@@ -37,7 +37,7 @@ export function DiakoHero({
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">
           {prenom ? `Diako · bonjour ${prenom}` : "Diako"}
         </p>
-        <h1 className="mt-1 text-2xl font-semibold leading-tight md:text-4xl md:leading-[1.15]">
+        <h1 className="mt-1 max-w-[22ch] text-2xl font-semibold leading-tight md:text-4xl md:leading-[1.15] xl:text-[2.75rem]">
           Diako — où dormir, où manger, avec qui partir à Madagascar
         </h1>
         <p className="mt-2 max-w-prose text-sm text-foreground/75 md:text-base">

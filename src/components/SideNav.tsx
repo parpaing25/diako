@@ -13,7 +13,7 @@ export function SideNav() {
   return (
     <nav
       aria-label="Sections du site"
-      className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-border px-2 py-4 lg:block"
+      className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-border px-2 py-4 lg:block 2xl:w-64"
     >
       <ul className="space-y-0.5">
         {NAV_COMPLET.map(({ to, label, icon: Icon, pret }) => (

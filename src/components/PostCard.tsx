@@ -79,7 +79,9 @@ export function PostCard({ post }: { post: PostApercu }) {
       </header>
 
       {/* Texte */}
-      <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed">{post.texte}</p>
+      <p className="mt-3 max-w-[68ch] whitespace-pre-line text-[15px] leading-relaxed">
+        {post.texte}
+      </p>
 
       {/* Étiquettes : lieu, établissement, plat — les 3 tags qui feront
           remonter la publication sur les bonnes fiches. */}
@@ -106,7 +108,7 @@ export function PostCard({ post }: { post: PostApercu }) {
           className={cn(
             "mt-3 flex items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br",
             post.media.couleur,
-            post.media.ratio === "4/3" ? "aspect-[4/3]" : "aspect-video"
+            post.media.ratio === "4/3" ? "aspect-[4/3] xl:aspect-video" : "aspect-video"
           )}
         >
           <span className="text-6xl" aria-hidden="true">

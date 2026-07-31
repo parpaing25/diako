@@ -17,7 +17,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-2 px-3 md:gap-3 md:px-4">
+        <div className="flex h-14 w-full items-center gap-2 px-3 md:gap-3 md:px-4 xl:px-6 2xl:px-10">
           <button
             onClick={() => setMenu(true)}
             aria-label="Ouvrir le menu"

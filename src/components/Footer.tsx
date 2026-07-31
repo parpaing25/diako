@@ -14,7 +14,7 @@ const ANNEE = 2026;
 export function Footer() {
   return (
     <footer className="mt-16 border-t border-border bg-secondary/40">
-      <div className="mx-auto grid max-w-[1240px] gap-8 px-4 py-10 md:grid-cols-3">
+      <div className="grid w-full gap-8 px-4 py-10 md:grid-cols-3 xl:px-6 2xl:px-10">
         <div>
           <p className="text-lg font-bold text-primary">Diako</p>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -75,7 +75,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-border">
-        <p className="mx-auto max-w-[1240px] px-4 py-4 text-xs text-muted-foreground">
+        <p className="w-full px-4 py-4 text-xs text-muted-foreground xl:px-6 2xl:px-10">
           © {ANNEE} Diako — Antananarivo, Madagascar.
         </p>
       </div>

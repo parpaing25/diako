@@ -23,7 +23,7 @@ export function RightRail() {
   return (
     <aside
       aria-label="À propos de Diako"
-      className="sticky top-14 hidden h-fit w-72 shrink-0 py-4 xl:block"
+      className="sticky top-14 hidden h-fit w-72 shrink-0 py-4 xl:block 2xl:w-80"
     >
       <div className="rounded-2xl border border-border p-4">
         <h2 className="text-sm font-semibold">Ce qui arrive sur Diako</h2>

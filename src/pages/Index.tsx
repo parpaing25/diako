@@ -72,7 +72,7 @@ export default function Index() {
             </Link>
           </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {PLACES.map((p) => (
               <PlaceCard key={p.slug} place={p} />
             ))}

@@ -147,7 +147,7 @@ function Shell() {
         <Header />
       </ErrorBoundary>
 
-      <div className="mx-auto flex w-full max-w-[1240px] flex-1 gap-6 lg:px-4">
+      <div className="flex w-full flex-1 gap-6 px-0 xl:gap-8 xl:px-6 2xl:px-10">
         <SideNav />
         <main
           id="contenu"

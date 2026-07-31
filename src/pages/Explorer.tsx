@@ -50,7 +50,7 @@ export default function Explorer() {
           </div>
 
           <h2 className="text-lg font-semibold">Où dormir et où manger</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {PLACES.map((p) => (
               <PlaceCard key={p.slug} place={p} />
             ))}
@@ -86,7 +86,7 @@ export default function Explorer() {
       </div>
 
       <h2 className="mt-7 text-sm font-semibold">Destinations</h2>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {DESTINATIONS.map((d) => (
           <a
             key={d.slug}

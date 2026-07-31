@@ -229,6 +229,38 @@ table {
   padding-bottom: calc(4rem + env(safe-area-inset-bottom));
 }
 
+/* ---------------------------------------------------------------------------
+   COLONNE CENTRALE — un seul reglage pour le fil, le bandeau et les listes.
+
+   Le defaut corrige : la colonne etait figee a 600 px. Sur un ecran de 1920,
+   la zone centrale fait ~1200 px, donc 300 px de vide s'ouvraient DE CHAQUE
+   COTE du fil, entre les deux rails. Deux corrections conjointes :
+     · la colonne s'elargit avec l'ecran (600 → 780 px) ;
+     · le conteneur des trois colonnes est plafonne et centre (App.tsx), pour
+       que le vide restant parte vers l'EXTERIEUR — une marge de page se lit
+       comme voulue, un trou entre deux colonnes se lit comme un oubli.
+   --------------------------------------------------------------------------- */
+.dk-colonne {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 600px;
+}
+@media (min-width: 1024px) {
+  .dk-colonne {
+    max-width: 680px;
+  }
+}
+@media (min-width: 1280px) {
+  .dk-colonne {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1536px) {
+  .dk-colonne {
+    max-width: 780px;
+  }
+}
+
 /* Squelettes de chargement — jamais d'ecran blanc. */
 .dk-skeleton {
   @apply animate-pulse rounded-md bg-muted;

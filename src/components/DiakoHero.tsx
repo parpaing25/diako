@@ -31,7 +31,7 @@ export function DiakoHero({
   const prenom = profile?.display_name?.split(" ")[0];
 
   return (
-    <section className="mx-auto w-full max-w-[600px] px-4 pt-4 xl:max-w-[620px]">
+    <section className="dk-colonne px-4 pt-4">
       {/* ── Salutation + recherche ─────────────────────────────────────── */}
       <div className="rounded-3xl bg-gradient-to-br from-secondary to-secondary/40 px-5 py-6 md:px-8 md:py-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">

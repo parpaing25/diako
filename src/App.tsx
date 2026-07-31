@@ -120,7 +120,9 @@ function Shell() {
         <Header />
       </ErrorBoundary>
 
-      <div className="flex w-full flex-1 gap-6 px-0 xl:gap-8 xl:px-6 2xl:px-10">
+      {/* Plafonne et centre : au-dela de ~1560 px le vide part en marge de page,
+          au lieu de s'ouvrir en trou entre les colonnes. */}
+      <div className="mx-auto flex w-full max-w-[1560px] flex-1 gap-6 px-0 xl:gap-8 xl:px-6 2xl:px-10">
         <SideNav />
         <main
           id="contenu"

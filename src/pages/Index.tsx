@@ -28,7 +28,7 @@ export default function Index() {
     <div className="pb-6">
       <DiakoHero categorie={cat} onCategorie={setCat} />
 
-      <div className="mx-auto mt-5 w-full max-w-[600px] px-4 xl:max-w-[620px]">
+      <div className="dk-colonne mt-5 px-4">
         {cat !== "all" && info && (
           <div className="mb-4 rounded-xl border border-border bg-card p-4">
             <p className="text-sm font-semibold">{info.label}</p>

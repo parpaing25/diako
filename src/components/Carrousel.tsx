@@ -1,16 +1,16 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ImageProgressive } from "@/components/ImageProgressive";
 import { cn } from "@/lib/utils";
 import type { Media } from "@/lib/api";
 
 /**
  * Carrousel d'images.
  *
- * ⚠ QUALITÉ — on sert l'image ORIGINALE (2000 px), jamais la vignette.
- * La vignette fait 480 px de large : affichée en plein écran sur un téléphone
- * de 1080 px à densité 2x, elle est agrandie 4 à 5 fois et devient une bouillie.
- * C'était la cause de la pixelisation. La vignette reste utile pour les
- * avatars et les listes, pas pour une photo qu'on regarde.
+ * ⚠ QUALITÉ — chaque image est servie en pleine résolution (2000 px) via
+ * ImageProgressive, qui affiche d'abord la vignette floutée puis la vraie
+ * image. Servir directement la vignette de 480 px en plein écran, comme je le
+ * faisais, l'agrandissait 4 à 5 fois : c'était la cause de la pixelisation.
  *
  * Défilement natif avec accroche plutôt qu'une bibliothèque : c'est le geste
  * attendu du doigt, ça pèse zéro kilo-octet, et ça reste fluide sur un Android
@@ -58,18 +58,13 @@ export function Carrousel({
       >
         {images.map((m, i) => (
           <div key={m.url + i} className="h-full w-full shrink-0 snap-center">
-            <img
+            <ImageProgressive
               src={m.url}
               alt={i === 0 ? alt : ""}
-              width={m.w || 1600}
-              height={m.h || 1200}
-              loading={prioritaire && i === 0 ? "eager" : "lazy"}
-              fetchPriority={prioritaire && i === 0 ? "high" : "auto"}
-              decoding="async"
-              className={cn(
-                "h-full w-full",
-                ajustement === "couvrir" ? "object-cover" : "object-contain"
-              )}
+              w={m.w}
+              h={m.h}
+              prioritaire={prioritaire && i === 0}
+              ajustement={ajustement === "couvrir" ? "cover" : "contain"}
             />
           </div>
         ))}

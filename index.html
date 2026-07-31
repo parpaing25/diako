@@ -52,6 +52,43 @@
     <meta property="og:image:alt" content="Logo Diako" />
     <meta name="twitter:card" content="summary" />
 
+    <!-- Données structurées : elles disent explicitement à Google ce qu'est le
+         site, plutôt que de le laisser le déduire d'une page presque vide.
+         SearchAction sera pleinement utile quand le moteur existera, mais la
+         cible /recherche?q= est déjà réelle et fonctionnelle. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://diako.fonenako.mg/#site",
+            "url": "https://diako.fonenako.mg/",
+            "name": "Diako",
+            "inLanguage": "fr",
+            "description": "Où dormir, où manger et avec qui partir à Madagascar. Hôtels, restaurants et agences de voyage, avec leurs vrais tarifs, leurs menus et leurs circuits.",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://diako.fonenako.mg/recherche?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://diako.fonenako.mg/#org",
+            "name": "Diako",
+            "url": "https://diako.fonenako.mg/",
+            "logo": "https://diako.fonenako.mg/media/diako-logo.png",
+            "email": "contact.fonenako@gmail.com",
+            "areaServed": { "@type": "Country", "name": "Madagascar" }
+          }
+        ]
+      }
+    </script>
+
     <style>
       /* ── SQUELETTE STATIQUE ──────────────────────────────────────────────
          Peint AVANT React, hors de #root : c'est lui l'élément LCP.

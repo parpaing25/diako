@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sitemap de Diako.
+
+  ⚠ Il ne liste QUE des pages ayant un contenu réel. Les écrans d'attente
+  (/explorer, /recherche, /publier) en sont volontairement exclus : soumettre
+  à Google des pages quasi vides fait baisser la qualité perçue du domaine
+  (« contenu insuffisant »), et elles n'apporteraient aucun visiteur.
+
+  Ce fichier est STATIQUE tant qu'il n'y a pas de données. Dès le Lot 2, il
+  devra être généré (destinations, fiches d'établissements, plats) — comme
+  sitemap.php le fait sur Fonenako.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://diako.fonenako.mg/</loc>
+    <lastmod>2026-07-31</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://diako.fonenako.mg/mentions</loc>
+    <lastmod>2026-07-31</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  <url>
+    <loc>https://diako.fonenako.mg/confidentialite</loc>
+    <lastmod>2026-07-31</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
+</urlset>

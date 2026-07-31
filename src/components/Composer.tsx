@@ -20,7 +20,7 @@ export function Composer() {
   const initiale = (profile?.display_name || "D").slice(0, 1).toUpperCase();
 
   return (
-    <div className="border-b border-border bg-card px-4 py-3.5 md:rounded-2xl md:border md:px-5">
+    <div className="border-b border-border bg-card px-4 py-3 md:rounded-2xl md:border md:px-5">
       <div className="flex items-center gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-muted text-sm font-semibold">
           {profile?.avatar_url ? (
@@ -49,10 +49,10 @@ export function Composer() {
           <button
             key={label}
             onClick={() => navigate(user ? "/publier" : "/auth")}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium text-muted-foreground transition hover:bg-muted"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-medium text-muted-foreground transition hover:bg-muted sm:text-[13px]"
           >
             <Icon className={`h-4 w-4 ${classe}`} aria-hidden="true" />
-            <span className="hidden xs:inline sm:inline">{label}</span>
+            <span>{label}</span>
           </button>
         ))}
       </div>

@@ -9,12 +9,12 @@ import {
   MessageCircle,
   MoreHorizontal,
   Send,
-  Share2,
   Trash2,
   UtensilsCrossed,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getThumbUrl } from "@/lib/imageThumb";
+import { Carrousel } from "@/components/Carrousel";
 import { cn } from "@/lib/utils";
 import {
   basculerFavori,
@@ -36,12 +36,15 @@ function ilYA(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
 }
 
+const SEUIL_TEXTE = 180;
+
 /**
- * Carte de publication — PLEINE LARGEUR, branchée sur la base.
+ * Publication — mise en page façon Instagram.
  *
- * Réactions, commentaires et favoris sont RÉELS. Les compteurs sont mis à jour
- * de façon optimiste puis corrigés si le serveur refuse : sur une connexion 3G,
- * attendre la réponse avant de réagir donne l'impression d'un bouton mort.
+ * L'image d'abord, en grand, bord à bord sur téléphone. Le texte vient
+ * ENSUITE et se replie au-delà de quelques lignes : sur un récit de voyage de
+ * 2 000 caractères, tout afficher noierait la photo et rendrait le défilement
+ * interminable.
  */
 export function PostCard({
   post,
@@ -55,6 +58,7 @@ export function PostCard({
   const [nbReactions, setNbReactions] = useState(post.reactions_count);
   const [favori, setFavori] = useState(post.enregistre);
   const [nbCommentaires, setNbCommentaires] = useState(post.comments_count);
+  const [deplie, setDeplie] = useState(false);
   const [ouvert, setOuvert] = useState(false);
   const [commentaires, setCommentaires] = useState<Commentaire[]>([]);
   const [saisie, setSaisie] = useState("");
@@ -72,12 +76,10 @@ export function PostCard({
   async function reagir() {
     if (!connecte()) return;
     const avant = reaction;
-    const nouveau = avant ? null : "jaime";
-    setReaction(nouveau);
-    setNbReactions((n) => n + (nouveau ? 1 : -1));
+    setReaction(avant ? null : "jaime");
+    setNbReactions((n) => n + (avant ? -1 : 1));
     try {
-      const res = await basculerReaction(post.id);
-      setReaction(res);
+      setReaction(await basculerReaction(post.id));
     } catch {
       setReaction(avant);
       setNbReactions((n) => n + (avant ? 1 : -1));
@@ -91,7 +93,6 @@ export function PostCard({
     setFavori(!avant);
     try {
       setFavori(await basculerFavori(post.id, avant));
-      toast.success(avant ? "Retiré des favoris" : "Enregistré dans vos favoris");
     } catch {
       setFavori(avant);
       toast.error("Impossible d'enregistrer.");
@@ -128,85 +129,73 @@ export function PostCard({
 
   async function partager() {
     const url = `${window.location.origin}/?post=${post.id}`;
-    const texte = `${post.body?.slice(0, 100) ?? "Sur Diako"} — ${url}`;
     try {
-      if (navigator.share) await navigator.share({ title: "Diako", text: texte, url });
-      else {
+      if (navigator.share) {
+        await navigator.share({ title: "Diako", text: post.body?.slice(0, 100) ?? "", url });
+      } else {
         await navigator.clipboard.writeText(url);
         toast.success("Lien copié");
       }
     } catch {
-      /* partage annulé par l'utilisateur */
+      /* partage annulé */
     }
   }
 
-  const media = post.media?.[0];
   const estMien = user?.id === post.author.id;
+  const texte = post.body ?? "";
+  const long = texte.length > SEUIL_TEXTE;
+  const visible = deplie || !long ? texte : texte.slice(0, SEUIL_TEXTE).trimEnd() + "…";
+  const nom = post.author.name || "Membre Diako";
 
   return (
-    <article className="border-b border-border bg-card px-4 py-4 md:rounded-2xl md:border md:px-5">
-      <header className="flex items-start gap-3">
+    <article className="border-b border-border bg-card pb-2 md:rounded-2xl md:border">
+      {/* ── En-tête ─────────────────────────────────────────────────────── */}
+      <header className="flex items-center gap-3 px-4 py-3">
         <Link
           to={`/user/${post.author.id}`}
-          className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-soft text-sm font-semibold text-primary-foreground"
+          className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-soft text-xs font-semibold text-primary-foreground"
         >
           {post.author.avatar ? (
-            <img
-              src={getThumbUrl(post.author.avatar)}
-              alt=""
-              width={40}
-              height={40}
-              className="h-10 w-10 object-cover"
-            />
+            <img src={getThumbUrl(post.author.avatar)} alt="" width={36} height={36} className="h-9 w-9 object-cover" />
           ) : (
-            (post.author.name || "?").slice(0, 1).toUpperCase()
+            nom.slice(0, 1).toUpperCase()
           )}
         </Link>
 
-        <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="flex items-center gap-1.5 text-sm font-semibold">
             <Link to={`/user/${post.author.id}`} className="truncate hover:underline">
-              {post.author.name || "Membre Diako"}
+              {nom}
             </Link>
             {post.author.verification !== "none" && (
-              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                ✓ vérifié
-              </span>
-            )}
-            {post.author.account_type === "pro" && (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                Pro
+              <span className="shrink-0 text-primary" title="Compte vérifié" aria-label="vérifié">
+                ✓
               </span>
             )}
           </p>
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-            {ilYA(post.created_at)}
-            {post.place && (
-              <>
-                <span aria-hidden="true">·</span>
-                <MapPin className="h-3 w-3" aria-hidden="true" />
-                {post.place}
-              </>
-            )}
-          </p>
+          {post.place && (
+            <Link
+              to={`/explorer?q=${encodeURIComponent(post.place)}`}
+              className="flex items-center gap-0.5 text-xs text-muted-foreground hover:underline"
+            >
+              <MapPin className="h-3 w-3" aria-hidden="true" />
+              {post.place}
+            </Link>
+          )}
         </div>
 
         <div className="relative shrink-0">
           <button
             onClick={() => setMenu((v) => !v)}
-            aria-label="Options de la publication"
+            aria-label="Options"
             className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted"
           >
-            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+            <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
           </button>
           {menu && (
             <>
-              <button
-                className="fixed inset-0 z-10 cursor-default"
-                aria-hidden="true"
-                onClick={() => setMenu(false)}
-              />
-              <div className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+              <button className="fixed inset-0 z-10 cursor-default" aria-hidden="true" onClick={() => setMenu(false)} />
+              <div className="absolute right-0 top-9 z-20 w-48 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
                 {estMien ? (
                   <button
                     onClick={async () => {
@@ -230,9 +219,7 @@ export function PostCard({
                       if (!connecte()) return;
                       try {
                         await signaler("post", post.id, "signalement depuis le fil");
-                        toast.success("Signalement envoyé", {
-                          description: "Au-delà de trois signalements, la publication est masquée automatiquement.",
-                        });
+                        toast.success("Signalement envoyé");
                       } catch {
                         toast.error("Le signalement n'a pas pu être envoyé.");
                       }
@@ -248,108 +235,105 @@ export function PostCard({
         </div>
       </header>
 
-      {post.body && (
-        <p className="mt-3 max-w-[68ch] whitespace-pre-line text-[15px] leading-relaxed">
-          {post.body}
-        </p>
-      )}
-
-      {(post.page_name || post.dish) && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {post.page_name && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs">
-              <MapPin className="h-3 w-3 text-primary" aria-hidden="true" />
-              {post.page_name}
-            </span>
-          )}
-          {post.dish && (
-            <Link
-              to={`/recherche?q=${encodeURIComponent(post.dish)}`}
-              className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs hover:bg-muted"
-            >
-              <UtensilsCrossed className="h-3 w-3 text-accent" aria-hidden="true" />
-              {post.dish}
-            </Link>
-          )}
+      {/* ── L'image, en grand ───────────────────────────────────────────── */}
+      {post.media?.length > 0 && (
+        <div className="md:px-0">
+          <Carrousel images={post.media} alt={post.place ? `${post.place}, Madagascar` : nom} />
         </div>
       )}
 
-      {media && (
-        <div className="mt-3 overflow-hidden rounded-xl bg-muted">
-          {/* Le ratio est réservé AVANT le chargement : sans width/height, la
-              page saute quand l'image arrive. */}
-          <img
-            src={getThumbUrl(media.url)}
-            alt=""
-            width={media.w || 1200}
-            height={media.h || 900}
-            loading="lazy"
-            decoding="async"
-            className="h-auto w-full object-cover"
-            onError={(e) => {
-              // La vignette n'existe pas encore : on retombe sur l'original.
-              const img = e.currentTarget;
-              if (img.src !== media.url) img.src = media.url;
-            }}
-          />
-        </div>
-      )}
-
-      {(nbReactions > 0 || nbCommentaires > 0) && (
-        <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-          {nbReactions > 0 && <span>{nbReactions} réaction{nbReactions > 1 ? "s" : ""}</span>}
-          {nbCommentaires > 0 && (
-            <button onClick={ouvrirCommentaires} className="hover:underline">
-              {nbCommentaires} commentaire{nbCommentaires > 1 ? "s" : ""}
-            </button>
-          )}
-        </div>
-      )}
-
-      <div className="mt-2 flex items-center justify-between border-t border-border pt-1">
+      {/* ── Actions, juste sous la photo ────────────────────────────────── */}
+      <div className="flex items-center gap-1 px-2 pt-2">
         <button
           onClick={reagir}
           aria-pressed={!!reaction}
+          aria-label="J'aime"
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium transition hover:bg-muted",
-            reaction ? "text-accent" : "text-muted-foreground hover:text-foreground"
+            "grid h-10 w-10 place-items-center rounded-full transition hover:bg-muted",
+            reaction ? "text-accent" : "text-foreground"
           )}
         >
-          <Heart className={cn("h-4 w-4", reaction && "fill-current")} aria-hidden="true" />
-          <span className="hidden sm:inline">J'aime</span>
+          <Heart className={cn("h-6 w-6", reaction && "fill-current")} aria-hidden="true" />
         </button>
-
         <button
           onClick={ouvrirCommentaires}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          aria-label="Commenter"
+          className="grid h-10 w-10 place-items-center rounded-full text-foreground transition hover:bg-muted"
         >
-          <MessageCircle className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Commenter</span>
+          <MessageCircle className="h-6 w-6" aria-hidden="true" />
         </button>
-
         <button
           onClick={partager}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          aria-label="Partager"
+          className="grid h-10 w-10 place-items-center rounded-full text-foreground transition hover:bg-muted"
         >
-          <Share2 className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Partager</span>
+          <Send className="h-6 w-6" aria-hidden="true" />
         </button>
-
         <button
           onClick={enregistrer}
           aria-pressed={favori}
+          aria-label="Enregistrer"
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium transition hover:bg-muted",
-            favori ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            "ml-auto grid h-10 w-10 place-items-center rounded-full transition hover:bg-muted",
+            favori ? "text-primary" : "text-foreground"
           )}
         >
-          <Bookmark className={cn("h-4 w-4", favori && "fill-current")} aria-hidden="true" />
-          <span className="hidden sm:inline">Enregistrer</span>
+          <Bookmark className={cn("h-6 w-6", favori && "fill-current")} aria-hidden="true" />
         </button>
       </div>
 
+      {/* ── Compteur + texte ────────────────────────────────────────────── */}
+      <div className="px-4">
+        {nbReactions > 0 && (
+          <p className="text-sm font-semibold">
+            {nbReactions} j'aime
+          </p>
+        )}
+
+        {texte && (
+          <p className="mt-1 max-w-[68ch] whitespace-pre-line text-sm leading-relaxed">
+            <Link to={`/user/${post.author.id}`} className="font-semibold hover:underline">
+              {nom}
+            </Link>{" "}
+            {visible}
+            {long && !deplie && (
+              <button
+                onClick={() => setDeplie(true)}
+                className="ml-1 text-muted-foreground hover:underline"
+              >
+                plus
+              </button>
+            )}
+          </p>
+        )}
+
+        {post.dish && (
+          <Link
+            to={`/recherche?q=${encodeURIComponent(post.dish)}`}
+            className="mt-2 inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs hover:bg-muted"
+          >
+            <UtensilsCrossed className="h-3 w-3 text-accent" aria-hidden="true" />
+            {post.dish}
+          </Link>
+        )}
+
+        {nbCommentaires > 0 && !ouvert && (
+          <button
+            onClick={ouvrirCommentaires}
+            className="mt-1 block text-sm text-muted-foreground hover:underline"
+          >
+            Voir les {nbCommentaires} commentaire{nbCommentaires > 1 ? "s" : ""}
+          </button>
+        )}
+
+        <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+          {ilYA(post.created_at)}
+        </p>
+      </div>
+
+      {/* ── Commentaires ────────────────────────────────────────────────── */}
       {ouvert && (
-        <div className="mt-3 border-t border-border pt-3">
+        <div className="mt-3 border-t border-border px-4 pt-3">
           {commentaires.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Aucun commentaire. Soyez le premier à répondre.
@@ -365,10 +349,12 @@ export function PostCard({
                       (c.auteur.name || "?").slice(0, 1).toUpperCase()
                     )}
                   </span>
-                  <div className="min-w-0 flex-1 rounded-2xl bg-muted px-3 py-2">
-                    <p className="text-xs font-semibold">{c.auteur.name || "Membre"}</p>
-                    <p className="mt-0.5 whitespace-pre-line text-sm">{c.body}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{ilYA(c.created_at)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">
+                      <span className="font-semibold">{c.auteur.name || "Membre"}</span>{" "}
+                      {c.body}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{ilYA(c.created_at)}</p>
                   </div>
                 </li>
               ))}
@@ -384,17 +370,16 @@ export function PostCard({
                 id={`c-${post.id}`}
                 value={saisie}
                 onChange={(e) => setSaisie(e.target.value)}
-                placeholder="Écrire un commentaire…"
+                placeholder="Ajouter un commentaire…"
                 maxLength={2000}
                 className="h-10 min-w-0 flex-1 rounded-full bg-muted px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <button
                 type="submit"
                 disabled={!saisie.trim() || envoi}
-                aria-label="Envoyer"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+                className="shrink-0 text-sm font-semibold text-primary disabled:opacity-40"
               >
-                <Send className="h-4 w-4" aria-hidden="true" />
+                Publier
               </button>
             </form>
           )}

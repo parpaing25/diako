@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Menu, Moon, Sun, User } from "lucide-react";
+import { Bell, Menu, MessageCircle, Moon, Sun, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -69,11 +69,18 @@ export function Header() {
           {user ? (
             <div className="flex shrink-0 items-center gap-1">
               <Link
+                to="/messages"
+                aria-label="Messages"
+                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <MessageCircle className="h-5 w-5" aria-hidden="true" />
+              </Link>
+              <Link
                 to="/notifications"
                 aria-label={nonLues > 0 ? `Notifications (${nonLues} non lues)` : "Notifications"}
-                className="relative hidden h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted sm:grid"
+                className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
               >
-                <Bell className="h-4 w-4" aria-hidden="true" />
+                <Bell className="h-5 w-5" aria-hidden="true" />
                 {nonLues > 0 && (
                   <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
                     {nonLues > 9 ? "9+" : nonLues}

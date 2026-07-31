@@ -23,7 +23,7 @@ export default function Index() {
     <div className="pb-6">
       <DiakoHero categorie={cat} onCategorie={setCat} />
 
-      <div className="mt-5 px-0 md:px-4">
+      <div className="mx-auto mt-5 w-full max-w-[600px] px-0 md:px-4 xl:max-w-[620px]">
         {cat !== "all" && info && (
           <div className="mx-4 mb-4 rounded-xl border border-border bg-card p-4 md:mx-0">
             <p className="text-sm font-semibold">{info.label}</p>
@@ -70,7 +70,7 @@ export default function Index() {
             </Link>
           </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {PLACES.map((p) => (
               <PlaceCard key={p.slug} place={p} />
             ))}

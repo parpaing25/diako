@@ -149,7 +149,7 @@ if (strpos($contentType, 'multipart/form-data') !== false) {
 }
 
 // ── Validation commune ──
-if (!$filename || !in_array($folder, ['profiles', 'listings'], true)) {
+if (!$filename || !in_array($folder, ['profiles', 'posts', 'pages'], true)) {
   respond(400, ['error' => 'Missing or invalid fields (filename, folder)']);
 }
 

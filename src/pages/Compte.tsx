@@ -8,6 +8,7 @@ import { useUserData } from "@/contexts/UserDataContext";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
 import { getAvatarUrl } from "@/lib/supabaseImage";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function Compte() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function Compte() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  useDocumentTitle("Mon compte");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth", { replace: true });
@@ -171,7 +173,8 @@ export default function Compte() {
             className="h-12 w-full rounded-xl border border-input bg-background px-4 outline-none focus:ring-2 focus:ring-ring"
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            Le choix dans le référentiel des destinations arrive au Lot 1.
+            La liste des destinations de Madagascar arrivera bientôt — en
+            attendant, écrivez librement.
           </p>
         </div>
         <div>

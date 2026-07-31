@@ -119,8 +119,9 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    /* Zone sure iOS (encoche + barre du bas). */
-    padding-bottom: env(safe-area-inset-bottom);
+    /* ⚠ PAS de padding-bottom ici : .dk-has-bottomnav et la barre du bas
+       portent deja env(safe-area-inset-bottom). L'appliquer aux deux ajoutait
+       ~34 px de vide mort en bas de chaque page sur iPhone. */
   }
 }
 
@@ -131,6 +132,8 @@
    --------------------------------------------------------------------------- */
 #root {
   overflow-x: clip;
+  display: flex;
+  flex-direction: column;
   min-height: 100dvh;
 }
 img,
@@ -158,6 +161,15 @@ li {
 table {
   width: max-content;
   max-width: 100%;
+}
+
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* Zone de frappe 44x44 px SANS changer le visuel du bouton. */

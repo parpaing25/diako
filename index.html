@@ -3,13 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0E7C86" />
+
+    <!-- Les deux thèmes sont supportés : sans color-scheme, le navigateur peint
+         les zones natives en clair et l'écran clignote sur un appareil en sombre. -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0E7C86" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0C1A1D" media="(prefers-color-scheme: dark)" />
 
     <title>Diako — Voyage &amp; tourisme à Madagascar</title>
     <meta
       name="description"
-      content="Trouvez où dormir, où manger et avec qui partir à Madagascar. Hôtels, restaurants et agences de voyage, avec leurs vrais tarifs."
+      content="Trouvez où dormir, où manger et avec qui partir à Madagascar. Hôtels, restaurants et agences de voyage, avec leurs vrais tarifs, leurs menus et leurs circuits."
     />
+    <link rel="canonical" href="https://diako.fonenako.mg/" />
 
     <link rel="icon" type="image/png" href="/media/favicon.png" />
     <link rel="apple-touch-icon" href="/media/diako-logo.png" />
@@ -23,81 +29,121 @@
       crossorigin
     />
 
-    <!-- app-init.js applique le CSS préchargé AVANT le montage de React et
-         enregistre le service worker de façon retardée. Priorité haute :
-         en simple `defer`, Chrome le classait « Low » et il arrivait tard. -->
+    <!-- app-init.js pose le thème, applique le CSS préchargé AVANT le montage de
+         React et enregistre le service worker de façon retardée. Priorité haute :
+         en simple `defer`, Chrome le classait « Low » et il arrivait trop tard. -->
     <link rel="preload" as="script" href="/app-init.js" />
 
+    <!-- ⚠ URL ABSOLUES obligatoires : Facebook, Messenger et WhatsApp — canal
+         d'acquisition n°1 à Madagascar — ne résolvent pas les chemins relatifs
+         et n'affichent alors aucun aperçu. -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Diako" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:url" content="https://diako.fonenako.mg/" />
     <meta property="og:title" content="Diako — Voyage &amp; tourisme à Madagascar" />
     <meta
       property="og:description"
-      content="Trouvez où dormir, où manger et avec qui partir à Madagascar."
+      content="Où dormir, où manger et avec qui partir à Madagascar."
     />
-    <meta property="og:image" content="/media/diako-logo.png" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:image" content="https://diako.fonenako.mg/media/diako-logo-mail.png" />
+    <meta property="og:image:width" content="160" />
+    <meta property="og:image:height" content="160" />
+    <meta property="og:image:alt" content="Logo Diako" />
+    <meta name="twitter:card" content="summary" />
 
     <style>
       /* ── SQUELETTE STATIQUE ──────────────────────────────────────────────
-         Vit HORS de #root et couvre tout le premier écran. C'est lui qui est
-         peint en LCP, avant même que React soit téléchargé. Sa géométrie doit
-         correspondre AU PIXEL à celle de la coquille React : un seul pixel
-         d'écart et Chrome recompte un nouvel élément LCP au montage.        */
-      :root { --dk-primary: #0e7c86; --dk-ink: #10262b; --dk-border: #e2ebec; }
+         Peint AVANT React, hors de #root : c'est lui l'élément LCP.
+         Il affiche le VRAI titre et la VRAIE phrase du produit — donc du texte
+         identique à celui que React montera. Aucun clignotement, un LCP textuel,
+         et un HTML qui dit enfin ce qu'est Diako aux robots qui n'exécutent pas
+         JavaScript.
+         ⚠ Il ne doit RIEN promettre qui n'existe pas : la version précédente
+         peignait deux cartes de publication avec zone photo, que React effaçait
+         ensuite — le visiteur voyait du contenu naître puis mourir.           */
+      :root {
+        --dk-primary: #0e7c86;
+        --dk-ink: #10262b;
+        --dk-border: #e2ebec;
+        --dk-sand: #f7efe3;
+        --dk-bg: #ffffff;
+        --dk-muted: #5b6e72;
+      }
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
       body {
         font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
         color: var(--dk-ink);
-        background: #fff;
+        background: var(--dk-bg);
         -webkit-font-smoothing: antialiased;
       }
-      #dk-shell { min-height: 100dvh; }
       #dk-shell header {
         height: 56px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         padding: 0 16px;
         border-bottom: 1px solid var(--dk-border);
+        max-width: 1180px;
+        margin: 0 auto;
       }
       #dk-shell .logo {
-        font-weight: 700;
-        font-size: 20px;
-        letter-spacing: -0.02em;
-        color: var(--dk-primary);
+        font-weight: 700; font-size: 20px; letter-spacing: -0.02em;
+        color: var(--dk-primary); flex: 0 0 auto;
       }
-      #dk-shell .search {
-        flex: 1;
-        height: 36px;
-        border-radius: 999px;
-        background: #f1f6f7;
+      #dk-shell .search { flex: 1 1 auto; height: 36px; border-radius: 999px; background: #f1f6f7; }
+      /* Réserve la place du bouton Connexion : sans elle, la barre de recherche
+         occupe toute la largeur puis se rétracte au montage de React. */
+      #dk-shell .cta { flex: 0 0 auto; width: 96px; height: 36px; border-radius: 999px; background: var(--dk-primary); }
+
+      #dk-shell .cols { display: flex; gap: 24px; max-width: 1180px; margin: 0 auto; }
+      #dk-shell .rail { display: none; }
+      #dk-shell .main { flex: 1 1 auto; min-width: 0; padding: 24px 16px; }
+      #dk-shell .hero {
+        background: var(--dk-sand);
+        border-radius: 24px;
+        padding: 40px 20px;
       }
-      #dk-shell .feed { padding: 12px; max-width: 600px; margin: 0 auto; }
-      #dk-shell .card {
-        border: 1px solid var(--dk-border);
-        border-radius: 12px;
-        overflow: hidden;
-        margin-bottom: 12px;
+      #dk-shell .hero h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+        font-weight: 600;
+        letter-spacing: -0.01em;
       }
-      #dk-shell .card .head { display: flex; align-items: center; gap: 10px; padding: 12px; }
-      #dk-shell .card .av { width: 36px; height: 36px; border-radius: 999px; background: #e8f0f1; }
-      #dk-shell .card .l { height: 10px; border-radius: 6px; background: #e8f0f1; }
-      #dk-shell .card .media { aspect-ratio: 4 / 3; background: #eef4f5; }
+      #dk-shell .hero p {
+        margin: 12px 0 0;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #3c4f53;
+        max-width: 60ch;
+      }
+      #dk-shell .hero .bar {
+        margin-top: 24px; height: 48px; max-width: 42rem;
+        border: 1px solid var(--dk-border); border-radius: 999px; background: #fff;
+      }
       #dk-shell nav {
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
+        position: fixed; left: 0; right: 0; bottom: 0;
         height: calc(64px + env(safe-area-inset-bottom));
-        border-top: 1px solid var(--dk-border);
-        background: #fff;
+        border-top: 1px solid var(--dk-border); background: var(--dk-bg);
       }
-      .dk-hidden { display: none !important; }
+      @media (min-width: 768px) {
+        #dk-shell .cols { padding: 0 16px; }
+        #dk-shell .rail { display: block; width: 224px; flex: 0 0 224px; border-right: 1px solid var(--dk-border); }
+        #dk-shell .main { padding: 24px 16px 24px 0; }
+        #dk-shell .hero { padding: 56px 40px; }
+        #dk-shell .hero h1 { font-size: 44px; line-height: 1.1; }
+        #dk-shell .hero p { font-size: 18px; }
+        /* La barre du bas est md:hidden côté React : sans cette règle, une bande
+           blanche de 64 px clignotait en bas des écrans d'ordinateur. */
+        #dk-shell nav { display: none; }
+      }
       @media (prefers-color-scheme: dark) {
-        body { background: #0c1a1d; color: #eaf2f3; }
-        #dk-shell header, #dk-shell nav { border-color: #1d3236; background: #0c1a1d; }
-        #dk-shell .search, #dk-shell .card .av, #dk-shell .card .l { background: #16292d; }
-        #dk-shell .card { border-color: #1d3236; }
-        #dk-shell .card .media { background: #122427; }
+        :root { --dk-bg: #0c1a1d; --dk-ink: #eaf2f3; --dk-border: #1d3236; --dk-sand: #16292d; }
+        #dk-shell .search { background: #16292d; }
+        #dk-shell .hero p { color: #a8bcc0; }
+        #dk-shell .hero .bar { background: #12242782; }
       }
     </style>
   </head>
@@ -108,21 +154,19 @@
       <header>
         <span class="logo">Diako</span>
         <span class="search"></span>
+        <span class="cta"></span>
       </header>
-      <div class="feed">
-        <div class="card">
-          <div class="head">
-            <span class="av"></span>
-            <span class="l" style="width: 120px"></span>
+      <div class="cols">
+        <div class="rail"></div>
+        <div class="main">
+          <div class="hero">
+            <h1>Où dormir, où manger, avec qui partir à Madagascar</h1>
+            <p>
+              Les hôtels, les restaurants et les agences de voyage du pays, avec
+              leurs vrais tarifs, leurs menus et leurs circuits.
+            </p>
+            <div class="bar"></div>
           </div>
-          <div class="media"></div>
-        </div>
-        <div class="card">
-          <div class="head">
-            <span class="av"></span>
-            <span class="l" style="width: 90px"></span>
-          </div>
-          <div class="media"></div>
         </div>
       </div>
       <nav></nav>
@@ -133,8 +177,13 @@
     <script src="/app-init.js"></script>
     <script type="module" src="/src/main.tsx"></script>
     <noscript>
-      <p style="padding: 24px; font-family: sans-serif">
-        Diako a besoin de JavaScript pour fonctionner. Activez-le dans votre navigateur.
+      <p style="padding: 24px; font-family: sans-serif; max-width: 60ch">
+        <strong>Diako</strong> — où dormir, où manger et avec qui partir à
+        Madagascar. Les hôtels, les restaurants et les agences de voyage du pays,
+        avec leurs vrais tarifs, leurs menus et leurs circuits.<br /><br />
+        Ce site a besoin de JavaScript pour fonctionner. Activez-le dans votre
+        navigateur, ou écrivez-nous à
+        <a href="mailto:contact.fonenako@gmail.com">contact.fonenako@gmail.com</a>.
       </p>
     </noscript>
   </body>

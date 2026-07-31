@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function NotFound() {
+  useDocumentTitle("Page introuvable");
   return (
     <div className="mx-auto max-w-md px-4 py-20 text-center">
       <p className="text-5xl font-bold text-primary">404</p>

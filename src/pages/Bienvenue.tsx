@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 /**
  * Complétion du profil après confirmation de l'adresse e-mail.
@@ -21,6 +22,7 @@ export default function Bienvenue() {
   const [ville, setVille] = useState("");
   const [type, setType] = useState<"voyageur" | "pro">("voyageur");
   const [busy, setBusy] = useState(false);
+  useDocumentTitle("Bienvenue");
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });

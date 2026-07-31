@@ -10,6 +10,27 @@
 (function () {
   "use strict";
 
+  // ── 0. THÈME, EN TOUT PREMIER ──────────────────────────────────────────
+  // Tailwind est en darkMode:["class"] : sans cette ligne, la classe `dark`
+  // n'est JAMAIS posée et les 40 lignes de palette sombre de index.css sont du
+  // code mort. Pire : le squelette statique, lui, se peint bien en sombre via
+  // prefers-color-scheme — l'utilisateur voyait donc un écran sombre suivi d'un
+  // flash blanc violent à chaque visite. Doit s'exécuter AVANT le premier rendu.
+  try {
+    var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+    var applique = function (sombre) {
+      document.documentElement.classList.toggle("dark", !!sombre);
+    };
+    if (mq) {
+      applique(mq.matches);
+      if (mq.addEventListener) {
+        mq.addEventListener("change", function (e) { applique(e.matches); });
+      }
+    }
+  } catch (e) {
+    /* thème clair par défaut */
+  }
+
   // ── 1. CSS non bloquant ────────────────────────────────────────────────
   // Le build remplace <link rel=stylesheet> par <link id="dk-css" rel=preload>.
   // On le repasse en vraie feuille de style : le téléchargement a déjà démarré

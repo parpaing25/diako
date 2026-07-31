@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmez votre nouvelle adresse Diako</title>
+</head>
+<!--
+  DIAKO — modèle « Change Email Address ».
+  Écrit en HTML d'e-mail : tableaux + styles EN LIGNE uniquement.
+  Ni flexbox, ni grid, ni <style> dans le <head> : Outlook et Gmail les ignorent
+  ou les suppriment. Le logo est servi en absolu depuis diako.fonenako.mg —
+  une image relative ne s'affiche jamais dans un client mail.
+-->
+<body style="margin:0;padding:0;background-color:#F7EFE3;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7EFE3;">
+    <tr>
+      <td align="center" style="padding:32px 12px;">
+
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;">
+
+          <!-- En-tête -->
+          <tr>
+            <td align="center" style="background-color:#0E7C86;padding:36px 24px;">
+              <img src="https://diako.fonenako.mg/media/diako-logo-mail.png"
+                   alt="Diako" width="72" height="72"
+                   style="display:block;width:72px;height:72px;border:0;border-radius:18px;background-color:#ffffff;">
+              <p style="margin:16px 0 0;font-family:Helvetica,Arial,sans-serif;font-size:26px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">Diako</p>
+              <p style="margin:6px 0 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#CFEAEC;">Voyage &amp; tourisme à Madagascar</p>
+            </td>
+          </tr>
+
+          <!-- Contenu -->
+          <tr>
+            <td style="padding:36px 32px;font-family:Helvetica,Arial,sans-serif;color:#10262B;">
+              <h1 style="margin:0 0 18px;font-size:22px;font-weight:bold;color:#10262B;">Nouvelle adresse e-mail</h1>
+
+              <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3C4F53;">
+                Vous avez demandé à remplacer l'adresse e-mail de votre compte Diako. Confirmez la nouvelle adresse pour terminer le changement.
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;">
+                <tr>
+                  <td align="center" bgcolor="#0E7C86" style="border-radius:12px;">
+                    <a href="{{ .ConfirmationURL }}"
+                       style="display:inline-block;padding:16px 36px;font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:12px;">
+                      Confirmer la nouvelle adresse
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FDF0EC;border-left:4px solid #F4633A;border-radius:6px;margin:0 0 24px;">
+                <tr>
+                  <td style="padding:14px 18px;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#3C4F53;">
+                    <strong>Ce n'est pas vous ?</strong> Ignorez ce message : l'adresse de votre compte ne sera pas modifiée.
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 6px;font-size:13px;color:#5B6E72;">
+                Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :
+              </p>
+              <p style="margin:0;font-size:12px;color:#0E7C86;word-break:break-all;">{{ .ConfirmationURL }}</p>
+            </td>
+          </tr>
+
+          <!-- Pied -->
+          <tr>
+            <td align="center" style="background-color:#FAFBFB;border-top:1px solid #E2EBEC;padding:24px 32px;font-family:Helvetica,Arial,sans-serif;">
+              <p style="margin:0 0 6px;font-size:14px;font-weight:bold;color:#10262B;">Diako</p>
+              <p style="margin:0 0 14px;font-size:13px;color:#5B6E72;">
+                Où dormir, où manger et avec qui partir à Madagascar.
+              </p>
+              <p style="margin:0;font-size:12px;color:#8A9BA0;">
+                <a href="https://diako.fonenako.mg" style="color:#0E7C86;text-decoration:none;">diako.fonenako.mg</a>
+              </p>
+              <p style="margin:12px 0 0;font-size:11px;color:#A5B3B7;">
+                Message automatique, merci de ne pas y répondre.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

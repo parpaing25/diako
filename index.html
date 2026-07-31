@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0E7C86" />
+
+    <title>Diako — Voyage &amp; tourisme à Madagascar</title>
+    <meta
+      name="description"
+      content="Trouvez où dormir, où manger et avec qui partir à Madagascar. Hôtels, restaurants et agences de voyage, avec leurs vrais tarifs."
+    />
+
+    <link rel="icon" type="image/png" href="./media/favicon.png" />
+    <link rel="apple-touch-icon" href="./media/diako-logo.png" />
+
+    <!-- Police auto-hébergée : préchargée, aucun appel externe. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="./fonts/inter-latin-var-v20.woff2"
+      crossorigin
+    />
+
+    <!-- app-init.js applique le CSS préchargé AVANT le montage de React et
+         enregistre le service worker de façon retardée. Priorité haute :
+         en simple `defer`, Chrome le classait « Low » et il arrivait tard. -->
+    <link rel="preload" as="script" href="./app-init.js" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Diako — Voyage &amp; tourisme à Madagascar" />
+    <meta
+      property="og:description"
+      content="Trouvez où dormir, où manger et avec qui partir à Madagascar."
+    />
+    <meta property="og:image" content="./media/diako-logo.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <style>
+      /* ── SQUELETTE STATIQUE ──────────────────────────────────────────────
+         Vit HORS de #root et couvre tout le premier écran. C'est lui qui est
+         peint en LCP, avant même que React soit téléchargé. Sa géométrie doit
+         correspondre AU PIXEL à celle de la coquille React : un seul pixel
+         d'écart et Chrome recompte un nouvel élément LCP au montage.        */
+      :root { --dk-primary: #0e7c86; --dk-ink: #10262b; --dk-border: #e2ebec; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--dk-ink);
+        background: #fff;
+        -webkit-font-smoothing: antialiased;
+      }
+      #dk-shell { min-height: 100dvh; }
+      #dk-shell header {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--dk-border);
+      }
+      #dk-shell .logo {
+        font-weight: 700;
+        font-size: 20px;
+        letter-spacing: -0.02em;
+        color: var(--dk-primary);
+      }
+      #dk-shell .search {
+        flex: 1;
+        height: 36px;
+        border-radius: 999px;
+        background: #f1f6f7;
+      }
+      #dk-shell .feed { padding: 12px; max-width: 600px; margin: 0 auto; }
+      #dk-shell .card {
+        border: 1px solid var(--dk-border);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 12px;
+      }
+      #dk-shell .card .head { display: flex; align-items: center; gap: 10px; padding: 12px; }
+      #dk-shell .card .av { width: 36px; height: 36px; border-radius: 999px; background: #e8f0f1; }
+      #dk-shell .card .l { height: 10px; border-radius: 6px; background: #e8f0f1; }
+      #dk-shell .card .media { aspect-ratio: 4 / 3; background: #eef4f5; }
+      #dk-shell nav {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        height: calc(64px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--dk-border);
+        background: #fff;
+      }
+      .dk-hidden { display: none !important; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0c1a1d; color: #eaf2f3; }
+        #dk-shell header, #dk-shell nav { border-color: #1d3236; background: #0c1a1d; }
+        #dk-shell .search, #dk-shell .card .av, #dk-shell .card .l { background: #16292d; }
+        #dk-shell .card { border-color: #1d3236; }
+        #dk-shell .card .media { background: #122427; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Squelette peint immédiatement, retiré par main.tsx au montage de React. -->
+    <div id="dk-shell">
+      <header>
+        <span class="logo">Diako</span>
+        <span class="search"></span>
+      </header>
+      <div class="feed">
+        <div class="card">
+          <div class="head">
+            <span class="av"></span>
+            <span class="l" style="width: 120px"></span>
+          </div>
+          <div class="media"></div>
+        </div>
+        <div class="card">
+          <div class="head">
+            <span class="av"></span>
+            <span class="l" style="width: 90px"></span>
+          </div>
+          <div class="media"></div>
+        </div>
+      </div>
+      <nav></nav>
+    </div>
+
+    <div id="root"></div>
+
+    <script src="./app-init.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <p style="padding: 24px; font-family: sans-serif">
+        Diako a besoin de JavaScript pour fonctionner. Activez-le dans votre navigateur.
+      </p>
+    </noscript>
+  </body>
+</html>

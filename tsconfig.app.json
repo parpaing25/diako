@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Mode bundler */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Vérifications.
+       Volontairement PLUS strict que Fonenako, dont le tsconfig désactive
+       strict, strictNullChecks et noImplicitAny — c'est précisément ce qui a
+       conduit à parsemer le code de `(supabase as any)`. On repart propre.
+       noUnusedLocals reste à false : les composants shadcn/ui repris tels
+       quels déclarent des variables inutilisées, et les corriger un par un
+       n'apporterait rien. */
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["vite/client", "vite-plugin-pwa/client"]
+  },
+  "include": ["src"]
+}

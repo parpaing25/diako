@@ -1,0 +1,91 @@
+# ============================================================================
+# DIAKO — configuration Apache (o2switch)
+#
+# ⚠ CE FICHIER EST VERSIONNÉ, ET C'EST VOLONTAIRE.
+#   Sur le Diako précédent, le .htaccess n'existait QUE sur le serveur : non
+#   versionné, non sauvegardé, et personne ne savait ce qu'il contenait.
+#   Toute modification se fait ici, puis part au déploiement.
+# ============================================================================
+
+# ── Sécurité ────────────────────────────────────────────────────────────────
+Options -Indexes
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+# Fichiers sensibles : jamais servis.
+<FilesMatch "(^\.|\.(env|sql|log|bak|ini|sh|yml|json5)$|composer\.(json|lock))">
+  Require all denied
+</FilesMatch>
+
+# Aucune exécution de PHP dans les dossiers d'images téléversées.
+# C'est exactement la faille qui a été trouvée sur l'ancien backend/ :
+# un .php déguisé en image = exécution de code sur le compte o2switch.
+<Directory "uploads">
+  php_flag engine off
+  <FilesMatch "\.(php|php\d|phtml|phar)$">
+    Require all denied
+  </FilesMatch>
+</Directory>
+
+# ── HTTPS + apex ────────────────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+  # Repli SPA : tout ce qui n'est ni un fichier ni un dossier existant
+  # retourne index.html (React Router prend le relais).
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} !^/api/
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# ── Cache ───────────────────────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Assets hachés par Vite : immuables, un an.
+  <FilesMatch "\.(js|css|woff2)$">
+    ExpiresDefault "access plus 1 year"
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Images : 30 jours.
+  <FilesMatch "\.(png|jpe?g|webp|avif|svg|ico)$">
+    ExpiresDefault "access plus 30 days"
+  </FilesMatch>
+
+  # ⚠ JAMAIS de cache sur ces deux-là : un index.html ou un sw.js caché fige
+  # les visiteurs sur une version morte du site après un déploiement.
+  <FilesMatch "^(index\.html|sw\.js|manifest\.webmanifest)$">
+    ExpiresDefault "access plus 0 seconds"
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+
+  # app-init.js : 1 h. Assez court pour qu'un correctif se propage vite,
+  # assez long pour ne pas être redemandé à chaque page.
+  <Files "app-init.js">
+    ExpiresDefault "access plus 1 hour"
+  </Files>
+</IfModule>
+
+# ── Compression ─────────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
+    application/javascript application/json image/svg+xml
+</IfModule>
+
+# ── Types ───────────────────────────────────────────────────────────────────
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType font/woff2 .woff2
+  AddType image/webp .webp
+</IfModule>

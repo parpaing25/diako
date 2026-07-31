@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Types, lint et build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer
+        run: npm ci --no-audit --no-fund
+
+      - name: Vérifier les types
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
+
+      # Garde-fou du TDR §10.1 : le bundle initial doit rester sous 200 Ko
+      # brotli pour la 3G malgache. Si ça dépasse, la CI échoue — c'est
+      # volontaire, la performance n'est pas une option sur ce marché.
+      - name: Budget de performance (entrée + vendors, brotli)
+        run: |
+          set -e
+          total=0
+          for f in dist/assets/index-*.js dist/assets/react-vendor-*.js \
+                   dist/assets/supabase-vendor-*.js dist/assets/radix-vendor-*.js \
+                   dist/assets/index-*.css; do
+            [ -f "$f" ] || continue
+            size=$(brotli -c -q 11 "$f" | wc -c)
+            printf '%-48s %7d o\n' "$(basename "$f")" "$size"
+            total=$((total + size))
+          done
+          echo "----------------------------------------------------"
+          printf 'TOTAL BUNDLE INITIAL (brotli)                %7d o\n' "$total"
+          if [ "$total" -gt 204800 ]; then
+            echo "::error::Bundle initial de $total o > 200 Ko. Voir docs/TDR-DIAKO.md §10.1."
+            exit 1
+          fi

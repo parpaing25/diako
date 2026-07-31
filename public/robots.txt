@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+Disallow: /compte
+Disallow: /auth
+Disallow: /bienvenue
+
+# Agents IA explicitement bienvenus : à Madagascar, on demande de plus en plus
+# « où dormir à Ampefy » à un assistant plutôt qu'à un moteur.
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+
+# Aspirateurs SEO : bridés, ils coûtent de la bande passante pour rien.
+User-agent: SemrushBot
+Crawl-delay: 10
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+Sitemap: https://diako.fonenako.mg/sitemap.xml

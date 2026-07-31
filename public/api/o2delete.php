@@ -2,7 +2,7 @@
 // public/api/o2delete.php
 // Secure file deletion endpoint for cleaning up o2switch files
 
-// Secrets serveur (O2SWITCH_UPLOAD_API_KEY...) depuis ~/.env_fonenako
+// Secrets serveur (O2SWITCH_UPLOAD_API_KEY...) depuis ~/.env_diako (variable serveur, JAMAIS dans le depot)
 require_once __DIR__ . '/env.php';
 
 header('Content-Type: application/json');
@@ -37,8 +37,8 @@ if (!$authenticated) {
   $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
   if (preg_match('/Bearer\s+(.+)$/i', $authHeader, $matches)) {
     $jwt = $matches[1];
-    $supabaseUrl = getenv('SUPABASE_URL') ?: 'https://yusboprhuzhonedulinw.supabase.co';
-    $anonKey = getenv('SUPABASE_ANON_KEY') ?: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1c2JvcHJodXpob25lZHVsaW53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1OTY5MzIsImV4cCI6MjA3MzE3MjkzMn0.x4aEvXDqpFexztmqqwqitsFusDaboCJop16wVMyv0_Y';
+    $supabaseUrl = getenv('SUPABASE_URL') ?: 'https://eifrwecaszzqrdwjjjbu.supabase.co';
+    $anonKey = getenv('SUPABASE_ANON_KEY') ?: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZnJ3ZWNhc3p6cXJkd2pqamJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NTM5OTYsImV4cCI6MjA3MDAyOTk5Nn0.Ks8epc1CiOyj7Y4AYGL9zRHHoZscQJ7_nWbqwMNcVMQ';
     if ($jwt) {
       $ch = curl_init($supabaseUrl . '/auth/v1/user');
       curl_setopt_array($ch, [

@@ -59,51 +59,10 @@ export const RECHERCHES_EXEMPLE = [
 ];
 
 /* ------------------------------------------------------------------------ */
-/*  Publications d'aperçu — MAQUETTE. Ni ces personnes ni ces séjours        */
-/*  n'existent. Affichées uniquement sous le bandeau <BandeauApercu />.      */
+/*  Etablissements d'apercu — MAQUETTE, en attendant les vraies pages (Lot 2). */
+/*  Le FIL, lui, est desormais REEL : il n'y a plus de publications d'apercu.  */
 /* ------------------------------------------------------------------------ */
-import type { PostApercu } from "@/components/PostCard";
 import type { PlaceApercu } from "@/components/PlaceCard";
-
-export const POSTS: PostApercu[] = [
-  {
-    id: "a1",
-    auteur: "Hery R.",
-    quand: "il y a 2 h",
-    lieu: "Ampefy, Itasy",
-    texte:
-      "Week-end au lac Itasy. Départ de Tana à 6 h, on y est à 9 h par la RN1 — la route est bonne jusqu'à Analavory.\nLa chute de la Lily vaut vraiment le détour en cette saison, il y a de l'eau.",
-    page: "Bungalow vue lac",
-    media: { emoji: "🌋", couleur: "from-sky-400 to-cyan-700", ratio: "4/3" },
-    reactions: 34,
-    commentaires: 7,
-  },
-  {
-    id: "a2",
-    auteur: "Chez Mariette",
-    role: "Restaurant",
-    verifie: true,
-    quand: "il y a 5 h",
-    lieu: "Analakely, Antananarivo",
-    texte:
-      "Le ravitoto sy henakisoa est prêt tous les mercredis et samedis midi. Sur place ou à emporter.",
-    plat: "Ravitoto sy henakisoa",
-    media: { emoji: "🥬", couleur: "from-green-500 to-emerald-800", ratio: "4/3" },
-    reactions: 58,
-    commentaires: 12,
-  },
-  {
-    id: "a3",
-    auteur: "Naina A.",
-    quand: "hier",
-    lieu: "Sainte-Marie",
-    texte:
-      "Sortie baleines ce matin. Trois sauts à moins de cinquante mètres du bateau. La saison commence bien.",
-    media: { emoji: "🐋", couleur: "from-blue-500 to-indigo-800", ratio: "16/9" },
-    reactions: 126,
-    commentaires: 23,
-  },
-];
 
 export const PLACES: PlaceApercu[] = [
   { slug: "apercu-hotel-ampefy", nom: "Bungalow vue lac", categorie: "hôtel", lieu: "Ampefy, Itasy", note: 4.6, avis: 18, prixDepuis: "85 000 Ar", unite: "la nuit, par chambre", emoji: "🛖", couleur: "from-sky-500 to-cyan-700", verifie: true },

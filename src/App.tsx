@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Bell, Bookmark, MessageCircle } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UserDataProvider } from "@/contexts/UserDataContext";
@@ -24,7 +23,10 @@ const Publier = lazy(() => import("./pages/Publier"));
 const PagePro = lazy(() => import("./pages/PagePro"));
 const EspacePro = lazy(() => import("./pages/EspacePro"));
 const Parametres = lazy(() => import("./pages/Parametres"));
-const EcranSimple = lazy(() => import("./pages/EcranSimple"));
+const Favoris = lazy(() => import("./pages/Favoris"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Profil = lazy(() => import("./pages/Profil"));
 const Mentions = lazy(() => import("./pages/Mentions"));
 const Confidentialite = lazy(() => import("./pages/Confidentialite"));
 const Cgu = lazy(() => import("./pages/Cgu"));
@@ -81,39 +83,10 @@ function Shell() {
       <Route path="/p/:slug" element={<PagePro />} />
       <Route path="/pro" element={<EspacePro />} />
       <Route path="/parametres" element={<Parametres />} />
-      <Route
-        path="/favoris"
-        element={
-          <EcranSimple
-            titre="Favoris"
-            icone={Bookmark}
-            vide="Aucun favori pour le moment"
-            detail="Vous pourrez enregistrer les hôtels, restaurants et circuits qui vous intéressent, et les regrouper en carnets de voyage."
-          />
-        }
-      />
-      <Route
-        path="/messages"
-        element={
-          <EcranSimple
-            titre="Messages"
-            icone={MessageCircle}
-            vide="Aucune conversation"
-            detail="Vous pourrez écrire directement aux établissements — demander une disponibilité, un devis, une table — et suivre leurs réponses ici."
-          />
-        }
-      />
-      <Route
-        path="/notifications"
-        element={
-          <EcranSimple
-            titre="Notifications"
-            icone={Bell}
-            vide="Aucune notification"
-            detail="Réponses à vos messages, nouvelles publications des pages que vous suivez, alertes de prix sur vos destinations favorites."
-          />
-        }
-      />
+      <Route path="/favoris" element={<Favoris />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="/notifications" element={<Notifications />} />
+      <Route path="/user/:id" element={<Profil />} />
       <Route path="/mentions" element={<Mentions />} />
       <Route path="/confidentialite" element={<Confidentialite />} />
       <Route path="/cgu" element={<Cgu />} />

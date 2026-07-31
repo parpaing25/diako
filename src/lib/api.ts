@@ -1,0 +1,393 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+
+/**
+ * Couche d'accès aux données — LE seul endroit qui parle à la base.
+ *
+ * Règles du projet appliquées ici :
+ *  · jamais de select('*') — les colonnes sont énumérées ;
+ *  · jamais de .single() en écriture (« Cannot coerce the result to a single
+ *    JSON object ») : on utilise .select('id').maybeSingle() ;
+ *  · pagination par CURSEUR, jamais par offset ;
+ *  · profiles se filtre par `id`, jamais par un `user_id` (il n'existe pas).
+ */
+
+/* ── Types du fil ──────────────────────────────────────────────────────── */
+
+export interface Media {
+  url: string;
+  w?: number;
+  h?: number;
+}
+
+export interface AuteurPost {
+  id: string;
+  name: string | null;
+  avatar: string | null;
+  verification: string;
+  account_type: string;
+}
+
+export interface Post {
+  id: string;
+  kind: string;
+  body: string | null;
+  media: Media[];
+  place: string | null;
+  dish: string | null;
+  page_name: string | null;
+  created_at: string;
+  reactions_count: number;
+  comments_count: number;
+  saves_count: number;
+  author: AuteurPost;
+  ma_reaction: string | null;
+  enregistre: boolean;
+}
+
+/* ── Le fil ────────────────────────────────────────────────────────────── */
+
+/** Une page du fil. `curseur` = created_at du dernier post reçu. */
+export async function chargerFeed(curseur?: string | null, limite = 10): Promise<Post[]> {
+  const { data, error } = await supabase.rpc("get_feed", {
+    p_curseur: curseur ?? null,
+    p_limite: limite,
+  });
+  if (error) throw error;
+  return (data as unknown as Post[]) ?? [];
+}
+
+/* ── Publier ───────────────────────────────────────────────────────────── */
+
+export async function publier(entree: {
+  kind: string;
+  body: string;
+  media?: Media[];
+  place?: string | null;
+  dish?: string | null;
+}): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+
+  // ⚠ .select('id') et non .single() : le second lève « Cannot coerce the
+  // result to a single JSON object » dès que la ligne n'est pas renvoyée.
+  const { data, error } = await supabase
+    .from("posts")
+    .insert({
+      author_id: user.id,
+      kind: entree.kind,
+      body: entree.body.trim() || null,
+      media: (entree.media ?? []) as unknown as Json,
+      place: entree.place || null,
+      dish: entree.dish || null,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("La publication n'a pas pu être enregistrée.");
+  return data.id;
+}
+
+export async function supprimerPost(id: string) {
+  const { error } = await supabase.from("posts").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ── Réactions ─────────────────────────────────────────────────────────── */
+
+/** Bascule la réaction. Renvoie le type courant, ou null si retirée. */
+export async function basculerReaction(postId: string, type = "jaime"): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+
+  const { data: existante } = await supabase
+    .from("reactions")
+    .select("id,type")
+    .eq("post_id", postId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existante) {
+    if (existante.type === type) {
+      await supabase.from("reactions").delete().eq("id", existante.id);
+      return null;
+    }
+    await supabase.from("reactions").update({ type }).eq("id", existante.id);
+    return type;
+  }
+
+  const { error } = await supabase
+    .from("reactions")
+    .insert({ post_id: postId, user_id: user.id, type });
+  if (error) throw error;
+  return type;
+}
+
+/* ── Favoris ───────────────────────────────────────────────────────────── */
+
+export async function basculerFavori(postId: string, actuel: boolean): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+
+  if (actuel) {
+    await supabase.from("saves").delete().eq("post_id", postId).eq("user_id", user.id);
+    return false;
+  }
+  const { error } = await supabase.from("saves").insert({ post_id: postId, user_id: user.id });
+  if (error) throw error;
+  return true;
+}
+
+export async function mesFavoris(): Promise<Post[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: ids } = await supabase
+    .from("saves")
+    .select("post_id")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (!ids?.length) return [];
+  const liste = ids.map((r) => r.post_id);
+
+  const { data } = await supabase
+    .from("posts")
+    .select(
+      "id,kind,body,media,place,dish,page_name,created_at,reactions_count,comments_count,saves_count,author_id,profiles!posts_author_id_fkey(id,display_name,avatar_url,verification,account_type)"
+    )
+    .in("id", liste)
+    .eq("status", "published");
+
+  type Ligne = {
+    id: string; kind: string; body: string | null; media: unknown;
+    place: string | null; dish: string | null; page_name: string | null;
+    created_at: string; reactions_count: number; comments_count: number;
+    saves_count: number; author_id: string;
+    profiles: { id: string; display_name: string | null; avatar_url: string | null; verification: string; account_type: string } | null;
+  };
+
+  return ((data ?? []) as unknown as Ligne[]).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    body: r.body,
+    media: (r.media as Media[]) ?? [],
+    place: r.place,
+    dish: r.dish,
+    page_name: r.page_name,
+    created_at: r.created_at,
+    reactions_count: r.reactions_count,
+    comments_count: r.comments_count,
+    saves_count: r.saves_count,
+    author: {
+      id: r.profiles?.id ?? r.author_id,
+      name: r.profiles?.display_name ?? null,
+      avatar: r.profiles?.avatar_url ?? null,
+      verification: r.profiles?.verification ?? "none",
+      account_type: r.profiles?.account_type ?? "voyageur",
+    },
+    ma_reaction: null,
+    enregistre: true,
+  }));
+}
+
+/* ── Commentaires ──────────────────────────────────────────────────────── */
+
+export interface Commentaire {
+  id: string;
+  body: string;
+  created_at: string;
+  author_id: string;
+  auteur: { name: string | null; avatar: string | null };
+}
+
+export async function chargerCommentaires(postId: string): Promise<Commentaire[]> {
+  const { data, error } = await supabase
+    .from("comments")
+    .select("id,body,created_at,author_id,profiles!comments_author_id_fkey(display_name,avatar_url)")
+    .eq("post_id", postId)
+    .eq("status", "published")
+    .order("created_at", { ascending: true })
+    .limit(100);
+  if (error) throw error;
+
+  type Ligne = {
+    id: string; body: string; created_at: string; author_id: string;
+    profiles: { display_name: string | null; avatar_url: string | null } | null;
+  };
+  return ((data ?? []) as unknown as Ligne[]).map((c) => ({
+    id: c.id,
+    body: c.body,
+    created_at: c.created_at,
+    author_id: c.author_id,
+    auteur: { name: c.profiles?.display_name ?? null, avatar: c.profiles?.avatar_url ?? null },
+  }));
+}
+
+export async function commenter(postId: string, body: string) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+  const { error } = await supabase
+    .from("comments")
+    .insert({ post_id: postId, author_id: user.id, body: body.trim() });
+  if (error) throw error;
+}
+
+/* ── Abonnements ───────────────────────────────────────────────────────── */
+
+export async function basculerAbonnement(cible: string, actuel: boolean): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+  if (user.id === cible) throw new Error("Vous ne pouvez pas vous suivre vous-même.");
+
+  if (actuel) {
+    await supabase.from("follows").delete().eq("follower_id", user.id).eq("target_id", cible);
+    return false;
+  }
+  const { error } = await supabase
+    .from("follows")
+    .insert({ follower_id: user.id, target_id: cible });
+  if (error) throw error;
+  return true;
+}
+
+/* ── Notifications ─────────────────────────────────────────────────────── */
+
+export async function chargerNotifications(limite = 30) {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id,type,title,message,data,read,created_at")
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function compterNonLues(): Promise<number> {
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("read", false);
+  return count ?? 0;
+}
+
+export async function toutMarquerLu() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
+}
+
+/* ── Messagerie ────────────────────────────────────────────────────────── */
+
+export interface Conversation {
+  id: string;
+  last_at: string;
+  autre: { id: string; name: string | null; avatar: string | null };
+  dernier: string | null;
+}
+
+export async function mesConversations(): Promise<Conversation[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: convs } = await supabase
+    .from("conversations")
+    .select("id,a_id,b_id,last_at")
+    .order("last_at", { ascending: false })
+    .limit(30);
+  if (!convs?.length) return [];
+
+  const autres = convs.map((c) => (c.a_id === user.id ? c.b_id : c.a_id));
+
+  // Une seule requête pour tous les profils, et une seule pour tous les
+  // derniers messages : sinon c'est un N+1 (le piège corrigé sur Fonenako).
+  const [{ data: profils }, { data: derniers }] = await Promise.all([
+    supabase.from("profiles").select("id,display_name,avatar_url").in("id", autres),
+    supabase
+      .from("messages")
+      .select("conv_id,body,created_at")
+      .in("conv_id", convs.map((c) => c.id))
+      .order("created_at", { ascending: false })
+      .limit(200),
+  ]);
+
+  const parId = new Map((profils ?? []).map((p) => [p.id, p]));
+  const dernierParConv = new Map<string, string>();
+  for (const m of derniers ?? []) {
+    if (!dernierParConv.has(m.conv_id)) dernierParConv.set(m.conv_id, m.body);
+  }
+
+  return convs.map((c) => {
+    const autreId = c.a_id === user.id ? c.b_id : c.a_id;
+    const p = parId.get(autreId);
+    return {
+      id: c.id,
+      last_at: c.last_at,
+      autre: { id: autreId, name: p?.display_name ?? null, avatar: p?.avatar_url ?? null },
+      dernier: dernierParConv.get(c.id) ?? null,
+    };
+  });
+}
+
+export async function ouvrirConversation(autre: string): Promise<string> {
+  const { data, error } = await supabase.rpc("ouvrir_conversation", { p_autre: autre });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function chargerMessages(convId: string) {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("id,conv_id,sender_id,body,read,created_at")
+    .eq("conv_id", convId)
+    .order("created_at", { ascending: true })
+    .limit(200);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function envoyerMessage(convId: string, body: string) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+  const { error } = await supabase
+    .from("messages")
+    .insert({ conv_id: convId, sender_id: user.id, body: body.trim() });
+  if (error) throw error;
+}
+
+/* ── Modération ────────────────────────────────────────────────────────── */
+
+export async function signaler(
+  cible: "post" | "comment" | "profile" | "message",
+  id: string,
+  raison: string
+) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+  const { error } = await supabase
+    .from("reports")
+    .insert({ target_type: cible, target_id: id, reporter_id: user.id, reason: raison });
+  if (error && error.code !== "23505") throw error; // 23505 = déjà signalé
+}

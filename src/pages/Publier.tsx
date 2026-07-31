@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Image, MapPin, Sparkles, UtensilsCrossed } from "lucide-react";
+import { Image, Loader2, MapPin, Sparkles, UtensilsCrossed, X } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useAuth } from "@/contexts/AuthContext";
-import { BandeauApercu } from "@/components/BandeauApercu";
+import { compressImage } from "@/lib/imageCompression";
+import { uploadToO2Switch } from "@/lib/o2switchUpload";
+import { publier, type Media } from "@/lib/api";
 import { DESTINATIONS, PLATS } from "@/data/apercu";
 
 const TYPES = [
@@ -15,22 +17,29 @@ const TYPES = [
   { cle: "avis", label: "Avis", emoji: "⭐" },
 ];
 
+const MAX_PHOTOS = 4;
+
 /**
- * Publier — l'assistant de publication.
+ * Publier — pleinement fonctionnel.
  *
- * Le point important, visible ici : les trois étiquettes lieu / établissement /
- * plat. Ce sont elles qui feront remonter la publication sur la fiche de la
- * destination, sur celle de l'établissement et sur celle du plat. C'est le
- * moteur du produit, pas une décoration.
+ * Les photos sont compressées DANS LE NAVIGATEUR (0,6 Mo / 1600 px) puis
+ * envoyées sur o2switch, jamais sur Supabase Storage : c'est ce seul point qui
+ * fait la différence entre ~70 Ko et ~1,2 Mo d'egress par visite. Le serveur
+ * génère une vignette WebP à côté de l'original.
  */
 export default function Publier() {
   useDocumentTitle("Publier");
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const [type, setType] = useState("recit");
   const [texte, setTexte] = useState("");
   const [lieu, setLieu] = useState("");
   const [plat, setPlat] = useState("");
+  const [photos, setPhotos] = useState<Media[]>([]);
+  const [envoiPhoto, setEnvoiPhoto] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (!user) {
     return (
@@ -53,6 +62,67 @@ export default function Publier() {
     );
   }
 
+  async function ajouterPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const fichiers = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!fichiers.length) return;
+
+    const place = MAX_PHOTOS - photos.length;
+    if (place <= 0) {
+      toast.error(`${MAX_PHOTOS} photos au maximum.`);
+      return;
+    }
+
+    setEnvoiPhoto(true);
+    try {
+      for (const f of fichiers.slice(0, place)) {
+        if (!f.type.startsWith("image/")) continue;
+        const compresse = await compressImage(f);
+        const res = await uploadToO2Switch(compresse, "posts");
+        if (!res.success || !res.url) {
+          toast.error(res.error || "Une photo n'a pas pu être envoyée.");
+          continue;
+        }
+        // On mesure la taille pour réserver le ratio à l'affichage (anti-saut).
+        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+          const img = new window.Image();
+          img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+          img.onerror = () => resolve({ w: 1200, h: 900 });
+          img.src = URL.createObjectURL(compresse);
+        });
+        setPhotos((p) => [...p, { url: res.url as string, w: dims.w, h: dims.h }]);
+      }
+    } catch {
+      toast.error("L'envoi des photos a échoué.");
+    } finally {
+      setEnvoiPhoto(false);
+    }
+  }
+
+  async function envoyer() {
+    if (envoi) return;
+    if (!texte.trim() && photos.length === 0) {
+      toast.error("Écrivez quelque chose ou ajoutez une photo.");
+      return;
+    }
+    setEnvoi(true);
+    try {
+      await publier({
+        kind: type,
+        body: texte,
+        media: photos,
+        place: lieu ? DESTINATIONS.find((d) => d.slug === lieu)?.nom ?? lieu : null,
+        dish: plat || null,
+      });
+      toast.success("Publié !");
+      navigate("/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "La publication a échoué.");
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-5">
       <h1 className="text-2xl font-semibold">Publier</h1>
@@ -60,11 +130,7 @@ export default function Publier() {
         Racontez, partagez une adresse, signalez un bon plan.
       </p>
 
-      <div className="mt-5">
-        <BandeauApercu quoi="Le formulaire est complet mais n'enregistre encore rien : le fil s'ouvrira au moment prévu." />
-      </div>
-
-      <fieldset>
+      <fieldset className="mt-5">
         <legend className="text-sm font-medium">Type de publication</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           {TYPES.map((t) => (
@@ -92,20 +158,61 @@ export default function Publier() {
           rows={6}
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
+          maxLength={5000}
           placeholder="Comment s'y rendre, combien ça coûte, ce qu'il faut savoir…"
           className="w-full rounded-xl border border-input bg-background p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
-        <p className="mt-1 text-xs text-muted-foreground">{texte.length} caractères</p>
+        <p className="mt-1 text-xs text-muted-foreground">{texte.length} / 5000</p>
       </div>
+
+      {photos.length > 0 && (
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {photos.map((p, i) => (
+            <div key={p.url} className="relative overflow-hidden rounded-xl bg-muted">
+              <img src={p.url} alt="" className="aspect-square w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setPhotos((l) => l.filter((_, j) => j !== i))}
+                aria-label="Retirer cette photo"
+                className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <button
         type="button"
-        onClick={() => toast("Bientôt disponible", { description: "L'envoi de photos utilisera la compression dans le navigateur, déjà en place." })}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-8 text-sm text-muted-foreground hover:bg-muted"
+        onClick={() => fileRef.current?.click()}
+        disabled={envoiPhoto || photos.length >= MAX_PHOTOS}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-8 text-sm text-muted-foreground hover:bg-muted disabled:opacity-60"
       >
-        <Image className="h-5 w-5" aria-hidden="true" />
-        Ajouter des photos
+        {envoiPhoto ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            Envoi en cours…
+          </>
+        ) : (
+          <>
+            <Image className="h-5 w-5" aria-hidden="true" />
+            Ajouter des photos ({photos.length}/{MAX_PHOTOS})
+          </>
+        )}
       </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => void ajouterPhotos(e)}
+      />
+      <p className="mt-1 text-xs text-muted-foreground">
+        Les photos sont compressées dans votre navigateur avant l'envoi — pour
+        ménager votre forfait.
+      </p>
 
       <div className="mt-5 space-y-4">
         <div>
@@ -145,9 +252,8 @@ export default function Publier() {
             ))}
           </select>
           <p className="mt-1 text-xs text-muted-foreground">
-            Taguer un lieu, un établissement ou un plat fait remonter votre
-            publication sur leur fiche. C'est ce qui rend les bonnes adresses
-            trouvables.
+            Taguer un lieu ou un plat fait remonter votre publication sur leur
+            fiche. C'est ce qui rend les bonnes adresses trouvables.
           </p>
         </div>
       </div>
@@ -155,14 +261,12 @@ export default function Publier() {
       <div className="mt-6 flex gap-3">
         <button
           type="button"
-          onClick={() =>
-            toast("Publication non enregistrée", {
-              description: "Le fil ouvrira ses publications prochainement. Rien n'a été perdu, mais rien n'a été envoyé.",
-            })
-          }
-          className="h-12 flex-1 rounded-xl bg-primary font-medium text-primary-foreground"
+          onClick={() => void envoyer()}
+          disabled={envoi || envoiPhoto}
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary font-medium text-primary-foreground disabled:opacity-60"
         >
-          Publier
+          {envoi && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {envoi ? "Publication…" : "Publier"}
         </button>
         <button
           type="button"

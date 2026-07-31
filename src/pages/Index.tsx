@@ -3,11 +3,10 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { DiakoHero } from "@/components/DiakoHero";
 import { Composer } from "@/components/Composer";
-import { PostCard } from "@/components/PostCard";
+import { Feed } from "@/components/Feed";
 import { PlaceCard } from "@/components/PlaceCard";
-import { BandeauApercu } from "@/components/BandeauApercu";
 import { categorie as trouveCategorie } from "@/lib/categories";
-import { PLACES, POSTS } from "@/data/apercu";
+import { PLACES } from "@/data/apercu";
 
 /**
  * Accueil — le fil.
@@ -42,15 +41,14 @@ export default function Index() {
           </div>
         )}
 
-        <div className="mx-4 md:mx-0">
-          <BandeauApercu quoi="Voici à quoi ressemblera le fil quand les voyageurs et les établissements publieront." />
-        </div>
-
         <div className="space-y-0 md:space-y-4">
           <Composer />
-          {POSTS.map((p) => (
-            <PostCard key={p.id} post={p} />
-          ))}
+        </div>
+
+        {/* Le fil RÉEL — il affiche les vraies publications, et un état vide
+            honnête tant que personne n'a publié. */}
+        <div className="mt-0 md:mt-4">
+          <Feed />
         </div>
 
         {/* Établissements — format compact, deux formats assumés */}

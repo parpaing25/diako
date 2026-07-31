@@ -48,10 +48,10 @@ export function RightRail() {
           maintenant, votre page sera prête dès l'ouverture.
         </p>
         <Link
-          to="/auth"
+          to="/pro"
           className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
         >
-          Créer mon compte
+          Découvrir l'espace pro
         </Link>
       </div>
     </aside>

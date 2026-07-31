@@ -1,51 +1,53 @@
-import { Compass, Home, Plus, Search, User, type LucideIcon } from "lucide-react";
+import {
+  Bell,
+  Bookmark,
+  Briefcase,
+  Compass,
+  Home,
+  MessageCircle,
+  Plus,
+  Search,
+  Settings,
+  User,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * Source UNIQUE de la navigation.
- * Partagée par la barre du bas (mobile), le rail latéral (desktop) et le pied
- * de page. Sur Fonenako, les libellés vivaient à trois endroits et divergeaient :
- * la barre disait « Chercher », la page s'appelait « Recherche ».
- *
- * `pret` dit la vérité : false = l'écran existe mais la fonctionnalité n'est pas
- * encore livrée. On affiche alors une pastille « bientôt » AVANT le clic, plutôt
- * que d'envoyer le visiteur dans un cul-de-sac sans prévenir.
+ * Partagée par la barre du bas, le rail latéral, le menu mobile et le pied de
+ * page. Sur Fonenako les libellés vivaient à trois endroits et avaient
+ * divergé : la barre disait « Chercher », la page s'appelait « Recherche ».
  */
 export interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
+  /** false = l'écran existe et est dessiné, mais rien n'est encore enregistré. */
   pret: boolean;
-  /** Uniquement pour l'écran d'attente : ce que fera vraiment cette page. */
   promesse?: string;
 }
 
-export const NAV_ITEMS: NavItem[] = [
+/** Les 5 emplacements de la barre du bas (mobile). « Publier » au centre. */
+export const NAV_PRINCIPAL: NavItem[] = [
   { to: "/", label: "Accueil", icon: Home, pret: true },
-  {
-    to: "/explorer",
-    label: "Explorer",
-    icon: Compass,
-    pret: false,
-    promesse:
-      "Parcourir Madagascar destination par destination : Ampefy, Nosy Be, Andasibe, Sainte-Marie… avec la meilleure saison pour y aller, comment s'y rendre et combien de temps de route.",
-  },
-  {
-    to: "/publier",
-    label: "Publier",
-    icon: Plus,
-    pret: false,
-    promesse:
-      "Raconter un voyage, partager une photo ou un bon plan, et taguer le lieu, l'établissement et le plat — c'est ce qui alimentera le fil.",
-  },
-  {
-    to: "/recherche",
-    label: "Rechercher",
-    icon: Search,
-    pret: false,
-    promesse:
-      "Poser une vraie question — « un hôtel à Ampefy », « où manger du ravitoto » — et obtenir une réponse directe : les établissements, leurs tarifs et le prix du plat chez chacun.",
-  },
+  { to: "/explorer", label: "Explorer", icon: Compass, pret: false },
+  { to: "/publier", label: "Publier", icon: Plus, pret: false },
+  { to: "/recherche", label: "Rechercher", icon: Search, pret: false },
+  { to: "/compte", label: "Compte", icon: User, pret: true },
+];
+
+/** Le rail desktop et le menu mobile : tout le produit. */
+export const NAV_COMPLET: NavItem[] = [
+  { to: "/", label: "Accueil", icon: Home, pret: true },
+  { to: "/explorer", label: "Explorer", icon: Compass, pret: false },
+  { to: "/recherche", label: "Rechercher", icon: Search, pret: false },
+  { to: "/publier", label: "Publier", icon: Plus, pret: false },
+  { to: "/favoris", label: "Favoris", icon: Bookmark, pret: false },
+  { to: "/messages", label: "Messages", icon: MessageCircle, pret: false },
+  { to: "/notifications", label: "Notifications", icon: Bell, pret: false },
+  { to: "/pro", label: "Espace pro", icon: Briefcase, pret: false },
   { to: "/compte", label: "Mon compte", icon: User, pret: true },
+  { to: "/parametres", label: "Paramètres", icon: Settings, pret: true },
 ];
 
 /** Ce qui est réellement en construction, affiché tel quel aux visiteurs. */

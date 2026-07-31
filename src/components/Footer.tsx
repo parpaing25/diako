@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { NAV_ITEMS } from "@/lib/nav";
+import { NAV_COMPLET } from "@/lib/nav";
 
 const ANNEE = 2026;
 
@@ -14,7 +14,7 @@ const ANNEE = 2026;
 export function Footer() {
   return (
     <footer className="mt-16 border-t border-border bg-secondary/40">
-      <div className="mx-auto grid max-w-[1180px] gap-8 px-4 py-10 md:grid-cols-3">
+      <div className="mx-auto grid max-w-[1240px] gap-8 px-4 py-10 md:grid-cols-3">
         <div>
           <p className="text-lg font-bold text-primary">Diako</p>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -30,7 +30,7 @@ export function Footer() {
         <div>
           <h2 className="text-sm font-semibold">Le site</h2>
           <ul className="mt-3 space-y-2 text-sm">
-            {NAV_ITEMS.map(({ to, label, pret }) => (
+            {NAV_COMPLET.slice(0, 6).map(({ to, label, pret }) => (
               <li key={to}>
                 <Link to={to} className="text-muted-foreground hover:text-foreground">
                   {label}
@@ -75,7 +75,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-border">
-        <p className="mx-auto max-w-[1180px] px-4 py-4 text-xs text-muted-foreground">
+        <p className="mx-auto max-w-[1240px] px-4 py-4 text-xs text-muted-foreground">
           © {ANNEE} Diako — Antananarivo, Madagascar.
         </p>
       </div>

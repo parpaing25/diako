@@ -1,24 +1,30 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Compass, Plus, Search } from "lucide-react";
+import { Bell, Bookmark, MessageCircle } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UserDataProvider } from "@/contexts/UserDataContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { RightRail } from "@/components/RightRail";
 import { Footer } from "@/components/Footer";
-import { NAV_ITEMS } from "@/lib/nav";
 import { trackView } from "@/lib/pageviews";
 
 import Index from "./pages/Index";
 const Auth = lazy(() => import("./pages/Auth"));
 const Bienvenue = lazy(() => import("./pages/Bienvenue"));
 const Compte = lazy(() => import("./pages/Compte"));
-const Attente = lazy(() => import("./pages/Attente"));
+const Explorer = lazy(() => import("./pages/Explorer"));
+const Recherche = lazy(() => import("./pages/Recherche"));
+const Publier = lazy(() => import("./pages/Publier"));
+const PagePro = lazy(() => import("./pages/PagePro"));
+const EspacePro = lazy(() => import("./pages/EspacePro"));
+const Parametres = lazy(() => import("./pages/Parametres"));
+const EcranSimple = lazy(() => import("./pages/EcranSimple"));
 const Mentions = lazy(() => import("./pages/Mentions"));
 const Confidentialite = lazy(() => import("./pages/Confidentialite"));
 const Cgu = lazy(() => import("./pages/Cgu"));
@@ -30,8 +36,6 @@ const queryClient = new QueryClient({
   },
 });
 
-const promesse = (to: string) => NAV_ITEMS.find((i) => i.to === to)?.promesse ?? "";
-
 function PageLoader() {
   return (
     <div className="space-y-3 px-4 py-6">
@@ -42,7 +46,7 @@ function PageLoader() {
   );
 }
 
-/** Audience anonyme, retour en haut, et focus rendu au contenu à chaque page. */
+/** Audience anonyme, retour en haut, focus rendu au contenu à chaque page. */
 function RouteEffects() {
   const { pathname } = useLocation();
   const [annonce, setAnnonce] = useState("");
@@ -50,8 +54,6 @@ function RouteEffects() {
   useEffect(() => {
     trackView(pathname);
     window.scrollTo({ top: 0 });
-    // Sans cela, dans une SPA, le clavier et les lecteurs d'écran restent
-    // bloqués en haut du header sticky à chaque navigation.
     document.getElementById("contenu")?.focus({ preventScroll: true });
     setAnnonce(document.title);
   }, [pathname]);
@@ -73,17 +75,44 @@ function Shell() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/bienvenue" element={<Bienvenue />} />
       <Route path="/compte" element={<Compte />} />
+      <Route path="/explorer" element={<Explorer />} />
+      <Route path="/recherche" element={<Recherche />} />
+      <Route path="/publier" element={<Publier />} />
+      <Route path="/p/:slug" element={<PagePro />} />
+      <Route path="/pro" element={<EspacePro />} />
+      <Route path="/parametres" element={<Parametres />} />
       <Route
-        path="/explorer"
-        element={<Attente titre="Explorer Madagascar" promesse={promesse("/explorer")} icone={Compass} />}
+        path="/favoris"
+        element={
+          <EcranSimple
+            titre="Favoris"
+            icone={Bookmark}
+            vide="Aucun favori pour le moment"
+            detail="Vous pourrez enregistrer les hôtels, restaurants et circuits qui vous intéressent, et les regrouper en carnets de voyage."
+          />
+        }
       />
       <Route
-        path="/recherche"
-        element={<Attente titre="Rechercher" promesse={promesse("/recherche")} icone={Search} />}
+        path="/messages"
+        element={
+          <EcranSimple
+            titre="Messages"
+            icone={MessageCircle}
+            vide="Aucune conversation"
+            detail="Vous pourrez écrire directement aux établissements — demander une disponibilité, un devis, une table — et suivre leurs réponses ici."
+          />
+        }
       />
       <Route
-        path="/publier"
-        element={<Attente titre="Publier" promesse={promesse("/publier")} icone={Plus} />}
+        path="/notifications"
+        element={
+          <EcranSimple
+            titre="Notifications"
+            icone={Bell}
+            vide="Aucune notification"
+            detail="Réponses à vos messages, nouvelles publications des pages que vous suivez, alertes de prix sur vos destinations favorites."
+          />
+        }
       />
       <Route path="/mentions" element={<Mentions />} />
       <Route path="/confidentialite" element={<Confidentialite />} />
@@ -118,12 +147,12 @@ function Shell() {
         <Header />
       </ErrorBoundary>
 
-      <div className="mx-auto flex w-full max-w-[1180px] flex-1 gap-6 md:px-4">
+      <div className="mx-auto flex w-full max-w-[1240px] flex-1 gap-6 lg:px-4">
         <SideNav />
         <main
           id="contenu"
           tabIndex={-1}
-          className="dk-has-bottomnav min-w-0 flex-1 outline-none md:pb-0"
+          className="dk-has-bottomnav min-w-0 flex-1 outline-none lg:pb-0"
         >
           <ErrorBoundary key={pathname}>
             <Suspense fallback={<PageLoader />}>{routes}</Suspense>
@@ -141,14 +170,16 @@ function Shell() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <UserDataProvider>
-            <Shell />
-            <Toaster position="top-center" richColors />
-          </UserDataProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <UserDataProvider>
+              <Shell />
+              <Toaster position="top-center" richColors />
+            </UserDataProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

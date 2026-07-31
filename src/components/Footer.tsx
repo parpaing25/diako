@@ -65,6 +65,11 @@ export function Footer() {
                 Confidentialité
               </Link>
             </li>
+            <li>
+              <Link to="/cgu" className="text-muted-foreground hover:text-foreground">
+                Conditions d'utilisation
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

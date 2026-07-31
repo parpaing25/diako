@@ -21,6 +21,7 @@ const Compte = lazy(() => import("./pages/Compte"));
 const Attente = lazy(() => import("./pages/Attente"));
 const Mentions = lazy(() => import("./pages/Mentions"));
 const Confidentialite = lazy(() => import("./pages/Confidentialite"));
+const Cgu = lazy(() => import("./pages/Cgu"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -86,6 +87,7 @@ function Shell() {
       />
       <Route path="/mentions" element={<Mentions />} />
       <Route path="/confidentialite" element={<Confidentialite />} />
+      <Route path="/cgu" element={<Cgu />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

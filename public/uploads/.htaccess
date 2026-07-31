@@ -1,0 +1,23 @@
+# ============================================================================
+# Dossier des images téléversées — AUCUNE exécution de code ici.
+#
+# C'est très exactement la faille trouvée sur l'ancien backend/ de Diako-V2 :
+# `upload.php` conservait l'extension fournie par le client, si bien qu'un
+# fichier .php déguisé en image devenait exécutable — donc une prise de
+# contrôle du compte o2switch qui héberge AUSSI fonenako.mg.
+#
+# Double protection : le endpoint contrôle les magic bytes ET le serveur
+# refuse d'exécuter quoi que ce soit dans ce dossier.
+# ============================================================================
+
+Options -Indexes
+
+<FilesMatch "\.(php|php\d|phtml|phar|cgi|pl|py|sh|htaccess)$">
+  Require all denied
+</FilesMatch>
+
+# Ceinture et bretelles : on force le type de contenu en statique.
+<IfModule mod_mime.c>
+  RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phar
+  RemoveType .php .php3 .php4 .php5 .php7 .php8 .phtml .phar
+</IfModule>

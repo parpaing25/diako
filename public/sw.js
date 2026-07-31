@@ -103,9 +103,8 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req).catch(() =>
         caches
-          .match("index.html")
-          .then((hit) => hit || caches.match("./index.html"))
-          .then((hit) => hit || caches.match("offline.html"))
+          .match("/index.html")
+          .then((hit) => hit || caches.match("/offline.html"))
           .then((hit) => hit || new Response("Hors ligne", { status: 503 }))
       )
     );
@@ -145,17 +144,17 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Diako", {
       body: data.body || "",
-      icon: "./media/favicon.png",
-      badge: "./media/favicon.png",
+      icon: "/media/favicon.png",
+      badge: "/media/favicon.png",
       tag: data.tag || "diako",
-      data: { url: data.url || "./" },
+      data: { url: data.url || "/" },
     })
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || "./";
+  const target = (event.notification.data && event.notification.data.url) || "/";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const client of list) {

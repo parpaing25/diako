@@ -16,8 +16,13 @@ import { VitePWA } from "vite-plugin-pwa";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default defineConfig(({ mode }) => ({
-  // Sous-domaine o2switch => chemins relatifs obligatoires.
-  base: "./",
+  // ⚠ base ABSOLUE, et c'est important.
+  // Diako-V2 utilisait base:'./' (chemins relatifs). Ça fonctionne tant que
+  // toutes les routes n'ont qu'un seul niveau, mais dès qu'on sert une route
+  // imbriquée — /p/mon-hotel au Lot 2 — le navigateur résout « ./assets/x »
+  // depuis /p/ et demande /p/assets/x => 404, page blanche.
+  // Le site est servi à la RACINE du sous-domaine : "/" est donc correct.
+  base: "/",
   server: { host: "::", port: 8080 },
   plugins: [
     react(),
@@ -51,12 +56,12 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#0E7C86",
         background_color: "#ffffff",
         display: "standalone",
-        scope: "./",
-        start_url: "./",
+        scope: "/",
+        start_url: "/",
         orientation: "portrait-primary",
         icons: [
-          { src: "media/diako-logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
-          { src: "media/favicon.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/media/diako-logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "/media/favicon.png", sizes: "192x192", type: "image/png", purpose: "any" },
         ],
       },
       injectManifest: {

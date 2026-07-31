@@ -11,22 +11,22 @@
       content="Trouvez où dormir, où manger et avec qui partir à Madagascar. Hôtels, restaurants et agences de voyage, avec leurs vrais tarifs."
     />
 
-    <link rel="icon" type="image/png" href="./media/favicon.png" />
-    <link rel="apple-touch-icon" href="./media/diako-logo.png" />
+    <link rel="icon" type="image/png" href="/media/favicon.png" />
+    <link rel="apple-touch-icon" href="/media/diako-logo.png" />
 
     <!-- Police auto-hébergée : préchargée, aucun appel externe. -->
     <link
       rel="preload"
       as="font"
       type="font/woff2"
-      href="./fonts/inter-latin-var-v20.woff2"
+      href="/fonts/inter-latin-var-v20.woff2"
       crossorigin
     />
 
     <!-- app-init.js applique le CSS préchargé AVANT le montage de React et
          enregistre le service worker de façon retardée. Priorité haute :
          en simple `defer`, Chrome le classait « Low » et il arrivait tard. -->
-    <link rel="preload" as="script" href="./app-init.js" />
+    <link rel="preload" as="script" href="/app-init.js" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Diako — Voyage &amp; tourisme à Madagascar" />
@@ -34,7 +34,7 @@
       property="og:description"
       content="Trouvez où dormir, où manger et avec qui partir à Madagascar."
     />
-    <meta property="og:image" content="./media/diako-logo.png" />
+    <meta property="og:image" content="/media/diako-logo.png" />
     <meta name="twitter:card" content="summary_large_image" />
 
     <style>
@@ -130,7 +130,7 @@
 
     <div id="root"></div>
 
-    <script src="./app-init.js"></script>
+    <script src="/app-init.js"></script>
     <script type="module" src="/src/main.tsx"></script>
     <noscript>
       <p style="padding: 24px; font-family: sans-serif">

@@ -23,15 +23,10 @@ Options -Indexes
   Require all denied
 </FilesMatch>
 
-# Aucune exécution de PHP dans les dossiers d'images téléversées.
-# C'est exactement la faille qui a été trouvée sur l'ancien backend/ :
-# un .php déguisé en image = exécution de code sur le compte o2switch.
-<Directory "uploads">
-  php_flag engine off
-  <FilesMatch "\.(php|php\d|phtml|phar)$">
-    Require all denied
-  </FilesMatch>
-</Directory>
+# ⚠ NE PAS utiliser <Directory> ici : cette directive est INTERDITE dans un
+#   .htaccess (elle n'est valable qu'en configuration serveur) et provoque un
+#   500 sur tout le site. Idem pour php_flag, qui n'existe pas sous PHP-FPM.
+#   La protection des dossiers d'images est faite par public/uploads/.htaccess.
 
 # ── HTTPS + apex ────────────────────────────────────────────────────────────
 <IfModule mod_rewrite.c>

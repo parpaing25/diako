@@ -36,7 +36,7 @@
 
   if ("serviceWorker" in navigator && !isLocal) {
     var register = function () {
-      navigator.serviceWorker.register("./sw.js").catch(function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {
         /* silencieux : l'absence de SW ne doit jamais casser le site */
       });
     };

@@ -156,9 +156,18 @@
         color: #3c4f53;
         max-width: 60ch;
       }
+      #dk-shell .hero .marque {
+        margin: 0 0 4px; font-size: 14px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.04em; color: var(--dk-primary);
+      }
       #dk-shell .hero .bar {
         margin-top: 24px; height: 48px; max-width: 42rem;
         border: 1px solid var(--dk-border); border-radius: 999px; background: #fff;
+      }
+      #dk-shell .apropos { margin-top: 40px; }
+      #dk-shell .apropos h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
+      #dk-shell .apropos p {
+        margin: 0 0 12px; font-size: 14px; line-height: 1.7; color: var(--dk-muted);
       }
       #dk-shell nav {
         position: fixed; left: 0; right: 0; bottom: 0;
@@ -197,13 +206,37 @@
         <div class="rail"></div>
         <div class="main">
           <div class="hero">
-            <h1>Où dormir, où manger, avec qui partir à Madagascar</h1>
+            <p class="marque">Diako</p>
+            <h1>Diako — où dormir, où manger, avec qui partir à Madagascar</h1>
             <p>
               Les hôtels, les restaurants et les agences de voyage du pays, avec
               leurs vrais tarifs, leurs menus et leurs circuits.
             </p>
             <div class="bar"></div>
           </div>
+
+          <!-- Ce texte est servi en HTML STATIQUE, donc lisible par un robot
+               qui n'exécute pas JavaScript — dont le vérificateur de l'écran de
+               consentement OAuth de Google, qui exige que la page d'accueil
+               nomme l'application et explique son objectif. React rend
+               exactement le même contenu, il n'y a donc aucun clignotement. -->
+          <section class="apropos">
+            <h2>À propos de Diako</h2>
+            <p>
+              Diako est un annuaire et un réseau social consacrés au voyage et au
+              tourisme à Madagascar. Le site réunit les hôtels, les restaurants
+              et les agences de voyage du pays, avec leurs tarifs, leurs menus et
+              leurs circuits, afin que chacun puisse trouver où dormir, où manger
+              et avec qui partir.
+            </p>
+            <p>
+              Créer un compte — par adresse e-mail ou avec Google — permet de
+              publier, d'enregistrer ses adresses favorites et de contacter les
+              établissements. Diako n'utilise votre compte Google que pour
+              connaître votre nom, votre adresse e-mail et votre photo de profil ;
+              aucune autre donnée n'est demandée et rien n'est publié en votre nom.
+            </p>
+          </section>
         </div>
       </div>
       <nav></nav>

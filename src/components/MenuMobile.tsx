@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { LogOut, Moon, Sun, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,8 +21,20 @@ export function MenuMobile({ ouvert, fermer }: { ouvert: boolean; fermer: () => 
   const { effectif, setTheme } = useTheme();
   const { pathname } = useLocation();
 
-  // Se referme à chaque navigation, sinon il reste ouvert par-dessus la page.
-  useEffect(fermer, [pathname, fermer]);
+  // Se referme à chaque NAVIGATION, et uniquement à ce moment-là.
+  // ⚠ `fermer` ne doit surtout PAS figurer dans les dépendances : le parent le
+  // recrée à chaque rendu, l'effet se redéclencherait donc immédiatement après
+  // l'ouverture et le menu se refermerait sans jamais s'afficher.
+  const fermerRef = useRef(fermer);
+  fermerRef.current = fermer;
+  const premier = useRef(true);
+  useEffect(() => {
+    if (premier.current) {
+      premier.current = false;
+      return;
+    }
+    fermerRef.current();
+  }, [pathname]);
 
   // Empêche la page de défiler derrière le tiroir.
   useEffect(() => {

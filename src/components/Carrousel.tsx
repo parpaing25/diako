@@ -1,21 +1,33 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getThumbUrl } from "@/lib/imageThumb";
 import { cn } from "@/lib/utils";
 import type { Media } from "@/lib/api";
 
 /**
- * Carrousel d'images façon Instagram.
+ * Carrousel d'images.
  *
- * Défilement natif avec accroche (scroll-snap) plutôt qu'une bibliothèque :
- * c'est le geste que le doigt attend sur mobile, ça pèse zéro kilo-octet, et
- * ça fonctionne même si le JavaScript rame sur un Android d'entrée de gamme.
+ * ⚠ QUALITÉ — on sert l'image ORIGINALE (2000 px), jamais la vignette.
+ * La vignette fait 480 px de large : affichée en plein écran sur un téléphone
+ * de 1080 px à densité 2x, elle est agrandie 4 à 5 fois et devient une bouillie.
+ * C'était la cause de la pixelisation. La vignette reste utile pour les
+ * avatars et les listes, pas pour une photo qu'on regarde.
  *
- * ⚠ Le conteneur impose un ratio FIXE (4:5, le format portrait d'Instagram) :
- * sans cela, chaque image d'une hauteur différente ferait sauter tout le fil
- * en dessous à mesure qu'elles se chargent.
+ * Défilement natif avec accroche plutôt qu'une bibliothèque : c'est le geste
+ * attendu du doigt, ça pèse zéro kilo-octet, et ça reste fluide sur un Android
+ * d'entrée de gamme.
  */
-export function Carrousel({ images, alt = "" }: { images: Media[]; alt?: string }) {
+export function Carrousel({
+  images,
+  alt = "",
+  prioritaire = false,
+  /** `couvrir` remplit le cadre (fil immersif), `contenir` montre toute l'image. */
+  ajustement = "couvrir",
+}: {
+  images: Media[];
+  alt?: string;
+  prioritaire?: boolean;
+  ajustement?: "couvrir" | "contenir";
+}) {
   const [index, setIndex] = useState(0);
   const piste = useRef<HTMLDivElement>(null);
 
@@ -38,26 +50,26 @@ export function Carrousel({ images, alt = "" }: { images: Media[]; alt?: string 
   const unique = images.length === 1;
 
   return (
-    <div className="relative -mx-4 md:mx-0 md:overflow-hidden md:rounded-xl">
+    <div className="relative h-full w-full">
       <div
         ref={piste}
         onScroll={auDefilement}
-        className="flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto overscroll-x-contain bg-muted [scrollbar-width:none] sm:aspect-square [&::-webkit-scrollbar]:hidden"
+        className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {images.map((m, i) => (
           <div key={m.url + i} className="h-full w-full shrink-0 snap-center">
             <img
-              src={getThumbUrl(m.url)}
+              src={m.url}
               alt={i === 0 ? alt : ""}
-              width={m.w || 1080}
-              height={m.h || 1350}
-              loading={i === 0 ? "eager" : "lazy"}
+              width={m.w || 1600}
+              height={m.h || 1200}
+              loading={prioritaire && i === 0 ? "eager" : "lazy"}
+              fetchPriority={prioritaire && i === 0 ? "high" : "auto"}
               decoding="async"
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                const img = e.currentTarget;
-                if (img.src !== m.url) img.src = m.url;
-              }}
+              className={cn(
+                "h-full w-full",
+                ajustement === "couvrir" ? "object-cover" : "object-contain"
+              )}
             />
           </div>
         ))}
@@ -65,12 +77,10 @@ export function Carrousel({ images, alt = "" }: { images: Media[]; alt?: string 
 
       {!unique && (
         <>
-          {/* Compteur, comme sur Instagram */}
           <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
             {index + 1}/{images.length}
           </span>
 
-          {/* Flèches — desktop uniquement : sur mobile, on fait glisser */}
           {index > 0 && (
             <button
               onClick={() => allerA(index - 1)}
@@ -90,7 +100,6 @@ export function Carrousel({ images, alt = "" }: { images: Media[]; alt?: string 
             </button>
           )}
 
-          {/* Points de position */}
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
             {images.map((_, i) => (
               <span

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, Menu, MessageCircle, Moon, Sun, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ export function Header() {
   const { effectif, setTheme } = useTheme();
   const [menu, setMenu] = useState(false);
   const [nonLues, setNonLues] = useState(0);
+  const fermerMenu = useCallback(() => setMenu(false), []);
 
   // Rafraichissement au FOCUS, jamais en temps reel : un canal ouvert en
   // permanence coute ~500 Ko/h de battements de coeur, pour un compteur.
@@ -116,7 +117,7 @@ export function Header() {
         </div>
       </header>
 
-      <MenuMobile ouvert={menu} fermer={() => setMenu(false)} />
+      <MenuMobile ouvert={menu} fermer={fermerMenu} />
     </>
   );
 }

@@ -237,8 +237,11 @@ export function PostCard({
 
       {/* ── L'image, en grand ───────────────────────────────────────────── */}
       {post.media?.length > 0 && (
-        <div className="md:px-0">
-          <Carrousel images={post.media} alt={post.place ? `${post.place}, Madagascar` : nom} />
+        <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
+          <Carrousel
+            images={post.media}
+            alt={post.place ? `${post.place}, Madagascar` : nom}
+          />
         </div>
       )}
 

@@ -5,27 +5,32 @@ import { DiakoHero } from "@/components/DiakoHero";
 import { Composer } from "@/components/Composer";
 import { Feed } from "@/components/Feed";
 import { PlaceCard } from "@/components/PlaceCard";
+import { useEstMobile } from "@/hooks/useEstMobile";
 import { categorie as trouveCategorie } from "@/lib/categories";
 import { PLACES } from "@/data/apercu";
 
 /**
- * Accueil — le fil.
+ * Accueil.
  *
- * Un SEUL flux pleine largeur, comme demandé : « un fil infini comme Facebook,
- * pas des petites cartes ». Les publications visibles sont un aperçu du design,
- * annoncé comme tel par le bandeau — jamais présenté comme du contenu réel.
+ *  · TÉLÉPHONE : le fil occupe TOUT l'écran, sans rien autour. On glisse vers
+ *    le haut d'une publication à l'autre. Un bandeau et des catégories
+ *    disparaîtraient de toute façon derrière la première photo.
+ *  · ORDINATEUR : bandeau, recherche, catégories, puis le fil façon Facebook.
  */
 export default function Index() {
+  const mobile = useEstMobile();
   const [cat, setCat] = useState("all");
   const info = trouveCategorie(cat);
+
+  if (mobile) return <Feed />;
 
   return (
     <div className="pb-6">
       <DiakoHero categorie={cat} onCategorie={setCat} />
 
-      <div className="mx-auto mt-5 w-full max-w-[600px] px-0 md:px-4 xl:max-w-[620px]">
+      <div className="mx-auto mt-5 w-full max-w-[600px] px-4 xl:max-w-[620px]">
         {cat !== "all" && info && (
-          <div className="mx-4 mb-4 rounded-xl border border-border bg-card p-4 md:mx-0">
+          <div className="mb-4 rounded-xl border border-border bg-card p-4">
             <p className="text-sm font-semibold">{info.label}</p>
             <p className="mt-1 text-sm text-muted-foreground">{info.quoi}.</p>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -41,18 +46,13 @@ export default function Index() {
           </div>
         )}
 
-        <div className="space-y-0 md:space-y-4">
-          <Composer />
-        </div>
+        <Composer />
 
-        {/* Le fil RÉEL — il affiche les vraies publications, et un état vide
-            honnête tant que personne n'a publié. */}
-        <div className="mt-0 md:mt-4">
+        <div className="mt-4">
           <Feed />
         </div>
 
-        {/* Établissements — format compact, deux formats assumés */}
-        <section className="mt-8 px-4 md:px-0" aria-labelledby="titre-etabs">
+        <section className="mt-10" aria-labelledby="titre-etabs">
           <div className="flex items-end justify-between gap-3">
             <div>
               <h2 id="titre-etabs" className="text-lg font-semibold">
@@ -77,12 +77,10 @@ export default function Index() {
           </div>
         </section>
 
-        {/* ── À propos ──────────────────────────────────────────────────
-             ⚠ NE PAS SUPPRIMER : Google exige que la page d'accueil nomme
-             l'application et explique son objectif pour valider l'écran de
-             consentement OAuth. Ce texte doit rester cohérent avec celui du
-             squelette statique de index.html. */}
-        <section className="mt-10 px-4 md:px-0" aria-labelledby="titre-apropos">
+        {/* ⚠ NE PAS SUPPRIMER : Google exige que la page d'accueil nomme
+            l'application et explique son objectif pour valider l'écran de
+            consentement OAuth. À garder cohérent avec le squelette statique. */}
+        <section className="mt-10" aria-labelledby="titre-apropos">
           <h2 id="titre-apropos" className="text-lg font-semibold">
             À propos de Diako
           </h2>
@@ -116,21 +114,6 @@ export default function Index() {
             </p>
           </div>
         </section>
-
-        {/* Fin du fil — état honnête */}
-        <div className="mt-8 px-4 text-center md:px-0">
-          <p className="text-sm font-medium">C'est tout pour le moment.</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-            Le fil s'ouvrira aux vraies publications quand les premières
-            destinations et les premiers établissements seront en ligne.
-          </p>
-          <Link
-            to="/auth"
-            className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground"
-          >
-            Créer mon compte
-          </Link>
-        </div>
       </div>
     </div>
   );

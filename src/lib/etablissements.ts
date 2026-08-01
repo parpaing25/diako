@@ -1,0 +1,933 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+
+/**
+ * Accès aux données des ÉTABLISSEMENTS et des RÉFÉRENTIELS.
+ *
+ * Prolongement de src/lib/api.ts, qui reste la couche du social (fil,
+ * réactions, messages). Même discipline : colonnes énumérées, jamais de
+ * `.single()` en écriture, pagination par curseur.
+ *
+ * Tout ce qui est lecture publique passe par une RPC `security definer` :
+ * une fiche complète en UN aller-retour plutôt que huit requêtes — sur une
+ * 3G malgache, les allers-retours coûtent plus cher que la charge utile.
+ */
+
+/* ── Types ─────────────────────────────────────────────────────────────── */
+
+export type Categorie =
+  | "hotel"
+  | "restaurant"
+  | "agence_voyage"
+  | "guide"
+  | "transporteur"
+  | "location_vehicule"
+  | "site_attraction"
+  | "organisateur_evenement";
+
+export const CATEGORIES: { code: Categorie; label: string; pluriel: string }[] = [
+  { code: "hotel", label: "Hôtel", pluriel: "Hôtels et hébergements" },
+  { code: "restaurant", label: "Restaurant", pluriel: "Restaurants et tables" },
+  { code: "agence_voyage", label: "Agence de voyage", pluriel: "Agences de voyage" },
+  { code: "guide", label: "Guide", pluriel: "Guides" },
+  { code: "transporteur", label: "Transporteur", pluriel: "Transporteurs" },
+  { code: "location_vehicule", label: "Location de véhicule", pluriel: "Location de véhicules" },
+  { code: "site_attraction", label: "Site à visiter", pluriel: "Sites à visiter" },
+  { code: "organisateur_evenement", label: "Événementiel", pluriel: "Organisateurs d'événements" },
+];
+
+export interface Suggestion {
+  type: "lieu" | "plat";
+  slug: string;
+  libelle: string;
+  detail: string | null;
+  score: number;
+}
+
+export interface ResultatPage {
+  id: string;
+  slug: string;
+  name: string;
+  categories: string[];
+  short_desc: string | null;
+  cover_url: string | null;
+  place_slug: string | null;
+  place_name: string | null;
+  landmark: string | null;
+  price_min_ar: number | null;
+  price_min_unit: string | null;
+  rating_avg: number;
+  rating_count: number;
+  verification_status: string;
+  completeness: number;
+  prix_du_plat: number | null;
+}
+
+export interface Tarif {
+  id: string;
+  season_label: string;
+  from_date: string | null;
+  to_date: string | null;
+  price_ar: number;
+  price_unit: string;
+  board: string | null;
+  min_nights: number;
+  resident_price_ar: number | null;
+}
+
+export interface Chambre {
+  id: string;
+  name: string;
+  description: string | null;
+  photos: string[];
+  units_count: number;
+  max_adults: number | null;
+  max_children: number | null;
+  surface_m2: number | null;
+  private_bath: boolean;
+  hot_water: boolean;
+  view: string | null;
+  base_price_ar: number;
+  price_unit: string;
+  extra_person_ar: number | null;
+  status: string;
+  rates: Tarif[];
+}
+
+export interface PlatCarte {
+  id: string;
+  section_id: string | null;
+  name: string;
+  dish_id: string | null;
+  dish_slug: string | null;
+  description: string | null;
+  price_ar: number | null;
+  price_unit: string;
+  photo_url: string | null;
+  availability: string;
+  tags: string[];
+  side_dish: string | null;
+  is_signature: boolean;
+  in_stock: boolean;
+}
+
+export interface Activite {
+  id: string;
+  name: string;
+  description: string | null;
+  photos: string[];
+  duration_h: number | null;
+  price_ar: number | null;
+  price_unit: string;
+  min_people: number | null;
+  max_people: number | null;
+  includes: string[];
+}
+
+export interface Circuit {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  description: string | null;
+  duration_days: number;
+  duration_nights: number | null;
+  difficulty: string | null;
+  format: string | null;
+  group_min: number | null;
+  group_max: number | null;
+  axe: string | null;
+  transports: string[];
+  guide_langs: string[];
+  parks_included: boolean;
+  months_open: number[] | null;
+  photos: string[];
+  days: { jour: number; titre: string; detail: string | null; nuitee: string | null }[];
+  prices: { base_pax: number; price_ar: number; price_unit: string }[];
+  inclusions: { libelle: string; inclus: boolean }[];
+}
+
+export interface Fiche {
+  id: string;
+  slug: string;
+  name: string;
+  owner_id: string | null;
+  categories: string[];
+  subcategory: string | null;
+  short_desc: string | null;
+  long_desc: string | null;
+  address: string | null;
+  landmark: string | null;
+  lat: number | null;
+  lng: number | null;
+  phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  website: string | null;
+  facebook: string | null;
+  logo_url: string | null;
+  cover_url: string | null;
+  cover_offset_y: number;
+  gallery: string[];
+  languages: string[];
+  payment_methods: string[];
+  price_level: number | null;
+  verification_status: string;
+  is_published: boolean;
+  rating_avg: number;
+  rating_count: number;
+  price_min_ar: number | null;
+  price_min_unit: string | null;
+  rates_checked_at: string | null;
+  completeness: number;
+  place: { id: string; slug: string; name: string; region: string | null } | null;
+  amenities: { code: string; label: string; category: string }[];
+  hours: {
+    jour: number;
+    ouvre: string | null;
+    ferme: string | null;
+    ferme_journee: boolean;
+  }[];
+  rooms: Chambre[];
+  menu_sections: { id: string; name: string; service: string | null }[];
+  menu_items: PlatCarte[];
+  menu_photos: { url: string; legende: string | null }[];
+  activities: Activite[];
+  tours: Circuit[];
+}
+
+export interface Lieu {
+  id: string;
+  slug: string;
+  name_fr: string;
+  name_mg: string | null;
+  kind: string;
+  region: string | null;
+  axe: string | null;
+  is_touristique: boolean;
+  summary: string | null;
+  why_go: string[] | null;
+  nb_pages: number;
+  nb_posts: number;
+  lat: number | null;
+  lng: number | null;
+}
+
+export interface Plat {
+  id: string;
+  slug: string;
+  name_fr: string;
+  name_mg: string | null;
+  family: string | null;
+  description: string | null;
+  is_vegetarian: boolean;
+  has_pork: boolean;
+  has_seafood: boolean;
+  price_min_ar: number | null;
+  price_max_ar: number | null;
+  nb_restaurants: number;
+}
+
+/* ── Recherche et autocomplétion ───────────────────────────────────────── */
+
+/**
+ * Autocomplétion unifiée : lieux ET plats en un seul appel.
+ * Un seul aller-retour, sinon la barre de recherche en déclenche deux par
+ * frappe.
+ */
+export async function suggerer(terme: string, limite = 8): Promise<Suggestion[]> {
+  const t = terme.trim();
+  if (t.length < 2) return [];
+  const { data, error } = await supabase.rpc("suggerer", { p_terme: t, p_limite: limite });
+  if (error) throw error;
+  return (data as unknown as Suggestion[]) ?? [];
+}
+
+/** Résout un terme libre en destination du référentiel. « majunga » → Mahajanga. */
+export async function resoudreLieu(terme: string, limite = 5) {
+  const t = terme.trim();
+  if (!t) return [];
+  const { data, error } = await supabase.rpc("resoudre_lieu", { p_terme: t, p_limite: limite });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Résout un terme libre en plat du référentiel. « ravi-toto » → Ravitoto. */
+export async function resoudrePlat(terme: string, limite = 5) {
+  const t = terme.trim();
+  if (!t) return [];
+  const { data, error } = await supabase.rpc("resoudre_plat", { p_terme: t, p_limite: limite });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface FiltresRecherche {
+  lieu?: string | null;
+  categorie?: string | null;
+  prixMax?: number | null;
+  plat?: string | null;
+  /** Curseur keyset : [complétude, id] du dernier résultat reçu. */
+  curseur?: [number, string] | null;
+  limite?: number;
+}
+
+export async function chercherPages(f: FiltresRecherche = {}): Promise<ResultatPage[]> {
+  const { data, error } = await supabase.rpc("chercher_pages", {
+    p_lieu: f.lieu ?? null,
+    p_categorie: f.categorie ?? null,
+    p_prix_max: f.prixMax ?? null,
+    p_plat: f.plat ?? null,
+    p_curseur_score: f.curseur?.[0] ?? null,
+    p_curseur_id: f.curseur?.[1] ?? null,
+    p_limite: f.limite ?? 12,
+  });
+  if (error) throw error;
+  return (data as ResultatPage[]) ?? [];
+}
+
+/**
+ * « Où manger du ravitoto » — la promesse centrale du produit.
+ * Rend les restaurants qui le servent AVEC le prix chez chacun.
+ */
+export async function restaurantsParPlat(plat: string, lieu?: string | null, limite = 20) {
+  const { data, error } = await supabase.rpc("restaurants_par_plat", {
+    p_plat: plat,
+    p_lieu: lieu ?? null,
+    p_limite: limite,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/* ── La fiche publique ─────────────────────────────────────────────────── */
+
+/** `null` = fiche inexistante. L'appelant doit afficher une 404, jamais une autre fiche. */
+export async function chargerFiche(slug: string): Promise<Fiche | null> {
+  const { data, error } = await supabase.rpc("get_page_by_slug", { p_slug: slug });
+  if (error) throw error;
+  return (data as unknown as Fiche | null) ?? null;
+}
+
+/** Ouvre (ou retrouve) la conversation avec le gérant, rattachée à la page. */
+export async function ecrireALEtablissement(pageId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("ouvrir_conversation_page", { p_page: pageId });
+  if (error) throw error;
+  return data as string;
+}
+
+/* ── Référentiels ──────────────────────────────────────────────────────── */
+
+/** Les destinations mises en avant : celles marquées touristiques. */
+export async function chargerDestinations(limite = 60): Promise<Lieu[]> {
+  const { data, error } = await supabase
+    .from("places")
+    .select(
+      "id, slug, name_fr, name_mg, kind, region, axe, is_touristique, summary, why_go, nb_pages, nb_posts, lat, lng"
+    )
+    .eq("is_touristique", true)
+    .order("nb_posts", { ascending: false })
+    .order("name_fr")
+    .limit(limite);
+  if (error) throw error;
+  return (data as Lieu[]) ?? [];
+}
+
+export async function chargerLieu(slug: string): Promise<Lieu | null> {
+  const { data, error } = await supabase
+    .from("places")
+    .select(
+      "id, slug, name_fr, name_mg, kind, region, axe, is_touristique, summary, why_go, nb_pages, nb_posts, lat, lng"
+    )
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Lieu) ?? null;
+}
+
+/** Saisonnalité d'une destination : douze lignes au plus. */
+export async function chargerSaisons(placeId: string) {
+  const { data, error } = await supabase
+    .from("place_seasons")
+    .select("month, rating, reason")
+    .eq("place_id", placeId)
+    .order("month");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Le référentiel des plats, pour l'autocomplétion de la carte et des récits. */
+export async function chargerPlats(limite = 200): Promise<Plat[]> {
+  const { data, error } = await supabase
+    .from("dishes")
+    .select(
+      "id, slug, name_fr, name_mg, family, description, is_vegetarian, has_pork, has_seafood, price_min_ar, price_max_ar, nb_restaurants"
+    )
+    .order("nb_restaurants", { ascending: false })
+    .order("name_fr")
+    .limit(limite);
+  if (error) throw error;
+  return (data as Plat[]) ?? [];
+}
+
+export async function chargerEquipements(pour?: string) {
+  let q = supabase
+    .from("amenities")
+    .select("code, label_fr, category, applies_to, rang")
+    .order("rang");
+  if (pour) q = q.contains("applies_to", [pour]);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+/* ── Espace professionnel ──────────────────────────────────────────────── */
+
+/** Les établissements dont je suis propriétaire. */
+export async function mesEtablissements() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from("pages")
+    .select(
+      "id, slug, name, categories, cover_url, is_published, completeness, rating_avg, rating_count, views_count, price_min_ar, price_min_unit, place_id"
+    )
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Fabrique un identifiant d'URL lisible et unique.
+ * On suffixe en cas de collision plutôt que d'échouer : un gérant ne doit pas
+ * buter sur « ce nom est déjà pris » alors qu'il tient à son enseigne.
+ */
+export async function slugLibre(nom: string): Promise<string> {
+  const base =
+    nom
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "etablissement";
+
+  const { data } = await supabase.from("pages").select("slug").like("slug", `${base}%`);
+  const pris = new Set((data ?? []).map((r) => r.slug));
+  if (!pris.has(base)) return base;
+  for (let i = 2; i < 200; i++) if (!pris.has(`${base}-${i}`)) return `${base}-${i}`;
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+export async function creerEtablissement(entree: {
+  name: string;
+  categories: string[];
+  place_id?: string | null;
+  short_desc?: string | null;
+}): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+
+  const slug = await slugLibre(entree.name);
+  const { data, error } = await supabase
+    .from("pages")
+    .insert({
+      owner_id: user.id,
+      slug,
+      name: entree.name.trim(),
+      categories: entree.categories,
+      place_id: entree.place_id ?? null,
+      short_desc: entree.short_desc?.trim() || null,
+    })
+    .select("slug")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("L'établissement n'a pas pu être créé.");
+  return data.slug;
+}
+
+export async function majEtablissement(id: string, champs: TablesUpdate<"pages">): Promise<void> {
+  const { error } = await supabase.from("pages").update(champs).eq("id", id);
+  if (error) throw error;
+}
+
+export async function definirEquipements(pageId: string, codes: string[]): Promise<void> {
+  const { error: eSuppr } = await supabase.from("page_amenities").delete().eq("page_id", pageId);
+  if (eSuppr) throw eSuppr;
+  if (!codes.length) return;
+  const { error } = await supabase
+    .from("page_amenities")
+    .insert(codes.map((code) => ({ page_id: pageId, code })));
+  if (error) throw error;
+}
+
+/* ── Chambres ──────────────────────────────────────────────────────────── */
+
+export async function chambresDe(pageId: string) {
+  const { data, error } = await supabase
+    .from("room_types")
+    .select(
+      "id, name, description, photos, units_count, max_adults, max_children, surface_m2, private_bath, hot_water, view, base_price_ar, price_unit, extra_person_ar, status, sort_order"
+    )
+    .eq("page_id", pageId)
+    .order("sort_order")
+    .order("base_price_ar");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function enregistrerChambre(
+  pageId: string,
+  chambre: Omit<TablesInsert<"room_types">, "page_id"> & { id?: string }
+): Promise<string> {
+  const { id, ...champs } = chambre;
+  if (id) {
+    const { error } = await supabase.from("room_types").update(champs).eq("id", id);
+    if (error) throw error;
+    return id;
+  }
+  const { data, error } = await supabase
+    .from("room_types")
+    .insert({ ...champs, page_id: pageId })
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("La chambre n'a pas pu être enregistrée.");
+  return data.id;
+}
+
+export async function supprimerChambre(id: string) {
+  const { error } = await supabase.from("room_types").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function tarifsDe(roomTypeId: string) {
+  const { data, error } = await supabase
+    .from("season_rates")
+    .select(
+      "id, season_label, from_date, to_date, price_ar, price_unit, board, min_nights, resident_price_ar"
+    )
+    .eq("room_type_id", roomTypeId)
+    .order("from_date", { nullsFirst: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function enregistrerTarif(
+  roomTypeId: string,
+  tarif: Omit<TablesInsert<"season_rates">, "room_type_id"> & { id?: string }
+): Promise<void> {
+  const { id, ...champs } = tarif;
+  if (id) {
+    const { error } = await supabase.from("season_rates").update(champs).eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase
+    .from("season_rates")
+    .insert({ ...champs, room_type_id: roomTypeId });
+  if (error) throw error;
+}
+
+export async function supprimerTarif(id: string) {
+  const { error } = await supabase.from("season_rates").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ── Carte ─────────────────────────────────────────────────────────────── */
+
+export async function carteDe(pageId: string) {
+  const [sections, plats] = await Promise.all([
+    supabase
+      .from("menu_sections")
+      .select("id, name, service, sort_order")
+      .eq("page_id", pageId)
+      .order("sort_order"),
+    supabase
+      .from("menu_items")
+      .select(
+        "id, section_id, name, dish_id, description, price_ar, price_unit, photo_url, availability, tags, side_dish, is_signature, in_stock, sort_order"
+      )
+      .eq("page_id", pageId)
+      .order("sort_order"),
+  ]);
+  if (sections.error) throw sections.error;
+  if (plats.error) throw plats.error;
+  return { sections: sections.data ?? [], plats: plats.data ?? [] };
+}
+
+export async function enregistrerSection(
+  pageId: string,
+  section: { id?: string; name: string; service?: string | null; sort_order?: number }
+): Promise<string> {
+  const { id, ...champs } = section;
+  if (id) {
+    const { error } = await supabase.from("menu_sections").update(champs).eq("id", id);
+    if (error) throw error;
+    return id;
+  }
+  const { data, error } = await supabase
+    .from("menu_sections")
+    .insert({ ...champs, page_id: pageId })
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("La section n'a pas pu être enregistrée.");
+  return data.id;
+}
+
+export async function supprimerSection(id: string) {
+  const { error } = await supabase.from("menu_sections").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function enregistrerPlat(
+  pageId: string,
+  plat: Omit<TablesInsert<"menu_items">, "page_id"> & { id?: string }
+): Promise<void> {
+  const { id, ...champs } = plat;
+  if (id) {
+    const { error } = await supabase.from("menu_items").update(champs).eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase
+    .from("menu_items")
+    .insert({ ...champs, page_id: pageId });
+  if (error) throw error;
+}
+
+export async function supprimerPlat(id: string) {
+  const { error } = await supabase.from("menu_items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Mode dégradé de la carte : la photo du menu papier.
+ * Sans cette échappatoire, une gargote de 45 plats ne publiera jamais sa
+ * carte — saisir 45 lignes prend une soirée, photographier prend trente
+ * secondes.
+ */
+export async function ajouterPhotoCarte(pageId: string, url: string, legende?: string) {
+  const { error } = await supabase
+    .from("menu_photos")
+    .insert({ page_id: pageId, url, legende: legende ?? null });
+  if (error) throw error;
+}
+
+export async function supprimerPhotoCarte(id: string) {
+  const { error } = await supabase.from("menu_photos").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ── Activités ─────────────────────────────────────────────────────────── */
+
+export async function activitesDe(pageId: string) {
+  const { data, error } = await supabase
+    .from("activities")
+    .select(
+      "id, name, description, photos, duration_h, price_ar, price_unit, min_people, max_people, includes, sort_order"
+    )
+    .eq("page_id", pageId)
+    .order("sort_order");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function enregistrerActivite(
+  pageId: string,
+  activite: Omit<TablesInsert<"activities">, "page_id"> & { id?: string }
+): Promise<void> {
+  const { id, ...champs } = activite;
+  if (id) {
+    const { error } = await supabase.from("activities").update(champs).eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase
+    .from("activities")
+    .insert({ ...champs, page_id: pageId });
+  if (error) throw error;
+}
+
+export async function supprimerActivite(id: string) {
+  const { error } = await supabase.from("activities").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ── Circuits ──────────────────────────────────────────────────────────── */
+
+export async function circuitsDe(pageId: string) {
+  const { data, error } = await supabase
+    .from("tours")
+    .select(
+      "id, slug, title, summary, duration_days, duration_nights, difficulty, format, group_min, group_max, axe, photos"
+    )
+    .eq("page_id", pageId)
+    .order("duration_days");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function enregistrerCircuit(
+  pageId: string,
+  circuit: Omit<TablesInsert<"tours">, "page_id" | "slug"> & { id?: string }
+): Promise<string> {
+  const { id, ...champs } = circuit;
+  if (id) {
+    const { error } = await supabase.from("tours").update(champs).eq("id", id);
+    if (error) throw error;
+    return id;
+  }
+  const slug = await slugCircuitLibre(circuit.title);
+  const { data, error } = await supabase
+    .from("tours")
+    .insert({ ...champs, page_id: pageId, slug })
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Le circuit n'a pas pu être enregistré.");
+  return data.id;
+}
+
+async function slugCircuitLibre(titre: string): Promise<string> {
+  const base =
+    titre
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "circuit";
+  const { data } = await supabase.from("tours").select("slug").like("slug", `${base}%`);
+  const pris = new Set((data ?? []).map((r) => r.slug));
+  if (!pris.has(base)) return base;
+  for (let i = 2; i < 200; i++) if (!pris.has(`${base}-${i}`)) return `${base}-${i}`;
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+export async function supprimerCircuit(id: string) {
+  const { error } = await supabase.from("tours").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function enregistrerJoursCircuit(
+  tourId: string,
+  jours: { jour: number; titre: string; detail?: string | null; nuitee?: string | null }[]
+): Promise<void> {
+  const { error: eSuppr } = await supabase.from("tour_days").delete().eq("tour_id", tourId);
+  if (eSuppr) throw eSuppr;
+  if (!jours.length) return;
+  const { error } = await supabase
+    .from("tour_days")
+    .insert(jours.map((j) => ({ ...j, tour_id: tourId })));
+  if (error) throw error;
+}
+
+export async function enregistrerPrixCircuit(
+  tourId: string,
+  prix: { base_pax: number; price_ar: number; price_unit?: string }[]
+): Promise<void> {
+  const { error: eSuppr } = await supabase.from("tour_prices").delete().eq("tour_id", tourId);
+  if (eSuppr) throw eSuppr;
+  if (!prix.length) return;
+  const { error } = await supabase
+    .from("tour_prices")
+    .insert(prix.map((p) => ({ ...p, tour_id: tourId })));
+  if (error) throw error;
+}
+
+export async function enregistrerInclusions(
+  tourId: string,
+  lignes: { libelle: string; inclus: boolean }[]
+): Promise<void> {
+  const { error: eSuppr } = await supabase.from("tour_inclusions").delete().eq("tour_id", tourId);
+  if (eSuppr) throw eSuppr;
+  if (!lignes.length) return;
+  const { error } = await supabase
+    .from("tour_inclusions")
+    .insert(lignes.map((l, i) => ({ ...l, tour_id: tourId, sort_order: i })));
+  if (error) throw error;
+}
+
+/* ── Avis ──────────────────────────────────────────────────────────────── */
+
+export interface Avis {
+  id: string;
+  note: number;
+  body: string | null;
+  visite_le: string | null;
+  created_at: string;
+  author: { id: string; name: string | null; avatar: string | null };
+  reponse: { body: string; created_at: string } | null;
+}
+
+export async function avisDe(pageId: string, limite = 30): Promise<Avis[]> {
+  const { data, error } = await supabase
+    .from("reviews")
+    .select("id, author_id, note, body, visite_le, created_at")
+    .eq("page_id", pageId)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  const lignes = data ?? [];
+  if (!lignes.length) return [];
+
+  // Deux requêtes annexes plutôt qu'une jointure par ligne : c'est le même
+  // anti-N+1 que dans api.ts pour les conversations.
+  const [profils, reponses] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url")
+      .in("id", [...new Set(lignes.map((l) => l.author_id))]),
+    supabase
+      .from("review_replies")
+      .select("review_id, body, created_at")
+      .in("review_id", lignes.map((l) => l.id)),
+  ]);
+
+  const parId = new Map((profils.data ?? []).map((p) => [p.id, p]));
+  const parAvis = new Map((reponses.data ?? []).map((r) => [r.review_id, r]));
+
+  return lignes.map((l) => ({
+    id: l.id,
+    note: l.note,
+    body: l.body,
+    visite_le: l.visite_le,
+    created_at: l.created_at,
+    author: {
+      id: l.author_id,
+      name: parId.get(l.author_id)?.display_name ?? null,
+      avatar: parId.get(l.author_id)?.avatar_url ?? null,
+    },
+    reponse: parAvis.get(l.id)
+      ? { body: parAvis.get(l.id)!.body, created_at: parAvis.get(l.id)!.created_at }
+      : null,
+  }));
+}
+
+export async function deposerAvis(
+  pageId: string,
+  avis: { note: number; body?: string | null; visite_le?: string | null }
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+
+  // Un seul avis par personne et par établissement (contrainte unique en
+  // base) : on remplace le sien plutôt que d'échouer.
+  const { error } = await supabase.from("reviews").upsert(
+    {
+      page_id: pageId,
+      author_id: user.id,
+      note: avis.note,
+      body: avis.body?.trim() || null,
+      visite_le: avis.visite_le ?? null,
+    },
+    { onConflict: "page_id,author_id" }
+  );
+  if (error) throw error;
+}
+
+export async function repondreAAvis(reviewId: string, pageId: string, body: string) {
+  const { error } = await supabase
+    .from("review_replies")
+    .upsert({ review_id: reviewId, page_id: pageId, body: body.trim() });
+  if (error) throw error;
+}
+
+/* ── Mentions dans un récit ────────────────────────────────────────────── */
+
+/** Rattache un récit aux établissements qu'il cite : la fiche affichera le récit. */
+export async function mentionner(postId: string, pageIds: string[]): Promise<void> {
+  if (!pageIds.length) return;
+  const { error } = await supabase
+    .from("post_mentions")
+    .insert(pageIds.map((page_id) => ({ post_id: postId, page_id })));
+  if (error) throw error;
+}
+
+/**
+ * Les récits publiés sur une destination.
+ *
+ * C'est le pont qui manquait : les 28 publications rangeaient leur lieu en
+ * texte libre, donc la recherche ne pouvait pas les retrouver. Depuis la
+ * migration 0005 elles portent un place_id, et on interroge dessus.
+ */
+export async function recitsParLieu(placeId: string, limite = 6) {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("id, body, place, media, created_at, reactions_count, comments_count")
+    .eq("place_id", placeId)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Les récits qui citent cet établissement — la preuve sociale de sa fiche. */
+export async function recitsMentionnant(pageId: string, limite = 10) {
+  const { data, error } = await supabase
+    .from("post_mentions")
+    .select("post_id")
+    .eq("page_id", pageId)
+    .limit(limite);
+  if (error) throw error;
+  const ids = (data ?? []).map((m) => m.post_id);
+  if (!ids.length) return [];
+
+  const { data: posts, error: ePosts } = await supabase
+    .from("posts")
+    .select("id, body, media, place, created_at, author_id, reactions_count, comments_count")
+    .in("id", ids)
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+  if (ePosts) throw ePosts;
+  return (posts ?? []) as unknown as {
+    id: string;
+    body: string | null;
+    media: Json;
+    place: string | null;
+    created_at: string;
+    author_id: string;
+    reactions_count: number;
+    comments_count: number;
+  }[];
+}
+
+/* ── Mise en forme ─────────────────────────────────────────────────────── */
+
+/** « 85 000 Ar ». Les montants sont des entiers d'ariary, jamais de décimales. */
+export function ariary(montant: number | null | undefined): string {
+  if (montant === null || montant === undefined) return "—";
+  return `${Math.round(montant).toLocaleString("fr-FR").replace(/ | /g, " ")} Ar`;
+}
+
+export const UNITES: Record<string, string> = {
+  nuit: "la nuit",
+  plat: "le plat",
+  personne: "par personne",
+  jour: "par jour",
+  circuit: "le circuit",
+  chambre: "la chambre",
+  portion: "la portion",
+  "2_personnes": "pour 2",
+  kg: "le kilo",
+  part: "la part",
+  verre: "le verre",
+  groupe: "le groupe",
+  vehicule: "le véhicule",
+  bateau: "le bateau",
+};
+
+export function unite(code: string | null | undefined): string {
+  return (code && UNITES[code]) || "";
+}

@@ -27,7 +27,7 @@ function ilYA(iso: string) {
 function destination(n: Notif): string {
   const d = (n.data ?? {}) as Record<string, unknown>;
   if (n.type === "message" && d.conv_id) return `/messages?c=${d.conv_id}`;
-  if (d.post_id) return `/?post=${d.post_id}`;
+  if (d.post_id) return `/post/${d.post_id}`;
   if (d.from) return `/user/${d.from}`;
   return "/";
 }

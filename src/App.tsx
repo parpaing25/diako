@@ -22,11 +22,13 @@ const Recherche = lazy(() => import("./pages/Recherche"));
 const Publier = lazy(() => import("./pages/Publier"));
 const PagePro = lazy(() => import("./pages/PagePro"));
 const EspacePro = lazy(() => import("./pages/EspacePro"));
+const ProConsole = lazy(() => import("./pages/ProConsole"));
 const Parametres = lazy(() => import("./pages/Parametres"));
 const Favoris = lazy(() => import("./pages/Favoris"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Profil = lazy(() => import("./pages/Profil"));
+const Post = lazy(() => import("./pages/Post"));
 const Mentions = lazy(() => import("./pages/Mentions"));
 const Confidentialite = lazy(() => import("./pages/Confidentialite"));
 const Cgu = lazy(() => import("./pages/Cgu"));
@@ -82,11 +84,15 @@ function Shell() {
       <Route path="/publier" element={<Publier />} />
       <Route path="/p/:slug" element={<PagePro />} />
       <Route path="/pro" element={<EspacePro />} />
+      {/* Console de gestion : la garde de propriete est dans la page. */}
+      <Route path="/pro/:slug" element={<ProConsole />} />
       <Route path="/parametres" element={<Parametres />} />
       <Route path="/favoris" element={<Favoris />} />
       <Route path="/messages" element={<Messages />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/user/:id" element={<Profil />} />
+      {/* Adresse propre d'une publication : partage et notifications en dependent. */}
+      <Route path="/post/:id" element={<Post />} />
       <Route path="/mentions" element={<Mentions />} />
       <Route path="/confidentialite" element={<Confidentialite />} />
       <Route path="/cgu" element={<Cgu />} />

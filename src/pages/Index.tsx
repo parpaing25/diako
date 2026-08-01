@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { DiakoHero } from "@/components/DiakoHero";
 import { Composer } from "@/components/Composer";
 import { Feed } from "@/components/Feed";
-import { PlaceCard } from "@/components/PlaceCard";
+import { FicheCard } from "@/components/FicheCard";
 import { useEstMobile } from "@/hooks/useEstMobile";
 import { categorie as trouveCategorie } from "@/lib/categories";
-import { PLACES } from "@/data/apercu";
+import { chercherPages, type ResultatPage } from "@/lib/etablissements";
 
 /**
  * Accueil.
@@ -21,6 +21,17 @@ export default function Index() {
   const mobile = useEstMobile();
   const [cat, setCat] = useState("all");
   const info = trouveCategorie(cat);
+
+  // ⚠ Cette section affichait quatre établissements INVENTÉS, avec leurs
+  // notes, leur nombre d'avis et un badge « ✓ vérifié » que rien ne
+  // distinguait d'une vraie fiche — et l'accueil était le seul écran à le
+  // faire sans avertissement. Elle lit désormais la base : s'il n'y a rien,
+  // elle le dit.
+  const [etabs, setEtabs] = useState<ResultatPage[]>([]);
+  useEffect(() => {
+    if (mobile) return;
+    void chercherPages({ limite: 6 }).then(setEtabs).catch(() => undefined);
+  }, [mobile]);
 
   if (mobile) return <Feed />;
 
@@ -59,7 +70,7 @@ export default function Index() {
                 Hôtels, restaurants et agences
               </h2>
               <p className="text-sm text-muted-foreground">
-                Chaque établissement aura sa page, ses tarifs et son menu.
+                Chaque établissement a sa page, ses tarifs et sa carte.
               </p>
             </div>
             <Link
@@ -70,11 +81,27 @@ export default function Index() {
             </Link>
           </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {PLACES.map((p) => (
-              <PlaceCard key={p.slug} place={p} />
-            ))}
-          </div>
+          {etabs.length > 0 ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {etabs.map((e) => (
+                <FicheCard key={e.id} fiche={e} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 rounded-2xl border border-dashed border-border px-5 py-10 text-center">
+              <p className="font-medium">Aucun établissement référencé pour l'instant</p>
+              <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                Les hôtels, restaurants et agences apparaîtront ici dès qu'ils
+                créeront leur page — avec leurs vrais tarifs et leur vraie carte.
+              </p>
+              <Link
+                to="/pro"
+                className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground"
+              >
+                Inscrire mon établissement
+              </Link>
+            </div>
+          )}
         </section>
 
         {/* ⚠ NE PAS SUPPRIMER : Google exige que la page d'accueil nomme

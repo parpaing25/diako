@@ -363,6 +363,7 @@ returns jsonb language sql stable security definer set search_path = public as $
     'logo_url', p.logo_url, 'cover_url', p.cover_url, 'cover_offset_y', p.cover_offset_y,
     'gallery', p.gallery, 'languages', p.languages, 'payment_methods', p.payment_methods,
     'price_level', p.price_level, 'verification_status', p.verification_status,
+    'is_published', p.is_published,
     'rating_avg', p.rating_avg, 'rating_count', p.rating_count,
     'price_min_ar', p.price_min_ar, 'price_min_unit', p.price_min_unit,
     'rates_checked_at', p.rates_checked_at, 'completeness', p.completeness,

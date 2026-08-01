@@ -30,31 +30,32 @@ export interface NavItem {
 /** Les 5 emplacements de la barre du bas (mobile). « Publier » au centre. */
 export const NAV_PRINCIPAL: NavItem[] = [
   { to: "/", label: "Accueil", icon: Home, pret: true },
-  { to: "/explorer", label: "Explorer", icon: Compass, pret: false },
-  { to: "/publier", label: "Publier", icon: Plus, pret: false },
-  { to: "/recherche", label: "Rechercher", icon: Search, pret: false },
+  { to: "/explorer", label: "Explorer", icon: Compass, pret: true },
+  { to: "/publier", label: "Publier", icon: Plus, pret: true },
+  { to: "/recherche", label: "Rechercher", icon: Search, pret: true },
   { to: "/compte", label: "Compte", icon: User, pret: true },
 ];
 
 /** Le rail desktop et le menu mobile : tout le produit. */
 export const NAV_COMPLET: NavItem[] = [
   { to: "/", label: "Accueil", icon: Home, pret: true },
-  { to: "/explorer", label: "Explorer", icon: Compass, pret: false },
-  { to: "/recherche", label: "Rechercher", icon: Search, pret: false },
-  { to: "/publier", label: "Publier", icon: Plus, pret: false },
-  { to: "/favoris", label: "Favoris", icon: Bookmark, pret: false },
-  { to: "/messages", label: "Messages", icon: MessageCircle, pret: false },
-  { to: "/notifications", label: "Notifications", icon: Bell, pret: false },
-  { to: "/pro", label: "Espace pro", icon: Briefcase, pret: false },
+  { to: "/explorer", label: "Explorer", icon: Compass, pret: true },
+  { to: "/recherche", label: "Rechercher", icon: Search, pret: true },
+  { to: "/publier", label: "Publier", icon: Plus, pret: true },
+  { to: "/favoris", label: "Favoris", icon: Bookmark, pret: true },
+  { to: "/messages", label: "Messages", icon: MessageCircle, pret: true },
+  { to: "/notifications", label: "Notifications", icon: Bell, pret: true },
+  { to: "/pro", label: "Espace pro", icon: Briefcase, pret: true },
   { to: "/compte", label: "Mon compte", icon: User, pret: true },
   { to: "/parametres", label: "Paramètres", icon: Settings, pret: true },
 ];
 
 /** Ce qui est réellement en construction, affiché tel quel aux visiteurs. */
 export const FEUILLE_DE_ROUTE = [
-  { quoi: "Créer son compte", etat: "ouvert" as const },
-  { quoi: "Destinations et plats de Madagascar", etat: "en cours" as const },
-  { quoi: "Pages des hôtels, restaurants et agences", etat: "à venir" as const },
-  { quoi: "Recherche par plat et par destination", etat: "à venir" as const },
-  { quoi: "Fil des voyageurs", etat: "à venir" as const },
+  { quoi: "Fil des voyageurs", etat: "ouvert" as const },
+  { quoi: "178 destinations et 95 plats référencés", etat: "ouvert" as const },
+  { quoi: "Recherche par destination, par plat et par budget", etat: "ouvert" as const },
+  { quoi: "Pages des hôtels, restaurants et agences", etat: "ouvert" as const },
+  { quoi: "Premiers établissements référencés", etat: "en cours" as const },
+  { quoi: "Réservation et paiement", etat: "à venir" as const },
 ];

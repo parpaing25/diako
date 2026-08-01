@@ -57,14 +57,85 @@ export async function chargerFeed(curseur?: string | null, limite = 10): Promise
   return (data as unknown as Post[]) ?? [];
 }
 
+/**
+ * Une publication seule, par son identifiant.
+ *
+ * Indispensable au partage et aux notifications : le bouton « Partager »
+ * produisait `/?post=<id>` et les notifications pointaient au même endroit,
+ * mais PERSONNE ne lisait ce paramètre. Le destinataire d'un lien tombait
+ * sur l'accueil, et cliquer sur « Untel a aimé votre récit » ne montrait pas
+ * le récit. Il existe désormais une vraie route `/post/:id`.
+ *
+ * `null` = introuvable ou non publiée : l'appelant affiche une 404.
+ */
+export async function chargerPost(id: string): Promise<Post | null> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      "id, kind, body, media, place, dish, page_name, created_at, author_id, reactions_count, comments_count, saves_count, status"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.status !== "published") return null;
+
+  const { data: profil } = await supabase
+    .from("profiles")
+    .select("id, display_name, avatar_url, verification, account_type")
+    .eq("id", data.author_id)
+    .maybeSingle();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let ma_reaction: string | null = null;
+  let enregistre = false;
+  if (user) {
+    const [r, s] = await Promise.all([
+      supabase.from("reactions").select("type").eq("post_id", id).eq("user_id", user.id).maybeSingle(),
+      supabase.from("saves").select("post_id").eq("post_id", id).eq("user_id", user.id).maybeSingle(),
+    ]);
+    ma_reaction = r.data?.type ?? null;
+    enregistre = !!s.data;
+  }
+
+  return {
+    id: data.id,
+    kind: data.kind,
+    body: data.body,
+    media: (data.media as unknown as Media[]) ?? [],
+    place: data.place,
+    dish: data.dish,
+    page_name: data.page_name,
+    created_at: data.created_at,
+    reactions_count: data.reactions_count,
+    comments_count: data.comments_count,
+    saves_count: data.saves_count,
+    author: {
+      id: data.author_id,
+      name: profil?.display_name ?? null,
+      avatar: profil?.avatar_url ?? null,
+      verification: profil?.verification ?? "none",
+      account_type: profil?.account_type ?? "voyageur",
+    },
+    ma_reaction,
+    enregistre,
+  };
+}
+
 /* ── Publier ───────────────────────────────────────────────────────────── */
 
 export async function publier(entree: {
   kind: string;
   body: string;
   media?: Media[];
+  /** Le libellé saisi, conservé tel quel pour l'affichage. */
   place?: string | null;
   dish?: string | null;
+  /** Les rattachements au référentiel : c'est sur EUX que la recherche porte. */
+  place_id?: string | null;
+  dish_id?: string | null;
 }): Promise<string> {
   const {
     data: { user },
@@ -81,7 +152,9 @@ export async function publier(entree: {
       body: entree.body.trim() || null,
       media: (entree.media ?? []) as unknown as Json,
       place: entree.place || null,
+      place_id: entree.place_id || null,
       dish: entree.dish || null,
+      dish_id: entree.dish_id || null,
     })
     .select("id")
     .maybeSingle();

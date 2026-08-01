@@ -69,7 +69,7 @@ export function PostImmersif({
   }
 
   async function partager() {
-    const url = `${window.location.origin}/?post=${post.id}`;
+    const url = `${window.location.origin}/post/${post.id}`;
     try {
       if (navigator.share) await navigator.share({ title: "Diako", text: post.place ?? "", url });
       else {
@@ -172,16 +172,40 @@ export function PostImmersif({
       {/* Voile du bas + texte */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-60 bg-gradient-to-t from-black/80 via-black/45 to-transparent" />
 
+      {/* ⚠ Le texte deplie DOIT defiler dans son propre cadre.
+          Ancre en bas d'un <article> en overflow-hidden, il grandissait vers
+          le HAUT : un recit de 1 500 caracteres sortait par le haut de
+          l'ecran et devenait illisible — precisement sur le contenu le plus
+          interessant du site. D'ou max-h + overflow-y, et overscroll-contain
+          pour que le geste ne fasse pas defiler la publication suivante. */}
       {post.media?.length > 0 && texte && (
         <div className="absolute inset-x-0 bottom-0 px-4 pb-20">
-          <p className="max-w-[80%] whitespace-pre-line text-sm leading-relaxed text-white drop-shadow">
-            {visible}
-            {long && !deplie && (
-              <button onClick={() => setDeplie(true)} className="ml-1 font-semibold text-white/80">
-                plus
+          <div
+            className={cn(
+              "max-w-[85%] overscroll-contain",
+              deplie && "max-h-[45dvh] overflow-y-auto pr-1"
+            )}
+          >
+            <p className="whitespace-pre-line text-sm leading-relaxed text-white drop-shadow">
+              {visible}
+              {long && !deplie && (
+                <button
+                  onClick={() => setDeplie(true)}
+                  className="ml-1 font-semibold text-white/80"
+                >
+                  plus
+                </button>
+              )}
+            </p>
+            {deplie && (
+              <button
+                onClick={() => setDeplie(false)}
+                className="mt-1 text-xs font-semibold text-white/70"
+              >
+                reduire
               </button>
             )}
-          </p>
+          </div>
         </div>
       )}
     </article>

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Image, Loader2, MapPin, Sparkles, UtensilsCrossed, X } from "lucide-react";
@@ -7,7 +7,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
 import { publier, type Media } from "@/lib/api";
-import { DESTINATIONS, PLATS } from "@/data/apercu";
+import {
+  chargerDestinations,
+  chargerPlats,
+  type Lieu,
+  type Plat,
+} from "@/lib/etablissements";
 
 const TYPES = [
   { cle: "recit", label: "Récit de voyage", emoji: "✍️" },
@@ -17,7 +22,15 @@ const TYPES = [
   { cle: "avis", label: "Avis", emoji: "⭐" },
 ];
 
-const MAX_PHOTOS = 4;
+/**
+ * Quinze photos, pas quatre.
+ *
+ * On revient de deux semaines à Sainte-Marie avec beaucoup d'images, et un
+ * récit de voyage n'a pas le même besoin qu'un bon plan. Quinze reste
+ * raisonnable : à 2000 px chacune, le carrousel demande déjà de la patience
+ * sur une 3G, et le chargement progressif (ImageProgressive) absorbe le reste.
+ */
+const MAX_PHOTOS = 15;
 
 /**
  * Publier — pleinement fonctionnel.
@@ -36,6 +49,18 @@ export default function Publier() {
   const [texte, setTexte] = useState("");
   const [lieu, setLieu] = useState("");
   const [plat, setPlat] = useState("");
+
+  // ⚠ Le lieu et le plat étaient choisis dans deux listes de HUIT entrées
+  // écrites en dur : Diego, Majunga, Tuléar, Ranomafana n'y figuraient pas.
+  // Ils viennent maintenant du référentiel — 178 lieux, 95 plats — et on
+  // enregistre l'IDENTIFIANT, pas seulement le libellé : c'est lui qui rend
+  // la publication trouvable.
+  const [destinations, setDestinations] = useState<Lieu[]>([]);
+  const [plats, setPlats] = useState<Plat[]>([]);
+  useEffect(() => {
+    void chargerDestinations(200).then(setDestinations).catch(() => undefined);
+    void chargerPlats(200).then(setPlats).catch(() => undefined);
+  }, []);
   const [photos, setPhotos] = useState<Media[]>([]);
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
   const [envoi, setEnvoi] = useState(false);
@@ -71,6 +96,15 @@ export default function Publier() {
     if (place <= 0) {
       toast.error(`${MAX_PHOTOS} photos au maximum.`);
       return;
+    }
+
+    // ⚠ On DIT ce qu'on écarte. Avant, sélectionner 15 fichiers en envoyait
+    // silencieusement 4 : l'auteur ne s'en apercevait qu'en relisant sa
+    // publication, quand il était trop tard pour la refaire.
+    if (fichiers.length > place) {
+      toast.warning(
+        `${place} photo${place > 1 ? "s" : ""} sur ${fichiers.length} ${place > 1 ? "seront ajoutées" : "sera ajoutée"} — la limite est de ${MAX_PHOTOS}.`
+      );
     }
 
     setEnvoiPhoto(true);
@@ -111,8 +145,10 @@ export default function Publier() {
         kind: type,
         body: texte,
         media: photos,
-        place: lieu ? DESTINATIONS.find((d) => d.slug === lieu)?.nom ?? lieu : null,
-        dish: plat || null,
+        place: destinations.find((d) => d.id === lieu)?.name_fr ?? null,
+        place_id: lieu || null,
+        dish: plats.find((p) => p.id === plat)?.name_fr ?? null,
+        dish_id: plat || null,
       });
       toast.success("Publié !");
       navigate("/");
@@ -226,9 +262,10 @@ export default function Publier() {
             className="h-12 w-full rounded-xl border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Choisir une destination…</option>
-            {DESTINATIONS.map((d) => (
-              <option key={d.slug} value={d.slug}>
-                {d.nom} — {d.region}
+            {destinations.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name_fr}
+                {d.region ? ` — ${d.region}` : ""}
               </option>
             ))}
           </select>
@@ -245,15 +282,16 @@ export default function Publier() {
             className="h-12 w-full rounded-xl border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Aucun</option>
-            {PLATS.map((p) => (
-              <option key={p.nom} value={p.nom}>
-                {p.nom}
+            {plats.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name_fr}
+                {p.name_mg && p.name_mg !== p.name_fr ? ` — ${p.name_mg}` : ""}
               </option>
             ))}
           </select>
           <p className="mt-1 text-xs text-muted-foreground">
-            Taguer un lieu ou un plat fait remonter votre publication sur leur
-            fiche. C'est ce qui rend les bonnes adresses trouvables.
+            Indiquer le lieu rend votre publication trouvable : elle remonte
+            sur la fiche de la destination et dans la recherche.
           </p>
         </div>
       </div>

@@ -1,10 +1,11 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Flame, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
 import { SearchBar } from "@/components/SearchBar";
 import { CATEGORIES } from "@/lib/categories";
-import { DESTINATIONS } from "@/data/apercu";
+import { chargerDestinations, type Lieu } from "@/lib/etablissements";
 
 /**
  * Bandeau d'accueil — transposition directe de HeroSection de Fonenako.
@@ -13,9 +14,10 @@ import { DESTINATIONS } from "@/data/apercu";
  * recherche, carrousel horizontal, puis « stories » de catégories en pastilles
  * dégradées. Le contenu passe de l'immobilier au voyage.
  *
- * ⚠ Le carrousel de destinations affiche des lieux RÉELS de Madagascar, mais
- * aucun établissement n'y est encore rattaché : les vignettes mènent à un
- * écran qui le dit clairement.
+ * Le carrousel de destinations est alimenté par le référentiel `places` :
+ * ce sont de vrais lieux, classés par le nombre de récits publiés. Les
+ * vignettes mènent à la fiche de destination, qui dit honnêtement combien
+ * d'établissements y sont rattachés — zéro compris.
  */
 export function DiakoHero({
   categorie,
@@ -29,6 +31,11 @@ export function DiakoHero({
   const { profile } = useUserData();
 
   const prenom = profile?.display_name?.split(" ")[0];
+
+  const [destinations, setDestinations] = useState<Lieu[]>([]);
+  useEffect(() => {
+    void chargerDestinations(12).then(setDestinations).catch(() => undefined);
+  }, []);
 
   return (
     <section className="dk-colonne px-4 pt-4">
@@ -75,43 +82,56 @@ export function DiakoHero({
         </div>
       </div>
 
-      {/* ── Destinations du moment (carrousel horizontal) ───────────────
-          Espace toujours réservé, comme sur Fonenako : aucun décalage de mise
-          en page quand les vraies données arriveront. */}
+      {/* ── Destinations (carrousel horizontal) ─────────────────────────
+          Espace réservé même pendant le chargement : aucun décalage de mise en
+          page quand la liste arrive. Les destinations sont classées par nombre
+          de récits publiés — ce qui est vivant passe devant. */}
       <div className="mt-5">
         <div className="mb-2 flex items-center gap-1.5 px-0.5">
           <Flame className="h-4 w-4 text-accent" aria-hidden="true" />
           <h2 className="text-sm font-semibold">Destinations de Madagascar</h2>
-          <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            aperçu
-          </span>
         </div>
 
         <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {DESTINATIONS.map((d) => (
-            <button
-              key={d.slug}
-              onClick={() => navigate(`/explorer?lieu=${d.slug}`)}
-              className="group w-[200px] shrink-0 snap-start overflow-hidden rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-md md:w-[228px]"
-            >
-              <div
-                className={`relative flex aspect-video items-center justify-center bg-gradient-to-br ${d.couleur}`}
-              >
-                <span className="text-4xl" aria-hidden="true">
-                  {d.emoji}
-                </span>
-                <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
-                  {d.region}
-                </span>
-              </div>
-              <div className="p-2.5">
-                <p className="line-clamp-1 text-sm font-semibold">{d.nom}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Idéal {d.saison}
-                </p>
-              </div>
-            </button>
-          ))}
+          {destinations.length === 0
+            ? [0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="dk-skeleton h-[168px] w-[200px] shrink-0 rounded-xl md:w-[228px]"
+                />
+              ))
+            : destinations.map((d) => (
+                <button
+                  key={d.slug}
+                  onClick={() => navigate(`/explorer?lieu=${d.slug}`)}
+                  className="group w-[200px] shrink-0 snap-start overflow-hidden rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-md md:w-[228px]"
+                >
+                  <div className="relative flex aspect-video items-center justify-center bg-gradient-to-br from-primary/85 to-primary-soft">
+                    <span className="px-3 text-center text-sm font-semibold text-white">
+                      {d.name_fr}
+                    </span>
+                    {d.region && (
+                      <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+                        {d.region}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="line-clamp-1 text-sm font-semibold">{d.name_fr}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {d.nb_posts > 0
+                        ? `${d.nb_posts} récit${d.nb_posts > 1 ? "s" : ""}`
+                        : d.kind === "parc"
+                          ? "Parc national"
+                          : d.kind === "ile"
+                            ? "Île"
+                            : d.kind === "plage"
+                              ? "Plage"
+                              : "À découvrir"}
+                    </p>
+                  </div>
+                </button>
+              ))}
         </div>
       </div>
 

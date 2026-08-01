@@ -103,7 +103,9 @@ export type Database = {
           body: string | null;
           media: Json;
           place: string | null;
+          place_id: string | null;
           dish: string | null;
+          dish_id: string | null;
           page_name: string | null;
           reactions_count: number;
           comments_count: number;
@@ -119,7 +121,9 @@ export type Database = {
           body?: string | null;
           media?: Json;
           place?: string | null;
+          place_id?: string | null;
           dish?: string | null;
+          dish_id?: string | null;
           page_name?: string | null;
           reactions_count?: number;
           comments_count?: number;
@@ -133,7 +137,9 @@ export type Database = {
           body?: string | null;
           media?: Json;
           place?: string | null;
+          place_id?: string | null;
           dish?: string | null;
+          dish_id?: string | null;
           page_name?: string | null;
           status?: string;
         };
@@ -202,8 +208,21 @@ export type Database = {
         Relationships: [];
       };
       conversations: {
-        Row: { id: string; a_id: string; b_id: string; last_at: string } & Horodate;
-        Insert: { id?: string; a_id: string; b_id: string; last_at?: string; created_at?: string };
+        Row: {
+          id: string;
+          a_id: string;
+          b_id: string;
+          page_id: string | null;
+          last_at: string;
+        } & Horodate;
+        Insert: {
+          id?: string;
+          a_id: string;
+          b_id: string;
+          page_id?: string | null;
+          last_at?: string;
+          created_at?: string;
+        };
         Update: { last_at?: string };
         Relationships: [];
       };
@@ -247,6 +266,592 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+
+      /* ── RÉFÉRENTIELS (migrations 0004-0006) ────────────────────────────
+         Lecture publique, écriture réservée à l'administration : le client
+         ne fait que les lire, d'où des Update volontairement à `never`. */
+      places: {
+        Row: {
+          id: string;
+          slug: string;
+          name_fr: string;
+          name_mg: string | null;
+          kind: string;
+          parent_id: string | null;
+          lat: number | null;
+          lng: number | null;
+          radius_km: number;
+          region: string | null;
+          axe: string | null;
+          is_touristique: boolean;
+          summary: string | null;
+          why_go: string[] | null;
+          nb_pages: number;
+          nb_posts: number;
+          norm: string;
+        } & Horodate;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      place_seasons: {
+        Row: { place_id: string; month: number; rating: string; reason: string | null };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      dishes: {
+        Row: {
+          id: string;
+          slug: string;
+          name_fr: string;
+          name_mg: string | null;
+          family: string | null;
+          description: string | null;
+          ingredients: string[] | null;
+          has_pork: boolean;
+          has_beef: boolean;
+          has_seafood: boolean;
+          has_peanut: boolean;
+          is_vegetarian: boolean;
+          price_min_ar: number | null;
+          price_max_ar: number | null;
+          photo_url: string | null;
+          spice_level: number | null;
+          nb_restaurants: number;
+          norm: string;
+        } & Horodate;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      amenities: {
+        Row: {
+          code: string;
+          label_fr: string;
+          label_mg: string | null;
+          icon: string | null;
+          category: string;
+          applies_to: string[];
+          rang: number;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+
+      /* ── ÉTABLISSEMENTS (migrations 0007-0008) ──────────────────────────
+         ⚠ verification_status, rating_avg, rating_count et views_count sont
+         absents des Insert/Update : ce sont des colonnes à valeur
+         commerciale, verrouillées côté base par déclencheur. Les omettre ici
+         évite d'écrire du code qui semble marcher et n'a aucun effet. */
+      pages: {
+        Row: {
+          id: string;
+          slug: string;
+          owner_id: string | null;
+          name: string;
+          categories: string[];
+          subcategory: string | null;
+          short_desc: string | null;
+          long_desc: string | null;
+          place_id: string | null;
+          address: string | null;
+          landmark: string | null;
+          lat: number | null;
+          lng: number | null;
+          phone: string | null;
+          whatsapp: string | null;
+          email: string | null;
+          website: string | null;
+          facebook: string | null;
+          logo_url: string | null;
+          cover_url: string | null;
+          cover_offset_y: number;
+          gallery: Json;
+          languages: string[];
+          payment_methods: string[];
+          price_level: number | null;
+          verification_status: string;
+          is_published: boolean;
+          rating_avg: number;
+          rating_count: number;
+          views_count: number;
+          price_min_ar: number | null;
+          price_min_unit: string | null;
+          rates_checked_at: string | null;
+          completeness: number;
+          norm: string;
+          updated_at: string;
+        } & Horodate;
+        Insert: {
+          id?: string;
+          slug: string;
+          owner_id: string;
+          name: string;
+          categories?: string[];
+          subcategory?: string | null;
+          short_desc?: string | null;
+          long_desc?: string | null;
+          place_id?: string | null;
+          address?: string | null;
+          landmark?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          phone?: string | null;
+          whatsapp?: string | null;
+          email?: string | null;
+          website?: string | null;
+          facebook?: string | null;
+          logo_url?: string | null;
+          cover_url?: string | null;
+          cover_offset_y?: number;
+          gallery?: Json;
+          languages?: string[];
+          payment_methods?: string[];
+          price_level?: number | null;
+          is_published?: boolean;
+        };
+        Update: {
+          slug?: string;
+          name?: string;
+          categories?: string[];
+          subcategory?: string | null;
+          short_desc?: string | null;
+          long_desc?: string | null;
+          place_id?: string | null;
+          address?: string | null;
+          landmark?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          phone?: string | null;
+          whatsapp?: string | null;
+          email?: string | null;
+          website?: string | null;
+          facebook?: string | null;
+          logo_url?: string | null;
+          cover_url?: string | null;
+          cover_offset_y?: number;
+          gallery?: Json;
+          languages?: string[];
+          payment_methods?: string[];
+          price_level?: number | null;
+          is_published?: boolean;
+        };
+        Relationships: [];
+      };
+      page_amenities: {
+        Row: { page_id: string; code: string };
+        Insert: { page_id: string; code: string };
+        Update: never;
+        Relationships: [];
+      };
+      page_hours: {
+        Row: {
+          page_id: string;
+          jour: number;
+          ouvre: string | null;
+          ferme: string | null;
+          ferme_toute_la_journee: boolean;
+        };
+        Insert: {
+          page_id: string;
+          jour: number;
+          ouvre?: string | null;
+          ferme?: string | null;
+          ferme_toute_la_journee?: boolean;
+        };
+        Update: {
+          ouvre?: string | null;
+          ferme?: string | null;
+          ferme_toute_la_journee?: boolean;
+        };
+        Relationships: [];
+      };
+      room_types: {
+        Row: {
+          id: string;
+          page_id: string;
+          name: string;
+          description: string | null;
+          photos: string[];
+          units_count: number;
+          max_adults: number | null;
+          max_children: number | null;
+          surface_m2: number | null;
+          private_bath: boolean;
+          hot_water: boolean;
+          view: string | null;
+          base_price_ar: number;
+          price_unit: string;
+          extra_person_ar: number | null;
+          status: string;
+          sort_order: number;
+        } & Horodate;
+        Insert: {
+          id?: string;
+          page_id: string;
+          name: string;
+          description?: string | null;
+          photos?: string[];
+          units_count?: number;
+          max_adults?: number | null;
+          max_children?: number | null;
+          surface_m2?: number | null;
+          private_bath?: boolean;
+          hot_water?: boolean;
+          view?: string | null;
+          base_price_ar: number;
+          price_unit?: string;
+          extra_person_ar?: number | null;
+          status?: string;
+          sort_order?: number;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          photos?: string[];
+          units_count?: number;
+          max_adults?: number | null;
+          max_children?: number | null;
+          surface_m2?: number | null;
+          private_bath?: boolean;
+          hot_water?: boolean;
+          view?: string | null;
+          base_price_ar?: number;
+          price_unit?: string;
+          extra_person_ar?: number | null;
+          status?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      season_rates: {
+        Row: {
+          id: string;
+          room_type_id: string;
+          season_label: string;
+          from_date: string | null;
+          to_date: string | null;
+          price_ar: number;
+          price_unit: string;
+          board: string | null;
+          min_nights: number;
+          resident_price_ar: number | null;
+          checked_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_type_id: string;
+          season_label?: string;
+          from_date?: string | null;
+          to_date?: string | null;
+          price_ar: number;
+          price_unit?: string;
+          board?: string | null;
+          min_nights?: number;
+          resident_price_ar?: number | null;
+          checked_at?: string;
+        };
+        Update: {
+          season_label?: string;
+          from_date?: string | null;
+          to_date?: string | null;
+          price_ar?: number;
+          price_unit?: string;
+          board?: string | null;
+          min_nights?: number;
+          resident_price_ar?: number | null;
+          checked_at?: string;
+        };
+        Relationships: [];
+      };
+      menu_sections: {
+        Row: { id: string; page_id: string; name: string; service: string | null; sort_order: number };
+        Insert: {
+          id?: string;
+          page_id: string;
+          name: string;
+          service?: string | null;
+          sort_order?: number;
+        };
+        Update: { name?: string; service?: string | null; sort_order?: number };
+        Relationships: [];
+      };
+      menu_items: {
+        Row: {
+          id: string;
+          page_id: string;
+          section_id: string | null;
+          name: string;
+          dish_id: string | null;
+          description: string | null;
+          price_ar: number | null;
+          price_unit: string;
+          photo_url: string | null;
+          availability: string;
+          tags: string[];
+          side_dish: string | null;
+          is_signature: boolean;
+          in_stock: boolean;
+          sort_order: number;
+          norm: string;
+        };
+        Insert: {
+          id?: string;
+          page_id: string;
+          section_id?: string | null;
+          name: string;
+          dish_id?: string | null;
+          description?: string | null;
+          price_ar?: number | null;
+          price_unit?: string;
+          photo_url?: string | null;
+          availability?: string;
+          tags?: string[];
+          side_dish?: string | null;
+          is_signature?: boolean;
+          in_stock?: boolean;
+          sort_order?: number;
+        };
+        Update: {
+          section_id?: string | null;
+          name?: string;
+          dish_id?: string | null;
+          description?: string | null;
+          price_ar?: number | null;
+          price_unit?: string;
+          photo_url?: string | null;
+          availability?: string;
+          tags?: string[];
+          side_dish?: string | null;
+          is_signature?: boolean;
+          in_stock?: boolean;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      menu_photos: {
+        Row: { id: string; page_id: string; url: string; legende: string | null; sort_order: number };
+        Insert: {
+          id?: string;
+          page_id: string;
+          url: string;
+          legende?: string | null;
+          sort_order?: number;
+        };
+        Update: { legende?: string | null; sort_order?: number };
+        Relationships: [];
+      };
+      activities: {
+        Row: {
+          id: string;
+          page_id: string;
+          name: string;
+          description: string | null;
+          photos: string[];
+          duration_h: number | null;
+          price_ar: number | null;
+          price_unit: string;
+          min_people: number | null;
+          max_people: number | null;
+          includes: string[];
+          months_open: number[] | null;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          page_id: string;
+          name: string;
+          description?: string | null;
+          photos?: string[];
+          duration_h?: number | null;
+          price_ar?: number | null;
+          price_unit?: string;
+          min_people?: number | null;
+          max_people?: number | null;
+          includes?: string[];
+          months_open?: number[] | null;
+          sort_order?: number;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          photos?: string[];
+          duration_h?: number | null;
+          price_ar?: number | null;
+          price_unit?: string;
+          min_people?: number | null;
+          max_people?: number | null;
+          includes?: string[];
+          months_open?: number[] | null;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      tours: {
+        Row: {
+          id: string;
+          page_id: string;
+          slug: string;
+          title: string;
+          summary: string | null;
+          description: string | null;
+          duration_days: number;
+          duration_nights: number | null;
+          difficulty: string | null;
+          format: string | null;
+          group_min: number | null;
+          group_max: number | null;
+          start_place_id: string | null;
+          end_place_id: string | null;
+          axe: string | null;
+          transports: string[];
+          guide_langs: string[];
+          parks_included: boolean;
+          months_open: number[] | null;
+          photos: string[];
+          norm: string;
+        } & Horodate;
+        Insert: {
+          id?: string;
+          page_id: string;
+          slug: string;
+          title: string;
+          summary?: string | null;
+          description?: string | null;
+          duration_days: number;
+          duration_nights?: number | null;
+          difficulty?: string | null;
+          format?: string | null;
+          group_min?: number | null;
+          group_max?: number | null;
+          start_place_id?: string | null;
+          end_place_id?: string | null;
+          axe?: string | null;
+          transports?: string[];
+          guide_langs?: string[];
+          parks_included?: boolean;
+          months_open?: number[] | null;
+          photos?: string[];
+        };
+        Update: {
+          slug?: string;
+          title?: string;
+          summary?: string | null;
+          description?: string | null;
+          duration_days?: number;
+          duration_nights?: number | null;
+          difficulty?: string | null;
+          format?: string | null;
+          group_min?: number | null;
+          group_max?: number | null;
+          start_place_id?: string | null;
+          end_place_id?: string | null;
+          axe?: string | null;
+          transports?: string[];
+          guide_langs?: string[];
+          parks_included?: boolean;
+          months_open?: number[] | null;
+          photos?: string[];
+        };
+        Relationships: [];
+      };
+      tour_days: {
+        Row: {
+          tour_id: string;
+          jour: number;
+          titre: string;
+          detail: string | null;
+          place_id: string | null;
+          nuitee: string | null;
+        };
+        Insert: {
+          tour_id: string;
+          jour: number;
+          titre: string;
+          detail?: string | null;
+          place_id?: string | null;
+          nuitee?: string | null;
+        };
+        Update: {
+          titre?: string;
+          detail?: string | null;
+          place_id?: string | null;
+          nuitee?: string | null;
+        };
+        Relationships: [];
+      };
+      tour_prices: {
+        Row: { id: string; tour_id: string; base_pax: number; price_ar: number; price_unit: string };
+        Insert: {
+          id?: string;
+          tour_id: string;
+          base_pax: number;
+          price_ar: number;
+          price_unit?: string;
+        };
+        Update: { base_pax?: number; price_ar?: number; price_unit?: string };
+        Relationships: [];
+      };
+      tour_inclusions: {
+        Row: { id: string; tour_id: string; libelle: string; inclus: boolean; sort_order: number };
+        Insert: {
+          id?: string;
+          tour_id: string;
+          libelle: string;
+          inclus?: boolean;
+          sort_order?: number;
+        };
+        Update: { libelle?: string; inclus?: boolean; sort_order?: number };
+        Relationships: [];
+      };
+      reviews: {
+        Row: {
+          id: string;
+          page_id: string;
+          author_id: string;
+          note: number;
+          note_proprete: number | null;
+          note_accueil: number | null;
+          note_rapport: number | null;
+          body: string | null;
+          visite_le: string | null;
+          status: string;
+        } & Horodate;
+        Insert: {
+          id?: string;
+          page_id: string;
+          author_id: string;
+          note: number;
+          note_proprete?: number | null;
+          note_accueil?: number | null;
+          note_rapport?: number | null;
+          body?: string | null;
+          visite_le?: string | null;
+        };
+        Update: {
+          note?: number;
+          note_proprete?: number | null;
+          note_accueil?: number | null;
+          note_rapport?: number | null;
+          body?: string | null;
+          visite_le?: string | null;
+        };
+        Relationships: [];
+      };
+      review_replies: {
+        Row: { review_id: string; page_id: string; body: string } & Horodate;
+        Insert: { review_id: string; page_id: string; body: string; created_at?: string };
+        Update: { body?: string };
+        Relationships: [];
+      };
+      post_mentions: {
+        Row: { post_id: string; page_id: string };
+        Insert: { post_id: string; page_id: string };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -254,6 +859,72 @@ export type Database = {
       is_staff: { Args: Record<string, never>; Returns: boolean };
       get_feed: { Args: { p_curseur?: string | null; p_limite?: number }; Returns: Json };
       ouvrir_conversation: { Args: { p_autre: string }; Returns: string };
+
+      /* ── Référentiels et recherche (0004-0008) ─────────────────────────── */
+      resoudre_lieu: {
+        Args: { p_terme: string; p_limite?: number };
+        Returns: {
+          id: string;
+          slug: string;
+          name_fr: string;
+          kind: string;
+          region: string | null;
+          score: number;
+        }[];
+      };
+      resoudre_plat: {
+        Args: { p_terme: string; p_limite?: number };
+        Returns: { id: string; slug: string; name_fr: string; family: string | null; score: number }[];
+      };
+      suggerer: { Args: { p_terme: string; p_limite?: number }; Returns: Json };
+      get_page_by_slug: { Args: { p_slug: string }; Returns: Json };
+      ouvrir_conversation_page: { Args: { p_page: string }; Returns: string };
+      chercher_pages: {
+        Args: {
+          p_lieu?: string | null;
+          p_categorie?: string | null;
+          p_prix_max?: number | null;
+          p_plat?: string | null;
+          p_curseur_score?: number | null;
+          p_curseur_id?: string | null;
+          p_limite?: number;
+        };
+        Returns: {
+          id: string;
+          slug: string;
+          name: string;
+          categories: string[];
+          short_desc: string | null;
+          cover_url: string | null;
+          place_slug: string | null;
+          place_name: string | null;
+          landmark: string | null;
+          price_min_ar: number | null;
+          price_min_unit: string | null;
+          rating_avg: number;
+          rating_count: number;
+          verification_status: string;
+          completeness: number;
+          prix_du_plat: number | null;
+        }[];
+      };
+      restaurants_par_plat: {
+        Args: { p_plat: string; p_lieu?: string | null; p_limite?: number };
+        Returns: {
+          page_id: string;
+          page_slug: string;
+          page_name: string;
+          place_name: string | null;
+          landmark: string | null;
+          cover_url: string | null;
+          rating_avg: number;
+          rating_count: number;
+          nom_sur_la_carte: string;
+          price_ar: number | null;
+          price_unit: string;
+          is_signature: boolean;
+        }[];
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

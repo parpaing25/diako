@@ -128,7 +128,7 @@ export function PostCard({
   }
 
   async function partager() {
-    const url = `${window.location.origin}/?post=${post.id}`;
+    const url = `${window.location.origin}/post/${post.id}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "Diako", text: post.body?.slice(0, 100) ?? "", url });
@@ -175,7 +175,7 @@ export function PostCard({
           </p>
           {post.place && (
             <Link
-              to={`/explorer?q=${encodeURIComponent(post.place)}`}
+              to={`/recherche?q=${encodeURIComponent(post.place)}`}
               className="flex items-center gap-0.5 text-xs text-muted-foreground hover:underline"
             >
               <MapPin className="h-3 w-3" aria-hidden="true" />

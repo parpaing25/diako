@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { BadgeCheck, MapPin, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
+import { BadgeVerification } from "@/components/Badges";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { ariary, unite, type ResultatPage } from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
@@ -45,8 +46,12 @@ export function FicheCard({ fiche, platCherche }: { fiche: ResultatPage; platChe
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
         <div className="flex items-start gap-1.5">
           <h3 className="min-w-0 flex-1 font-semibold leading-tight">{fiche.name}</h3>
+          {/* ⚠ La coche seule laissait croire « bon établissement ». Le badge
+              nomme desormais CE QUI est verifie — un NIF n'est pas une chambre
+              propre, et le confondre engagerait Diako sur une prestation qu'il
+              ne fournit pas. */}
           {fiche.verification_status !== "none" && (
-            <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-label="Vérifié" />
+            <BadgeVerification niveau={fiche.verification_status} className="mt-0.5 shrink-0" />
           )}
         </div>
 

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  BadgeCheck,
   Bookmark,
   Clock,
   Globe,
@@ -12,6 +11,7 @@ import {
   Share2,
   Star,
 } from "lucide-react";
+import { BadgeVerification } from "@/components/Badges";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSEO } from "@/hooks/useSEO";
 import {
@@ -297,10 +297,7 @@ export default function PagePro() {
         <div className="mt-4 flex items-start gap-2">
           <h1 className="min-w-0 flex-1 text-2xl font-semibold leading-tight">{fiche.name}</h1>
           {fiche.verification_status !== "none" && (
-            <BadgeCheck
-              className="mt-1 h-5 w-5 shrink-0 text-primary"
-              aria-label="Établissement vérifié"
-            />
+            <BadgeVerification niveau={fiche.verification_status} className="mt-1.5 shrink-0" />
           )}
         </div>
 

@@ -155,12 +155,28 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "/";
+
+  // ⚠ DEFAUT CORRIGE : la version precedente se contentait de `client.focus()`.
+  //   Un onglet deja ouvert reprenait le focus SANS naviguer — cliquer sur
+  //   « Message de X » ramenait donc sur la page qu'on regardait, pas sur les
+  //   messages. Une notification qui ne mene pas a ce qu'elle annonce est pire
+  //   qu'une absence de notification : on croit avoir rate quelque chose.
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-      for (const client of list) {
-        if ("focus" in client) return client.focus();
-      }
-      return self.clients.openWindow(target);
-    })
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((list) => {
+        for (const client of list) {
+          if ("focus" in client) {
+            // On navigue PUIS on focus. navigate() n'existe pas partout :
+            // en cas d'echec, on ouvre une fenetre neuve sur la bonne adresse.
+            if ("navigate" in client) {
+              return client.navigate(target).then((c) => (c || client).focus());
+            }
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(target);
+      })
+      .catch(() => self.clients.openWindow(target))
   );
 });

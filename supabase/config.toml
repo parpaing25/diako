@@ -16,3 +16,14 @@ project_id = "eifrwecaszzqrdwjjjbu"
 # La fonction est appelée depuis le site avec la clé anon, qui est un JWT
 # valide : la vérification reste active.
 verify_jwt = true
+
+[functions.send-push]
+# ⚠ PAS de verification de jeton, et c'est DELIBERE. Cette fonction est
+#   appelee par un declencheur de base, qui n'a pas de session. La securite ne
+#   repose pas sur un secret mais sur la forme du message : le corps ne
+#   designe QU'UN IDENTIFIANT DE LIGNE, et tout le contenu est relu en base.
+#   Une requete forgee ne peut donc que reexpedier une VRAIE notification a
+#   son VRAI destinataire — il n'y a rien a voler ni a detourner.
+#   C'est ce qui evite de mettre la cle service_role dans un declencheur, comme
+#   c'est le cas sur le projet frere.
+verify_jwt = false

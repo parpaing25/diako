@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Eye, Plus, Star, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { AssistantEtablissement } from "@/components/AssistantEtablissement";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   ariary,
   CATEGORIES,
-  chargerDestinations,
-  creerEtablissement,
   mesEtablissements,
   unite,
-  type Categorie,
-  type Lieu,
 } from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
 
@@ -28,26 +25,19 @@ type MonEtab = Awaited<ReturnType<typeof mesEtablissements>>[number];
  *   back-office, et cocher « Professionnel » à l'inscription n'avait d'autre
  *   effet qu'un badge sur le profil public.
  *
- *   Ici, un gérant crée réellement sa fiche et la gère. La création ne demande
- *   que trois choses — nom, ce qu'il fait, où il est — parce qu'un formulaire
- *   de vingt champs fait abandonner. Tout le reste se remplit ensuite, et la
- *   barre de complétude dit ce qui manque encore.
+ *   Ici, un gérant crée réellement sa fiche et la gère. La création passe par un
+ *   ASSISTANT en étapes qui garde un brouillon : le formulaire d'un seul tenant
+ *   faisait tout perdre à qui s'arrêtait au milieu. Seules trois informations
+ *   sont exigées — nom, activité, lieu ; le reste se complète ensuite, et la
+ *   barre de complétude dit ce qui manque.
  */
 export default function EspacePro() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   useDocumentTitle("Espace professionnel");
 
   const [etabs, setEtabs] = useState<MonEtab[]>([]);
   const [chargement, setChargement] = useState(true);
   const [formOuvert, setFormOuvert] = useState(false);
-  const [destinations, setDestinations] = useState<Lieu[]>([]);
-
-  const [nom, setNom] = useState("");
-  const [cats, setCats] = useState<Categorie[]>([]);
-  const [lieu, setLieu] = useState("");
-  const [resume, setResume] = useState("");
-  const [envoi, setEnvoi] = useState(false);
 
   const charger = useCallback(async () => {
     if (!user) {
@@ -66,34 +56,6 @@ export default function EspacePro() {
   useEffect(() => {
     void charger();
   }, [charger]);
-
-  useEffect(() => {
-    if (!formOuvert || destinations.length) return;
-    void chargerDestinations(200).then(setDestinations).catch(() => undefined);
-  }, [formOuvert, destinations.length]);
-
-  async function creer(e: React.FormEvent) {
-    e.preventDefault();
-    if (!nom.trim() || !cats.length) {
-      toast.error("Il faut au moins un nom et une activité.");
-      return;
-    }
-    setEnvoi(true);
-    try {
-      const slug = await creerEtablissement({
-        name: nom,
-        categories: cats,
-        place_id: lieu || null,
-        short_desc: resume,
-      });
-      toast.success("Votre fiche est créée.");
-      navigate(`/pro/${slug}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "La fiche n'a pas pu être créée.");
-    } finally {
-      setEnvoi(false);
-    }
-  }
 
   if (!user) {
     return (
@@ -207,108 +169,18 @@ export default function EspacePro() {
         </ul>
       )}
 
+      {/* ⚠ L'ancien formulaire tenait sur un seul ecran. Un gerant qui
+          s'arretait au milieu — parce qu'il cherchait son numero, parce qu'un
+          client arrivait — perdait tout. L'assistant garde un brouillon a
+          chaque frappe et ne pose qu'une question a la fois. */}
       {!chargement && (formOuvert || etabs.length === 0) && (
-        <form onSubmit={creer} className="mt-5 rounded-2xl border border-border p-4">
-          <h2 className="font-semibold">
-            {etabs.length === 0 ? "Créez votre fiche" : "Nouvel établissement"}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Trois informations suffisent pour commencer. Vous ajouterez les
-            chambres, la carte et les photos ensuite.
-          </p>
-
-          <label className="mt-4 block text-sm font-medium" htmlFor="nom">
-            Nom de l'établissement
-          </label>
-          <input
-            id="nom"
-            value={nom}
-            onChange={(ev) => setNom(ev.target.value)}
-            required
-            maxLength={120}
-            placeholder="Chez Mariette, Hôtel Le Baobab…"
-            className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-sm"
+        <div className="mt-5">
+          <AssistantEtablissement
+            onAnnuler={etabs.length > 0 ? () => setFormOuvert(false) : undefined}
           />
-
-          <p className="mt-4 text-sm font-medium">Ce que vous faites</p>
-          <p className="text-xs text-muted-foreground">
-            Plusieurs choix possibles : un écolodge est souvent hôtel, restaurant
-            et organisateur d'excursions à la fois.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {CATEGORIES.map((c) => {
-              const actif = cats.includes(c.code);
-              return (
-                <button
-                  key={c.code}
-                  type="button"
-                  onClick={() =>
-                    setCats((l) => (actif ? l.filter((x) => x !== c.code) : [...l, c.code]))
-                  }
-                  aria-pressed={actif}
-                  className={cn(
-                    "min-h-9 rounded-full border px-3 text-sm transition",
-                    actif
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border hover:bg-muted"
-                  )}
-                >
-                  {c.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <label className="mt-4 block text-sm font-medium" htmlFor="lieu">
-            Où c'est
-          </label>
-          <select
-            id="lieu"
-            value={lieu}
-            onChange={(ev) => setLieu(ev.target.value)}
-            className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-sm"
-          >
-            <option value="">Choisir une destination…</option>
-            {destinations.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name_fr}
-                {d.region ? ` — ${d.region}` : ""}
-              </option>
-            ))}
-          </select>
-
-          <label className="mt-4 block text-sm font-medium" htmlFor="resume">
-            En une phrase
-          </label>
-          <input
-            id="resume"
-            value={resume}
-            onChange={(ev) => setResume(ev.target.value)}
-            maxLength={200}
-            placeholder="Douze bungalows les pieds dans l'eau, devant le récif."
-            className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-sm"
-          />
-
-          <div className="mt-4 flex gap-2">
-            <button
-              type="submit"
-              disabled={envoi}
-              className="min-h-11 rounded-full bg-primary px-6 font-medium text-primary-foreground disabled:opacity-50"
-            >
-              {envoi ? "Création…" : "Créer ma fiche"}
-            </button>
-            {etabs.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setFormOuvert(false)}
-                className="min-h-11 rounded-full border border-input px-5 text-sm font-medium"
-              >
-                Annuler
-              </button>
-            )}
-          </div>
-        </form>
+        </div>
       )}
+
     </div>
   );
 }

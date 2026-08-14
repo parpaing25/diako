@@ -1,7 +1,14 @@
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Bell, ChevronRight, Globe, Lock, LogOut, Monitor, Moon, Shield, Sun, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import {
+  activerPush,
+  desactiverPush,
+  etatPush,
+  type EtatPush,
+} from "@/lib/pushNotifications";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -49,6 +56,45 @@ export default function Parametres() {
   const { theme, effectif, setTheme } = useTheme();
   const { user, signOut } = useAuth();
 
+  const [push, setPush] = useState<EtatPush>("impossible");
+  const [bascule, setBascule] = useState(false);
+
+  const relire = useCallback(() => {
+    void etatPush().then(setPush);
+  }, []);
+  useEffect(relire, [relire]);
+
+  async function basculerPush() {
+    setBascule(true);
+    try {
+      if (push === "actif") {
+        await desactiverPush();
+        toast.success("Notifications coupées.");
+      } else {
+        const ok = await activerPush();
+        toast[ok ? "success" : "error"](
+          ok
+            ? "Notifications activées."
+            : "Le navigateur a refusé. Autorisez les notifications dans ses réglages."
+        );
+      }
+    } finally {
+      setBascule(false);
+      relire();
+    }
+  }
+
+  const detailPush =
+    !user
+      ? "Connectez-vous pour être prévenu des réponses"
+      : push === "impossible"
+        ? "Votre navigateur ne les gère pas"
+        : push === "refuse"
+          ? "Refusées — à réautoriser dans les réglages du navigateur"
+          : push === "actif"
+            ? "Activées sur cet appareil · appuyez pour couper"
+            : "Être prévenu quand un établissement vous répond";
+
   const bientot = (quoi: string) =>
     toast("Bientôt disponible", { description: `${quoi} arrivera avec les prochaines fonctionnalités.` });
 
@@ -93,7 +139,20 @@ export default function Parametres() {
           Préférences
         </h2>
         <div className="mt-2 divide-y divide-border overflow-hidden rounded-2xl border border-border">
-          <Ligne icon={Bell} titre="Notifications" detail="Alertes de prix, réponses, nouveautés — bientôt" onClick={() => bientot("Le réglage des notifications")} />
+          {/* Le push sert d'abord aux REPONSES : un voyageur ecrit le soir,
+              le gerant repond le lendemain. Sans notification, la reponse
+              attend qu'on pense a rouvrir le site — et la mise en relation ne
+              se fait pas. */}
+          <Ligne
+            icon={Bell}
+            titre="Notifications"
+            detail={detailPush}
+            onClick={() => {
+              if (!user) return bientot("Les notifications");
+              if (push === "impossible" || push === "refuse" || bascule) return;
+              void basculerPush();
+            }}
+          />
           <Ligne icon={Globe} titre="Langue" detail="Français · le malgache viendra plus tard" onClick={() => bientot("Le choix de la langue")} />
           <Ligne icon={Shield} titre="Confidentialité" detail="Qui voit mon profil et mes publications — bientôt" onClick={() => bientot("Les réglages de confidentialité")} />
         </div>

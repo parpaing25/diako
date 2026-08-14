@@ -854,6 +854,28 @@ export type Database = {
         Relationships: [];
       };
 
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          navigateur: string | null;
+          vu_le: string;
+        } & Horodate;
+        Insert: {
+          id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          navigateur?: string | null;
+          vu_le?: string;
+        };
+        Update: { vu_le?: string; navigateur?: string | null };
+        Relationships: [];
+      };
       journal_erreurs: {
         Row: {
           id: number;
@@ -980,6 +1002,8 @@ export type Database = {
           prix_du_plat: number | null;
         }[];
       };
+      marquer_conversation_lue: { Args: { p_conv: string }; Returns: number };
+      messages_non_lus: { Args: Record<string, never>; Returns: number };
       revendiquer_page: {
         Args: { p_page: string; p_message: string | null; p_tel: string | null };
         Returns: string;

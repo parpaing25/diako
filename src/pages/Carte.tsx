@@ -35,6 +35,7 @@ interface PointCarte {
   lat: number;
   lng: number;
   precision_geo: "exacte" | "lieu";
+  geo_source: string | null;
   place_name: string | null;
   price_min_ar: number | null;
   price_min_unit: string | null;
@@ -276,11 +277,23 @@ export default function Carte() {
 
             {/* Dire la vérité sur la précision plutôt que de laisser croire que
                 le point est celui de la porte d'entrée. */}
-            {choisis[0].precision_geo === "lieu" && (
+            {choisis[0].precision_geo === "lieu" ? (
               <p className="border-b border-border bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground">
                 Position approchée : le point est celui de la commune, pas de
                 l'établissement.
               </p>
+            ) : (
+              /* D'où vient le point : un relevé OpenStreetMap ne se discute pas
+                 comme une épingle posée par le gérant. */
+              choisis[0].geo_source && (
+                <p className="border-b border-border bg-primary/5 px-4 py-1.5 text-xs text-muted-foreground">
+                  Position relevée ·{" "}
+                  {choisis[0].geo_source.startsWith("OSM") ||
+                  choisis[0].geo_source.startsWith("Nominatim")
+                    ? "source OpenStreetMap"
+                    : choisis[0].geo_source}
+                </p>
+              )
             )}
 
             <ul className="divide-y divide-border overflow-y-auto overscroll-contain">

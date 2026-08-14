@@ -1057,6 +1057,7 @@ export type Database = {
           lat: number;
           lng: number;
           precision_geo: string;
+          geo_source: string | null;
           place_name: string | null;
           price_min_ar: number | null;
           price_min_unit: string | null;

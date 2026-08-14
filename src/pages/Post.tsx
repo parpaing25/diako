@@ -4,6 +4,7 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { PostCard } from "@/components/PostCard";
 import { Commentaires } from "@/components/Commentaires";
 import { chargerPost, type Post as TypePost } from "@/lib/api";
+import { useReveal } from "@/hooks/useReveal";
 
 /**
  * Une publication seule, à son adresse propre.
@@ -21,6 +22,7 @@ import { chargerPost, type Post as TypePost } from "@/lib/api";
  * pour LIRE un récit précis, pas pour faire défiler un fil.
  */
 export default function Post() {
+  useReveal();
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<TypePost | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absent" | "erreur">("chargement");

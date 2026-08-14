@@ -7,8 +7,8 @@
     <!-- Les deux thèmes sont supportés : sans color-scheme, le navigateur peint
          les zones natives en clair et l'écran clignote sur un appareil en sombre. -->
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#0E7C86" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0C1A1D" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FAF6EF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0D1817" media="(prefers-color-scheme: dark)" />
 
     <title>Diako — Voyage &amp; tourisme à Madagascar</title>
     <meta
@@ -59,10 +59,13 @@
       property="og:description"
       content="Où dormir, où manger et avec qui partir à Madagascar."
     />
-    <meta property="og:image" content="https://diako.fonenako.mg/media/diako-logo-mail.png" />
-    <meta property="og:image:width" content="160" />
-    <meta property="og:image:height" content="160" />
-    <meta property="og:image:alt" content="Logo Diako" />
+    <!-- ⚠ 1200x630, et c'est important. L'ancienne vignette faisait 160x160 :
+         WhatsApp et Facebook la reduisaient a une pastille a cote du lien,
+         alors que le partage WhatsApp est le canal d'acquisition n°1 ici. -->
+    <meta property="og:image" content="https://diako.fonenako.mg/media/og-diako.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Diako — Madagascar se raconte par ceux qui y vont." />
     <meta name="twitter:card" content="summary" />
 
     <!-- Données structurées : elles disent explicitement à Google ce qu'est le
@@ -174,7 +177,7 @@
       }
       #dk-shell .hero .bar {
         margin-top: 24px; height: 48px; max-width: 42rem;
-        border: 1px solid var(--dk-border); border-radius: 999px; background: #fff;
+        border: 1px solid var(--dk-border); border-radius: 999px; background: #FAF6EF;
       }
       #dk-shell .apropos { margin-top: 40px; }
       #dk-shell .apropos h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }

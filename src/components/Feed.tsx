@@ -6,6 +6,7 @@ import { PostImmersif } from "@/components/PostImmersif";
 import { Commentaires } from "@/components/Commentaires";
 import { useEstMobile } from "@/hooks/useEstMobile";
 import { chargerFeed, type Post } from "@/lib/api";
+import { useReveal } from "@/hooks/useReveal";
 
 const PAR_PAGE = 6;
 
@@ -24,6 +25,8 @@ const PAR_PAGE = 6;
 export function Feed() {
   const mobile = useEstMobile();
   const [posts, setPosts] = useState<Post[]>([]);
+  // Les cartes se posent en arrivant a l'ecran ; relance a chaque page recue.
+  useReveal(posts.length);
   const [chargement, setChargement] = useState(true);
   const [fini, setFini] = useState(false);
   const [erreur, setErreur] = useState(false);

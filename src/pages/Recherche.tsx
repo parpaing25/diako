@@ -21,6 +21,7 @@ import {
   type ResultatPage,
 } from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
+import { useReveal } from "@/hooks/useReveal";
 
 /**
  * Recherche — la fonctionnalité signature de Diako.
@@ -73,6 +74,7 @@ interface Recit {
 }
 
 export default function Recherche() {
+  useReveal();
   const [params, setParams] = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
   const categorie = params.get("cat");

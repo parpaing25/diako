@@ -30,6 +30,7 @@ export function ImageProgressive({
   ajustement?: "cover" | "contain";
 }) {
   const [chargee, setChargee] = useState(false);
+  // La vraie image ne remplace pas la vignette d'un coup sec : elle se pose.
   const vignette = getThumbUrl(src);
   const aVignette = vignette !== src;
 

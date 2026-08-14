@@ -13,6 +13,7 @@ import {
   type ResultatPage,
 } from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
+import { useReveal } from "@/hooks/useReveal";
 
 const MOIS = [
   "Janv.",
@@ -53,6 +54,7 @@ const COULEUR_SAISON: Record<string, string> = {
  *    pointe vers la recherche, qui sait résoudre « Nosy be » en « nosy-be ».
  */
 export default function Explorer() {
+  useReveal();
   const [params] = useSearchParams();
   const slug = params.get("lieu") ?? params.get("q");
 

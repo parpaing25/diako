@@ -15,6 +15,7 @@ import {
   type PublicationAimee,
 } from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
+import { useReveal } from "@/hooks/useReveal";
 
 type Onglet = "adresses" | "enregistres" | "aimes";
 
@@ -30,6 +31,7 @@ type Onglet = "adresses" | "enregistres" | "aimes";
  *   que c'est ce qui sert à décider.
  */
 export default function Favoris() {
+  useReveal();
   useDocumentTitle("Mon carnet");
   const { user, loading } = useAuth();
   const [onglet, setOnglet] = useState<Onglet>("adresses");

@@ -73,13 +73,23 @@ export function PostCard({
     return true;
   };
 
+  // ⚠ L'animation ne se rejoue pas si la classe reste posee : on la retire au
+  //   bout de son temps, sinon le deuxieme clic ne montre rien.
+  const [pulseCoeur, setPulseCoeur] = useState(false);
+  const [pulseSignet, setPulseSignet] = useState(false);
+
   async function reagir() {
     if (!connecte()) return;
     const avant = reaction;
     setReaction(avant ? null : "jaime");
     setNbReactions((n) => n + (avant ? -1 : 1));
     try {
-      setReaction(await basculerReaction(post.id));
+      const nouvelle = await basculerReaction(post.id);
+      setReaction(nouvelle);
+      if (nouvelle) {
+        setPulseCoeur(true);
+        window.setTimeout(() => setPulseCoeur(false), 520);
+      }
     } catch {
       setReaction(avant);
       setNbReactions((n) => n + (avant ? 1 : -1));
@@ -88,6 +98,8 @@ export function PostCard({
   }
 
   async function enregistrer() {
+    setPulseSignet(true);
+    window.setTimeout(() => setPulseSignet(false), 460);
     if (!connecte()) return;
     const avant = favori;
     setFavori(!avant);
@@ -148,7 +160,7 @@ export function PostCard({
   const nom = post.author.name || "Membre Diako";
 
   return (
-    <article className="border-b border-border bg-card pb-2 md:rounded-2xl md:border">
+    <article className="dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border">
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
       <header className="flex items-center gap-3 px-4 py-3">
         <Link
@@ -252,11 +264,15 @@ export function PostCard({
           aria-pressed={!!reaction}
           aria-label="J'aime"
           className={cn(
-            "grid h-10 w-10 place-items-center rounded-full transition hover:bg-muted",
-            reaction ? "text-accent" : "text-foreground"
+            "relative grid h-10 w-10 place-items-center rounded-full hover:bg-muted",
+            reaction ? "text-accent" : "text-foreground",
+            pulseCoeur && "dk-halo"
           )}
         >
-          <Heart className={cn("h-6 w-6", reaction && "fill-current")} aria-hidden="true" />
+          <Heart
+            className={cn("h-6 w-6", reaction && "fill-current", pulseCoeur && "dk-coeur-actif")}
+            aria-hidden="true"
+          />
         </button>
         <button
           onClick={ouvrirCommentaires}
@@ -277,11 +293,14 @@ export function PostCard({
           aria-pressed={favori}
           aria-label="Enregistrer"
           className={cn(
-            "ml-auto grid h-10 w-10 place-items-center rounded-full transition hover:bg-muted",
+            "ml-auto grid h-10 w-10 place-items-center rounded-full hover:bg-muted",
             favori ? "text-primary" : "text-foreground"
           )}
         >
-          <Bookmark className={cn("h-6 w-6", favori && "fill-current")} aria-hidden="true" />
+          <Bookmark
+            className={cn("h-6 w-6", favori && "fill-current", pulseSignet && "dk-signet-actif")}
+            aria-hidden="true"
+          />
         </button>
       </div>
 

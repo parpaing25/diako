@@ -30,9 +30,9 @@ export function FicheCard({ fiche, platCherche }: { fiche: ResultatPage; platChe
   return (
     <Link
       to={`/p/${fiche.slug}`}
-      className="dk-card group flex flex-col overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/40"
+      className="dk-reveal dk-carte group flex flex-col overflow-hidden rounded-2xl border border-border bg-card"
     >
-      <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
+      <div className="dk-zoom aspect-[4/3] w-full overflow-hidden bg-muted">
         {fiche.cover_url ? (
           <ImageProgressive src={fiche.cover_url} alt={fiche.name} ajustement="cover" />
         ) : (

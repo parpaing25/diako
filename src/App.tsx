@@ -17,6 +17,7 @@ import { installerJournalErreurs } from "@/lib/journalErreurs";
 import { trackView } from "@/lib/pageviews";
 
 import Index from "./pages/Index";
+import { useRevealFilet } from "@/hooks/useReveal";
 const Auth = lazy(() => import("./pages/Auth"));
 const Bienvenue = lazy(() => import("./pages/Bienvenue"));
 const Compte = lazy(() => import("./pages/Compte"));
@@ -75,9 +76,14 @@ function RouteEffects() {
 
 function Shell() {
   const { pathname } = useLocation();
+  useRevealFilet(pathname);
+  // ⚠ La cle force React a remonter le conteneur a chaque changement d'adresse.
+  //   Sans elle, l'animation d'entree ne joue qu'une fois, au premier
+  //   chargement — c'est exactement pourquoi le site paraissait fige.
   const bare = pathname.startsWith("/auth") || pathname.startsWith("/bienvenue");
 
   const routes = (
+    <div key={pathname} className="dk-page">
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
@@ -103,6 +109,7 @@ function Shell() {
       <Route path="/cgu" element={<Cgu />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </div>
   );
 
   if (bare) {

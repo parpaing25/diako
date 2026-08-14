@@ -59,14 +59,29 @@ export function Header() {
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          {/* « Diako » en romain, « MADAGASIKARA » en petites capitales
-              espacées : le nom dit le pays sans une ligne de plus. */}
-          <Link to="/" className="shrink-0 leading-none">
-            <span className="dk-edito block text-[1.35rem] font-semibold tracking-tight text-primary">
-              Diako
-            </span>
-            <span className="dk-etiquette hidden text-[0.55rem] leading-none sm:block">
-              Madagasikara
+          {/* ⚠ Le vrai logo, et non plus le nom en typographie. Servi en WebP
+              de 5,6 Ko : le fichier d'origine fait 1920 px pour 494 Ko, soit
+              onze secondes de 3G pour une image de 36 px de haut.
+              `dark:invert` : le tracé est une encre unie, il se retourne
+              proprement en blanc sur fond de nuit. */}
+          <Link to="/" className="flex shrink-0 items-center gap-2" aria-label="Diako, accueil">
+            <picture>
+              <source srcSet="/media/diako-marque-96.webp" type="image/webp" />
+              <img
+                src="/media/diako-marque-96.png"
+                alt=""
+                width={36}
+                height={36}
+                className="h-9 w-9 transition-transform duration-300 hover:rotate-[-6deg] hover:scale-110 dark:invert"
+              />
+            </picture>
+            <span className="hidden leading-none sm:block">
+              <span className="dk-edito block text-[1.3rem] font-semibold tracking-tight text-primary">
+                Diako
+              </span>
+              <span className="dk-etiquette block text-[0.55rem] leading-none">
+                Madagasikara
+              </span>
             </span>
           </Link>
 

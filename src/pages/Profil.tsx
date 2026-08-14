@@ -9,6 +9,7 @@ import { getAvatarUrl } from "@/lib/supabaseImage";
 import { basculerAbonnement, ouvrirConversation } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
 import type { Post } from "@/lib/api";
+import { useReveal } from "@/hooks/useReveal";
 
 interface ProfilPublic {
   id: string;
@@ -29,6 +30,7 @@ const COLONNES =
   "id,display_name,avatar_url,bio,home_place,account_type,verification,followers_count,following_count,posts_count";
 
 export default function Profil() {
+  useReveal();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();

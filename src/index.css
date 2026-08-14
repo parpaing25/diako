@@ -274,8 +274,25 @@ table {
 }
 
 /* Squelettes de chargement — jamais d'ecran blanc. */
+/* ⚠ `animate-pulse` fait clignoter le bloc entier : sur une liste de six
+   squelettes, six rectangles battent ensemble et ca ressemble a une panne.
+   Un BALAYAGE lit dans le sens de la lecture et dit « ca arrive ». */
+@keyframes dk-balayage {
+  from { background-position: -140% 0; }
+  to   { background-position: 240% 0; }
+}
 .dk-skeleton {
-  @apply animate-pulse rounded-md bg-muted;
+  @apply rounded-md;
+  background-color: hsl(var(--muted));
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--card) / 0.85) 45%,
+    transparent 90%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: dk-balayage 1.35s ease-in-out infinite;
 }
 
 
@@ -531,3 +548,134 @@ table {
 /* Le survol d'une ligne de tendance : le rang glisse, le titre avance. */
 .dk-ligne-tendance { transition: transform 0.18s ease, color 0.18s ease; }
 .dk-ligne-tendance:hover { transform: translateX(3px); }
+
+/* ═══ LA COUCHE DE MOUVEMENT, RÉELLEMENT POSÉE ════════════════════════════
+   ⚠ CONSTAT DU 14/08 : cette couche existait déjà et n'était appliquée
+     NULLE PART — `dk-page-enter` apparaissait dans zéro fichier, `dk-card`
+     dans deux. Écrire les animations ne suffit pas : c'est de les brancher
+     qui fait la différence entre un site vivant et une maquette.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ── Ce qui arrive au défilement ─────────────────────────────────────────
+   Posé par useReveal (IntersectionObserver). L'état de départ est écrit ici
+   et non en JS : sinon le bloc s'affiche une image avant de sauter. */
+.dk-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.dk-reveal[data-vu="1"] { opacity: 1; transform: none; will-change: auto; }
+
+/* ── Le cœur qui éclate ──────────────────────────────────────────────────
+   Le geste le plus fréquent du site. Sans retour, on ne sait pas s'il a été
+   pris en compte et on appuie deux fois — ce qui annule. */
+@keyframes dk-coeur {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.38); }
+  60%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.dk-coeur-actif { animation: dk-coeur 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes dk-halo {
+  from { transform: scale(0.4); opacity: 0.55; }
+  to   { transform: scale(2.1); opacity: 0; }
+}
+.dk-halo::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  background: hsl(var(--accent) / 0.35);
+  animation: dk-halo 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+/* ── Le signet qui se pose ───────────────────────────────────────────────*/
+@keyframes dk-signet {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-4px) scale(1.2); }
+  100% { transform: translateY(0) scale(1); }
+}
+.dk-signet-actif { animation: dk-signet 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* ── Tout ce qui se clique ───────────────────────────────────────────────
+   ⚠ Une transition sur `all` repeint aussi la couleur du texte et le fond à
+     chaque image : sur un Android d'entrée de gamme ça coûte des ips. On
+     nomme donc les propriétés, et seulement celles qui bougent. */
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]) {
+  transition: transform 0.14s cubic-bezier(0.34, 1.4, 0.64, 1),
+              opacity 0.14s ease,
+              background-color 0.16s ease,
+              border-color 0.16s ease,
+              color 0.16s ease,
+              box-shadow 0.18s ease;
+}
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.96);
+}
+
+/* ── Les cartes ──────────────────────────────────────────────────────────*/
+.dk-carte {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s ease,
+              border-color 0.22s ease;
+}
+@media (hover: hover) {
+  .dk-carte:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px -12px hsl(var(--foreground) / 0.22);
+    border-color: hsl(var(--primary) / 0.35);
+  }
+}
+.dk-carte:active { transform: translateY(0) scale(0.995); }
+
+/* Une image qui grandit doucement sous le curseur : le cadre ne bouge pas,
+   c'est la photo qui respire. */
+.dk-zoom { overflow: hidden; }
+.dk-zoom img { transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (hover: hover) {
+  .dk-zoom:hover img { transform: scale(1.05); }
+}
+
+/* ── L'image qui se pose au lieu d'apparaître ────────────────────────────*/
+@keyframes dk-image-posee { from { opacity: 0; } to { opacity: 1; } }
+.dk-image-posee { animation: dk-image-posee 0.4s ease-out both; }
+
+/* ── L'entrée de page, appliquée au conteneur de routes ──────────────────*/
+@keyframes dk-page {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.dk-page { animation: dk-page 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── L'onglet actif : un trait qui glisse plutôt qu'un trait qui saute ───*/
+.dk-onglets { position: relative; }
+.dk-onglet-trait {
+  position: absolute;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: hsl(var(--primary));
+  transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Le focus au clavier, visible et net ─────────────────────────────────
+   ⚠ Jamais `outline: none` sans remplacement : c'est ce qui rend un site
+     inutilisable au clavier sans que personne ne s'en aperçoive. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Défilement adouci pour les ancres ───────────────────────────────────*/
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}

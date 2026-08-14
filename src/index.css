@@ -461,3 +461,73 @@ table {
   background-image: radial-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px);
   background-size: 18px 18px;
 }
+
+/* ═══ LE RAIL VIVANT ═══════════════════════════════════════════════════════
+   Fonenako anime son rail : c'est ce qui donne l'impression d'un site
+   habité plutôt que d'une page figée. Tout est en CSS pur — aucune
+   bibliothèque d'animation, aucun octet de plus.
+   ⚠ Tout est neutralisé par le bloc `prefers-reduced-motion` plus haut : il
+     porte `!important` sur `*`, donc il gagne malgré sa position AVANT ces
+     règles. Ne jamais poser `!important` sur une animation ici, ça le
+     contournerait.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Le point « en direct » : deux ondes, comme un pouls. */
+@keyframes dk-onde {
+  0%   { box-shadow: 0 0 0 0 hsl(var(--accent) / 0.55); }
+  70%  { box-shadow: 0 0 0 7px hsl(var(--accent) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--accent) / 0); }
+}
+.dk-direct {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: hsl(var(--accent));
+  animation: dk-onde 2.2s ease-out infinite;
+}
+
+/* La flamme des tendances : elle respire, elle ne clignote pas. */
+@keyframes dk-respire {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.14); opacity: 1; }
+}
+.dk-flamme { animation: dk-respire 2.4s ease-in-out infinite; transform-origin: bottom center; }
+
+/* Le balayage lumineux de la carte « espace pro ». Lent (6 s) et discret :
+   à 2 s il devient un clignotant publicitaire. */
+@keyframes dk-brillance {
+  0%   { transform: translateX(-120%) skewX(-18deg); }
+  60%, 100% { transform: translateX(320%) skewX(-18deg); }
+}
+.dk-brillance { position: relative; overflow: hidden; }
+.dk-brillance::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.09), transparent);
+  animation: dk-brillance 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* L'entrée en cascade des blocs du rail, un peu plus lente que le fil :
+   la colonne se dépose, elle ne surgit pas. */
+.dk-rail > * { animation: dk-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.dk-rail > *:nth-child(1) { animation-delay: 0.04s; }
+.dk-rail > *:nth-child(2) { animation-delay: 0.12s; }
+.dk-rail > *:nth-child(3) { animation-delay: 0.20s; }
+.dk-rail > *:nth-child(4) { animation-delay: 0.28s; }
+.dk-rail > *:nth-child(n + 5) { animation-delay: 0.34s; }
+
+/* La barre de proportion d'une tendance, qui se déploie à l'arrivée. */
+@keyframes dk-deploie { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.dk-jauge {
+  transform-origin: left;
+  animation: dk-deploie 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.25s;
+}
+
+/* Le survol d'une ligne de tendance : le rang glisse, le titre avance. */
+.dk-ligne-tendance { transition: transform 0.18s ease, color 0.18s ease; }
+.dk-ligne-tendance:hover { transform: translateX(3px); }

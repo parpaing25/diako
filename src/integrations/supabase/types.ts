@@ -1008,6 +1008,34 @@ export type Database = {
           prix_du_plat: number | null;
         }[];
       };
+      stats_diako: {
+        Args: Record<string, never>;
+        Returns: {
+          recits: number;
+          etablissements: number;
+          destinations: number;
+          plats: number;
+          membres: number;
+          vues_7j: number;
+        };
+      };
+      recits_en_vogue: {
+        Args: { p_limite?: number };
+        Returns: {
+          id: string;
+          body: string | null;
+          media: unknown;
+          place: string | null;
+          dish: string | null;
+          created_at: string;
+          reactions_count: number;
+          comments_count: number;
+          saves_count: number;
+          auteur_nom: string | null;
+          auteur_avatar: string | null;
+          score: number;
+        }[];
+      };
       saison_du_mois: {
         Args: { p_mois?: number | null; p_limite?: number };
         Returns: {

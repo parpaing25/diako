@@ -126,7 +126,12 @@ export function RightRail() {
   return (
     <aside
       aria-label="À propos de Diako"
-      className="dk-rail sticky top-14 hidden h-fit w-72 shrink-0 space-y-4 py-4 xl:block 2xl:w-80"
+      /* ⚠ `h-fit` seul rendait le BAS DU RAIL INATTEIGNABLE : collé en haut,
+         plus haut que l'écran, il ne défilait ni avec la page ni pour
+         lui-même. On borne sa hauteur à celle de la fenêtre et on lui donne
+         son propre défilement — `overscroll-contain` évite d'entraîner la
+         page quand on arrive au bout. */
+      className="dk-rail sticky top-14 hidden max-h-[calc(100dvh-3.5rem)] w-72 shrink-0 space-y-4 overflow-y-auto overscroll-contain py-4 [scrollbar-width:thin] xl:block 2xl:w-80"
     >
       {/* ── Les chiffres, vrais ────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-4">
@@ -189,7 +194,7 @@ export function RightRail() {
                           {v.place ?? v.dish ?? v.auteur_nom ?? "Un récit"}
                         </span>
                         {v.body && (
-                          <span className="mt-0.5 line-clamp-1 block text-xs text-muted-foreground">
+                          <span className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                             {v.body}
                           </span>
                         )}

@@ -282,7 +282,7 @@ export function PanneauNotifications({
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium">{n.title}</span>
                   {n.message && (
-                    <span className="mt-0.5 block line-clamp-2 text-sm text-muted-foreground">
+                    <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                       {n.message}
                     </span>
                   )}

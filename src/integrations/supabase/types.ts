@@ -913,6 +913,12 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      page_saves: {
+        Row: { page_id: string; user_id: string; note: string | null } & Horodate;
+        Insert: { page_id: string; user_id: string; note?: string | null };
+        Update: { note?: string | null };
+        Relationships: [];
+      };
       page_claims: {
         Row: {
           id: string;
@@ -1002,6 +1008,27 @@ export type Database = {
           prix_du_plat: number | null;
         }[];
       };
+      mes_etablissements_gardes: {
+        Args: { p_limite?: number };
+        Returns: {
+          id: string;
+          slug: string;
+          name: string;
+          categories: string[];
+          short_desc: string | null;
+          cover_url: string | null;
+          place_name: string | null;
+          landmark: string | null;
+          phone: string | null;
+          price_min_ar: number | null;
+          price_min_unit: string | null;
+          rating_avg: number;
+          rating_count: number;
+          garde_le: string;
+          note: string | null;
+        }[];
+      };
+      mes_publications_aimees: { Args: { p_limite?: number }; Returns: Json };
       marquer_conversation_lue: { Args: { p_conv: string }; Returns: number };
       messages_non_lus: { Args: Record<string, never>; Returns: number };
       revendiquer_page: {

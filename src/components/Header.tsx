@@ -8,6 +8,11 @@ import { getAvatarUrl } from "@/lib/supabaseImage";
 import { SearchBar } from "@/components/SearchBar";
 import { MenuMobile } from "@/components/MenuMobile";
 import { compterNonLues } from "@/lib/api";
+import {
+  compterMessagesNonLus,
+  PanneauMessages,
+  PanneauNotifications,
+} from "@/components/PanneauxEntete";
 
 export function Header() {
   const { user } = useAuth();
@@ -15,6 +20,9 @@ export function Header() {
   const { effectif, setTheme } = useTheme();
   const [menu, setMenu] = useState(false);
   const [nonLues, setNonLues] = useState(0);
+  const [msgNonLus, setMsgNonLus] = useState(0);
+  // Un seul panneau ouvert a la fois : deux volets superposes se recouvrent.
+  const [panneau, setPanneau] = useState<"messages" | "notifs" | null>(null);
   const fermerMenu = useCallback(() => setMenu(false), []);
 
   // Rafraichissement au FOCUS, jamais en temps reel : un canal ouvert en
@@ -22,6 +30,7 @@ export function Header() {
   const rafraichir = useCallback(() => {
     if (!user) { setNonLues(0); return; }
     void compterNonLues().then(setNonLues).catch(() => {});
+    void compterMessagesNonLus().then(setMsgNonLus).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -69,25 +78,48 @@ export function Header() {
 
           {user ? (
             <div className="flex shrink-0 items-center gap-1">
-              <Link
-                to="/messages"
-                aria-label="Messages"
-                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
-              >
-                <MessageCircle className="h-5 w-5" aria-hidden="true" />
-              </Link>
-              <Link
-                to="/notifications"
-                aria-label={nonLues > 0 ? `Notifications (${nonLues} non lues)` : "Notifications"}
-                className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
-              >
-                <Bell className="h-5 w-5" aria-hidden="true" />
-                {nonLues > 0 && (
-                  <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
-                    {nonLues > 9 ? "9+" : nonLues}
-                  </span>
-                )}
-              </Link>
+              {/* On OUVRE un apercu, on ne change pas de page : verifier qu'il
+                  n'y a rien coutait jusqu'ici deux chargements sur une 3G. */}
+              <div className="relative">
+                <button
+                  onClick={() => setPanneau((p) => (p === "messages" ? null : "messages"))}
+                  aria-label={msgNonLus > 0 ? `Messages (${msgNonLus} non lus)` : "Messages"}
+                  aria-expanded={panneau === "messages"}
+                  className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <MessageCircle className="h-5 w-5" aria-hidden="true" />
+                  {msgNonLus > 0 && (
+                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+                      {msgNonLus > 9 ? "9+" : msgNonLus}
+                    </span>
+                  )}
+                </button>
+                <PanneauMessages
+                  ouvert={panneau === "messages"}
+                  onFermer={() => setPanneau(null)}
+                />
+              </div>
+
+              <div className="relative">
+                <button
+                  onClick={() => setPanneau((p) => (p === "notifs" ? null : "notifs"))}
+                  aria-label={nonLues > 0 ? `Notifications (${nonLues} non lues)` : "Notifications"}
+                  aria-expanded={panneau === "notifs"}
+                  className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <Bell className="h-5 w-5" aria-hidden="true" />
+                  {nonLues > 0 && (
+                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+                      {nonLues > 9 ? "9+" : nonLues}
+                    </span>
+                  )}
+                </button>
+                <PanneauNotifications
+                  ouvert={panneau === "notifs"}
+                  onFermer={() => setPanneau(null)}
+                  onLues={() => setNonLues(0)}
+                />
+              </div>
               <Link
                 to="/compte"
                 aria-label="Mon compte"

@@ -42,7 +42,7 @@ export const NAV_COMPLET: NavItem[] = [
   { to: "/explorer", label: "Explorer", icon: Compass, pret: true },
   { to: "/recherche", label: "Rechercher", icon: Search, pret: true },
   { to: "/publier", label: "Publier", icon: Plus, pret: true },
-  { to: "/favoris", label: "Favoris", icon: Bookmark, pret: true },
+  { to: "/favoris", label: "Mon carnet", icon: Bookmark, pret: true },
   { to: "/messages", label: "Messages", icon: MessageCircle, pret: true },
   { to: "/notifications", label: "Notifications", icon: Bell, pret: true },
   { to: "/pro", label: "Espace pro", icon: Briefcase, pret: true },

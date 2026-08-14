@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   BadgeCheck,
+  Bookmark,
   Clock,
   Globe,
   MapPin,
@@ -25,7 +26,9 @@ import { Carrousel } from "@/components/Carrousel";
 import {
   ariary,
   avisDe,
+  basculerFicheGardee,
   chargerFiche,
+  ficheEstGardee,
   deposerAvis,
   ecrireALEtablissement,
   recitsMentionnant,
@@ -78,6 +81,7 @@ export default function PagePro() {
   const [monAvis, setMonAvis] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [revendicationOuverte, setRevendicationOuverte] = useState(false);
+  const [gardee, setGardee] = useState(false);
 
   // Titre, description, aperçu de partage et canonique — tirés de la fiche.
   // Partager un hôtel sur WhatsApp montrait jusqu'ici le titre et l'image de
@@ -154,6 +158,7 @@ export default function PagePro() {
                 : "infos"
       );
       void avisDe(f.id).then(setAvis).catch(() => undefined);
+      void ficheEstGardee(f.id).then(setGardee).catch(() => undefined);
       void recitsMentionnant(f.id).then(setRecits).catch(() => undefined);
     } catch {
       setEtat("erreur");
@@ -367,6 +372,36 @@ export default function PagePro() {
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             Écrire
+          </button>
+          {/* Ce qu'on garde en preparant un voyage, ce n'est pas un recit :
+              c'est l'hotel ou on pense dormir. */}
+          <button
+            onClick={async () => {
+              if (!user) {
+                toast("Connexion requise", {
+                  description: "Créez un compte pour garder cette adresse.",
+                });
+                return navigate("/auth");
+              }
+              const avant = gardee;
+              setGardee(!avant);
+              try {
+                setGardee(await basculerFicheGardee(fiche.id, avant));
+                toast.success(avant ? "Retiré de votre carnet." : "Gardé dans votre carnet.");
+              } catch {
+                setGardee(avant);
+                toast.error("L'enregistrement a échoué.");
+              }
+            }}
+            aria-pressed={gardee}
+            aria-label={gardee ? "Retirer de mon carnet" : "Garder dans mon carnet"}
+            className={cn(
+              "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium",
+              gardee ? "border-primary bg-secondary text-primary" : "border-input"
+            )}
+          >
+            <Bookmark className={cn("h-4 w-4", gardee && "fill-current")} aria-hidden="true" />
+            {gardee ? "Gardé" : "Garder"}
           </button>
           <button
             onClick={() => void partager()}

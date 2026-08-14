@@ -1049,6 +1049,91 @@ export const AXES: { code: string; label: string }[] = [
   { code: "extreme-sud", label: "L'Extrême Sud" },
 ];
 
+/* ── Ce que je garde ───────────────────────────────────────────────────── */
+
+/**
+ * Garder un établissement de côté.
+ *
+ * `saves` ne connaît que les publications. Or ce qu'on garde en préparant un
+ * voyage, ce n'est pas un récit : c'est l'hôtel où on pense dormir. Sans ça,
+ * un voyageur qui trouve trois adresses à Majunga doit les noter ailleurs — et
+ * il ne revient pas.
+ */
+export async function basculerFicheGardee(pageId: string, actuel: boolean): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+
+  if (actuel) {
+    await supabase.from("page_saves").delete().eq("page_id", pageId).eq("user_id", user.id);
+    return false;
+  }
+  const { error } = await supabase
+    .from("page_saves")
+    .insert({ page_id: pageId, user_id: user.id });
+  if (error) throw error;
+  return true;
+}
+
+export async function ficheEstGardee(pageId: string): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from("page_saves")
+    .select("page_id")
+    .eq("page_id", pageId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  return !!data;
+}
+
+export interface FicheGardee {
+  id: string;
+  slug: string;
+  name: string;
+  categories: string[];
+  short_desc: string | null;
+  cover_url: string | null;
+  place_name: string | null;
+  landmark: string | null;
+  phone: string | null;
+  price_min_ar: number | null;
+  price_min_unit: string | null;
+  rating_avg: number;
+  rating_count: number;
+  garde_le: string;
+  note: string | null;
+}
+
+export async function mesEtablissementsGardes(): Promise<FicheGardee[]> {
+  const { data, error } = await supabase.rpc("mes_etablissements_gardes", { p_limite: 50 });
+  if (error) throw error;
+  return (data as FicheGardee[]) ?? [];
+}
+
+export interface PublicationAimee {
+  id: string;
+  body: string | null;
+  media: { url: string }[];
+  place: string | null;
+  created_at: string;
+  aime_le: string;
+  reactions_count: number;
+  comments_count: number;
+  auteur: { id: string; nom: string | null; avatar: string | null };
+}
+
+/** Les publications AIMÉES — signal distinct de l'enregistrement, et souvent
+ *  le seul qu'un lecteur laisse derrière lui. */
+export async function mesPublicationsAimees(): Promise<PublicationAimee[]> {
+  const { data, error } = await supabase.rpc("mes_publications_aimees", { p_limite: 50 });
+  if (error) throw error;
+  return (data as unknown as PublicationAimee[]) ?? [];
+}
+
 /* ── Mise en forme ─────────────────────────────────────────────────────── */
 
 

@@ -778,13 +778,20 @@ export default function PagePro() {
 
               {/* Le repère en clair : l'adressage normalisé n'existe pas à
                   Madagascar, c'est lui qui permet de trouver l'endroit. */}
-              {(fiche.landmark || fiche.address) && (
+              {(fiche.landmark || fiche.address || fiche.place) && (
                 <section>
                   <h3 className="text-sm font-semibold">Où c'est</h3>
                   {fiche.address && <p className="mt-1 text-sm">{fiche.address}</p>}
                   {fiche.landmark && (
                     <p className="mt-1 text-sm text-muted-foreground">{fiche.landmark}</p>
                   )}
+                  <Link
+                    to={`/carte?focus=${fiche.slug}`}
+                    className="mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-medium"
+                  >
+                    <MapPin className="h-4 w-4" aria-hidden="true" />
+                    Voir sur la carte
+                  </Link>
                 </section>
               )}
 

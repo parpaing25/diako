@@ -23,71 +23,83 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 191 46% 12%; /* #10262B — encre */
+    /* PAPIER, pas blanc. Un fil de voyage se lit comme un carnet : le blanc
+       pur d'une application bancaire ne raconte rien, et sur les ecrans bon
+       marche tres lumineux du marche il fatigue. */
+    --background: 40 43% 96%;      /* #FAF6EF — papier */
+    --foreground: 180 30% 11%;     /* #142524 — encre */
 
-    --card: 0 0% 100%;
-    --card-foreground: 191 46% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 191 46% 12%;
+    --card: 42 50% 98%;            /* #FDFBF7 — la carte respire sur le papier */
+    --card-foreground: 180 30% 11%;
+    --popover: 42 50% 98%;
+    --popover-foreground: 180 30% 11%;
 
-    /* Teal profond #0E7C86 : c'est LUI la couleur des etats actifs et du texte
-       sur blanc (contraste AA). Le turquoise clair reste decoratif — leçon de
-       Fonenako, ou #2994C0 sur blanc ne faisait que 3,43:1. */
-    --primary: 185 81% 29%;
-    --primary-foreground: 0 0% 100%;
-    --primary-soft: 185 78% 40%; /* #16A9B5 */
+    /* TEAL PROFOND #0F5C5A. Assombri par rapport au #0E7C86 precedent : il
+       fallait tenir le contraste AA sur fond papier, pas sur blanc pur. */
+    --primary: 178 72% 21%;
+    --primary-foreground: 42 50% 98%;
+    --primary-soft: 178 45% 34%;
 
-    --secondary: 36 55% 93%; /* sable #F7EFE3 */
-    --secondary-foreground: 191 46% 12%;
+    --secondary: 38 45% 91%;       /* #EFE6D7 — sable */
+    --secondary-foreground: 180 30% 11%;
 
-    --muted: 190 20% 96%;
-    --muted-foreground: 190 11% 40%; /* #5B6E72 */
+    --muted: 38 35% 93%;
+    --muted-foreground: 180 12% 38%;
 
-    --accent: 13 89% 59%; /* corail #F4633A */
-    --accent-foreground: 0 0% 100%;
+    /* BRIQUE #B4472F. Le corail #F4633A faisait « application » ; la terre
+       cuite est la couleur des Hautes Terres, et elle passe AA sur papier. */
+    --accent: 12 59% 45%;
+    --accent-foreground: 42 50% 98%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
+    /* OR #B8912F — le liseré, jamais un aplat : sur papier il ne contraste pas
+       assez pour porter du texte. */
+    --or: 41 59% 45%;
 
-    --sand: 36 55% 93%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 42 50% 98%;
 
-    --border: 190 18% 89%;
-    --input: 190 18% 89%;
-    --ring: 185 81% 29%;
+    --sand: 38 45% 91%;
+
+    --border: 38 25% 85%;
+    --input: 38 25% 85%;
+    --ring: 178 72% 21%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 191 46% 12%;
-    --sidebar-primary: 185 81% 29%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 190 20% 96%;
-    --sidebar-accent-foreground: 191 46% 12%;
-    --sidebar-border: 190 18% 89%;
-    --sidebar-ring: 185 81% 29%;
+    --sidebar-background: 40 43% 96%;
+    --sidebar-foreground: 180 30% 11%;
+    --sidebar-primary: 178 72% 21%;
+    --sidebar-primary-foreground: 42 50% 98%;
+    --sidebar-accent: 38 35% 93%;
+    --sidebar-accent-foreground: 180 30% 11%;
+    --sidebar-border: 38 25% 85%;
+    --sidebar-ring: 178 72% 21%;
   }
 
   .dark {
-    --background: 191 40% 8%;
-    --foreground: 185 25% 94%;
+    /* Le sombre garde la meme famille : encre de nuit teintee teal, jamais du
+       gris neutre. */
+    --background: 180 28% 7%;
+    --foreground: 40 25% 92%;
 
-    --card: 191 38% 11%;
-    --card-foreground: 185 25% 94%;
-    --popover: 191 38% 11%;
-    --popover-foreground: 185 25% 94%;
+    --card: 180 24% 10%;
+    --card-foreground: 40 25% 92%;
+    --popover: 180 24% 10%;
+    --popover-foreground: 40 25% 92%;
 
-    --primary: 173 66% 50%; /* #2DD4BF */
-    --primary-foreground: 191 46% 12%;
-    --primary-soft: 185 81% 29%;
+    --primary: 174 55% 52%;
+    --primary-foreground: 180 30% 11%;
+    --primary-soft: 178 45% 34%;
 
-    --secondary: 191 30% 16%;
-    --secondary-foreground: 185 25% 94%;
+    --secondary: 180 20% 15%;
+    --secondary-foreground: 40 25% 92%;
 
-    --muted: 191 30% 16%;
-    --muted-foreground: 190 12% 65%;
+    --muted: 180 20% 15%;
+    --muted-foreground: 40 10% 64%;
 
-    --accent: 14 100% 66%; /* #FF7A52 */
+    --or: 41 62% 58%;
+
+    --accent: 12 68% 57%
     --accent-foreground: 191 46% 12%;
 
     --destructive: 0 62% 50%;
@@ -363,4 +375,89 @@ table {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ── Les pastilles de la carte ────────────────────────────────────────────
+   Leaflet injecte du HTML brut via divIcon : ces classes ne peuvent pas etre
+   des utilitaires Tailwind (elles ne seraient pas vues au balayage). */
+.dk-pin {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  border-radius: 9999px;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--primary));
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  transition: transform 0.12s ease;
+}
+.dk-pin:hover { transform: scale(1.12); }
+.dk-pin--groupe {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--card));
+  font-size: 14px;
+  font-weight: 700;
+}
+/* Leaflet monte ses panneaux tres haut ; nos feuilles et l'en-tete doivent
+   rester au-dessus. */
+.leaflet-pane, .leaflet-control { z-index: 1 !important; }
+.leaflet-top, .leaflet-bottom { z-index: 400 !important; }
+
+/* ═══ REFONTE ÉDITORIALE ═══════════════════════════════════════════════════
+   Le fil ne doit pas ressembler à un tableau de bord. Trois outils, et
+   AUCUN n'ajoute un octet à télécharger : les serifs et le monospace sont
+   ceux du système, la frise est un dégradé CSS. Sur 3G, une police
+   décorative importée aurait coûté 30 à 80 Ko pour trois titres.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Le titre de rubrique en italique de labeur — ce qui distingue un récit
+   d'une fiche produit. */
+.dk-edito {
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+.dk-edito em,
+.dk-edito .dk-souligne {
+  font-style: italic;
+  color: hsl(var(--primary));
+}
+
+/* L'étiquette de section : petites capitales espacées, façon revue. */
+.dk-etiquette {
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+/* La frise tissée — un rappel du lamba, en dégradés répétés.
+   ⚠ 4px de haut : au-delà elle prend le pas sur le contenu. */
+.dk-tissage {
+  height: 4px;
+  background-image: repeating-linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0 6px,
+      transparent 6px 12px
+    ),
+    repeating-linear-gradient(45deg, hsl(var(--or)) 0 6px, transparent 6px 12px),
+    linear-gradient(to right, hsl(var(--accent)), hsl(var(--accent)));
+  background-size: 12px 4px, 12px 4px, 100% 4px;
+}
+
+/* Le liseré or d'une carte mise en avant. */
+.dk-liseré-or {
+  box-shadow: inset 0 0 0 1px hsl(var(--or) / 0.45);
+}
+
+/* Le fond papier discrètement grainé : une trame de points à 2 % d'opacité,
+   assez pour casser l'aplat, invisible de près. */
+.dk-papier {
+  background-image: radial-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px);
+  background-size: 18px 18px;
 }

@@ -47,6 +47,9 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+        {/* La frise tissée — un rappel du lamba, en dégradés CSS : elle situe
+            le site en deux pixels, sans une image à télécharger. */}
+        <div className="dk-tissage" aria-hidden="true" />
         <div className="flex h-14 w-full items-center gap-2 px-3 md:gap-3 md:px-4 xl:px-6 2xl:px-10">
           <button
             onClick={() => setMenu(true)}
@@ -56,8 +59,15 @@ export function Header() {
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          <Link to="/" className="shrink-0 text-xl font-bold tracking-tight text-primary">
-            Diako
+          {/* « Diako » en romain, « MADAGASIKARA » en petites capitales
+              espacées : le nom dit le pays sans une ligne de plus. */}
+          <Link to="/" className="shrink-0 leading-none">
+            <span className="dk-edito block text-[1.35rem] font-semibold tracking-tight text-primary">
+              Diako
+            </span>
+            <span className="dk-etiquette hidden text-[0.55rem] leading-none sm:block">
+              Madagasikara
+            </span>
           </Link>
 
           <div className="min-w-0 flex-1">

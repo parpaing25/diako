@@ -1008,6 +1008,34 @@ export type Database = {
           prix_du_plat: number | null;
         }[];
       };
+      saison_du_mois: {
+        Args: { p_mois?: number | null; p_limite?: number };
+        Returns: {
+          slug: string;
+          nom: string;
+          region: string | null;
+          note: string;
+          raison: string | null;
+        }[];
+      };
+      pages_carte: {
+        Args: { p_categorie?: string | null; p_limite?: number };
+        Returns: {
+          id: string;
+          slug: string;
+          name: string;
+          categories: string[];
+          cover_url: string | null;
+          lat: number;
+          lng: number;
+          precision_geo: string;
+          place_name: string | null;
+          price_min_ar: number | null;
+          price_min_unit: string | null;
+          rating_avg: number;
+          rating_count: number;
+        }[];
+      };
       mes_etablissements_gardes: {
         Args: { p_limite?: number };
         Returns: {

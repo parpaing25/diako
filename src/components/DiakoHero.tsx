@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Flame, Plus } from "lucide-react";
+import { Flame, Map as MapIcon, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
 import { SearchBar } from "@/components/SearchBar";
@@ -40,16 +40,21 @@ export function DiakoHero({
   return (
     <section className="dk-colonne px-4 pt-4">
       {/* ── Salutation + recherche ─────────────────────────────────────── */}
-      <div className="rounded-3xl bg-gradient-to-br from-secondary to-secondary/40 px-5 py-6 md:px-8 md:py-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary">
-          {prenom ? `Diako · bonjour ${prenom}` : "Diako"}
+      <div className="dk-papier relative overflow-hidden rounded-3xl border border-border bg-secondary px-5 py-7 md:px-8 md:py-9">
+        <div className="dk-tissage absolute inset-x-0 top-0" aria-hidden="true" />
+        <p className="dk-etiquette">
+          {prenom ? `Bonjour ${prenom}` : "Réseau de voyage malgache"}
         </p>
-        <h1 className="mt-1 max-w-[22ch] text-2xl font-semibold leading-tight md:text-4xl md:leading-[1.15] xl:text-[2.75rem]">
-          Diako — où dormir, où manger, avec qui partir à Madagascar
+        {/* ⚠ Le titre disait « Diako — où dormir, où manger, avec qui partir » :
+            un sommaire de rubriques, pas une promesse. Ce site n'est pas un
+            annuaire, c'est ce que les gens rapportent de leurs voyages. */}
+        <h1 className="dk-edito mt-2 max-w-[16ch] text-[1.75rem] md:text-[2.6rem] xl:text-[3rem]">
+          Madagascar se raconte{" "}
+          <em className="dk-souligne">par ceux qui y vont.</em>
         </h1>
-        <p className="mt-2 max-w-prose text-sm text-foreground/75 md:text-base">
-          Les hôtels, les restaurants et les agences de voyage du pays, avec
-          leurs vrais tarifs, leurs menus et leurs circuits.
+        <p className="mt-3 max-w-prose text-sm text-foreground/75 md:text-base">
+          Les hôtels, les tables et les agences du pays — avec les tarifs
+          réellement payés, écrits par des voyageurs.
         </p>
 
         <SearchBar taille="hero" className="mt-5 max-w-2xl" />
@@ -58,10 +63,10 @@ export function DiakoHero({
           <button
             type="button"
             onClick={() => navigate("/publier")}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Publier
+            Raconter un voyage
           </button>
           {!user && (
             <button
@@ -75,9 +80,17 @@ export function DiakoHero({
           <button
             type="button"
             onClick={() => navigate("/explorer")}
-            className="inline-flex min-h-10 items-center rounded-full border border-border bg-background px-4 text-sm font-medium"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-background px-5 text-sm font-medium"
           >
             Explorer Madagascar
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/carte")}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-5 text-sm font-medium"
+          >
+            <MapIcon className="h-4 w-4" aria-hidden="true" />
+            Voir la carte
           </button>
         </div>
       </div>
@@ -88,8 +101,8 @@ export function DiakoHero({
           de récits publiés — ce qui est vivant passe devant. */}
       <div className="mt-5">
         <div className="mb-2 flex items-center gap-1.5 px-0.5">
-          <Flame className="h-4 w-4 text-accent" aria-hidden="true" />
-          <h2 className="text-sm font-semibold">Destinations de Madagascar</h2>
+          <Flame className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+          <h2 className="dk-etiquette">Régions actives cette semaine</h2>
         </div>
 
         <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

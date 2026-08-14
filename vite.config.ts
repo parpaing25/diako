@@ -107,6 +107,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("node_modules/clsx/")) return "react-vendor";
           if (id.includes("node_modules/recharts") || id.includes("node_modules/d3"))
             return "charts-vendor";
+          // Leaflet (~150 Ko) n'est tire QUE par /carte, qui est en lazy() :
+          // isole, il ne pese jamais sur l'accueil.
+          if (id.includes("node_modules/leaflet")) return "maps-vendor";
           if (id.includes("node_modules/react-hook-form") || id.includes("node_modules/zod"))
             return "forms-vendor";
           // Pas de manualChunks applicatifs : ils forcent l'import statique de

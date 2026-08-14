@@ -12,6 +12,7 @@ export default {
     },
     extend: {
       colors: {
+        or: "hsl(var(--or))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -65,6 +66,9 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        // Serif et mono du SYSTEME : zero octet telecharge sur 3G.
+        serif: ["Georgia", "Iowan Old Style", "Times New Roman", "serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Cascadia Mono", "Menlo", "monospace"],
       },
       keyframes: {
         "accordion-down": {

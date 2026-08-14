@@ -30,7 +30,7 @@ export function FicheCard({ fiche, platCherche }: { fiche: ResultatPage; platChe
   return (
     <Link
       to={`/p/${fiche.slug}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:border-primary/40 hover:shadow-sm"
+      className="dk-card group flex flex-col overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/40"
     >
       <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
         {fiche.cover_url ? (

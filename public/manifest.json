@@ -1,0 +1,79 @@
+{
+  "id": "mg.diako.app",
+  "name": "Diako — Voyage et tourisme à Madagascar",
+  "short_name": "Diako",
+  "description": "Où dormir, où manger, avec qui partir à Madagascar. Hôtels, restaurants et agences avec leurs vrais tarifs, leurs menus et leurs circuits.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#0E7C86",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["travel", "lifestyle", "food"],
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "icons": [
+    {
+      "src": "/media/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/media/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/media/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Rechercher un hôtel ou un plat",
+      "short_name": "Rechercher",
+      "description": "Trouver où dormir et où manger à Madagascar",
+      "url": "/recherche",
+      "icons": [{ "src": "/media/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Explorer les destinations",
+      "short_name": "Explorer",
+      "description": "Les destinations de Madagascar, leur saison et leurs adresses",
+      "url": "/explorer",
+      "icons": [{ "src": "/media/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Raconter un voyage",
+      "short_name": "Publier",
+      "description": "Partager un récit, des photos, un bon plan",
+      "url": "/publier",
+      "icons": [{ "src": "/media/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/publier",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "titre",
+      "text": "texte",
+      "url": "lien",
+      "files": [
+        {
+          "name": "photos",
+          "accept": ["image/*"]
+        }
+      ]
+    }
+  },
+  "prefer_related_applications": false
+}

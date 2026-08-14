@@ -266,6 +266,94 @@ table {
   @apply animate-pulse rounded-md bg-muted;
 }
 
+
+/* ---------------------------------------------------------------------------
+   COUCHE D'ANIMATION ET DE FINITION
+
+   Transposee du projet frere, ou elle porte l'essentiel de l'impression de
+   qualite : une carte qui repond au survol, une page qui entre au lieu
+   d'apparaitre, un squelette qui pulse. Ce sont des details, mais leur absence
+   se remarque immediatement — le site parait « plat ».
+
+   ⚠ Tout est desactive par « reduire les animations » (bloc plus bas) : sur un
+     Android d'entree de gamme, une animation de trop coute des images par
+     seconde, et pour une partie du public elle donne le mal de coeur.
+   --------------------------------------------------------------------------- */
+
+@keyframes dk-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes dk-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes dk-scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Entree de page : courte et discrete. Au-dela de 250 ms, on attend. */
+.dk-page-enter { animation: dk-fade-up 0.22s ease-out both; }
+.dk-fade-in    { animation: dk-fade-in 0.25s ease-out both; }
+.dk-scale-in   { animation: dk-scale-in 0.18s ease-out both; }
+
+/* Apparition en cascade d'une liste : le retard est porte par une variable
+   pour rester lisible dans le composant. */
+.dk-stagger > * { animation: dk-fade-up 0.25s ease-out both; }
+.dk-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.dk-stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.dk-stagger > *:nth-child(3) { animation-delay: 0.10s; }
+.dk-stagger > *:nth-child(4) { animation-delay: 0.14s; }
+.dk-stagger > *:nth-child(5) { animation-delay: 0.18s; }
+.dk-stagger > *:nth-child(n + 6) { animation-delay: 0.22s; }
+
+/* Carte : le survol souleve, le clic enfonce. Le second compte plus que le
+   premier — sur telephone il n'y a pas de survol, mais il y a un appui. */
+.dk-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+@media (hover: hover) {
+  .dk-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -12px hsl(var(--foreground) / 0.18);
+  }
+}
+.dk-card:active { transform: scale(0.995); }
+
+/* Verre depoli — utilise sur les barres posees au-dessus du contenu. */
+.dk-glass {
+  background: hsl(var(--background) / 0.72);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+
+/* Pastille qui bat : reservee aux non-lus, jamais decorative. */
+@keyframes dk-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.15); opacity: 0.85; }
+}
+.dk-badge-pulse { animation: dk-pulse 1.8s ease-in-out infinite; }
+
+/* Barre de progression indeterminee, pour les chargements sans total connu. */
+@keyframes dk-progress {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.dk-progress {
+  position: relative;
+  overflow: hidden;
+  background: hsl(var(--muted));
+}
+.dk-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 25%;
+  background: hsl(var(--primary));
+  animation: dk-progress 1.1s ease-in-out infinite;
+}
+
 /* Respect de « reduire les animations ». */
 @media (prefers-reduced-motion: reduce) {
   *,

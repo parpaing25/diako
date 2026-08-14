@@ -18,7 +18,20 @@
     <link rel="canonical" href="https://diako.fonenako.mg/" />
 
     <link rel="icon" type="image/png" href="/media/favicon.png" />
-    <link rel="apple-touch-icon" href="/media/diako-logo.png" />
+
+    <!-- ⚠ L'icone d'accueil iOS doit etre une VRAIE icone de 180 px, pas le
+         logo de 1920 px et 494 Ko : Safari le telechargeait en entier pour
+         l'afficher en 60 px. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/media/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Diako" />
+
+    <!-- Le service worker et offline.html existaient deja, mais SANS manifeste
+         le site n'etait pas installable : ni « Ajouter a l'ecran d'accueil »,
+         ni icone, ni ouverture en plein ecran. Sur un marche ou l'ordinateur
+         est rare, une application installable n'est pas un supplement. -->
+    <link rel="manifest" href="/manifest.json" />
 
     <!-- Police auto-hébergée : préchargée, aucun appel externe. -->
     <link

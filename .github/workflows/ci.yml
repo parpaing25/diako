@@ -27,6 +27,13 @@ jobs:
         run: npm run lint
         continue-on-error: true
 
+      # 01/08/2026 : Diako n'avait AUCUN test. Ce verrou devient bloquant des
+      # la premiere batterie (40 tests sur le balisage schema.org et les
+      # numeros WhatsApp) — sinon la dette revient par la fenetre, comme sur
+      # le projet frere ou elle avait atteint 114 erreurs de typage.
+      - name: Tests
+        run: npm test
+
       - name: Build
         run: npm run build
 

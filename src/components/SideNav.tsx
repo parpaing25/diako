@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { NAV_COMPLET } from "@/lib/nav";
+import { prechargerRoute } from "@/lib/prechargerRoute";
 import { cn } from "@/lib/utils";
 
 /**
@@ -20,6 +21,9 @@ export function SideNav() {
           <li key={to}>
             <NavLink
               to={to}
+              // Le code de la page part AU TOUCHER, pas au clic : sur o2switch,
+              // l\'etablissement de connexion coute deja ~800 ms.
+              onPointerDown={() => prechargerRoute(to)}
               end={to === "/"}
               className={({ isActive }) =>
                 cn(

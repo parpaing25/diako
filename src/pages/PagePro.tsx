@@ -12,7 +12,14 @@ import {
   Star,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
+import {
+  construireCircuitJsonLd,
+  construireFicheJsonLd,
+  construireOffresChambres,
+  filArianeFiche,
+  poserJsonLd,
+} from "@/lib/jsonld";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { Carrousel } from "@/components/Carrousel";
 import {
@@ -27,6 +34,7 @@ import {
   type Avis,
   type Fiche,
 } from "@/lib/etablissements";
+import { afficherNumero, lienAppel, lienWhatsApp, peutRecevoirWhatsApp } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
 const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -71,7 +79,55 @@ export default function PagePro() {
   const [envoi, setEnvoi] = useState(false);
   const [revendicationOuverte, setRevendicationOuverte] = useState(false);
 
-  useDocumentTitle(fiche?.name ?? "Établissement");
+  // Titre, description, aperçu de partage et canonique — tirés de la fiche.
+  // Partager un hôtel sur WhatsApp montrait jusqu'ici le titre et l'image de
+  // l'accueil : sur ce marché, c'est le canal d'acquisition n°1.
+  useSEO({
+    titre: fiche ? `${fiche.name}${fiche.place ? ` — ${fiche.place.name}` : ""}` : "Établissement",
+    description:
+      fiche?.short_desc ??
+      (fiche
+        ? `${fiche.name}${fiche.place ? ` à ${fiche.place.name}` : ""}${
+            fiche.price_min_ar ? `, à partir de ${ariary(fiche.price_min_ar)}` : ""
+          }. Coordonnées, tarifs et avis sur Diako.`
+        : undefined),
+    image: fiche?.cover_url ?? undefined,
+    url: slug ? `/p/${slug}` : undefined,
+  });
+
+  // Données structurées : c'est ce qui fait afficher la note, la fourchette de
+  // prix et le fil d'Ariane dans les résultats Google plutôt qu'une ligne bleue.
+  useEffect(() => {
+    if (!fiche) return;
+    poserJsonLd("dk-jsonld-fiche", construireFicheJsonLd(fiche));
+    poserJsonLd("dk-jsonld-ariane", filArianeFiche(fiche));
+    poserJsonLd(
+      "dk-jsonld-chambres",
+      construireOffresChambres(
+        fiche.slug,
+        fiche.rooms.map((r) => ({
+          name: r.name,
+          description: r.description,
+          max_adults: r.max_adults,
+          base_price_ar: r.base_price_ar,
+          price_unit: r.price_unit,
+        }))
+      )
+    );
+    poserJsonLd(
+      "dk-jsonld-circuit",
+      fiche.tours.length ? construireCircuitJsonLd(fiche.slug, fiche.tours[0]) : null
+    );
+    return () => {
+      for (const id of [
+        "dk-jsonld-fiche",
+        "dk-jsonld-ariane",
+        "dk-jsonld-chambres",
+        "dk-jsonld-circuit",
+      ])
+        poserJsonLd(id, null);
+    };
+  }, [fiche]);
 
   const charger = useCallback(async () => {
     if (!slug) return;
@@ -288,16 +344,16 @@ export default function PagePro() {
         <div className="mt-4 flex flex-wrap gap-2">
           {fiche.phone && (
             <a
-              href={`tel:${fiche.phone.replace(/\s/g, "")}`}
+              href={lienAppel(fiche.phone)}
               className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
             >
               <Phone className="h-4 w-4" aria-hidden="true" />
               Appeler
             </a>
           )}
-          {fiche.whatsapp && (
+          {fiche.whatsapp && peutRecevoirWhatsApp(fiche.whatsapp) && (
             <a
-              href={`https://wa.me/${fiche.whatsapp.replace(/\D/g, "")}`}
+              href={lienWhatsApp(fiche.whatsapp, { etablissement: fiche.name })}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-5 text-sm font-medium"

@@ -1,0 +1,246 @@
+import { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Flame, Star, Utensils } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useSEO } from "@/hooks/useSEO";
+import { useReveal } from "@/hooks/useReveal";
+import { EtatErreur, EtatVide, Squelettes } from "@/components/Etats";
+import { ImageProgressive } from "@/components/ImageProgressive";
+import { Fourchette, Prix } from "@/components/Prix";
+import { cn } from "@/lib/utils";
+
+/**
+ * LA FICHE D'UN PLAT — /plat/:slug (écran C6 de la maquette).
+ *
+ * ⚠ C'EST LA PAGE QUI RÉPOND À « OÙ MANGER DU RAVITOTO », la requête citée en
+ *   exemple dans le TDR §0.1. Le référentiel des 95 plats et de leurs 254
+ *   variantes orthographiques existe depuis le lot 1 et n'était visible nulle
+ *   part : il faisait marcher la recherche sans jamais avoir de page à lui.
+ *
+ * ⚠ LES VARIANTES SONT AFFICHÉES, pas seulement indexées. Elles disent au
+ *   lecteur « oui, c'est bien le plat que tu cherchais, quelle que soit la
+ *   façon dont tu l'écris » — et elles expliquent pourquoi la recherche le
+ *   trouve. C'est exactement ce que montre la maquette.
+ *
+ * ⚠ AUCUNE CARTE DE RESTAURANT N'EST ENCORE SAISIE. La liste « où en manger »
+ *   est donc vide pour tous les plats. On l'écrit franchement et on propose
+ *   l'action qui la remplit, plutôt que d'inventer des adresses et des prix.
+ */
+
+const FAMILLE: Record<string, string> = {
+  laoka: "Laoka · plat de base",
+  grillade: "Grillade",
+  soupe: "Soupe",
+  riz: "Riz",
+  mofo: "Mofo · beignet",
+  dessert: "Dessert",
+  boisson: "Boisson",
+  "street-food": "Street food",
+  "fruit-de-mer": "Fruit de mer",
+};
+
+const PIMENT = ["", "peu épicé", "épicé", "très épicé"];
+
+interface Fiche {
+  plat: {
+    slug: string; name_fr: string; name_mg: string | null; family: string | null;
+    description: string | null; ingredients: string[] | null; photo_url: string | null;
+    has_pork: boolean; has_beef: boolean; has_seafood: boolean; has_peanut: boolean;
+    is_vegetarian: boolean; spice_level: number | null;
+    price_min_ar: number | null; price_max_ar: number | null;
+  };
+  alias: string[];
+  adresses: {
+    slug: string; nom: string; lieu: string | null; prix_ar: number | null;
+    unite: string | null; note: number; nb_avis: number;
+    signature: boolean; dispo: boolean; photo: string | null;
+  }[];
+  prix_min: number | null;
+  prix_max: number | null;
+  nb_recits: number;
+}
+
+export default function Plat() {
+  const { slug } = useParams<{ slug: string }>();
+  const [f, setF] = useState<Fiche | null>(null);
+  const [etat, setEtat] = useState<"chargement" | "ok" | "absente" | "erreur">("chargement");
+  useReveal(f);
+
+  const charger = useCallback(async () => {
+    if (!slug) return;
+    setEtat("chargement");
+    const { data, error } = await supabase.rpc("fiche_plat", { p_slug: slug });
+    if (error) return setEtat("erreur");
+    if (!data) return setEtat("absente");
+    setF(data as unknown as Fiche);
+    setEtat("ok");
+  }, [slug]);
+
+  useEffect(() => {
+    void charger();
+  }, [charger]);
+
+  useSEO({
+    titre: f ? `${f.plat.name_fr} — où en manger à Madagascar` : "Plat",
+    description: f
+      ? f.plat.description ??
+        `${f.plat.name_fr} : où en manger à Madagascar, avec le prix chez chacun.`
+      : undefined,
+    image: f?.plat.photo_url ?? undefined,
+    url: slug ? `/plat/${slug}` : undefined,
+  });
+
+  if (etat === "chargement")
+    return (
+      <div className="space-y-4 px-4 py-5">
+        <div className="dk-skeleton h-40 rounded-2xl" />
+        <div className="dk-skeleton h-8 w-2/3" />
+        <Squelettes nombre={3} hauteur="h-16" />
+      </div>
+    );
+
+  if (etat === "erreur") return <div className="px-4 py-8"><EtatErreur onReessayer={() => void charger()} /></div>;
+
+  if (etat === "absente" || !f)
+    return (
+      <div className="px-4 py-16 text-center">
+        <h1 className="dk-titre">Plat inconnu</h1>
+        <p className="mt-2 text-muted-foreground">Ce plat n'est pas dans le référentiel.</p>
+        <Link to="/recherche" className="mt-6 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground">
+          Chercher un plat
+        </Link>
+      </div>
+    );
+
+  const p = f.plat;
+  const regimes = [
+    p.has_pork && "Contient du porc",
+    p.has_beef && "Contient du bœuf",
+    p.has_seafood && "Fruits de mer",
+    p.has_peanut && "Contient de l'arachide",
+    p.is_vegetarian && "Végétarien",
+    p.spice_level ? PIMENT[p.spice_level] : null,
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className="px-4 py-5">
+      {p.photo_url && (
+        <div className="mb-4 aspect-[3/2] overflow-hidden rounded-2xl bg-muted">
+          <ImageProgressive src={p.photo_url} alt={p.name_fr} ajustement="cover" />
+        </div>
+      )}
+
+      <p className="dk-etiquette">{FAMILLE[p.family ?? ""] ?? p.family}</p>
+      <h1 className="dk-titre mt-1">{p.name_fr}</h1>
+
+      {/* Les variantes : c'est ce qui fait que « ravi-toto » trouve ce plat. */}
+      {f.alias.length > 0 && (
+        <p className="dk-secondaire mt-1">{f.alias.slice(0, 6).join(" · ")}</p>
+      )}
+
+      {p.description && <p className="dk-corps mt-3 max-w-prose">{p.description}</p>}
+
+      {regimes.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {regimes.map((r) => (
+            <li
+              key={r}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-semibold",
+                r.startsWith("Contient") || r.includes("épicé")
+                  ? "bg-accent/15 text-accent-strong"
+                  : "bg-secondary text-foreground"
+              )}
+            >
+              {r}
+            </li>
+          ))}
+          {(p.price_min_ar || p.price_max_ar) && (
+            <li className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold">
+              <Fourchette min={p.price_min_ar} max={p.price_max_ar} />
+            </li>
+          )}
+        </ul>
+      )}
+
+      {p.ingredients?.length ? (
+        <p className="dk-secondaire mt-3">
+          <span className="font-semibold text-foreground">Dedans : </span>
+          {p.ingredients.join(", ")}
+        </p>
+      ) : null}
+
+      {/* ── Où en manger ─────────────────────────────────────────────── */}
+      <section className="dk-reveal mt-6">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="dk-etiquette">Où en manger</h2>
+          {f.adresses.length > 0 && (
+            <span className="dk-secondaire">{f.adresses.length} adresses</span>
+          )}
+        </div>
+
+        {f.adresses.length === 0 ? (
+          <EtatVide
+            className="mt-2"
+            icone={Utensils}
+            titre="Aucune adresse ne le sert encore"
+            texte="Aucune carte de restaurant n'est saisie pour l'instant. Vous connaissez un endroit où on en mange bien ? Racontez-le, ou créez la page de l'établissement."
+            action="Raconter un repas"
+            lien="/publier"
+          />
+        ) : (
+          <ul className="mt-2 divide-y divide-border overflow-hidden rounded-2xl border border-border">
+            {f.adresses.map((a) => (
+              <li key={a.slug}>
+                <Link to={`/p/${a.slug}`} className="flex items-center gap-3 p-3 hover:bg-muted/40">
+                  <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
+                    {a.photo ? (
+                      <ImageProgressive src={a.photo} alt="" ajustement="cover" />
+                    ) : (
+                      <span className="grid h-full w-full place-items-center">
+                        <Utensils className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                      </span>
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate font-semibold">{a.nom}</span>
+                      {a.signature && (
+                        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-accent-strong">
+                          Signature
+                        </span>
+                      )}
+                    </span>
+                    <span className="dk-secondaire flex flex-wrap items-center gap-x-2">
+                      {a.lieu}
+                      {a.nb_avis > 0 && (
+                        <span className="inline-flex items-center gap-0.5">
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />
+                          {a.note.toFixed(1)}
+                        </span>
+                      )}
+                      {!a.dispo && <span className="text-accent-strong">épuisé aujourd'hui</span>}
+                    </span>
+                  </span>
+                  <Prix
+                    montant={a.prix_ar}
+                    unite="portion"
+                    taille="compacte"
+                    className="shrink-0 text-right"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {f.nb_recits > 0 && (
+        <p className="dk-reveal mt-4 rounded-xl bg-secondary p-3 text-sm">
+          <Flame className="mr-1 inline h-4 w-4 text-accent" aria-hidden="true" />
+          {f.nb_recits} récit{f.nb_recits > 1 ? "s" : ""} tague{f.nb_recits > 1 ? "nt" : ""} ce plat.
+        </p>
+      )}
+    </div>
+  );
+}

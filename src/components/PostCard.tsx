@@ -5,6 +5,7 @@ import {
   Bookmark,
   Flag,
   Heart,
+  SmilePlus,
   MapPin,
   MessageCircle,
   MoreHorizontal,
@@ -16,6 +17,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getThumbUrl } from "@/lib/imageThumb";
 import { Carrousel } from "@/components/Carrousel";
 import { cn } from "@/lib/utils";
+
+/** Les six reactions de la maquette. « J'y vais » et « bon prix » disent des
+ *  choses qu'un coeur ne dit pas — et ce sont elles qui nourrissent le
+ *  classement du fil. Les codes sont ceux ecrits en base. */
+const REACTIONS = [
+  { code: "jaime", label: "J'aime" },
+  { code: "utile", label: "Utile" },
+  { code: "beau", label: "Beau" },
+  { code: "jy_vais", label: "J'y vais" },
+  { code: "bon_prix", label: "Bon prix" },
+  { code: "prudence", label: "Prudence" },
+] as const;
 import {
   basculerFavori,
   basculerReaction,
@@ -73,18 +86,28 @@ export function PostCard({
     return true;
   };
 
+  // ⚠ SIX REACTIONS, PAS UNE. Le modele les portait deja (`reactions.type`)
+  //   mais l'interface n'envoyait jamais que « jaime » : cinq colonnes de
+  //   nuance ecrites en base et jamais utilisees. Sur un site de voyage
+  //   « j'y vais » et « bon prix » disent des choses qu'un coeur ne dit pas —
+  //   et ce sont ces signaux qui alimentent le classement du fil.
+  const [choixOuvert, setChoixOuvert] = useState(false);
+
   // ⚠ L'animation ne se rejoue pas si la classe reste posee : on la retire au
   //   bout de son temps, sinon le deuxieme clic ne montre rien.
   const [pulseCoeur, setPulseCoeur] = useState(false);
   const [pulseSignet, setPulseSignet] = useState(false);
 
-  async function reagir() {
+  async function reagir(type = "jaime") {
     if (!connecte()) return;
     const avant = reaction;
-    setReaction(avant ? null : "jaime");
-    setNbReactions((n) => n + (avant ? -1 : 1));
+    // Toucher la meme reaction la retire ; en toucher une autre la remplace.
+    const vise = avant === type ? null : type;
+    setReaction(vise);
+    setNbReactions((n) => n + (avant ? (vise ? 0 : -1) : 1));
+    setChoixOuvert(false);
     try {
-      const nouvelle = await basculerReaction(post.id);
+      const nouvelle = await basculerReaction(post.id, type);
       setReaction(nouvelle);
       if (nouvelle) {
         setPulseCoeur(true);
@@ -260,7 +283,11 @@ export function PostCard({
       {/* ── Actions, juste sous la photo ────────────────────────────────── */}
       <div className="flex items-center gap-1 px-2 pt-2">
         <button
-          onClick={reagir}
+          onClick={() => void reagir()}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setChoixOuvert((o) => !o);
+          }}
           aria-pressed={!!reaction}
           aria-label="J'aime"
           className={cn(
@@ -273,6 +300,14 @@ export function PostCard({
             className={cn("h-6 w-6", reaction && "fill-current", pulseCoeur && "dk-coeur-actif")}
             aria-hidden="true"
           />
+        </button>
+        <button
+          onClick={() => setChoixOuvert((o) => !o)}
+          aria-expanded={choixOuvert}
+          aria-label="Choisir une réaction"
+          className="grid h-10 w-10 place-items-center rounded-full text-foreground hover:bg-muted"
+        >
+          <SmilePlus className="h-6 w-6" aria-hidden="true" />
         </button>
         <button
           onClick={ouvrirCommentaires}
@@ -303,6 +338,30 @@ export function PostCard({
           />
         </button>
       </div>
+
+      {/* ⚠ LES SIX NUANCES DE LA MAQUETTE. Elles ne remplacent pas le coeur :
+          un appui simple aime, un appui long ouvre le choix. Imposer six
+          boutons a tout le monde ralentirait le geste le plus frequent du
+          site, alors que la nuance n'interesse qu'une partie des lecteurs. */}
+      {choixOuvert && (
+        <div className="dk-scale-in flex flex-wrap gap-1.5 px-2 pt-2">
+          {REACTIONS.map((r) => (
+            <button
+              key={r.code}
+              onClick={() => void reagir(r.code)}
+              aria-pressed={reaction === r.code}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs font-semibold",
+                reaction === r.code
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border hover:border-primary hover:text-primary"
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Compteur + texte ────────────────────────────────────────────── */}
       <div className="px-4">

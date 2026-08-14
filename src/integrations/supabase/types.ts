@@ -1008,6 +1008,14 @@ export type Database = {
           prix_du_plat: number | null;
         }[];
       };
+      fiche_destination: {
+        Args: { p_slug: string };
+        Returns: unknown;
+      };
+      fiche_plat: {
+        Args: { p_slug: string };
+        Returns: unknown;
+      };
       stats_diako: {
         Args: Record<string, never>;
         Returns: {

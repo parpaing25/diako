@@ -30,6 +30,8 @@ const ProConsole = lazy(() => import("./pages/ProConsole"));
 const Parametres = lazy(() => import("./pages/Parametres"));
 const Favoris = lazy(() => import("./pages/Favoris"));
 const Carte = lazy(() => import("./pages/Carte"));
+const Destination = lazy(() => import("./pages/Destination"));
+const Plat = lazy(() => import("./pages/Plat"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Profil = lazy(() => import("./pages/Profil"));
@@ -99,6 +101,10 @@ function Shell() {
       <Route path="/parametres" element={<Parametres />} />
       <Route path="/favoris" element={<Favoris />} />
       <Route path="/carte" element={<Carte />} />
+      {/* Les deux fiches du referentiel : c'est lui le fosse defensif du
+          produit, il ne pouvait pas rester invisible. */}
+      <Route path="/lieu/:slug" element={<Destination />} />
+      <Route path="/plat/:slug" element={<Plat />} />
       <Route path="/messages" element={<Messages />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/user/:id" element={<Profil />} />

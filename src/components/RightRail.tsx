@@ -255,7 +255,7 @@ export function RightRail() {
           <ul className="mt-3 space-y-2.5">
             {saison.map((s) => (
               <li key={s.slug}>
-                <Link to={`/explorer?lieu=${s.slug}`} className="dk-ligne-tendance group block">
+                <Link to={`/lieu/${s.slug}`} className="dk-ligne-tendance group block">
                   <span className="text-sm font-semibold group-hover:text-primary">{s.nom}</span>
                   {s.region && (
                     <span className="ml-1.5 text-xs text-muted-foreground">{s.region}</span>

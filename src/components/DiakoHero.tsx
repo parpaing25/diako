@@ -116,7 +116,7 @@ export function DiakoHero({
             : destinations.map((d) => (
                 <button
                   key={d.slug}
-                  onClick={() => navigate(`/explorer?lieu=${d.slug}`)}
+                  onClick={() => navigate(`/lieu/${d.slug}`)}
                   className="group w-[200px] shrink-0 snap-start overflow-hidden rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-md md:w-[228px]"
                 >
                   <div className="relative flex aspect-video items-center justify-center bg-gradient-to-br from-primary/85 to-primary-soft">

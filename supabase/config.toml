@@ -1,0 +1,18 @@
+# Configuration Supabase du projet Diako.
+#
+# ⚠ Ce fichier est versionné dans un dépôt PUBLIC : il ne doit contenir aucun
+#   secret. Les clés (GROQ_API_KEY et compagnie) sont posées sur le projet avec
+#   `supabase secrets set` et lues par Deno.env.get dans les fonctions.
+#
+# ⚠ La configuration d'authentification (Site URL, modèles d'e-mail, SMTP) est
+#   gérée À LA MAIN dans le tableau de bord — voir docs/supabase-config-manuelle.md.
+#   On ne la déclare pas ici pour éviter qu'un `supabase link` distrait ne
+#   l'écrase avec des valeurs de développement : c'est exactement le piège du
+#   « Site URL = http://localhost:3000 » qui a envoyé tous les liens de
+#   confirmation sur la machine de l'utilisateur.
+project_id = "eifrwecaszzqrdwjjjbu"
+
+[functions.agent-diako]
+# La fonction est appelée depuis le site avec la clé anon, qui est un JWT
+# valide : la vérification reste active.
+verify_jwt = true

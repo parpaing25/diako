@@ -11,6 +11,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { RightRail } from "@/components/RightRail";
 import { Footer } from "@/components/Footer";
+import { AgentDiako } from "@/components/AgentDiako";
 import { trackView } from "@/lib/pageviews";
 
 import Index from "./pages/Index";
@@ -144,6 +145,11 @@ function Shell() {
 
       <Footer />
       <BottomNav />
+      {/* L'agent est disponible partout : c'est la porte d'entree du produit,
+          pas une page a trouver. */}
+      <ErrorBoundary fallback={<div />}>
+        <AgentDiako />
+      </ErrorBoundary>
     </>
   );
 }

@@ -1,0 +1,50 @@
+-- ============================================================================
+-- 0018 — CORRECTION D'UN DÉFAUT LATENT, trouvé en branchant le sitemap
+--
+-- SYMPTÔME. Un visiteur NON CONNECTÉ recevait, sur toute lecture directe de
+-- `pages` et de `posts` :
+--     {"code":"42501","message":"permission denied for function is_staff"}
+--
+-- CAUSE. La migration 0002 avait fermé `is_admin()` et `is_staff()` à `anon`
+-- en appliquant la règle des trois révocations. Or les policies de lecture
+-- publique les APPELLENT :
+--     using (is_published or owner_id = (select auth.uid()) or public.is_staff())
+-- PostgreSQL évalue une policy avec les droits de l'appelant : sans EXECUTE,
+-- la requête entière échoue — même quand la première condition suffirait à
+-- répondre oui.
+--
+-- POURQUOI PERSONNE NE L'AVAIT VU. Le site lit le fil par `get_feed()` et les
+-- établissements par `chercher_pages()`, qui sont SECURITY DEFINER : la
+-- fonction s'exécute alors avec les droits de son propriétaire et le problème
+-- disparaît. Seules les lectures DIRECTES cassaient, et elles étaient toutes
+-- récentes ou peu visitées :
+--   · le sitemap (0 fiche, 0 récit — c'est là que ça s'est vu) ;
+--   · la page /post/:id, donc TOUT lien de publication partagé ;
+--   · la section « Récits de voyageurs » de la recherche ;
+--   · les récits mentionnant un établissement, sur sa fiche ;
+--   · les avis d'un établissement.
+-- Autrement dit : un lien envoyé sur WhatsApp à quelqu'un qui n'a pas de
+-- compte ne montrait rien. Le canal d'acquisition n°1.
+--
+-- POURQUOI LA RÉVOCATION NE PROTÉGEAIT RIEN. Les deux fonctions sont SANS
+-- ARGUMENT et ne répondent que sur l'utilisateur COURANT. Pour `anon`,
+-- auth.uid() vaut NULL : elles rendent toujours `false`. La seule chose
+-- qu'anon puisse en apprendre, c'est qu'il n'est pas administrateur — ce qu'il
+-- sait déjà. Le risque serait réel avec une signature `is_admin(uuid)`, qui
+-- permettrait d'énumérer les administrateurs. Ce n'est pas le cas ici.
+--
+-- ⚠ LA RÈGLE DES TROIS RÉVOCATIONS RESTE JUSTE, et on continue de l'appliquer.
+--   Elle vaut pour les fonctions qui FONT quelque chose : ouvrir une
+--   conversation, écrire en base, calculer un prix. Une fonction de test de
+--   rôle, sans argument, appelée par les policies de lecture publique, doit
+--   rester ouverte — sinon elle ferme la porte qu'elle est censée garder.
+--
+-- Vérifié après correction, avec la clé anon :
+--   pages / posts / reviews / places publiés ......... 200
+--   colonnes PII de profiles ......................... 401
+--   notifications · journal_erreurs · page_claims .... 401
+--   insertion dans pages ............................. 401
+-- ============================================================================
+
+grant execute on function public.is_admin() to anon;
+grant execute on function public.is_staff() to anon;

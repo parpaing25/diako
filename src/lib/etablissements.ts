@@ -180,6 +180,8 @@ export interface Fiche {
   price_min_unit: string | null;
   rates_checked_at: string | null;
   completeness: number;
+  /** Provenance quand la fiche est editoriale (owner_id null). */
+  source: string | null;
   place: { id: string; slug: string; name: string; region: string | null } | null;
   amenities: { code: string; label: string; category: string }[];
   hours: {
@@ -266,6 +268,8 @@ export interface FiltresRecherche {
   categorie?: string | null;
   prixMax?: number | null;
   plat?: string | null;
+  /** Codes d'équipements — TOUS exigés. « avec piscine ET wifi ». */
+  equipements?: string[] | null;
   /** Curseur keyset : [complétude, id] du dernier résultat reçu. */
   curseur?: [number, string] | null;
   limite?: number;
@@ -280,6 +284,7 @@ export async function chercherPages(f: FiltresRecherche = {}): Promise<ResultatP
     p_curseur_score: f.curseur?.[0] ?? null,
     p_curseur_id: f.curseur?.[1] ?? null,
     p_limite: f.limite ?? 12,
+    p_equipements: f.equipements ?? null,
   });
   if (error) throw error;
   return (data as ResultatPage[]) ?? [];
@@ -903,7 +908,149 @@ export async function recitsMentionnant(pageId: string, limite = 10) {
   }[];
 }
 
+
+/* ── Socle de l'agent ──────────────────────────────────────────────────── */
+
+export interface Cuisine {
+  slug: string;
+  label_fr: string;
+  rang: number;
+}
+
+export async function chargerCuisines(): Promise<Cuisine[]> {
+  const { data, error } = await supabase
+    .from("cuisines")
+    .select("slug, label_fr, rang")
+    .order("rang");
+  if (error) throw error;
+  return (data as Cuisine[]) ?? [];
+}
+
+export async function definirCuisines(pageId: string, slugs: string[]): Promise<void> {
+  const { error: eSuppr } = await supabase.from("page_cuisines").delete().eq("page_id", pageId);
+  if (eSuppr) throw eSuppr;
+  if (!slugs.length) return;
+  const { error } = await supabase
+    .from("page_cuisines")
+    .insert(slugs.map((cuisine_slug) => ({ page_id: pageId, cuisine_slug })));
+  if (error) throw error;
+}
+
+/**
+ * « C'est mon établissement. »
+ *
+ * Au lancement, les fiches sont saisies par Diako (owner_id null). Un gérant
+ * demande à reprendre la sienne ; la demande est vérifiée à la main, jamais
+ * accordée automatiquement — accepter un transfert donne accès aux messages
+ * des clients, ça ne peut pas dépendre d'un clic.
+ */
+export async function revendiquer(
+  pageId: string,
+  message: string,
+  telephone: string
+): Promise<string> {
+  const { data, error } = await supabase.rpc("revendiquer_page", {
+    p_page: pageId,
+    p_message: message || null,
+    p_tel: telephone || null,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export interface FiltresAgent {
+  lieu?: string | null;
+  categorie?: string | null;
+  budgetMax?: number | null;
+  budgetMin?: number | null;
+  equipements?: string[] | null;
+  cuisines?: string[] | null;
+  plat?: string | null;
+  personnes?: number | null;
+  limite?: number;
+}
+
+/**
+ * LA fonction que l'agent Diako appellera.
+ *
+ * Le partage des rôles est ce qui rend l'ensemble fiable : le modèle de langue
+ * traduit « un hôtel à Ampefy avec piscine chauffée à 200 000 Ar » en filtres,
+ * cette fonction répond avec des faits pris en base, et le modèle reformule.
+ * L'agent ne peut citer que ce qui lui est rendu — donc il ne peut pas inventer
+ * un hôtel, un prix ou une piscine.
+ *
+ * `p_equipements` exige TOUS les équipements ; `p_cuisines` en accepte au moins
+ * un. C'est la façon dont on parle : « avec piscine ET wifi », « japonais OU
+ * thaï ».
+ */
+export async function agentChercher(f: FiltresAgent = {}): Promise<unknown[]> {
+  const { data, error } = await supabase.rpc("agent_chercher", {
+    p_lieu: f.lieu ?? null,
+    p_categorie: f.categorie ?? null,
+    p_budget_max: f.budgetMax ?? null,
+    p_budget_min: f.budgetMin ?? null,
+    p_equipements: f.equipements ?? null,
+    p_cuisines: f.cuisines ?? null,
+    p_plat: f.plat ?? null,
+    p_personnes: f.personnes ?? null,
+    p_limite: f.limite ?? 10,
+  });
+  if (error) throw error;
+  return (data as unknown[]) ?? [];
+}
+
+export interface EtapeItineraire {
+  etape: string;
+  slug: string;
+  type: string;
+  region: string | null;
+  resume: string | null;
+  a_voir: string[] | null;
+  km_depuis_le_depart: number | null;
+  heures_de_route_cumulees: number | null;
+  derniere_etape: {
+    depuis: string;
+    distance_km: number | null;
+    duree_h: number | null;
+    mode: string;
+    etat_route: string | null;
+    ouvert_toute_l_annee: boolean;
+    transporteurs: string[] | null;
+    prix_ar: number | null;
+  } | null;
+  saison_ce_mois: { note: string; raison: string | null } | null;
+  nb_etablissements: number;
+  nb_recits: number;
+  a_partir_de_ar: number | null;
+}
+
+/** Les étapes d'un axe, ordonnées par distance cumulée depuis le départ. */
+export async function itineraire(axe: string, depuis = "antananarivo"): Promise<EtapeItineraire[]> {
+  const { data, error } = await supabase.rpc("itineraire_axe", { p_axe: axe, p_depuis: depuis });
+  if (error) throw error;
+  return (data as unknown as EtapeItineraire[]) ?? [];
+}
+
+/** « Comment aller à… » — les trajets connus au départ d'un lieu. */
+export async function trajetsDepuis(slug: string): Promise<unknown[]> {
+  const { data, error } = await supabase.rpc("trajets_depuis", { p_lieu: slug });
+  if (error) throw error;
+  return (data as unknown[]) ?? [];
+}
+
+export const AXES: { code: string; label: string }[] = [
+  { code: "rn7-sud", label: "Le Sud, par la RN7" },
+  { code: "nord", label: "Le Nord, autour de Diego" },
+  { code: "est", label: "L'Est et la côte des épices" },
+  { code: "ouest-baobabs", label: "L'Ouest et les baobabs" },
+  { code: "sava", label: "La SAVA, pays de la vanille" },
+  { code: "sud-est", label: "Le Sud-Est" },
+  { code: "hautes-terres", label: "Les Hautes Terres" },
+  { code: "extreme-sud", label: "L'Extrême Sud" },
+];
+
 /* ── Mise en forme ─────────────────────────────────────────────────────── */
+
 
 /** « 85 000 Ar ». Les montants sont des entiers d'ariary, jamais de décimales. */
 export function ariary(montant: number | null | undefined): string {

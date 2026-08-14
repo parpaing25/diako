@@ -381,6 +381,7 @@ export type Database = {
           price_min_unit: string | null;
           rates_checked_at: string | null;
           completeness: number;
+          source: string | null;
           norm: string;
           updated_at: string;
         } & Horodate;
@@ -852,6 +853,52 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+
+      /* ── SOCLE DE L'AGENT (migration 0010) ────────────────────────────── */
+      cuisines: {
+        Row: { slug: string; label_fr: string; rang: number; norm: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      page_cuisines: {
+        Row: { page_id: string; cuisine_slug: string };
+        Insert: { page_id: string; cuisine_slug: string };
+        Update: never;
+        Relationships: [];
+      };
+      page_claims: {
+        Row: {
+          id: string;
+          page_id: string;
+          user_id: string;
+          message: string | null;
+          telephone: string | null;
+          statut: string;
+          traite_le: string | null;
+        } & Horodate;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      place_access: {
+        Row: {
+          id: string;
+          place_id: string;
+          from_place_id: string;
+          mode: string;
+          distance_km: number | null;
+          duration_h: number | null;
+          road_state: string | null;
+          all_year: boolean;
+          departure_point: string | null;
+          operators: string[] | null;
+          price_ar: number | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -888,6 +935,7 @@ export type Database = {
           p_curseur_score?: number | null;
           p_curseur_id?: string | null;
           p_limite?: number;
+          p_equipements?: string[] | null;
         };
         Returns: {
           id: string;
@@ -908,6 +956,26 @@ export type Database = {
           prix_du_plat: number | null;
         }[];
       };
+      revendiquer_page: {
+        Args: { p_page: string; p_message: string | null; p_tel: string | null };
+        Returns: string;
+      };
+      agent_chercher: {
+        Args: {
+          p_lieu?: string | null;
+          p_categorie?: string | null;
+          p_budget_max?: number | null;
+          p_budget_min?: number | null;
+          p_equipements?: string[] | null;
+          p_cuisines?: string[] | null;
+          p_plat?: string | null;
+          p_personnes?: number | null;
+          p_limite?: number;
+        };
+        Returns: Json;
+      };
+      itineraire_axe: { Args: { p_axe: string | null; p_depuis?: string }; Returns: Json };
+      trajets_depuis: { Args: { p_lieu: string }; Returns: Json };
       restaurants_par_plat: {
         Args: { p_plat: string; p_lieu?: string | null; p_limite?: number };
         Returns: {

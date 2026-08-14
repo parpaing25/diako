@@ -46,6 +46,24 @@ const BUDGETS = [
   { label: "Moins de 200 000 Ar", valeur: 200000 },
 ];
 
+/**
+ * Les équipements les plus demandés, en filtres directs.
+ *
+ * Ce sont exactement les contraintes qu'un voyageur pose à voix haute :
+ * « avec piscine », « avec wifi », « adapté aux familles ». Le référentiel en
+ * compte plus de soixante-dix — on met en avant ceux qui décident vraiment
+ * d'un choix, le reste passe par l'agent.
+ */
+const EQUIPEMENTS_COURANTS = [
+  { code: "piscine", label: "Piscine" },
+  { code: "piscine-chauffee", label: "Piscine chauffée" },
+  { code: "wifi", label: "Wi-Fi" },
+  { code: "restaurant-sur-place", label: "Restaurant" },
+  { code: "vue-lac", label: "Vue sur le lac" },
+  { code: "famille", label: "Familles" },
+  { code: "eau-chaude", label: "Eau chaude" },
+];
+
 interface Recit {
   id: string;
   body: string | null;
@@ -58,6 +76,7 @@ export default function Recherche() {
   const q = params.get("q")?.trim() ?? "";
   const categorie = params.get("cat");
   const budget = params.get("max") ? Number(params.get("max")) : null;
+  const equipements = params.get("eq")?.split(",").filter(Boolean) ?? [];
 
   useDocumentTitle(q ? `« ${q} »` : "Rechercher");
 
@@ -105,6 +124,7 @@ export default function Recherche() {
           categorie,
           prixMax: budget,
           plat: p?.slug ?? null,
+          equipements: equipements.length ? equipements : null,
           limite: 24,
         }),
         p ? restaurantsParPlat(p.slug, l?.slug ?? null, 12) : Promise.resolve([]),
@@ -118,7 +138,8 @@ export default function Recherche() {
     } finally {
       setChargement(false);
     }
-  }, [q, categorie, budget]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, categorie, budget, params.get("eq")]);
 
   useEffect(() => {
     void lancer();
@@ -129,6 +150,17 @@ export default function Recherche() {
     const suivant = new URLSearchParams(params);
     if (valeur === null || suivant.get(cle) === valeur) suivant.delete(cle);
     else suivant.set(cle, valeur);
+    setParams(suivant, { replace: true });
+  }
+
+  /** Les équipements s'ACCUMULENT : « piscine » ET « wifi », pas l'un ou l'autre. */
+  function basculerEquipement(code: string) {
+    const suivant = new URLSearchParams(params);
+    const liste = equipements.includes(code)
+      ? equipements.filter((e) => e !== code)
+      : [...equipements, code];
+    if (liste.length) suivant.set("eq", liste.join(","));
+    else suivant.delete("eq");
     setParams(suivant, { replace: true });
   }
 
@@ -314,6 +346,22 @@ export default function Recherche() {
                 )}
               >
                 {b.label}
+              </button>
+            ))}
+            {EQUIPEMENTS_COURANTS.map((e) => (
+              <button
+                key={e.code}
+                type="button"
+                onClick={() => basculerEquipement(e.code)}
+                aria-pressed={equipements.includes(e.code)}
+                className={cn(
+                  "min-h-8 rounded-full border px-2.5 text-xs transition",
+                  equipements.includes(e.code)
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background hover:bg-muted"
+                )}
+              >
+                {e.label}
               </button>
             ))}
           </div>

@@ -22,6 +22,7 @@ import {
   deposerAvis,
   ecrireALEtablissement,
   recitsMentionnant,
+  revendiquer,
   unite,
   type Avis,
   type Fiche,
@@ -68,6 +69,7 @@ export default function PagePro() {
   const [maNote, setMaNote] = useState(0);
   const [monAvis, setMonAvis] = useState("");
   const [envoi, setEnvoi] = useState(false);
+  const [revendicationOuverte, setRevendicationOuverte] = useState(false);
 
   useDocumentTitle(fiche?.name ?? "Établissement");
 
@@ -800,8 +802,140 @@ export default function PagePro() {
                   Tarifs vérifiés le {new Date(fiche.rates_checked_at).toLocaleDateString("fr-FR")}.
                 </p>
               )}
+
+              {/* ⭐ FICHE ÉDITORIALE. Au lancement, c'est Diako qui saisit les
+                  établissements : la fiche dit alors D'OÙ vient l'information
+                  et propose au gérant de la reprendre. Afficher la source n'est
+                  pas de la coquetterie — c'est ce qui distingue une donnée
+                  relevée d'une donnée inventée, et ce projet a déjà payé pour
+                  le savoir. */}
+              {!fiche.owner_id && (
+                <section className="rounded-2xl border border-border bg-secondary/40 p-4">
+                  <p className="text-sm font-medium">Cette fiche est tenue par Diako</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Nous l'avons créée pour que l'établissement soit trouvable.
+                    Le gérant peut la reprendre à tout moment : il ajoutera alors
+                    ses chambres, ses tarifs, ses photos, et recevra les messages
+                    des voyageurs.
+                  </p>
+                  {fiche.source && (
+                    <p className="mt-2 text-xs italic text-muted-foreground">
+                      Source : {fiche.source}
+                    </p>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        toast("Connexion requise", {
+                          description: "Créez un compte pour revendiquer votre établissement.",
+                        });
+                        navigate("/auth");
+                        return;
+                      }
+                      setRevendicationOuverte(true);
+                    }}
+                    className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
+                  >
+                    C'est mon établissement
+                  </button>
+                </section>
+              )}
             </div>
           )}
+        </div>
+      </div>
+
+      {revendicationOuverte && (
+        <Revendication
+          fiche={fiche}
+          onFerme={() => setRevendicationOuverte(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * « C'est mon établissement. »
+ *
+ * On demande un numéro de rappel plutôt que de valider automatiquement :
+ * accepter une revendication donne accès aux messages des clients de
+ * l'établissement. Un simple clic ne peut pas suffire — un coup de téléphone,
+ * si.
+ */
+function Revendication({ fiche, onFerme }: { fiche: Fiche; onFerme: () => void }) {
+  const [message, setMessage] = useState("");
+  const [tel, setTel] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+
+  async function envoyer() {
+    setEnvoi(true);
+    try {
+      await revendiquer(fiche.id, message, tel);
+      toast.success("Demande envoyée", {
+        description: "Nous vous rappelons pour vérifier, puis la fiche vous est transférée.",
+      });
+      onFerme();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "La demande n'a pas pu être envoyée.");
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-end sm:place-items-center">
+      <button
+        aria-label="Fermer"
+        onClick={onFerme}
+        className="absolute inset-0 bg-black/50"
+      />
+      <div className="relative w-full max-w-md rounded-t-2xl bg-background p-5 sm:rounded-2xl">
+        <h2 className="text-lg font-semibold">Reprendre {fiche.name}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Nous vérifions chaque demande par téléphone avant de transférer une
+          fiche : elle donne accès aux messages de vos clients.
+        </p>
+
+        <label className="mt-4 block text-sm font-medium" htmlFor="tel-revendication">
+          Votre numéro
+        </label>
+        <input
+          id="tel-revendication"
+          value={tel}
+          onChange={(e) => setTel(e.target.value)}
+          inputMode="tel"
+          placeholder="034 00 000 00"
+          className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-sm"
+        />
+
+        <label className="mt-3 block text-sm font-medium" htmlFor="msg-revendication">
+          Un mot pour nous
+        </label>
+        <textarea
+          id="msg-revendication"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={3}
+          maxLength={1000}
+          placeholder="Je suis le gérant, voici comment me joindre…"
+          className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-sm"
+        />
+
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => void envoyer()}
+            disabled={envoi}
+            className="min-h-11 rounded-full bg-primary px-6 font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {envoi ? "Envoi…" : "Envoyer ma demande"}
+          </button>
+          <button
+            onClick={onFerme}
+            className="min-h-11 rounded-full border border-input px-5 text-sm font-medium"
+          >
+            Annuler
+          </button>
         </div>
       </div>
     </div>

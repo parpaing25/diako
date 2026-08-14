@@ -1,7 +1,20 @@
 # PROMPT 1 — Direction artistique de Diako
 
 > **À copier-coller tel quel à Claude.** Il n'a pas accès au dépôt : tout ce dont
-> il a besoin est ci-dessous.
+> il a besoin est recopié ci-dessous.
+>
+> **Documents liés** (dans ce dépôt, pour toi — pas pour lui) :
+> · [`README.md` de `docs/`](README.md) — l'index de tous les documents
+> · [`TDR-DIAKO.md` §3 — les personas](TDR-DIAKO.md#3-utilisateurs-et-parcours)
+> · [`TDR-DIAKO.md` §11 — identité, design, mobile](TDR-DIAKO.md#11-identité-design-et-expérience-mobile)
+> · [`TDR-DIAKO.md` §10 — budget de performance](TDR-DIAKO.md#10-performance-coûts-et-exploitation)
+> · [`TDR-DIAKO.md` Annexe B — les 20 pièges](TDR-DIAKO.md#annexe-b--les-20-pièges-à-ne-jamais-reproduire)
+> · [`PROMPT-2-MODERNISER-TOUTES-LES-PAGES.md`](PROMPT-2-MODERNISER-TOUTES-LES-PAGES.md) — la suite
+>
+> ⚠️ Si tu veux lui en donner davantage, joins le **§3** (les personas) et le
+> **§11** du TDR. N'y joins pas le TDR entier : 135 Ko de contexte technique
+> noieraient la question de design. Et préviens-le que la charte du §11 a
+> évolué — les valeurs à jour sont au §3 ci-dessous.
 
 ---
 

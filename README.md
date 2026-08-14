@@ -3,7 +3,8 @@
 **Le réseau social malgache du voyage et du tourisme.**
 Où dormir, où manger et avec qui partir à Madagascar.
 
-En ligne : [diako.fonenako.mg](https://diako.fonenako.mg) · Document de référence : [`docs/TDR-DIAKO.md`](docs/TDR-DIAKO.md)
+En ligne : [diako.fonenako.mg](https://diako.fonenako.mg)
+Documents : [`docs/`](docs/README.md) — dont le [TDR](docs/TDR-DIAKO.md), document de référence, et ses [20 pièges à ne jamais reproduire](docs/TDR-DIAKO.md#annexe-b--les-20-pièges-à-ne-jamais-reproduire)
 
 ---
 

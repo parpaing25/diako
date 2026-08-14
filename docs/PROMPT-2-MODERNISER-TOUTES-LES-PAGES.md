@@ -1,7 +1,17 @@
 # PROMPT 2 — Moderniser TOUTES les pages de Diako
 
 > **À copier-coller tel quel à Claude**, après le prompt 1 (ou avec, dans la même
-> conversation). Il n'a pas accès au dépôt : tout est ci-dessous.
+> conversation). Il n'a pas accès au dépôt : tout est recopié ci-dessous.
+>
+> **Documents liés** (dans ce dépôt, pour toi — pas pour lui) :
+> · [`PROMPT-1-DIRECTION-DESIGN.md`](PROMPT-1-DIRECTION-DESIGN.md) — **à donner en premier**
+> · [`README.md` de `docs/`](README.md) — l'index de tous les documents
+> · [`TDR-DIAKO.md` §2 — périmètre et non-objectifs](TDR-DIAKO.md#2-objectifs-périmètre-non-objectifs)
+> · [`TDR-DIAKO.md` §3 — les parcours écran par écran](TDR-DIAKO.md#3-utilisateurs-et-parcours)
+> · [`TDR-DIAKO.md` §11 — densité mobile, cibles tactiles, réseau dégradé](TDR-DIAKO.md#11-identité-design-et-expérience-mobile)
+>
+> ⚠️ Ce prompt suppose que le parti pris du prompt 1 est déjà tranché. Le donner
+> seul produira un rapport sans direction : 53 avis isolés au lieu d'un système.
 
 ---
 

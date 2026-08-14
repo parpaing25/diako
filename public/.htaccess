@@ -35,6 +35,13 @@ Options -Indexes
   RewriteCond %{HTTPS} !=on
   RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
+  # Le sitemap est GENERE depuis la base : /sitemap.xml sert sitemap.php.
+  # Le fichier statique ne listait que quatre URL — ni les 178 destinations,
+  # ni les etablissements. Google ne savait donc pas qu'ils existaient.
+  # ⚠ Cette regle doit venir AVANT le repli SPA, sinon /sitemap.xml
+  #   retomberait sur index.html des que le .xml statique est retire.
+  RewriteRule ^sitemap\.xml$ /sitemap.php [L]
+
   # Repli SPA : tout ce qui n'est ni un fichier ni un dossier existant
   # retourne index.html (React Router prend le relais).
   RewriteCond %{REQUEST_FILENAME} !-f

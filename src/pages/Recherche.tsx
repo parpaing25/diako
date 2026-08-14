@@ -4,6 +4,7 @@ import { MapPin, Search, SlidersHorizontal, Star, UtensilsCrossed } from "lucide
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { SearchBar } from "@/components/SearchBar";
 import { FicheCard } from "@/components/FicheCard";
+import { AutourDeMoi } from "@/components/AutourDeMoi";
 import {
   ariary,
   CATEGORIES,
@@ -182,6 +183,12 @@ export default function Recherche() {
             d'importance : <em>Majunga</em> et <em>Mahajanga</em> mènent au même
             endroit, comme <em>ravitoto</em> et <em>ravi-toto</em>.
           </p>
+
+          {/* La question d'un voyageur sur place n'est pas « quels hotels
+              existent a Madagascar » mais « qu'y a-t-il ICI ». */}
+          <div className="mt-6">
+            <AutourDeMoi />
+          </div>
 
           {destinations.length > 0 && (
             <>

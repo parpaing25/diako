@@ -12,6 +12,8 @@ import { SideNav } from "@/components/SideNav";
 import { RightRail } from "@/components/RightRail";
 import { Footer } from "@/components/Footer";
 import { AgentDiako } from "@/components/AgentDiako";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { installerJournalErreurs } from "@/lib/journalErreurs";
 import { trackView } from "@/lib/pageviews";
 
 import Index from "./pages/Index";
@@ -150,9 +152,17 @@ function Shell() {
       <ErrorBoundary fallback={<div />}>
         <AgentDiako />
       </ErrorBoundary>
+      <ErrorBoundary fallback={<div />}>
+        <InstallPrompt />
+      </ErrorBoundary>
     </>
   );
 }
+
+// Une erreur qui n'arrive que sur un Android de 2019 a Toliara n'apparait
+// jamais dans une console de developpeur. On l'enregistre, sans donnee
+// personnelle et sans jamais casser le site si l'envoi echoue.
+installerJournalErreurs();
 
 export default function App() {
   return (

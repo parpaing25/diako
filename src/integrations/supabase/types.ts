@@ -854,6 +854,30 @@ export type Database = {
         Relationships: [];
       };
 
+      journal_erreurs: {
+        Row: {
+          id: number;
+          message: string;
+          source: string | null;
+          ligne: number | null;
+          pile: string | null;
+          chemin: string | null;
+          navigateur: string | null;
+          reseau: string | null;
+        } & Horodate;
+        Insert: {
+          message: string;
+          source?: string | null;
+          ligne?: number | null;
+          pile?: string | null;
+          chemin?: string | null;
+          navigateur?: string | null;
+          reseau?: string | null;
+        };
+        Update: never;
+        Relationships: [];
+      };
+
       /* ── SOCLE DE L'AGENT (migration 0010) ────────────────────────────── */
       cuisines: {
         Row: { slug: string; label_fr: string; rang: number; norm: string };
@@ -973,6 +997,37 @@ export type Database = {
           p_limite?: number;
         };
         Returns: Json;
+      };
+      distance_km: {
+        Args: { lat1: number; lng1: number; lat2: number; lng2: number };
+        Returns: number;
+      };
+      lieu_le_plus_proche: { Args: { p_lat: number; p_lng: number }; Returns: Json };
+      autour_de_moi: {
+        Args: {
+          p_lat: number;
+          p_lng: number;
+          p_rayon_km?: number;
+          p_categorie?: string | null;
+          p_limite?: number;
+        };
+        Returns: {
+          id: string;
+          slug: string;
+          name: string;
+          categories: string[];
+          short_desc: string | null;
+          cover_url: string | null;
+          place_name: string | null;
+          landmark: string | null;
+          phone: string | null;
+          price_min_ar: number | null;
+          price_min_unit: string | null;
+          rating_avg: number;
+          rating_count: number;
+          completeness: number;
+          distance_km: number | null;
+        }[];
       };
       itineraire_axe: { Args: { p_axe: string | null; p_depuis?: string }; Returns: Json };
       trajets_depuis: { Args: { p_lieu: string }; Returns: Json };

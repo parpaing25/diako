@@ -11,6 +11,13 @@ export default {
       screens: { "2xl": "1400px" },
     },
     extend: {
+      /* ⚠ LE QUATRIÈME SEUIL DU GABARIT v4. Tailwind s'arrête à `2xl` et il
+         n'existait aucun palier au-delà de 1536 px — or c'est précisément à
+         1920 que la troisième colonne du fil doit apparaître. `large` est ce
+         palier, et il est dans `extend` : il s'AJOUTE aux seuils par défaut au
+         lieu de les remplacer. Une clé `screens` posée à la racine de `theme`
+         les effacerait tous. */
+      screens: { large: "1920px" },
       colors: {
         or: "hsl(var(--or))",
         border: "hsl(var(--border))",

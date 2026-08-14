@@ -144,14 +144,25 @@ function Shell() {
         <Header />
       </ErrorBoundary>
 
-      {/* Plafonne et centre : au-dela de ~1560 px le vide part en marge de page,
-          au lieu de s'ouvrir en trou entre les colonnes. */}
-      <div className="mx-auto flex w-full max-w-[1560px] flex-1 gap-6 px-0 xl:gap-8 xl:px-6 2xl:px-10">
+      {/* ══ LA COQUE — gabarit v4, une seule fois, les 23 routes en heritent ══
+          Largeurs qui en decoulent, verifiees au pixel :
+            1024 : coque 1000 = contenu 664 + 16 + rail droit 320
+            1280 : coque 1248 = 256 + 16 + contenu 640 + 16 + 320
+            1440 : coque 1408 = 256 + 16 + contenu 800 + 16 + 320
+            1920 : coque 1850 = 256 + 16 + contenu 1242 + 16 + 320
+
+          ⚠ CE QUI A CHANGE ET POURQUOI. La coque etait plafonnee a 1560 px avec
+            une colonne de fil figee a 620 : sur un ecran de 1920, cela faisait
+            628 px de vide, 33 % de la largeur. Le plafond passe a 1850 comme sur
+            Fonenako — mais elargir SEUL aurait aggrave le probleme, en elargissant
+            le vide autour d'une colonne qui, elle, ne bougeait pas. Les deux vont
+            ensemble : la coque ici, la grille dans le fil. */}
+      <div className="mx-auto flex w-full max-w-[1850px] flex-1 gap-4 px-0 lg:px-3 xl:px-4">
         <SideNav />
         <main
           id="contenu"
           tabIndex={-1}
-          className="dk-has-bottomnav min-w-0 flex-1 outline-none lg:pb-0"
+          className="dk-has-bottomnav min-w-0 flex-1 outline-none xl:pb-0"
         >
           <ErrorBoundary key={pathname}>
             <Suspense fallback={<PageLoader />}>{routes}</Suspense>

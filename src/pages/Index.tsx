@@ -39,7 +39,12 @@ export default function Index() {
     <div className="pb-6">
       <DiakoHero categorie={cat} onCategorie={setCat} />
 
-      <div className="dk-colonne mt-5 px-4">
+      {/* ⚠ PLUS DE `dk-colonne` ICI. L'accueil était bridé à 620 px : c'est de
+          là que venait l'essentiel des 628 px de vide mesurés à 1920. La
+          colonne de lecture reste en vigueur là où on LIT vraiment — un récit
+          ouvert, une page légale — mais un fil d'aperçus coupés à trois lignes
+          n'est pas de la lecture longue. Ici, on remplit. */}
+      <div className="mt-5 px-4">
         {cat !== "all" && info && (
           <div className="mb-4 rounded-xl border border-border bg-card p-4">
             <p className="text-sm font-semibold">{info.label}</p>
@@ -82,7 +87,10 @@ export default function Index() {
           </div>
 
           {etabs.length > 0 ? (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            /* Meme rythme que le fil. ⚠ Trois colonnes au maximum et pas
+               quatre : ces cartes portent un prix avec son unite et sa base,
+               qui se casse en dessous de ~320 px. */
+            <div className="mt-3 grid gap-4 sm:grid-cols-2 large:grid-cols-3">
               {etabs.map((e) => (
                 <FicheCard key={e.id} fiche={e} />
               ))}
@@ -107,7 +115,11 @@ export default function Index() {
         {/* ⚠ NE PAS SUPPRIMER : Google exige que la page d'accueil nomme
             l'application et explique son objectif pour valider l'écran de
             consentement OAuth. À garder cohérent avec le squelette statique. */}
-        <section className="mt-10" aria-labelledby="titre-apropos">
+        {/* ⚠ CELUI-LA reste borne : c'est du texte suivi, et une ligne de
+            1242 px est illisible. La regle « on n'elargit pas le texte » ne
+            disparait pas avec l'elargissement de la coque — elle s'applique
+            juste la ou on lit, et plus la ou on parcourt. */}
+        <section className="mt-10 max-w-[68ch]" aria-labelledby="titre-apropos">
           <h2 id="titre-apropos" className="text-lg font-semibold">
             À propos de Diako
           </h2>

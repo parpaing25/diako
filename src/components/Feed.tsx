@@ -195,16 +195,37 @@ export function Feed() {
     );
   }
 
-  // ── ORDINATEUR : cartes façon Facebook ──────────────────────────────────
+  // ── ORDINATEUR : le fil en GRILLE (gabarit G1) ──────────────────────────
+  //
+  // ⚠ LA CARTE NE GROSSIT PAS, ELLE SE MULTIPLIE. C'est toute la correction :
+  //   le fil était une colonne unique de 620 px au milieu d'un écran de 1920,
+  //   et l'élargir aurait cassé la longueur de ligne lisible. Deux colonnes
+  //   dès 1024, trois à 1920 — les largeurs de carte tombent alors à 324, 312,
+  //   392 puis 403 px, toutes dans la plage où une carte garde sa hiérarchie.
+  //
+  // ⚠ PAS DE QUATRIÈME COLONNE À 1920. Elle donnerait des cartes de 298 px :
+  //   la photo s'écrase et le bloc de prix se casse. Les grilles à quatre
+  //   colonnes sont réservées aux destinations et aux plats, qui n'ont ni
+  //   extrait ni prix.
+  //
+  // ⚠ PAS DE GRILLE EN DESSOUS DE 1024, contrairement à Fonenako qui y passe
+  //   dès 640. Les cartes de Diako portent plus de choses qu'une annonce
+  //   immobilière — lieu, plat et établissement tagués, prix avec son unité et
+  //   sa base — et perdent leur hiérarchie en dessous de ~320 px.
+  //
+  // La sentinelle de défilement infini reste HORS de la grille : dedans, elle
+  // occuperait une cellule et créerait un trou en fin de rangée.
   return (
-    <div className="space-y-4">
-      {posts.map((p) => (
-        <PostCard
-          key={p.id}
-          post={p}
-          onSupprime={(id) => setPosts((l) => l.filter((x) => x.id !== id))}
-        />
-      ))}
+    <div>
+      <div className="grid gap-4 lg:grid-cols-2 large:grid-cols-3">
+        {posts.map((p) => (
+          <PostCard
+            key={p.id}
+            post={p}
+            onSupprime={(id) => setPosts((l) => l.filter((x) => x.id !== id))}
+          />
+        ))}
+      </div>
       <div ref={sentinelle} className="h-10" aria-hidden="true" />
       {fini && (
         <p className="py-4 text-center text-sm text-muted-foreground">Vous avez tout vu.</p>

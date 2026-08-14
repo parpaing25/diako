@@ -13,7 +13,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background xl:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Navigation principale"
     >

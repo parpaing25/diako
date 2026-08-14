@@ -14,7 +14,11 @@ export function SideNav() {
   return (
     <nav
       aria-label="Sections du site"
-      className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-border px-2 py-4 lg:block 2xl:w-64"
+      /* ⚠ ENTRE EN `xl`, PAS EN `lg` — et 256 px fixes (gabarit v4). En dessous
+         de 1280, la place va au contenu et la navigation reste la barre du bas,
+         qui bascule au MEME seuil : les deux ne doivent jamais disparaître
+         ensemble, sinon la fenêtre 1024–1280 n'a plus aucune navigation. */
+      className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-64 shrink-0 overflow-y-auto border-r border-border px-2 py-4 xl:block"
     >
       <ul className="space-y-0.5">
         {NAV_COMPLET.map(({ to, label, icon: Icon, pret }) => (

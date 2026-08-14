@@ -84,9 +84,11 @@ function Compteur({ valeur }: { valeur: number }) {
 /**
  * Rail de droite.
  *
- * ⚠ Il apparaît dès 768 px et non plus à 1280. La maquette (W5) fait entrer le
- *   rail droit AVANT le rail gauche : sur une tablette, la place gagnée sert à
- *   montrer la saison et les tendances, pas à étirer le fil.
+ * ⚠ 320 px fixes, à partir de 1024 (gabarit v4). Il entre AVANT le rail gauche,
+ *   qui n'arrive qu'à 1280 : la première place gagnée sur un écran d'ordinateur
+ *   sert à montrer la saison et les tendances, pas à étirer le fil. Sa largeur
+ *   ne varie plus — c'est elle qui rend les largeurs de contenu calculables
+ *   (664 / 640 / 800 / 1242 aux quatre seuils).
  *
  * ⚠ Il ne contient QUE du contenu réel. Sur la version précédente de Diako,
  * cette colonne affichait « Nosy Be 1.2k posts », « Hôtel Sakamanga 4.8
@@ -150,7 +152,7 @@ export function RightRail() {
          lui-même. On borne sa hauteur à celle de la fenêtre et on lui donne
          son propre défilement — `overscroll-contain` évite d'entraîner la
          page quand on arrive au bout. */
-      className="dk-rail sticky top-14 hidden w-64 max-h-[calc(100dvh-3.5rem)] shrink-0 space-y-4 overflow-y-auto overscroll-contain py-4 [scrollbar-width:thin] md:block xl:w-80"
+      className="dk-rail sticky top-14 hidden w-80 max-h-[calc(100dvh-3.5rem)] shrink-0 space-y-4 overflow-y-auto overscroll-contain py-4 [scrollbar-width:thin] lg:block"
     >
       {/* ── Les chiffres, vrais ────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-4">

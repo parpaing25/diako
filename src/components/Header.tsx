@@ -50,11 +50,19 @@ export function Header() {
         {/* La frise tissée — un rappel du lamba, en dégradés CSS : elle situe
             le site en deux pixels, sans une image à télécharger. */}
         <div className="dk-tissage" aria-hidden="true" />
-        <div className="flex h-14 w-full items-center gap-2 px-3 md:gap-3 md:px-4 xl:px-6 2xl:px-10">
+        {/* ⚠ MÊME COQUE QUE LE CONTENU : 1850 px centrés, mêmes marges. Sans
+            `max-w`, l'entête s'étalait sur toute la largeur pendant que le
+            contenu s'arrêtait à 1850 — le logo se décalait de la barre de
+            navigation, et l'écart grandissait avec l'écran. */}
+        <div className="mx-auto flex h-14 w-full max-w-[1850px] items-center gap-2 px-3 md:gap-3 xl:px-4">
           <button
             onClick={() => setMenu(true)}
             aria-label="Ouvrir le menu"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-muted lg:hidden"
+            /* ⚠ DISPARAÎT AU MÊME SEUIL QUE L'ARRIVÉE DU RAIL GAUCHE. À
+               `lg:hidden` il s'effaçait dès 1024 alors que la barre latérale
+               n'apparaît qu'à 1280 : entre les deux, plus aucun accès au menu
+               complet. */
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-muted xl:hidden"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>

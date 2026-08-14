@@ -61,6 +61,12 @@ export interface ResultatPage {
   verification_status: string;
   completeness: number;
   prix_du_plat: number | null;
+  /** Position du résultat, pour la carte à côté de la liste (écran W2).
+   *  ⚠ C'est le centre de la commune quand la fiche n'a pas d'épingle propre —
+   *  `precision_geo` dit laquelle des deux, et l'écran l'annonce. */
+  lat: number | null;
+  lng: number | null;
+  precision_geo: "exacte" | "lieu" | null;
 }
 
 export interface Tarif {

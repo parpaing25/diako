@@ -23,6 +23,7 @@ import {
 } from "@/lib/jsonld";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { Carrousel } from "@/components/Carrousel";
+import { PanneauDemande } from "@/components/PanneauDemande";
 import {
   ariary,
   avisDe,
@@ -293,7 +294,12 @@ export default function PagePro() {
         )}
       </div>
 
-      <div className="px-4">
+      {/* ⚠ DEUX COLONNES À PARTIR DE `xl` (écran W3). La fiche garde sa largeur
+          de lecture ; le panneau de demande prend le reste. En dessous, une
+          seule colonne : les boutons de contact de l'entête suffisent, on les
+          retrouve d'un geste. */}
+      <div className="px-4 xl:flex xl:items-start xl:gap-6">
+        <div className="min-w-0 flex-1">
         <div className="mt-4 flex items-start gap-2">
           <h1 className="min-w-0 flex-1 text-2xl font-semibold leading-tight">{fiche.name}</h1>
           {fiche.verification_status !== "none" && (
@@ -332,8 +338,10 @@ export default function PagePro() {
           )}
         </div>
 
+        {/* Le tarif d'appel passe dans le panneau à partir de `xl` : l'afficher
+            deux fois à 30 cm d'écart donne l'impression de deux prix. */}
         {fiche.price_min_ar != null && (
-          <p className="mt-2 text-sm">
+          <p className="mt-2 text-sm xl:hidden">
             À partir de{" "}
             <span className="font-semibold text-primary">{ariary(fiche.price_min_ar)}</span>{" "}
             <span className="text-muted-foreground">{unite(fiche.price_min_unit)}</span>
@@ -347,7 +355,7 @@ export default function PagePro() {
           {fiche.phone && (
             <a
               href={lienAppel(fiche.phone)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground xl:hidden"
             >
               <Phone className="h-4 w-4" aria-hidden="true" />
               Appeler
@@ -358,14 +366,14 @@ export default function PagePro() {
               href={lienWhatsApp(fiche.whatsapp, { etablissement: fiche.name })}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-5 text-sm font-medium"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-5 text-sm font-medium xl:hidden"
             >
               WhatsApp
             </a>
           )}
           <button
             onClick={() => void ecrire()}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-5 text-sm font-medium"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-5 text-sm font-medium xl:hidden"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             Écrire
@@ -422,7 +430,11 @@ export default function PagePro() {
         <div
           role="tablist"
           aria-label="Sections de la fiche"
-          className="mt-6 flex gap-1 overflow-x-auto border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          /* ⚠ ACCROCHÉS SOUS L'ENTÊTE (écran W3). Une fiche complète fait
+             plusieurs hauteurs d'écran : sans cela, passer des avis aux
+             chambres oblige à remonter tout en haut. Le fond est opaque —
+             translucide, le texte qui défile dessous les rendait illisibles. */
+          className="sticky top-14 z-20 -mx-4 mt-6 flex gap-1 overflow-x-auto border-b border-border bg-background px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {onglets
             .filter((o) => o.visible)
@@ -938,6 +950,9 @@ export default function PagePro() {
             </div>
           )}
         </div>
+        </div>
+
+        <PanneauDemande fiche={fiche} onEcrire={() => void ecrire()} />
       </div>
 
       {revendicationOuverte && (

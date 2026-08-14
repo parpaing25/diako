@@ -1006,6 +1006,9 @@ export type Database = {
           verification_status: string;
           completeness: number;
           prix_du_plat: number | null;
+          lat: number | null;
+          lng: number | null;
+          precision_geo: string | null;
         }[];
       };
       fiche_destination: {

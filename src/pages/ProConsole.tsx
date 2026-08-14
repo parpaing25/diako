@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Eye, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, Loader2, Plus, Trash2 } from "lucide-react";
+import { ApercuMobile } from "@/components/ApercuMobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { compressImage } from "@/lib/imageCompression";
@@ -43,6 +44,16 @@ type Onglet = "infos" | "chambres" | "carte" | "activites" | "circuits";
 
 const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
+/** Les mêmes libellés que sur la fiche publique : le gérant doit lire dans sa
+ *  console exactement le mot que verra le voyageur. */
+const PENSION: Record<string, string> = {
+  chambre_seule: "Chambre seule",
+  petit_dej: "Petit déjeuner",
+  demi_pension: "Demi-pension",
+  pension_complete: "Pension complète",
+  all_in: "Tout compris",
+};
+
 /**
  * La console de gestion d'un établissement.
  *
@@ -74,6 +85,8 @@ export default function ProConsole() {
   const [fiche, setFiche] = useState<Fiche | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "refus" | "absente">("chargement");
   const [onglet, setOnglet] = useState<Onglet>("infos");
+  /** Incrémenté après chaque enregistrement : l'aperçu se recharge alors seul. */
+  const [versionApercu, setVersionApercu] = useState(0);
 
   useDocumentTitle(fiche ? `Gérer — ${fiche.name}` : "Espace professionnel");
 
@@ -95,6 +108,16 @@ export default function ProConsole() {
 
   useEffect(() => {
     void recharger();
+  }, [recharger]);
+
+  /**
+   * Ce que chaque onglet appelle après avoir enregistré : on relit la fiche ET
+   * on fait rejouer l'aperçu. Les deux ensemble, jamais l'un sans l'autre — un
+   * aperçu figé sur l'état d'avant est pire que pas d'aperçu du tout.
+   */
+  const majEtApercu = useCallback(async () => {
+    await recharger();
+    setVersionApercu((n) => n + 1);
   }, [recharger]);
 
   if (etat === "chargement") {
@@ -177,12 +200,20 @@ export default function ProConsole() {
         ))}
       </div>
 
-      <div className="mt-5">
-        {onglet === "infos" && <OngletInfos fiche={fiche} onMaj={recharger} />}
-        {onglet === "chambres" && <OngletChambres fiche={fiche} onMaj={recharger} />}
-        {onglet === "carte" && <OngletCarte fiche={fiche} onMaj={recharger} />}
-        {onglet === "activites" && <OngletActivites fiche={fiche} onMaj={recharger} />}
-        {onglet === "circuits" && <OngletCircuits fiche={fiche} onMaj={recharger} />}
+      {/* ⚠ L'APERÇU N'APPARAÎT QU'À PARTIR DE `xl`. En dessous, la console
+          elle-même a besoin de toute la largeur : un aperçu de 400 px collé à
+          côté d'un formulaire écrasé n'aide personne. Le bouton « Voir » de
+          l'entête reste la porte de sortie sur les écrans plus étroits. */}
+      <div className="mt-5 xl:flex xl:items-start xl:gap-6">
+        <div className="min-w-0 flex-1">
+          {onglet === "infos" && <OngletInfos fiche={fiche} onMaj={majEtApercu} />}
+          {onglet === "chambres" && <OngletChambres fiche={fiche} onMaj={majEtApercu} />}
+          {onglet === "carte" && <OngletCarte fiche={fiche} onMaj={majEtApercu} />}
+          {onglet === "activites" && <OngletActivites fiche={fiche} onMaj={majEtApercu} />}
+          {onglet === "circuits" && <OngletCircuits fiche={fiche} onMaj={majEtApercu} />}
+        </div>
+
+        <ApercuMobile slug={fiche.slug} publiee={fiche.is_published} version={versionApercu} />
       </div>
     </div>
   );
@@ -516,8 +547,77 @@ function OngletChambres({ fiche, onMaj }: { fiche: Fiche; onMaj: () => Promise<v
 
   return (
     <div className="space-y-3">
+      {/* ⚠ LE TABLEAU EST LA FORME DE L'ÉCRAN W4, et il n'apparaît qu'à partir
+          de `lg`. Un catalogue, ça se relit en colonne : le gérant vérifie que
+          ses six chambres n'ont pas un prix aberrant en balayant UNE colonne,
+          pas en dépliant six cartes. En dessous de 1024 px, la même table
+          demanderait un défilement horizontal — les cartes restent meilleures.
+
+          ⚠ LES TARIFS DE SAISON SONT DES LIGNES FILLES de leur chambre, pas
+          une liste à part. Séparés, on ne voit plus quel prix appartient à
+          quoi — et c'est exactement l'erreur qui fait facturer la basse saison
+          au tarif de Noël. */}
+      {chambres.length > 0 && (
+        <div className="hidden overflow-hidden rounded-2xl border border-border lg:block">
+          <table className="w-full text-sm">
+            <caption className="sr-only">
+              Chambres et tarifs de saison de {fiche.name}
+            </caption>
+            <thead className="bg-secondary/60 text-left">
+              <tr>
+                <th scope="col" className="px-3 py-2 font-semibold">Chambre</th>
+                <th scope="col" className="px-3 py-2 font-semibold">Unités</th>
+                <th scope="col" className="px-3 py-2 font-semibold">Capacité</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">Prix de référence</th>
+                <th scope="col" className="px-3 py-2 font-semibold">État</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {chambres.map((c) => (
+                <LigneChambre
+                  key={c.id}
+                  chambre={c}
+                  ouverte={ouvert === c.id}
+                  onBasculer={() => setOuvert(ouvert === c.id ? null : c.id)}
+                  onSupprimer={async () => {
+                    if (!confirm(`Supprimer « ${c.name} » et ses tarifs ?`)) return;
+                    await supprimerChambre(c.id);
+                    await recharger();
+                    await onMaj();
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Le formulaire d'édition reste sous le tableau : une chambre ouverte
+          dans une cellule de tableau ne tient pas, et l'imbriquer casserait la
+          sémantique de la table pour les lecteurs d'écran. */}
+      {ouvert && ouvert !== "nouveau" && chambres.some((c) => c.id === ouvert) && (
+        <div className="hidden rounded-2xl border border-primary/30 p-4 lg:block">
+          <p className="font-medium">
+            {chambres.find((c) => c.id === ouvert)!.name}
+          </p>
+          <FormChambre
+            pageId={fiche.id}
+            chambre={chambres.find((c) => c.id === ouvert)!}
+            onFini={async () => {
+              setOuvert(null);
+              await recharger();
+              await onMaj();
+            }}
+          />
+        </div>
+      )}
+
+      {/* La forme carte, sur téléphone et tablette. */}
       {chambres.map((c) => (
-        <div key={c.id} className="rounded-2xl border border-border p-4">
+        <div key={c.id} className="rounded-2xl border border-border p-4 lg:hidden">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-medium">{c.name}</p>
@@ -583,6 +683,141 @@ function OngletChambres({ fiche, onMaj }: { fiche: Fiche; onMaj: () => Promise<v
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * Une chambre dans le tableau, suivie de ses tarifs de saison en lignes
+ * filles (écran W4).
+ *
+ * ⚠ LES TARIFS SONT CHARGÉS À L'OUVERTURE DE LA LIGNE, pas au montage du
+ *   tableau. Une requête par chambre au chargement, c'est six allers-retours
+ *   pour un gérant qui ne venait vérifier qu'un prix.
+ */
+function LigneChambre({
+  chambre,
+  ouverte,
+  onBasculer,
+  onSupprimer,
+}: {
+  chambre: Awaited<ReturnType<typeof chambresDe>>[number];
+  ouverte: boolean;
+  onBasculer: () => void;
+  onSupprimer: () => Promise<void>;
+}) {
+  const [tarifs, setTarifs] = useState<Awaited<ReturnType<typeof tarifsDe>> | null>(null);
+  const [deplie, setDeplie] = useState(false);
+
+  useEffect(() => {
+    if (!deplie || tarifs) return;
+    void tarifsDe(chambre.id).then(setTarifs);
+  }, [deplie, tarifs, chambre.id]);
+
+  const capacite = [
+    chambre.max_adults && `${chambre.max_adults} adulte${chambre.max_adults > 1 ? "s" : ""}`,
+    chambre.max_children && `${chambre.max_children} enfant${chambre.max_children > 1 ? "s" : ""}`,
+  ]
+    .filter(Boolean)
+    .join(" + ");
+
+  return (
+    <>
+      <tr className={cn(ouverte && "bg-secondary/40")}>
+        <th scope="row" className="px-3 py-2.5 text-left font-medium">
+          <button
+            onClick={() => setDeplie(!deplie)}
+            aria-expanded={deplie}
+            className="inline-flex items-center gap-1.5 text-left"
+          >
+            <ChevronRight
+              className={cn("h-4 w-4 shrink-0 transition-transform", deplie && "rotate-90")}
+              aria-hidden="true"
+            />
+            {chambre.name}
+          </button>
+        </th>
+        <td className="px-3 py-2.5 tabular-nums">{chambre.units_count}</td>
+        <td className="px-3 py-2.5 text-muted-foreground">{capacite || "—"}</td>
+        <td className="px-3 py-2.5 text-right font-semibold tabular-nums">
+          {ariary(chambre.base_price_ar)}
+        </td>
+        <td className="px-3 py-2.5">
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-xs font-semibold",
+              chambre.status === "active"
+                ? "bg-primary/10 text-primary"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {chambre.status === "active" ? "En ligne" : "Masquée"}
+          </span>
+        </td>
+        <td className="px-3 py-2.5">
+          <div className="flex justify-end gap-1.5">
+            <button
+              onClick={onBasculer}
+              className="min-h-8 rounded-full border border-input px-3 text-xs font-medium"
+            >
+              {ouverte ? "Fermer" : "Modifier"}
+            </button>
+            <button
+              onClick={() => void onSupprimer()}
+              aria-label={`Supprimer ${chambre.name}`}
+              className="grid h-8 w-8 place-items-center rounded-full border border-input text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      {/* ── Les lignes filles : un tarif de saison par ligne ───────────── */}
+      {deplie &&
+        (tarifs === null ? (
+          <tr>
+            <td colSpan={6} className="px-3 py-2">
+              <div className="dk-skeleton h-4 w-40" />
+            </td>
+          </tr>
+        ) : tarifs.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="px-3 py-2 pl-10 text-xs text-muted-foreground">
+              Aucun tarif de saison. C'est le prix de référence qui s'affiche toute
+              l'année — une réponse valable, pas un oubli.
+            </td>
+          </tr>
+        ) : (
+          tarifs.map((t) => (
+            <tr key={t.id} className="bg-muted/25 text-xs">
+              <td className="py-2 pl-10 pr-3">
+                <span className="font-medium">{t.season_label}</span>
+                {t.from_date && t.to_date && (
+                  <span className="ml-1.5 text-muted-foreground">
+                    {t.from_date} → {t.to_date}
+                  </span>
+                )}
+              </td>
+              <td className="px-3 py-2 text-muted-foreground">
+                {t.min_nights > 1 ? `${t.min_nights} nuits mini` : "—"}
+              </td>
+              <td className="px-3 py-2 text-muted-foreground">
+                {t.board ? PENSION[t.board] ?? t.board : "—"}
+              </td>
+              <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                {ariary(t.price_ar)}
+              </td>
+              <td className="px-3 py-2 text-muted-foreground" colSpan={2}>
+                {/* Le tarif résident est une réalité du tourisme malgache : il
+                    est affiché, jamais confondu avec le prix public. */}
+                {t.resident_price_ar != null
+                  ? `Résident ${ariary(t.resident_price_ar)}`
+                  : ""}
+              </td>
+            </tr>
+          ))
+        ))}
+    </>
   );
 }
 

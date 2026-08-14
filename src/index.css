@@ -37,7 +37,11 @@
          tout ce qui porte du texte. #D0471C est le corail le moins sombre qui
          passe : 4,57:1. La famille de couleur ne change pas, elle tient juste
          la lecture. */
-    --background: 0 0% 100%;
+    /* ⚠ #FBF7F1, pas blanc pur. La maquette web pose la page sur un papier
+       tiede et les cartes en blanc PAR-DESSUS : c'est ce decalage qui donne
+       le relief. Tout en blanc, les cartes disparaissent et l'ecran devient
+       une seule surface plate. */
+    --background: 35 43% 97%;       /* #FBF7F1 — papier */
     --foreground: 191 47% 12%;      /* #10262B — encre */
 
     --card: 0 0% 100%;
@@ -262,22 +266,12 @@ table {
 .dk-colonne {
   width: 100%;
   margin-inline: auto;
-  max-width: 600px;
-}
-@media (min-width: 1024px) {
-  .dk-colonne {
-    max-width: 680px;
-  }
-}
-@media (min-width: 1280px) {
-  .dk-colonne {
-    max-width: 720px;
-  }
-}
-@media (min-width: 1536px) {
-  .dk-colonne {
-    max-width: 780px;
-  }
+  /* ⚠ 620 px, ET CA NE BOUGE PLUS. La colonne s'elargissait a 680, 720 puis
+     780 px sur grand ecran : les cartes s'etiraient, les lignes de texte
+     depassaient la longueur lisible et la densite changeait d'un ecran a
+     l'autre. La regle de la maquette est explicite — « on n'elargit pas les
+     cartes, on AJOUTE DES COLONNES ». Le vide gagne va au rail, pas au fil. */
+  max-width: 620px;
 }
 
 /* Squelettes de chargement — jamais d'ecran blanc. */
@@ -423,6 +417,18 @@ table {
   border-color: hsl(var(--card));
   font-size: 14px;
   font-weight: 700;
+}
+/* L'épingle levée par le survol de la ligne correspondante (écran W2).
+   ⚠ La classe est posée par Leaflet sur le CONTENEUR du marqueur, jamais sur
+   notre pastille : d'où le sélecteur descendant. */
+.dk-pin-actif { z-index: 500 !important; }
+.dk-pin-actif .dk-pin {
+  transform: scale(1.25);
+  border-color: hsl(var(--accent-strong));
+  box-shadow: 0 4px 16px hsl(var(--accent-strong) / 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dk-pin, .dk-pin-actif .dk-pin { transition: none; transform: none; }
 }
 /* Leaflet monte ses panneaux tres haut ; nos feuilles et l'en-tete doivent
    rester au-dessus. */

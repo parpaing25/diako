@@ -48,7 +48,13 @@ export interface Post {
 /* ── Le fil ────────────────────────────────────────────────────────────── */
 
 /** Une page du fil. `curseur` = created_at du dernier post reçu. */
-export async function chargerFeed(curseur?: string | null, limite = 10): Promise<Post[]> {
+/** ⚠ 8 sur telephone, 12 sur grand ecran (regle W5 de la maquette). Sur 3G,
+ *  8 posts font deja ~200 Ko d'images ; sur une connexion de bureau, s'arreter
+ *  a 8 fait pagayer l'utilisateur pour rien. */
+export const PAR_PALIER = () =>
+  typeof window !== "undefined" && window.innerWidth >= 1024 ? 12 : 8;
+
+export async function chargerFeed(curseur?: string | null, limite = PAR_PALIER()): Promise<Post[]> {
   const { data, error } = await supabase.rpc("get_feed", {
     p_curseur: curseur ?? null,
     p_limite: limite,

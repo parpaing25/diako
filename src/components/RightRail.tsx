@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Flame, Heart, MessageCircle, Bookmark, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { FEUILLE_DE_ROUTE } from "@/lib/nav";
@@ -82,7 +82,11 @@ function Compteur({ valeur }: { valeur: number }) {
 }
 
 /**
- * Rail de droite (≥ 1280 px).
+ * Rail de droite.
+ *
+ * ⚠ Il apparaît dès 768 px et non plus à 1280. La maquette (W5) fait entrer le
+ *   rail droit AVANT le rail gauche : sur une tablette, la place gagnée sert à
+ *   montrer la saison et les tendances, pas à étirer le fil.
  *
  * ⚠ Il ne contient QUE du contenu réel. Sur la version précédente de Diako,
  * cette colonne affichait « Nosy Be 1.2k posts », « Hôtel Sakamanga 4.8
@@ -102,8 +106,21 @@ export function RightRail() {
   const [vogue, setVogue] = useState<Vogue[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const mois = MOIS[new Date().getMonth()];
+  const { pathname } = useLocation();
+
+  // ⚠ TROIS ÉCRANS ONT DÉJÀ LEUR COLONNE DE DROITE et elle vaut mieux que ce
+  //   rail : le panneau de demande sur une fiche, la carte à côté des
+  //   résultats, la carte plein écran. Deux colonnes de droite côte à côte ne
+  //   tiennent pas en 1560 px, et surtout : quelqu'un qui lit une fiche décide
+  //   d'y aller — lui proposer d'autres récits à cet instant lui fait quitter
+  //   la page qu'il était en train de choisir.
+  const aSaPropreColonne =
+    pathname.startsWith("/p/") ||
+    pathname.startsWith("/recherche") ||
+    pathname.startsWith("/carte");
 
   useEffect(() => {
+    if (aSaPropreColonne) return;
     // Trois appels, une seule fois, en parallèle. Aucun canal temps réel : la
     // règle d'egress du projet le réserve au chat et aux notifications.
     void supabase
@@ -116,12 +133,14 @@ export function RightRail() {
       const tous = (data as Vogue[] | null) ?? [];
       setVogue(choisirEnVogue(tous, 4));
     });
-  }, []);
+  }, [aSaPropreColonne]);
 
   const total = vogue?.reduce(
     (t, v) => Math.max(t, v.reactions_count + v.comments_count + v.saves_count),
     0
   );
+
+  if (aSaPropreColonne) return null;
 
   return (
     <aside
@@ -131,7 +150,7 @@ export function RightRail() {
          lui-même. On borne sa hauteur à celle de la fenêtre et on lui donne
          son propre défilement — `overscroll-contain` évite d'entraîner la
          page quand on arrive au bout. */
-      className="dk-rail sticky top-14 hidden max-h-[calc(100dvh-3.5rem)] w-72 shrink-0 space-y-4 overflow-y-auto overscroll-contain py-4 [scrollbar-width:thin] xl:block 2xl:w-80"
+      className="dk-rail sticky top-14 hidden w-64 max-h-[calc(100dvh-3.5rem)] shrink-0 space-y-4 overflow-y-auto overscroll-contain py-4 [scrollbar-width:thin] md:block xl:w-80"
     >
       {/* ── Les chiffres, vrais ────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-4">

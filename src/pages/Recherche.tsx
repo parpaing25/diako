@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { MapPin, Search, SlidersHorizontal, Star, UtensilsCrossed } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { MapPin, Search, SlidersHorizontal, Star, UtensilsCrossed, X } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useMediaQuery } from "@/hooks/use-mobile";
 import { SearchBar } from "@/components/SearchBar";
 import { FicheCard } from "@/components/FicheCard";
+import { FicheLigne } from "@/components/FicheLigne";
 import { AutourDeMoi } from "@/components/AutourDeMoi";
 import {
   ariary,
@@ -22,6 +24,15 @@ import {
 } from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
 import { useReveal } from "@/hooks/useReveal";
+
+/**
+ * ⚠ LEAFLET N'EST PAS DANS LE PAQUET DE LA RECHERCHE. Le panneau carte est
+ *   importé à la demande ET n'est monté qu'au-dessus de `xl` — un téléphone
+ *   ne télécharge jamais les ~150 Ko de la bibliothèque pour un panneau qu'il
+ *   ne verra pas. `hidden lg:block` n'aurait rien empêché : un composant
+ *   masqué en CSS est quand même monté, et son import quand même chargé.
+ */
+const CarteResultats = lazy(() => import("@/components/CarteResultats"));
 
 /**
  * Recherche — la fonctionnalité signature de Diako.
@@ -75,11 +86,28 @@ interface Recit {
 
 export default function Recherche() {
   useReveal();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
   const categorie = params.get("cat");
   const budget = params.get("max") ? Number(params.get("max")) : null;
   const equipements = params.get("eq")?.split(",").filter(Boolean) ?? [];
+
+  /**
+   * ⚠ LA ZONE VIT DANS L'URL, comme tous les autres filtres. C'est ce qui rend
+   *   « /recherche?q=ampefy&cat=hotel&zone=… » partageable et indexable —
+   *   le canal d'acquisition du produit. Une zone gardée dans un état React
+   *   aurait produit un lien qui ne montre pas ce que l'expéditeur voyait.
+   *   Quatre nombres, arrondis au dix-millième de degré (~11 m) : au-delà on
+   *   allonge l'URL sans rien gagner.
+   */
+  const zone = useMemo(() => {
+    const brut = params.get("zone");
+    if (!brut) return null;
+    const n = brut.split(",").map(Number);
+    if (n.length !== 4 || n.some((x) => !Number.isFinite(x))) return null;
+    return { sud: n[0], ouest: n[1], nord: n[2], est: n[3] };
+  }, [params]);
 
   useDocumentTitle(q ? `« ${q} »` : "Rechercher");
 
@@ -92,6 +120,12 @@ export default function Recherche() {
   const [recits, setRecits] = useState<Recit[]>([]);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState(false);
+
+  /** La ligne (ou l'épingle) survolée : c'est ce qui relie la liste à la carte. */
+  const [surligne, setSurligne] = useState<string | null>(null);
+  // Le panneau carte n'existe qu'à partir de `xl`, et en JavaScript — pas en
+  // CSS : voir le commentaire de l'import différé.
+  const grandEcran = useMediaQuery("(min-width: 1280px)");
 
   // Suggestions d'accueil : tirées du référentiel réel, plus jamais d'un
   // fichier d'exemples.
@@ -148,11 +182,48 @@ export default function Recherche() {
     void lancer();
   }, [lancer]);
 
+  /**
+   * Les résultats effectivement affichés, une fois la zone appliquée.
+   *
+   * ⚠ LE DÉCOUPAGE SE FAIT CÔTÉ CLIENT, ET C'EST UNE LIMITE ASSUMÉE. Il ne
+   *   porte que sur les résultats DÉJÀ rendus par la recherche (40 au plus) :
+   *   ce n'est pas une requête géographique sur toute la base. Recadrer sur
+   *   Nosy Be en cherchant « Ampefy » ne fera donc pas apparaître Nosy Be —
+   *   ça vide la liste, et le bandeau au-dessus le dit.
+   *
+   * ⚠ LES FICHES SANS POSITION SONT GARDÉES. Les exclure ferait disparaître de
+   *   la liste, sans un mot, tout établissement dont on ignore l'adresse — une
+   *   absence de donnée deviendrait une absence d'établissement.
+   */
+  const fichesVisibles = useMemo(() => {
+    if (!zone) return fiches;
+    return fiches.filter(
+      (f) =>
+        f.lat == null ||
+        f.lng == null ||
+        (f.lat >= zone.sud && f.lat <= zone.nord && f.lng >= zone.ouest && f.lng <= zone.est)
+    );
+  }, [fiches, zone]);
+
   /** Bascule un filtre dans l'URL : partageable, et le retour arrière marche. */
   function basculer(cle: string, valeur: string | null) {
     const suivant = new URLSearchParams(params);
     if (valeur === null || suivant.get(cle) === valeur) suivant.delete(cle);
     else suivant.set(cle, valeur);
+    setParams(suivant, { replace: true });
+  }
+
+  /**
+   * Pose ou retire le cadre géographique.
+   *
+   * ⚠ PAS `basculer()`. Celui-là efface le filtre quand on lui repasse la même
+   *   valeur — ce qui est juste pour une catégorie, et faux ici : recadrer deux
+   *   fois exactement pareil viderait la zone au lieu de la garder.
+   */
+  function poserZone(valeur: string | null) {
+    const suivant = new URLSearchParams(params);
+    if (valeur === null) suivant.delete("zone");
+    else suivant.set("zone", valeur);
     setParams(suivant, { replace: true });
   }
 
@@ -384,6 +455,30 @@ export default function Recherche() {
           </p>
         )}
 
+        {/* Le recadrage est un filtre comme les autres : il s'annonce et il se
+            retire. Sans cette ligne, une liste vidée par un cadre passe pour
+            une recherche sans résultat. */}
+        {zone && (
+          <div className="mt-3 flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.06] px-3 py-1.5 text-xs">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              Limité à la zone affichée sur la carte —{" "}
+              <strong className="font-semibold">{fichesVisibles.length}</strong> sur{" "}
+              {fiches.length} résultat{fiches.length > 1 ? "s" : ""}
+            </span>
+            <button
+              onClick={() => poserZone(null)}
+              className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+              Toute la recherche
+            </button>
+          </div>
+        )}
+
+        {/* ── DEUX COLONNES À PARTIR DE `xl` (écran W2) ─────────────────── */}
+        <div className="xl:flex xl:items-start xl:gap-5">
+          <div className="min-w-0 flex-1">
         {erreur && (
           <div className="mt-5 rounded-2xl border border-border p-5 text-center">
             <p className="font-medium">La recherche n'a pas abouti</p>
@@ -404,12 +499,29 @@ export default function Recherche() {
           </div>
         )}
 
-        {fiches.length > 0 && (
+        {fichesVisibles.length > 0 && (
           <>
             <h2 className="mt-7 text-lg font-semibold">Établissements</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {fiches.map((f) => (
+            {/* ⚠ DEUX FORMES, PAS UNE ÉTIRÉE. Sur téléphone, une grille de
+                vignettes : on compare en faisant défiler. Sur grand écran, des
+                LIGNES LARGES avec une colonne de prix alignée — c'est le seul
+                moyen de comparer douze hôtels d'un coup d'œil, et c'est ce que
+                demande la maquette (W2). La grille étirée perdait exactement
+                cette lecture-là. */}
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:hidden">
+              {fichesVisibles.map((f) => (
                 <FicheCard key={f.id} fiche={f} platCherche={!!plat} />
+              ))}
+            </div>
+            <div className="mt-3 hidden flex-col gap-3 lg:flex">
+              {fichesVisibles.map((f) => (
+                <FicheLigne
+                  key={f.id}
+                  fiche={f}
+                  platCherche={!!plat}
+                  surligne={surligne === f.slug}
+                  onSurvol={setSurligne}
+                />
               ))}
             </div>
           </>
@@ -462,6 +574,46 @@ export default function Recherche() {
             )}
           </div>
         )}
+
+        {/* Une liste vidée par le seul recadrage n'est pas « aucun résultat » :
+            c'est une zone trop étroite, et le remède n'est pas le même. */}
+        {zone && fichesVisibles.length === 0 && fiches.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-dashed border-border px-5 py-10 text-center">
+            <p className="font-medium">Rien dans cette zone</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Les {fiches.length} résultats de cette recherche sont tous en dehors du
+              cadre affiché. Élargissez la carte, ou revenez à la recherche entière.
+            </p>
+            <button
+              onClick={() => poserZone(null)}
+              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground"
+            >
+              Toute la recherche
+            </button>
+          </div>
+        )}
+          </div>
+
+          {/* ── LA CARTE, à côté et non par-dessus ──────────────────────── */}
+          {grandEcran && !chargement && fiches.length > 0 && (
+            <Suspense
+              fallback={
+                <div className="dk-skeleton sticky top-20 hidden h-[calc(100dvh-6.5rem)] w-[38%] max-w-[520px] shrink-0 rounded-2xl xl:block" />
+              }
+            >
+              <CarteResultats
+                points={fichesVisibles}
+                surligne={surligne}
+                onSurvol={setSurligne}
+                onChoisir={(slug) => navigate(`/p/${slug}`)}
+                cadreInitial={zone}
+                onChercherIci={(c) =>
+                  poserZone([c.sud, c.ouest, c.nord, c.est].map((x) => x.toFixed(4)).join(","))
+                }
+              />
+            </Suspense>
+          )}
+        </div>
       </div>
     </div>
   );

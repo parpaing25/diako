@@ -109,7 +109,13 @@ export default function Recherche() {
     return { sud: n[0], ouest: n[1], nord: n[2], est: n[3] };
   }, [params]);
 
-  useDocumentTitle(q ? `« ${q} »` : "Rechercher");
+  useDocumentTitle(
+    q
+      ? `« ${q} »`
+      : categorie
+        ? (CATEGORIES.find((c) => c.code === categorie)?.pluriel ?? "Rechercher")
+        : "Rechercher"
+  );
 
   const [lieu, setLieu] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [plat, setPlat] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
@@ -154,7 +160,16 @@ export default function Recherche() {
   const versionRef = useRef(0);
 
   const lancer = useCallback(async () => {
-    if (!q) return;
+    /* 🔴 CORRIGE : `if (!q) return` rendait TOUT filtre seul inoperant.
+       « /recherche?cat=agence_voyage » ne declenchait aucune recherche et la
+       page rendait sa branche d'accueil — un champ vide. Consequence en
+       cascade : les liens qui voulaient filtrer par categorie ont ete
+       contournes en passant un `q` bidon, qui ne resout ni lieu ni plat et
+       rend donc TOUS les etablissements. Le bouton « Voir les agences »
+       affichait ainsi des hotels et des restaurants.
+       ⚠ Une recherche par filtre seul est legitime : « toutes les agences »
+         est une question aussi valable que « ravitoto a Majunga ». */
+    if (!q && !categorie && !budget && !equipements.length) return;
     const version = ++versionRef.current;
     setChargement(true);
     setErreur(false);
@@ -253,8 +268,11 @@ export default function Recherche() {
     setParams(suivant, { replace: true });
   }
 
-  /* ── Écran d'accueil de la recherche ─────────────────────────────────── */
-  if (!q) {
+  /* ── Écran d'accueil de la recherche ───────────────────────────────────
+     ⚠ Il ne s'affiche que si RIEN n'est demande — ni terme, ni filtre. Tester
+       le seul `q` renvoyait a l'accueil quiconque arrivait par un lien de
+       categorie, alors que la recherche venait de tourner. */
+  if (!q && !categorie && !budget && !equipements.length) {
     return (
       <div className="px-4 py-5">
         <h1 className="sr-only">Rechercher sur Diako</h1>

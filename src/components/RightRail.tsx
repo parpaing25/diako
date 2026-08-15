@@ -187,7 +187,10 @@ export function RightRail() {
               { n: stats.recits, quoi: "récits", ou: "/" },
               { n: stats.etablissements, quoi: "adresses", ou: "/carte" },
               { n: stats.destinations, quoi: "destinations", ou: "/explorer" },
-              { n: stats.plats, quoi: "plats référencés", ou: "/recherche" },
+              /* 🔴 Menait a « /recherche » sans terme, donc a un champ VIDE. La page
+                 qui repond exactement a ce clic existe et est citee deux blocs
+                 plus bas dans ce meme composant. */
+              { n: stats.plats, quoi: "plats référencés", ou: "/plats" },
             ].map((c) => (
               <Link key={c.quoi} to={c.ou} className="group block">
                 <span className="dk-edito block text-2xl leading-none text-primary">

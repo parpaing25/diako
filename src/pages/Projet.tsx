@@ -336,8 +336,11 @@ export default function Projet() {
             }
             action={
               projet
-                ? { libelle: "Voir les agences", /* ⚠ `cat` seul ne declenche rien sans `q` : la recherche sort tot. */
-                  lien: "/recherche?q=agence" }
+                ? /* 🔴 `?q=agence` ne resolvait ni un lieu ni un plat : la RPC
+                     rendait TOUS les etablissements publies, donc des hotels et
+                     des restaurants — jamais une agence. `agence_voyage` est le
+                     code reel en base ; `agence` etait une cle d'interface. */
+                  { libelle: "Voir les agences", lien: "/recherche?cat=agence_voyage" }
                 : { libelle: "Décrire mon voyage", onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }) }
             }
             contenuReel={

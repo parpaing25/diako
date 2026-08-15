@@ -31,6 +31,20 @@ export interface NavItem {
   icon: LucideIcon;
   /** false = l'écran existe et est dessiné, mais rien n'est encore enregistré. */
   pret: boolean;
+  /**
+   * ⚠ `false` = ABSENT DU RAIL DESKTOP, présent partout ailleurs.
+   *
+   * 🔴 POURQUOI UN DRAPEAU ET PAS UNE SUPPRESSION. Publier, Messages,
+   *    Notifications et Mon compte sont déjà des icônes de l'en-tête sur grand
+   *    écran : les répéter dans le rail fait doublon, et la liste de vingt
+   *    entrées devient illisible.
+   *
+   *    Mais `NAV_COMPLET` alimente AUSSI le tiroir mobile et le pied de page.
+   *    Les retirer de la liste les ferait disparaître à 390 px — où l'en-tête
+   *    porte moins d'icônes, et où rien ne se plaignait. On filtre le rail,
+   *    on ne coupe pas la source.
+   */
+  railDesktop?: boolean;
   promesse?: string;
 }
 
@@ -79,15 +93,23 @@ export const NAV_COMPLET: NavItem[] = [
   { to: "/guides", label: "Guides", icon: Mountain, pret: true },
   { to: "/carte", label: "Carte", icon: Map, pret: true },
   { to: "/recherche", label: "Rechercher", icon: Search, pret: true },
-  { to: "/publier", label: "Publier", icon: Plus, pret: true },
+  { to: "/publier", label: "Publier", icon: Plus, pret: true, railDesktop: false },
   { to: "/favoris", label: "Mon carnet", icon: Bookmark, pret: true },
   { to: "/gouts", label: "Mon carnet de goûts", icon: UtensilsCrossed, pret: true },
-  { to: "/messages", label: "Messages", icon: MessageCircle, pret: true },
-  { to: "/notifications", label: "Notifications", icon: Bell, pret: true },
+  { to: "/messages", label: "Messages", icon: MessageCircle, pret: true, railDesktop: false },
+  { to: "/notifications", label: "Notifications", icon: Bell, pret: true, railDesktop: false },
   { to: "/pro", label: "Espace pro", icon: Briefcase, pret: true },
-  { to: "/compte", label: "Mon compte", icon: User, pret: true },
+  { to: "/compte", label: "Mon compte", icon: User, pret: true, railDesktop: false },
   { to: "/parametres", label: "Paramètres", icon: Settings, pret: true },
 ];
+
+/**
+ * Ce que le rail desktop affiche : tout sauf ce que l'en-tête porte déjà.
+ *
+ * ⚠ Le tiroir mobile et le pied de page continuent de lire `NAV_COMPLET` :
+ *   c'est le rail seul qui se raccourcit.
+ */
+export const NAV_RAIL = NAV_COMPLET.filter((e) => e.railDesktop !== false);
 
 /** Ce qui est réellement en construction, affiché tel quel aux visiteurs. */
 export const FEUILLE_DE_ROUTE = [

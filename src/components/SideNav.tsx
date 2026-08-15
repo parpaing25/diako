@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { NAV_COMPLET } from "@/lib/nav";
+import { NAV_RAIL } from "@/lib/nav";
 import { prechargerRoute } from "@/lib/prechargerRoute";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export function SideNav() {
       className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-64 shrink-0 overflow-y-auto border-r border-border px-2 py-4 xl:block"
     >
       <ul className="space-y-0.5">
-        {NAV_COMPLET.map(({ to, label, icon: Icon, pret }) => (
+        {NAV_RAIL.map(({ to, label, icon: Icon, pret }) => (
           <li key={to}>
             <NavLink
               to={to}

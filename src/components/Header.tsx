@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getAvatarUrl } from "@/lib/supabaseImage";
+import { MenuCompte } from "@/components/MenuCompte";
 import { SearchBar } from "@/components/SearchBar";
 import { MenuMobile } from "@/components/MenuMobile";
 import { compterNonLues } from "@/lib/api";
@@ -22,7 +23,7 @@ export function Header() {
   const [nonLues, setNonLues] = useState(0);
   const [msgNonLus, setMsgNonLus] = useState(0);
   // Un seul panneau ouvert a la fois : deux volets superposes se recouvrent.
-  const [panneau, setPanneau] = useState<"messages" | "notifs" | null>(null);
+  const [panneau, setPanneau] = useState<"messages" | "notifs" | "compte" | null>(null);
   const fermerMenu = useCallback(() => setMenu(false), []);
 
   // Rafraichissement au FOCUS, jamais en temps reel : un canal ouvert en
@@ -153,23 +154,32 @@ export function Header() {
                   onLues={() => setNonLues(0)}
                 />
               </div>
-              <Link
-                to="/compte"
-                aria-label="Mon compte"
-                className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-muted"
-              >
-                {profile?.avatar_url ? (
-                  <img
-                    src={getAvatarUrl(profile.avatar_url, 36)}
-                    alt=""
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 object-cover"
-                  />
-                ) : (
-                  <User className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                )}
-              </Link>
+              {/* ⚠ L'AVATAR OUVRE UN MENU, il ne navigue plus. Un clic direct
+                  vers /compte obligeait a charger tout l'espace compte pour se
+                  deconnecter ou changer un reglage — deux ecrans sur une 3G
+                  pour un geste d'un seul. */}
+              <div className="relative">
+                <button
+                  onClick={() => setPanneau((p) => (p === "compte" ? null : "compte"))}
+                  aria-label="Mon compte"
+                  aria-expanded={panneau === "compte"}
+                  aria-haspopup="menu"
+                  className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-muted"
+                >
+                  {profile?.avatar_url ? (
+                    <img
+                      src={getAvatarUrl(profile.avatar_url, 36)}
+                      alt=""
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 object-cover"
+                    />
+                  ) : (
+                    <User className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  )}
+                </button>
+                <MenuCompte ouvert={panneau === "compte"} onFermer={() => setPanneau(null)} />
+              </div>
             </div>
           ) : (
             <Link

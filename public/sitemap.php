@@ -56,7 +56,32 @@ $jour = fn(?string $iso) => $iso ? substr($iso, 0, 10) : date('Y-m-d');
 $fixes = [
     ['/',                 '1.0', 'daily',   '2026-08-01'],
     ['/explorer',         '0.9', 'weekly',  '2026-08-01'],
+
+    /* ⚠ LES DEUX PAGES A PLUS FORTE VALEUR DE RECHERCHE, en priorite 0.9.
+         Elles repondent a deux requetes que les gens tapent vraiment —
+         « quand partir a Nosy Be », « combien de temps Tana Morondava » — et
+         elles sont les SEULES a porter une donnee que personne d'autre ne
+         publie : la raison d'une saison, et la vitesse reelle des routes.
+         Un annuaire de 54 fiches ne gagne pas sur « hotel Madagascar » ; il
+         gagne sur ces questions-la. */
+    ['/quand-partir',     '0.9', 'weekly',  '2026-08-15'],
+    ['/y-aller',          '0.9', 'weekly',  '2026-08-15'],
+
+    /* Le referentiel culinaire : 95 plats et 254 orthographes, c'est-a-dire
+       autant de portes d'entree sur « ou manger du X ». */
+    ['/plats',            '0.9', 'weekly',  '2026-08-15'],
+
     ['/recherche',        '0.8', 'weekly',  '2026-08-01'],
+    ['/carte',            '0.7', 'weekly',  '2026-08-15'],
+
+    /* ⚠ CES QUATRE-LA SONT VIDES AUJOURD'HUI et gardent une priorite BASSE.
+         Les declarer a 0.8 apprendrait a Google que nos priorites ne veulent
+         rien dire. Elles remonteront quand elles auront du contenu. */
+    ['/circuits',         '0.4', 'monthly', '2026-08-15'],
+    ['/sites',            '0.4', 'monthly', '2026-08-15'],
+    ['/evenements',       '0.4', 'monthly', '2026-08-15'],
+    ['/guides',           '0.4', 'monthly', '2026-08-15'],
+
     ['/pro',              '0.6', 'monthly', '2026-08-01'],
     ['/mentions',         '0.2', 'yearly',  '2026-07-31'],
     ['/cgu',              '0.2', 'yearly',  '2026-07-31'],
@@ -96,15 +121,55 @@ foreach ($fixes as [$url, $prio, $freq, $maj]) {
 }
 
 // Destinations — uniquement celles qui ont quelque chose à montrer.
+//
+// 🔴 DÉFAUT CORRIGÉ. Ce bloc soumettait « /explorer?lieu=<slug> », une URL à
+//    paramètre qui n'a jamais eu de page à elle : elle rouvre l'écran de liste
+//    avec un filtre. La vraie fiche de destination est « /lieu/<slug> » depuis
+//    la vague du référentiel. Google se voyait donc proposer 178 variantes du
+//    MÊME écran au lieu des 178 fiches — c'est-à-dire l'inverse exact de ce
+//    qu'un sitemap doit faire, et de quoi diluer tout le domaine en contenu
+//    quasi dupliqué.
 foreach ($lieux as $l) {
     $vide = (int)($l['nb_pages'] ?? 0) === 0 && (int)($l['nb_posts'] ?? 0) === 0;
     if ($vide) continue;
     echo "  <url>\n";
-    echo "    <loc>{$base}/explorer?lieu=" . $e($l['slug']) . "</loc>\n";
+    echo "    <loc>{$base}/lieu/" . $e($l['slug']) . "</loc>\n";
     echo "    <lastmod>" . date('Y-m-d') . "</lastmod>\n";
     echo "    <changefreq>weekly</changefreq>\n";
     echo "    <priority>0.8</priority>\n";
     echo "  </url>\n";
+}
+
+// Plats — le référentiel culinaire est le seul jeu de données COMPLET du site :
+// 95 fiches, chacune portant ses variantes d'orthographe. Ce sont 95 portes
+// d'entrée sur « où manger du <plat> », la requête citée en exemple du TDR.
+// ⚠ Aucune ne porte encore d'adresse : la priorité reste modérée, mais la page
+//   a un vrai contenu éditorial (famille, ingrédients, régimes, variantes).
+$plats = lire(
+    $sbUrl . '/rest/v1/dishes?select=slug,photo_url,name_fr&order=slug&limit=500',
+    $headers
+);
+foreach ($plats as $pl) {
+    echo "  <url>
+";
+    echo "    <loc>{$base}/plat/" . $e($pl['slug']) . "</loc>
+";
+    echo "    <changefreq>monthly</changefreq>
+";
+    echo "    <priority>0.6</priority>
+";
+    if (!empty($pl['photo_url'])) {
+        echo "    <image:image>
+";
+        echo "      <image:loc>" . $e($pl['photo_url']) . "</image:loc>
+";
+        echo "      <image:title>" . $e($pl['name_fr']) . "</image:title>
+";
+        echo "    </image:image>
+";
+    }
+    echo "  </url>
+";
 }
 
 // Établissements — la priorité suit la complétude : une fiche renseignée

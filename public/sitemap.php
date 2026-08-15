@@ -122,6 +122,19 @@ $fiches = lire_tout(
     $headers
 );
 
+// 🔴 LES 2 429 FICHES DE SITES ÉTAIENT ABSENTES DU PLAN. Le plan comptait
+//    3 628 URL et pas une seule /site/ : parcs nationaux, sommets, plages et
+//    patrimoine — la moitié de l'intérêt du pays — étaient invisibles pour
+//    Google. Une page qu'aucun moteur ne connaît n'existe pas.
+// ⚠ `lire_tout` et non `lire` : `&limit=5000` ne sert à rien, PostgREST
+//   plafonne une réponse à 1 000 lignes SANS LE DIRE. Une limite qu'on demande
+//   n'est pas une limite qu'on obtient.
+$sites = lire_tout(
+    $sbUrl . '/rest/v1/attractions?select=slug,name,kind,summary,description,cover_url,updated_at'
+           . '&is_published=eq.true&order=updated_at.desc',
+    $headers
+);
+
 $recits = lire(
     $sbUrl . '/rest/v1/posts?select=id,body,media,created_at,place'
            . '&status=eq.published&order=created_at.desc&limit=2000',
@@ -207,6 +220,27 @@ foreach ($fiches as $f) {
         echo "    <image:image>\n";
         echo "      <image:loc>" . $e($f['cover_url']) . "</image:loc>\n";
         echo "      <image:title>" . $e($f['name']) . "</image:title>\n";
+        echo "    </image:image>\n";
+    }
+    echo "  </url>\n";
+}
+
+// Sites et parcs — la priorité suit ce qu'il y a VRAIMENT à lire. Une fiche
+// qui n'est qu'un nom sur une carte ne mérite pas la même fréquence de
+// passage qu'un parc national décrit : l'annoncer en 0.9 apprendrait au
+// moteur que nos priorités ne veulent rien dire.
+foreach ($sites as $s2) {
+    $riche = !empty($s2['description']);
+    $prio  = $riche ? '0.8' : (!empty($s2['summary']) ? '0.6' : '0.4');
+    echo "  <url>\n";
+    echo "    <loc>{$base}/site/" . $e($s2['slug']) . "</loc>\n";
+    echo "    <lastmod>" . $jour($s2['updated_at'] ?? null) . "</lastmod>\n";
+    echo "    <changefreq>" . ($riche ? 'monthly' : 'yearly') . "</changefreq>\n";
+    echo "    <priority>{$prio}</priority>\n";
+    if (!empty($s2['cover_url'])) {
+        echo "    <image:image>\n";
+        echo "      <image:loc>" . $e($s2['cover_url']) . "</image:loc>\n";
+        echo "      <image:title>" . $e($s2['name']) . "</image:title>\n";
         echo "    </image:image>\n";
     }
     echo "  </url>\n";

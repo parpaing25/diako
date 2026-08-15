@@ -35,6 +35,7 @@ export type Database = {
       profiles: {
         Row: {
           account_type: string;
+          metier_pro: string | null;
           avatar_url: string | null;
           bio: string | null;
           cover_url: string | null;
@@ -53,6 +54,7 @@ export type Database = {
         };
         Insert: {
           account_type?: string;
+          metier_pro?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
           cover_url?: string | null;
@@ -71,6 +73,7 @@ export type Database = {
         };
         Update: {
           account_type?: string;
+          metier_pro?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
           cover_url?: string | null;
@@ -1320,6 +1323,12 @@ export type Database = {
       };
       /** ⚠ Regroupe cote BASE pour la vue d'ensemble : le reseau ne transporte
        *  que ce qui s'affiche, et le navigateur ne pose pas 800 noeuds DOM. */
+      /** ⚠ SEUL chemin vers un compte professionnel : l'UPDATE direct de
+       *  `account_type` est refuse par declencheur depuis la migration 0069. */
+      devenir_pro: {
+        Args: { p_metier: string };
+        Returns: undefined;
+      };
       chercher_lieux: {
         Args: { p_q: string; p_limite?: number };
         Returns: {

@@ -21,6 +21,7 @@ export default function Bienvenue() {
   const [nom, setNom] = useState("");
   const [ville, setVille] = useState("");
   const [type, setType] = useState<"voyageur" | "pro">("voyageur");
+  const [metier, setMetier] = useState<string>("hotellerie");
   const [busy, setBusy] = useState(false);
   useDocumentTitle("Bienvenue");
 
@@ -40,21 +41,41 @@ export default function Bienvenue() {
       return;
     }
     setBusy(true);
+
+    // 🔴 `account_type` NE S'ÉCRIT PLUS EN DIRECT. La migration 0069 a fermé
+    //    cette porte — n'importe quel compte pouvait se déclarer professionnel
+    //    par un simple UPDATE, alors que ce statut ouvre la revendication d'un
+    //    des 3 254 établissements. Le déclencheur lève désormais une exception.
+    //
+    //    ⚠ CET ÉCRAN CONTINUAIT DE L'ÉCRIRE, et l'erreur brute de Postgres
+    //      s'affichait dans un toast : plus personne ne pouvait devenir
+    //      professionnel, donc plus personne ne pouvait revendiquer. La base
+    //      était en avance sur le client, et c'est le client qui cassait.
     const { error } = await supabase
       .from("profiles")
-      .update({
-        display_name: nom.trim(),
-        home_place: ville.trim() || null,
-        account_type: type,
-      })
+      .update({ display_name: nom.trim(), home_place: ville.trim() || null })
       .eq("id", user.id)
       .select("id");
-    setBusy(false);
 
     if (error) {
+      setBusy(false);
       toast.error(error.message);
       return;
     }
+
+    // ⚠ LE MÉTIER PART AVEC LE STATUT. `devenir_pro()` l'exige : un compte
+    //   professionnel sans métier ne dit rien de ce qu'il propose, et c'est
+    //   sur lui que reposent les écrans réservés aux pros.
+    if (type === "pro") {
+      const { error: e2 } = await supabase.rpc("devenir_pro", { p_metier: metier });
+      if (e2) {
+        setBusy(false);
+        toast.error(e2.message);
+        return;
+      }
+    }
+
+    setBusy(false);
     await refresh();
     navigate("/", { replace: true });
   }
@@ -117,6 +138,36 @@ export default function Bienvenue() {
             ))}
           </div>
         </fieldset>
+
+        {/* ⚠ LE MÉTIER N'APPARAÎT QUE POUR UN PRO. Le demander à un voyageur
+            serait du bruit ; et `devenir_pro()` le refuse vide. Les sept codes
+            sont ceux de la contrainte posée en 0069 — les inventer ici ferait
+            échouer l'appel avec « Metier inconnu ». */}
+        {type === "pro" && (
+          <div>
+            <label htmlFor="metier" className="mb-1 block text-sm font-medium">
+              Votre métier
+            </label>
+            <select
+              id="metier"
+              value={metier}
+              onChange={(e) => setMetier(e.target.value)}
+              className="h-12 w-full rounded-xl border border-input bg-background px-4 text-base outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="hotellerie">Hôtellerie — hôtel, bungalow, chambres</option>
+              <option value="restauration">Restauration — restaurant, gargote</option>
+              <option value="guide">Guide</option>
+              <option value="agence">Agence de voyage — circuits</option>
+              <option value="transport">Transport</option>
+              <option value="artisanat">Artisanat</option>
+              <option value="autre">Autre</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Vous pourrez revendiquer votre établissement ensuite — rien ne
+              vous y oblige maintenant.
+            </p>
+          </div>
+        )}
 
         <button
           type="submit"

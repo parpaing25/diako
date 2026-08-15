@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { MapPin, Star } from "lucide-react";
 import { BadgeVerification } from "@/components/Badges";
 import { ImageProgressive } from "@/components/ImageProgressive";
-import { ariary, unite, type ResultatPage } from "@/lib/etablissements";
+import { unite, type ResultatPage } from "@/lib/etablissements";
+import { Prix } from "@/components/Prix";
 import { cn } from "@/lib/utils";
 
 const LIBELLE: Record<string, string> = {
@@ -74,16 +75,20 @@ export function FicheCard({ fiche, platCherche }: { fiche: ResultatPage; platChe
         )}
 
         <div className="mt-auto flex items-end justify-between gap-2 pt-1.5">
-          {prix != null ? (
-            <p className="text-sm">
-              <span className={cn("font-semibold", platCherche && "text-primary")}>
-                {ariary(prix)}
-              </span>{" "}
-              <span className="text-xs text-muted-foreground">{uniteAffichee}</span>
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">Tarifs non renseignés</p>
-          )}
+          {/* 🔴 DÉFAUT CORRIGÉ : cette carte formatait le montant elle-même avec
+              `ariary()`, court-circuitant <Prix>. Résultat mesuré sur le site :
+              la même fiche affichait « 93 000 Ar la nuit » ici (sous 1024 px)
+              et « Nous consulter » dans <FicheLigne> au-dessus — même donnée,
+              même seconde, deux réponses selon la largeur de l'écran.
+              ⚠ RÈGLE DU PROJET : aucun prix ne s'affiche hors de <Prix>. C'est
+                lui, et lui seul, qui sait ce qu'un prix a le droit de dire. */}
+          <Prix
+            montant={prix}
+            unite={platCherche ? "portion" : null}
+            base={platCherche ? null : uniteAffichee}
+            confirmeLe={null}
+            taille="compacte"
+          />
 
           {fiche.rating_count > 0 && (
             <span className="inline-flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground">

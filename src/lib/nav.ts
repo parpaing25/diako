@@ -68,6 +68,12 @@ export const NAV_COMPLET: NavItem[] = [
   { to: "/circuits", label: "Circuits", icon: Route, pret: true },
   { to: "/sites", label: "Sites et parcs", icon: Trees, pret: true },
   { to: "/evenements", label: "Événements", icon: CalendarDays, pret: true },
+  /* ⚠ AJOUTE APRES L'AUDIT : `/projet` n'avait qu'UN SEUL lien dans tout le
+     depot — la carte du bas de SideNav, qui n'apparait qu'a 1280 px. Sur la
+     cible du produit (390 px), l'ecran que le code decrit comme « le seul
+     endroit ou l'offre vient au voyageur » n'etait joignable qu'en tapant
+     l'URL a la main. */
+  { to: "/projet", label: "Mon projet de voyage", icon: Compass, pret: true },
   { to: "/quand-partir", label: "Quand partir", icon: Sun, pret: true },
   { to: "/y-aller", label: "Y aller", icon: Route, pret: true },
   { to: "/guides", label: "Guides", icon: Mountain, pret: true },

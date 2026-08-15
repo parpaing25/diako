@@ -63,7 +63,7 @@ export function DiakoHero({
           <button
             type="button"
             onClick={() => navigate("/publier")}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-95"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent-strong px-5 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             Raconter un voyage

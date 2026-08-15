@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, Inbox, MessageCircle, X } from "lucide-react";
+import { Inbox, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
@@ -304,22 +304,25 @@ export default function Projet() {
                   base={o.pax ? `pour ${o.pax} personne${o.pax > 1 ? "s" : ""}` : o.price_unit}
                   className="mt-3"
                 />
-                <div className="mt-3 flex gap-2">
-                  <button className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
-                    <Check className="h-4 w-4" aria-hidden="true" />
-                    Accepter
-                  </button>
-                  <button className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-input text-sm font-semibold">
-                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                    Discuter
-                  </button>
-                  <button
-                    aria-label="Refuser"
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-input"
+                {/* 🔴 TROIS BOUTONS RETIRES. « Accepter », « Discuter » et
+                    « Refuser » n'avaient AUCUN gestionnaire, et la policy
+                    `trip_offers_maj` n'autorise l'ecriture qu'a l'AUTEUR de
+                    l'offre : le voyageur n'a aucun droit sur ces lignes. Rien
+                    n'etait branche a aucun etage.
+                    ⚠ Un bouton qui ne fait rien coute plus cher que son absence :
+                      il se clique, ne repond pas, et apprend au visiteur que le
+                      site ne marche pas. On garde la seule action qui EXISTE —
+                      ecrire au professionnel — et on dira le reste quand le
+                      cote pro sera branche. */}
+                {o.page && (
+                  <Link
+                    to={`/p/${o.page.slug}`}
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-input text-sm font-semibold"
                   >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    Voir {o.page.name} et lui ecrire
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

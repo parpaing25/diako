@@ -90,8 +90,23 @@ export default function Plats() {
     [familles, regimes, q]
   );
 
+  /**
+   * 🔴 DEFAUT CORRIGE : une requete partait a CHAQUE FRAPPE. `q` est dans les
+   *    dependances de `charger`, lui-meme seule dependance de cet effet, sans
+   *    aucun garde-fou. Taper « ravitoto » lancait huit requetes reseau, dont
+   *    sept jetees — sur la 3G visee, elles se doublent et la derniere arrivee
+   *    n'est pas forcement la derniere demandee.
+   *
+   * ⚠ 260 ms : c'est le seuil deja retenu par SearchBar (220 ms) arrondi au
+   *   cout d'un aller-retour supplementaire. En dessous, on relance pendant que
+   *   le doigt bouge encore ; au-dessus, la liste parait figee.
+   *
+   * ⚠ LE NETTOYAGE ANNULE LE MINUTEUR EN ATTENTE : sans lui, quitter la page
+   *   pendant la frappe declencherait une requete sur un composant demonte.
+   */
   useEffect(() => {
-    void charger();
+    const t = window.setTimeout(() => void charger(), 260);
+    return () => window.clearTimeout(t);
   }, [charger]);
 
   useEffect(() => {

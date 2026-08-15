@@ -59,11 +59,40 @@ const LIBELLE_UNITE: Record<Unite, string> = {
 /** Le jour où les tarifs cessent d'être crédibles. TDR §8.2. */
 const JOURS_AVANT_PEREMPTION = 183;
 
-function fraicheur(confirmeLe?: string | null) {
-  if (!confirmeLe) return { perime: true, texte: null as string | null };
+/**
+ * TROIS ÉTATS, ET NON DEUX.
+ *
+ * 🔴 DÉFAUT CORRIGÉ. `fraicheur(undefined)` renvoyait `{ perime: true }` : tout
+ *    appel SANS date de confirmation affichait « Nous consulter » ET « Tarifs
+ *    non confirmés depuis plus de 6 mois ». C'est une DATE DE PÉREMPTION
+ *    FABRIQUÉE — exactement ce que la règle n°1 du projet interdit — sur un
+ *    tarif que personne n'a jamais dit périmé : simplement, personne ne l'a
+ *    encore confirmé.
+ *
+ *    Cinq appelants sur six omettent `confirmeLe`. Conséquence mesurée sur le
+ *    site : la seule fiche des 54 qui porte un prix affichait « 93 000 Ar »
+ *    sous 1024 px et « Nous consulter » au-dessus — même donnée, même seconde,
+ *    deux réponses selon la largeur de l'écran.
+ *
+ *    Et surtout : `rates_checked_at` n'est alimenté que par les tarifs de
+ *    saison, dont il y a zéro. Chaque tarif que saisiront les premiers gérants
+ *    d'Ampefy serait donc arrivé barré d'un « non confirmé depuis 6 mois ».
+ *
+ * ⚠ « jamais confirmé » N'EST PAS « périmé ». Le premier montre le chiffre avec
+ *   une réserve honnête ; le second le retire. Confondre les deux, c'est soit
+ *   mentir sur l'âge d'un prix, soit cacher un prix valide.
+ */
+type Fraicheur =
+  | { etat: "confirme"; texte: string }
+  | { etat: "jamais_confirme"; texte: null }
+  | { etat: "perime"; texte: null };
+
+function fraicheur(confirmeLe?: string | null): Fraicheur {
+  if (!confirmeLe) return { etat: "jamais_confirme", texte: null };
   const jours = (Date.now() - new Date(confirmeLe).getTime()) / 86_400_000;
+  if (jours > JOURS_AVANT_PEREMPTION) return { etat: "perime", texte: null };
   return {
-    perime: jours > JOURS_AVANT_PEREMPTION,
+    etat: "confirme",
     texte: `Tarifs confirmés le ${new Date(confirmeLe).toLocaleDateString("fr-FR")}`,
   };
 }
@@ -96,11 +125,11 @@ export function Prix({
   taille?: "normale" | "grande" | "compacte";
   className?: string;
 }) {
-  const { perime, texte } = fraicheur(confirmeLe);
+  const { etat, texte } = fraicheur(confirmeLe);
 
-  // Au-delà de six mois sans confirmation, on n'affiche plus le chiffre : un
-  // prix faux coûte plus cher qu'un prix absent. TDR §8.2.
-  if (montant === null || perime) {
+  // Au-delà de six mois SANS AVOIR ÉTÉ RECONFIRMÉ, on n'affiche plus le
+  // chiffre : un prix faux coûte plus cher qu'un prix absent. TDR §8.2.
+  if (montant === null || etat === "perime") {
     return (
       <span className={cn("inline-flex flex-col gap-0.5", className)}>
         <span className="dk-sous-titre text-muted-foreground">
@@ -156,7 +185,15 @@ export function Prix({
         </span>
       )}
 
-      {texte && <span className="text-xs font-medium text-primary">{texte}</span>}
+      {/* ⚠ LE TROISIÈME ÉTAT S'AFFICHE, il ne se tait pas. Un prix jamais
+          confirmé reste un prix relevé quelque part : le montrer sans réserve
+          serait le faire passer pour vérifié, le cacher reviendrait à priver le
+          voyageur de la seule indication qu'il a. On dit lequel des deux c'est. */}
+      {texte ? (
+        <span className="text-xs font-medium text-primary">{texte}</span>
+      ) : etat === "jamais_confirme" ? (
+        <span className="text-xs text-muted-foreground">Tarif à confirmer</span>
+      ) : null}
     </span>
   );
 }

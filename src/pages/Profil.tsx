@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { MapPin, MessageCircle, UserMinus, UserPlus } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAvatarUrl } from "@/lib/supabaseImage";
@@ -38,7 +38,13 @@ export default function Profil() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [suivi, setSuivi] = useState(false);
   const [chargement, setChargement] = useState(true);
-  useDocumentTitle(profil?.display_name ?? "Profil");
+  useSEO({
+    titre: profil?.display_name ?? "Profil",
+    description: profil?.bio ?? undefined,
+    image: profil?.avatar_url ?? undefined,
+    url: id ? `/user/${id}` : undefined,
+    type: "profile",
+  });
 
   useEffect(() => {
     if (!id) return;

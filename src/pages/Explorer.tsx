@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Compass, MapPin } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { FicheCard } from "@/components/FicheCard";
 import {
   CATEGORIES,
@@ -67,7 +67,12 @@ export default function Explorer() {
   const [categorie, setCategorie] = useState<string | null>(null);
   const [chargement, setChargement] = useState(true);
 
-  useDocumentTitle(lieu ? lieu.name_fr : "Explorer Madagascar");
+  useSEO({
+    titre: lieu ? lieu.name_fr : "Explorer Madagascar — 178 destinations",
+    description: lieu?.summary ??
+      "Les destinations de Madagascar, avec leur saisonnalite, leurs acces reels et les adresses qui s'y trouvent.",
+    url: "/explorer",
+  });
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -286,7 +291,12 @@ export default function Explorer() {
           {destinations.map((d) => (
             <Link
               key={d.slug}
-              to={`/explorer?lieu=${d.slug}`}
+              /* 🔴 Menait vers `/explorer?lieu=`, qui rend une fiche ALLEGEE
+                 (resume + saisons) alors que `/lieu/` porte en plus les acces
+                 chronometres et les lieux rattaches. Deux ecrans pour le meme
+                 lieu selon la porte d'entree, et le catalogue servait
+                 systematiquement le plus pauvre. */
+              to={`/lieu/${d.slug}`}
               className="group rounded-2xl border border-border p-4 transition hover:border-primary/40 hover:shadow-sm"
             >
               <div className="flex items-start justify-between gap-2">

@@ -310,8 +310,13 @@ export function AssistantEtablissement({ onAnnuler }: { onAnnuler?: () => void }
               />
               {/* On avertit sans bloquer : un fixe reste un contact valable,
                   il n'a simplement pas WhatsApp. */}
+              {/* ⚠ `accent-strong` et non `accent` : ce span porte un
+                  AVERTISSEMENT de saisie, et le corail clair y donnait 3,14:1.
+                  Un message qu'on ne lit pas est un message qui n'existe pas.
+                  ⚠ Le commentaire est ICI : une accolade JSX ne peut pas être
+                    le premier enfant d'une expression conditionnelle. */}
               {b.whatsapp && !estMobileMalgache(b.whatsapp) && (
-                <span className="mt-1 block text-xs text-accent">
+                <span className="mt-1 block text-xs text-accent-strong">
                   Ce numéro ne ressemble pas à un mobile malgache — WhatsApp
                   risque de ne pas fonctionner.
                 </span>

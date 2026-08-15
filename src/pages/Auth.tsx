@@ -12,6 +12,39 @@ export default function Auth() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<Mode>("connexion");
+
+  /**
+   * Envoie le courriel de réinitialisation.
+   *
+   * ⚠ ON REPOND LA MEME CHOSE QUE L'ADRESSE EXISTE OU NON. Un message qui
+   *   distingue les deux cas transforme ce formulaire en outil pour savoir qui
+   *   est inscrit sur Diako — c'est une fuite, pas un service.
+   *
+   * ⚠ `detectSessionInUrl` est deja actif sur le client : le lien du courriel
+   *   ouvre donc la session tout seul au retour. Il ne manque que l'envoi.
+   */
+  async function reinitialiser() {
+    const adresse = email.trim();
+    if (!adresse) {
+      toast("Votre adresse d'abord", {
+        description: "Saisissez l'e-mail du compte, puis redemandez le lien.",
+      });
+      return;
+    }
+    setBusy(true);
+    try {
+      await supabase.auth.resetPasswordForEmail(adresse, {
+        redirectTo: `${window.location.origin}/compte`,
+      });
+    } catch {
+      /* On ne revele rien : meme reponse dans tous les cas. */
+    } finally {
+      setBusy(false);
+      toast.success("Si un compte existe pour cette adresse, le lien est parti.", {
+        description: "Vérifiez votre boîte, et vos indésirables.",
+      });
+    }
+  }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -131,8 +164,20 @@ export default function Auth() {
             onChange={(e) => setPassword(e.target.value)}
             className="h-12 w-full rounded-xl border border-input bg-background px-4 outline-none focus:ring-2 focus:ring-ring"
           />
-          {mode === "inscription" && (
+          {mode === "inscription" ? (
             <p className="mt-1 text-xs text-muted-foreground">8 caractères minimum.</p>
+          ) : (
+            /* 🔴 IL N'Y AVAIT AUCUNE RECUPERATION DE MOT DE PASSE. Deux champs,
+               aucune route, alors que le modele de courriel `recovery.html`
+               existe depuis le debut. Un gerant qui oublie son mot de passe
+               perdait sa fiche ET les messages de ses clients, sans recours. */
+            <button
+              type="button"
+              onClick={() => void reinitialiser()}
+              className="mt-1.5 text-xs font-medium text-primary underline underline-offset-4"
+            >
+              Mot de passe oublié ?
+            </button>
           )}
         </div>
 

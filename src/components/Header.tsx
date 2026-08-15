@@ -122,7 +122,7 @@ export function Header() {
                 >
                   <MessageCircle className="h-5 w-5" aria-hidden="true" />
                   {msgNonLus > 0 && (
-                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-[10px] font-bold text-accent-foreground">
                       {msgNonLus > 9 ? "9+" : msgNonLus}
                     </span>
                   )}
@@ -142,7 +142,7 @@ export function Header() {
                 >
                   <Bell className="h-5 w-5" aria-hidden="true" />
                   {nonLues > 0 && (
-                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-[10px] font-bold text-accent-foreground">
                       {nonLues > 9 ? "9+" : nonLues}
                     </span>
                   )}

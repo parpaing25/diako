@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { journaliser } from "@/lib/journalErreurs";
 
 interface Props {
   children: ReactNode;
@@ -22,9 +23,22 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // TODO Lot 0-bis : brancher Sentry ici. Aujourd'hui Fonenako n'a AUCUNE
-    // collecte d'erreurs — un bug en production y passe inaperçu.
     console.error("[Diako] erreur non rattrapée :", error, info.componentStack);
+
+    // 🔴 DEFAUT CORRIGE. Cette methode ne faisait qu'un `console.error` et
+    //    portait un TODO. Or `installerJournalErreurs` n'ecoute que
+    //    `window.error` et `unhandledrejection` — et React 18 en production ne
+    //    repropage PAS les erreurs de rendu vers `window.onerror`.
+    //    La classe d'erreur la plus visible pour un visiteur — l'ecran qui
+    //    disparait — etait donc la SEULE a n'arriver jamais au journal, alors
+    //    que la table et ses droits existent depuis la migration 0017.
+    //    Pire : les montages `fallback={<div />}` font disparaitre le composant
+    //    en silence, sans aucune trace nulle part.
+    void journaliser({
+      message: error.message || "Erreur de rendu",
+      pile: info.componentStack ?? undefined,
+      source: "react",
+    });
   }
 
   render() {

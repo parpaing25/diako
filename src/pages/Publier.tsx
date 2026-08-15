@@ -324,12 +324,18 @@ export default function Publier() {
       </div>
       </div>
 
+      {/* 🔴 DEFAUT CORRIGE : l'apercu recevait `lieu` et `plat` bruts, qui sont
+          les IDENTIFIANTS des selecteurs (`value={d.id}`), pas les noms. Il
+          affichait donc « 3f2b9c4e-… » dans la ligne de lieu et dans les deux
+          tags, avec deux liens morts vers `/recherche?q=<uuid>`. La fonction
+          d'envoi, elle, traduisait bien id -> nom : l'apercu etait le seul a ne
+          pas le faire, et c'est precisement lui qui pretend montrer le resultat. */}
       <ApercuRecit
         auteur={user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Vous"}
         avatar={user?.user_metadata?.avatar_url ?? null}
         texte={texte}
-        lieu={lieu || null}
-        plat={plat || null}
+        lieu={destinations.find((d) => d.id === lieu)?.name_fr ?? null}
+        plat={plats.find((p) => p.id === plat)?.name_fr ?? null}
         photos={photos}
       />
     </div>

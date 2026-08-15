@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { PostCard } from "@/components/PostCard";
 import { Commentaires } from "@/components/Commentaires";
 import { chargerPost, type Post as TypePost } from "@/lib/api";
@@ -27,9 +27,19 @@ export default function Post() {
   const [post, setPost] = useState<TypePost | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absent" | "erreur">("chargement");
 
-  useDocumentTitle(
-    post?.place ? `${post.place} — Diako` : post?.body?.slice(0, 60) || "Publication"
-  );
+  /**
+   * ⚠ C'ETAIT `useDocumentTitle` SEUL : le titre de l'onglet changeait, mais ni
+   *   la canonique ni les metadonnees de partage. Les 28 recits soumis au
+   *   sitemap se declaraient donc duplicatas de l'accueil (canonique en dur de
+   *   index.html), et un recit partage affichait la banniere generique.
+   */
+  useSEO({
+    titre: post?.place ? `Recit a ${post.place}` : "Recit de voyage",
+    description: post?.body?.slice(0, 180) ?? undefined,
+    image: post?.media?.[0]?.url ?? undefined,
+    url: id ? `/post/${id}` : undefined,
+    type: "article",
+  });
 
   const charger = useCallback(async () => {
     if (!id) return;

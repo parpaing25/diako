@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Search, SlidersHorizontal, Star, UtensilsCrossed, X } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -142,8 +142,20 @@ export default function Recherche() {
       .catch(() => setErreur(true));
   }, [q]);
 
+  /**
+   * ⚠ GARDE DE VERSION CONTRE LA COURSE DE REQUETES. Sur une 3G a ~800 ms,
+   *   cliquer « Piscine » puis « Wi-Fi » lance deux recherches ; rien ne
+   *   garantissait que la seconde reponse arrive apres la premiere. Les puces
+   *   enfoncees restaient justes (elles sont lues de l'URL) mais la LISTE
+   *   pouvait etre celle du filtre precedent — le pire des cas, parce que
+   *   l'ecran a l'air coherent.
+   *   Le remede existait deja dans le depot (Commentaires.tsx) ; il manquait ici.
+   */
+  const versionRef = useRef(0);
+
   const lancer = useCallback(async () => {
     if (!q) return;
+    const version = ++versionRef.current;
     setChargement(true);
     setErreur(false);
     try {
@@ -152,6 +164,7 @@ export default function Recherche() {
       const [lieux, platsTrouves] = await Promise.all([resoudreLieu(q, 1), resoudrePlat(q, 1)]);
       const l = lieux[0] ?? null;
       const p = platsTrouves[0] ?? null;
+      if (version !== versionRef.current) return;
       setLieu(l);
       setPlat(p);
 
@@ -167,13 +180,15 @@ export default function Recherche() {
         p ? restaurantsParPlat(p.slug, l?.slug ?? null, 12) : Promise.resolve([]),
         l ? recitsParLieu(l.id, 6) : Promise.resolve([]),
       ]);
+      // Une reponse plus ancienne que l'etat courant est jetee, pas affichee.
+      if (version !== versionRef.current) return;
       setFiches(pages);
       setTables(restos);
       setRecits(posts as Recit[]);
     } catch {
-      setErreur(true);
+      if (version === versionRef.current) setErreur(true);
     } finally {
-      setChargement(false);
+      if (version === versionRef.current) setChargement(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, categorie, budget, params.get("eq")]);
@@ -334,9 +349,24 @@ export default function Recherche() {
                   ? "Recherche en cours…"
                   : plat
                     ? tables.length > 0
-                      ? `${tables.length} ${tables.length > 1 ? "établissements le servent" : "établissement le sert"}, de ${ariary(
-                          Math.min(...tables.map((t) => t.price_ar ?? Infinity))
-                        )} à ${ariary(Math.max(...tables.map((t) => t.price_ar ?? 0)))}`
+                      ? (() => {
+                          /* 🔴 DEFAUT CORRIGE : `Math.min(… ?? Infinity)` sur des
+                             prix NULLABLES. `menu_items.price_ar` l'est, et la RPC
+                             ne les filtre pas. Deux gargotes sans prix suffisaient
+                             a afficher « de ∞ Ar a 0 Ar ». */
+                          const connus = tables
+                            .map((t) => t.price_ar)
+                            .filter((x): x is number => typeof x === "number" && x > 0);
+                          const combien = `${tables.length} ${
+                            tables.length > 1 ? "établissements le servent" : "établissement le sert"
+                          }`;
+                          if (!connus.length) return `${combien} — prix non communiqués.`;
+                          const min = Math.min(...connus);
+                          const max = Math.max(...connus);
+                          return min === max
+                            ? `${combien}, à ${ariary(min)}`
+                            : `${combien}, de ${ariary(min)} à ${ariary(max)}`;
+                        })()
                       : "Aucun établissement ne l'a encore inscrit à sa carte."
                     : fiches.length > 0
                       ? `${fiches.length} établissement${fiches.length > 1 ? "s" : ""}${

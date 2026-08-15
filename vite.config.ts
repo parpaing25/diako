@@ -46,7 +46,10 @@ export default defineConfig(({ mode }) => ({
       strategies: "injectManifest",
       srcDir: "public",
       filename: "sw.js",
-      includeAssets: ["media/favicon.png", "media/diako-logo.png", "offline.html"],
+      // ⚠ `diako-logo.png` RETIRE : 482 Ko preacharges que RIEN n'affiche —
+      //   l'entete sert `diako-marque-96.webp`, qui pese 5,5 Ko. Le commentaire
+      //   ci-dessous dit « la coquille, rien de plus » ; il n'etait pas suivi.
+      includeAssets: ["media/favicon.png", "offline.html"],
       manifest: {
         name: "Diako — Voyage & tourisme a Madagascar",
         short_name: "Diako",
@@ -75,7 +78,9 @@ export default defineConfig(({ mode }) => ({
           "assets/react-vendor-*.js",
           "assets/supabase-vendor-*.js",
           "assets/radix-vendor-*.js",
-          "fonts/*.woff2",
+          // ⚠ `fonts/*.woff2` RETIRE : la police auto-hebergee a ete supprimee
+          //   le 15/08/26 (polices systeme uniquement). On preachargeait 47 Ko
+          //   d'un fichier que plus aucune regle CSS ne demande.
           "media/favicon.png",
         ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

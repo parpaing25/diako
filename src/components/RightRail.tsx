@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useMediaQuery } from "@/hooks/use-mobile";
 import { Flame, Heart, MessageCircle, Bookmark, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { FEUILLE_DE_ROUTE } from "@/lib/nav";
@@ -109,6 +110,18 @@ export function RightRail() {
   const [stats, setStats] = useState<Stats | null>(null);
   const mois = MOIS[new Date().getMonth()];
   const { pathname } = useLocation();
+  /**
+   * 🔴 DEFAUT CORRIGE. Ce rail est masque en CSS (`hidden … lg:block`), mais il
+   *    etait MONTE quand meme : ses trois requetes partaient sur un telephone
+   *    de 390 px, dont `recits_en_vogue(12)` qui ramene le corps ET les medias
+   *    de douze publications. Le commentaire du fichier affirmait exactement le
+   *    contraire (« monte uniquement en desktop »).
+   *    ⚠ Un composant masque en CSS est monte, ses effets s'executent, ses
+   *      requetes partent. Seul un test en JavaScript l'evite — et sur la 3G
+   *      visee, c'est la difference entre un fil qui s'affiche et un fil qui
+   *      attend derriere trois requetes invisibles.
+   */
+  const assezLarge = useMediaQuery("(min-width: 1024px)");
 
   // ⚠ TROIS ÉCRANS ONT DÉJÀ LEUR COLONNE DE DROITE et elle vaut mieux que ce
   //   rail : le panneau de demande sur une fiche, la carte à côté des
@@ -121,8 +134,10 @@ export function RightRail() {
     pathname.startsWith("/recherche") ||
     pathname.startsWith("/carte");
 
+  const inutile = aSaPropreColonne || !assezLarge;
+
   useEffect(() => {
-    if (aSaPropreColonne) return;
+    if (inutile) return;
     // Trois appels, une seule fois, en parallèle. Aucun canal temps réel : la
     // règle d'egress du projet le réserve au chat et aux notifications.
     void supabase
@@ -135,14 +150,14 @@ export function RightRail() {
       const tous = (data as Vogue[] | null) ?? [];
       setVogue(choisirEnVogue(tous, 4));
     });
-  }, [aSaPropreColonne]);
+  }, [inutile]);
 
   const total = vogue?.reduce(
     (t, v) => Math.max(t, v.reactions_count + v.comments_count + v.saves_count),
     0
   );
 
-  if (aSaPropreColonne) return null;
+  if (inutile) return null;
 
   return (
     <aside

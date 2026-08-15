@@ -16,6 +16,24 @@ Options -Indexes
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()"
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+  # ── Content-Security-Policy ───────────────────────────────────────────
+  # ⚠ ELLE MANQUAIT ENTIÈREMENT. C'était le seul filet manquant contre une URL
+  #   `javascript:` saisie par un gérant dans « site web » — la contrainte en
+  #   base (migration 0036) ferme la porte d'entrée, la CSP ferme la sortie.
+  #
+  # ⚠ `'unsafe-inline'` SUR script-src EST NÉCESSAIRE ET ASSUMÉ : index.html
+  #   porte le squelette statique et le JSON-LD en ligne, et Vite injecte son
+  #   module de préchargement. Les retirer demanderait un nonce, donc un rendu
+  #   dynamique de la page — ce qu'un hébergement mutualisé ne fait pas ici.
+  #   Ce qui compte le plus est déjà là : `object-src 'none'` (pas de Flash ni
+  #   d'embed), `base-uri 'self'` (on ne détourne pas les URL relatives) et
+  #   `frame-ancestors 'self'` (pas de détournement de clic).
+  #
+  # ⚠ LES ORIGINES AUTORISÉES SONT CELLES QUE LE SITE UTILISE VRAIMENT :
+  #   Supabase (base + fonctions), o2switch (images), OpenStreetMap (tuiles de
+  #   la carte). Rien d'autre — pas de CDN de police, le site n'en charge plus.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
 </IfModule>
 
 # Fichiers sensibles : jamais servis.
@@ -41,6 +59,22 @@ Options -Indexes
   # ⚠ Cette regle doit venir AVANT le repli SPA, sinon /sitemap.xml
   #   retomberait sur index.html des que le .xml statique est retire.
   RewriteRule ^sitemap\.xml$ /sitemap.php [L]
+
+  # ── APERÇU DE PARTAGE ────────────────────────────────────────────────
+  # Les robots de partage n'exécutent PAS JavaScript : sur une application
+  # monopage, ils ne voient donc que les métas génériques de index.html. Coller
+  # un lien d'hôtel dans WhatsApp affichait « Diako — Voyage & tourisme »,
+  # pour les 220 URL du sitemap. Or WhatsApp et Messenger SONT le canal
+  # d'acquisition sur ce marché.
+  #
+  # ⚠ GOOGLEBOT EST VOLONTAIREMENT ABSENT DE CETTE LISTE. Il exécute le
+  #   JavaScript et voit donc la vraie page ; lui servir une version distincte
+  #   serait du cloaking, et se paie cher. Ici on ne sert pas un autre contenu :
+  #   c'est la même information, dans le seul format qu'un robot de partage
+  #   sait lire.
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Discordbot|Slackbot|TelegramBot|Pinterest|SkypeUriPreview|vkShare|redditbot|Applebot) [NC]
+  RewriteCond %{REQUEST_URI} !^/(partage\.php|sitemap\.php|api/|assets/|media/|uploads/) [NC]
+  RewriteRule ^ /partage.php [L]
 
   # Repli SPA : tout ce qui n'est ni un fichier ni un dossier existant
   # retourne index.html (React Router prend le relais).

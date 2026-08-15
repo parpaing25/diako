@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { TagRow } from "@/components/TagRow";
 import { toast } from "sonner";
+import { useConnexionRequise } from "@/hooks/useConnexionRequise";
 import {
   Bookmark,
   Flag,
@@ -92,13 +93,10 @@ export function PostCard({
   const [menu, setMenu] = useState(false);
   const [envoi, setEnvoi] = useState(false);
 
-  const connecte = () => {
-    if (!user) {
-      toast("Connexion requise", { description: "Créez un compte pour participer." });
-      return false;
-    }
-    return true;
-  };
+  /* ⚠ Le crochet porte desormais l'ACTION vers l'inscription : le toast seul
+     laissait le visiteur devant un bouton muet, a l'instant precis ou il avait
+     une raison de creer un compte. */
+  const connecte = useConnexionRequise();
 
   // ⚠ SIX REACTIONS, PAS UNE. Le modele les portait deja (`reactions.type`)
   //   mais l'interface n'envoyait jamais que « jaime » : cinq colonnes de
@@ -113,7 +111,7 @@ export function PostCard({
   const [pulseSignet, setPulseSignet] = useState(false);
 
   async function reagir(type: string = REACTION_PAR_DEFAUT) {
-    if (!connecte()) return;
+    if (!connecte("réagir aux récits")) return;
     const avant = reaction;
     // Toucher la meme reaction la retire ; en toucher une autre la remplace.
     const vise = avant === type ? null : type;
@@ -137,7 +135,7 @@ export function PostCard({
   async function enregistrer() {
     setPulseSignet(true);
     window.setTimeout(() => setPulseSignet(false), 460);
-    if (!connecte()) return;
+    if (!connecte("garder ce récit")) return;
     const avant = favori;
     setFavori(!avant);
     try {
@@ -162,7 +160,7 @@ export function PostCard({
 
   async function envoyer(e: React.FormEvent) {
     e.preventDefault();
-    if (!connecte() || !saisie.trim() || envoi) return;
+    if (!connecte("répondre") || !saisie.trim() || envoi) return;
     setEnvoi(true);
     try {
       await commenter(post.id, saisie);
@@ -265,7 +263,7 @@ export function PostCard({
                   <button
                     onClick={async () => {
                       setMenu(false);
-                      if (!connecte()) return;
+                      if (!connecte("signaler une publication")) return;
                       try {
                         await signaler("post", post.id, "signalement depuis le fil");
                         toast.success("Signalement envoyé");

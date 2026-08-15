@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BookMarked, Check, Store, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConnexionRequise } from "@/hooks/useConnexionRequise";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EmptyState, EtatErreur } from "@/components/Etats";
@@ -49,6 +50,7 @@ export default function Gouts() {
   });
 
   const { user } = useAuth();
+  const connecte = useConnexionRequise();
   const [onglet, setOnglet] = useState<Onglet>("goutes");
   const [carnet, setCarnet] = useState<Degustation[]>([]);
   const [tous, setTous] = useState<PlatAtlas[]>([]);
@@ -84,7 +86,7 @@ export default function Gouts() {
   const aGouter = tous.filter((p) => !goutesIds.has(p.id));
 
   async function marquer(dishId: string) {
-    if (!user) return toast("Connexion requise", { description: "Créez un compte pour tenir votre carnet." });
+    if (!connecte("tenir votre carnet de goûts")) return;
     try {
       const ajoute = await basculerDegustation(dishId);
       toast.success(ajoute ? "Marqué goûté." : "Retiré du carnet.");

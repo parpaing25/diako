@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { useConnexionRequise } from "@/hooks/useConnexionRequise";
 import { Bookmark, Heart, MapPin, MessageCircle, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getThumbUrl } from "@/lib/imageThumb";
@@ -36,16 +37,13 @@ export function PostImmersif({
   const [favori, setFavori] = useState(post.enregistre);
   const [deplie, setDeplie] = useState(false);
 
-  const connecte = () => {
-    if (!user) {
-      toast("Connexion requise", { description: "Créez un compte pour participer." });
-      return false;
-    }
-    return true;
-  };
+  /* ⚠ Le crochet porte desormais l'ACTION vers l'inscription : le toast seul
+     laissait le visiteur devant un bouton muet, a l'instant precis ou il avait
+     une raison de creer un compte. */
+  const connecte = useConnexionRequise();
 
   async function reagir() {
-    if (!connecte()) return;
+    if (!connecte("réagir aux récits")) return;
     const avant = reaction;
     setReaction(avant ? null : "utile"); // ⚠ « jaime » refuse en base depuis 0031
     setNbReactions((n) => n + (avant ? -1 : 1));
@@ -58,7 +56,7 @@ export function PostImmersif({
   }
 
   async function enregistrer() {
-    if (!connecte()) return;
+    if (!connecte("garder ce récit")) return;
     const avant = favori;
     setFavori(!avant);
     try {

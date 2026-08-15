@@ -56,6 +56,7 @@ const Evenements = lazy(() => import("./pages/Evenements"));
 const Projet = lazy(() => import("./pages/Projet"));
 const Guides = lazy(() => import("./pages/Guides"));
 const QuandPartir = lazy(() => import("./pages/QuandPartir"));
+const YAller = lazy(() => import("./pages/YAller"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -143,6 +144,7 @@ function Shell() {
       {/* ⚠ La page qui exploite le fosse defensif : 5 destinations x 12 mois
              avec leur RAISON. Personne d'autre ne publie le pourquoi. */}
       <Route path="/quand-partir" element={<QuandPartir />} />
+      <Route path="/y-aller" element={<YAller />} />
       <Route path="/guides" element={<Guides />} />
       <Route path="/guides/:slug" element={<Guides />} />
       <Route path="/messages" element={<Messages />} />

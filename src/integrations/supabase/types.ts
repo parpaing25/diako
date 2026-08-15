@@ -1146,6 +1146,10 @@ export type Database = {
           precision_geo: string | null;
         }[];
       };
+      y_aller: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
       quand_partir: {
         Args: Record<string, never>;
         Returns: unknown;

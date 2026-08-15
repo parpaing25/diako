@@ -69,6 +69,7 @@ export const NAV_COMPLET: NavItem[] = [
   { to: "/sites", label: "Sites et parcs", icon: Trees, pret: true },
   { to: "/evenements", label: "Événements", icon: CalendarDays, pret: true },
   { to: "/quand-partir", label: "Quand partir", icon: Sun, pret: true },
+  { to: "/y-aller", label: "Y aller", icon: Route, pret: true },
   { to: "/guides", label: "Guides", icon: Mountain, pret: true },
   { to: "/carte", label: "Carte", icon: Map, pret: true },
   { to: "/recherche", label: "Rechercher", icon: Search, pret: true },

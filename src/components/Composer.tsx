@@ -47,15 +47,24 @@ export function Composer() {
           occuper deux fois la hauteur d'une carte du fil pour poser une seule
           question. */}
       <div className="mt-3 flex items-center justify-between gap-1 border-t border-border pt-2 lg:mt-0 lg:border-0 lg:pt-0">
+        {/* 🔴 LES QUATRE BOUTONS FAISAIENT EXACTEMENT LA MEME CHOSE. Quatre
+            icones, quatre couleurs, quatre libelles — et le meme
+            `navigate("/publier")` sans aucune intention transmise. Qui appuyait
+            sur « Photo » attendait le selecteur d'images ; qui appuyait sur
+            « Plat » attendait le type presenti. Les deux obtenaient le
+            formulaire vierge, a re-choisir depuis le debut.
+            ⚠ Quatre libelles pour une seule action apprennent au visiteur que
+              les libelles de ce site ne veulent rien dire. L'intention passe
+              desormais dans l'URL, et `/publier` la lit au montage. */}
         {[
-          { icon: Image, label: "Photo", classe: "text-emerald-600" },
-          { icon: MapPin, label: "Lieu", classe: "text-primary" },
-          { icon: UtensilsCrossed, label: "Plat", classe: "text-accent" },
-          { icon: Sparkles, label: "Bon plan", classe: "text-amber-500" },
-        ].map(({ icon: Icon, label, classe }) => (
+          { icon: Image, label: "Photo", classe: "text-emerald-600", vers: "/publier?photo=1" },
+          { icon: MapPin, label: "Lieu", classe: "text-primary", vers: "/publier?champ=lieu" },
+          { icon: UtensilsCrossed, label: "Plat", classe: "text-accent", vers: "/publier?champ=plat" },
+          { icon: Sparkles, label: "Bon plan", classe: "text-amber-500", vers: "/publier?type=bon_plan" },
+        ].map(({ icon: Icon, label, classe, vers }) => (
           <button
             key={label}
-            onClick={() => navigate(user ? "/publier" : "/auth")}
+            onClick={() => navigate(user ? vers : "/auth")}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-medium text-muted-foreground transition hover:bg-muted sm:text-[13px]"
           >
             <Icon className={`h-4 w-4 ${classe}`} aria-hidden="true" />

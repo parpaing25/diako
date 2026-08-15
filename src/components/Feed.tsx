@@ -14,7 +14,7 @@ import { useReveal } from "@/hooks/useReveal";
  *   visiteur de bureau ni gaver un telephone en 3G. Deux sources de verite
  *   pour la meme decision, et c'est la mauvaise qui gagnait.
  */
-const PAR_PAGE = PAR_PALIER();
+const PAR_PAGE = PAR_PALIER;
 
 /**
  * Le fil — deux présentations, une seule logique.
@@ -44,9 +44,15 @@ export function Feed() {
     if (enVol.current) return;
     enVol.current = true;
     try {
-      const page = await chargerFeed(curseur, PAR_PAGE);
+      // ⚠ LE PALIER EST RELU A CHAQUE APPEL, et la MEME valeur sert a demander
+      //   et a conclure. Fige au chargement du module, il restait a 8 pour qui
+      //   avait ouvert le site en fenetre etroite puis elargi — et surtout,
+      //   demander 12 en comparant a 8 (ou l'inverse) fait declarer le fil
+      //   « termine » alors qu'il reste des publications.
+      const palier = PAR_PAGE();
+      const page = await chargerFeed(curseur, palier);
       setErreur(false);
-      if (page.length < PAR_PAGE) setFini(true);
+      if (page.length < palier) setFini(true);
       setPosts((avant) => {
         if (!curseur) return page;
         const vus = new Set(avant.map((p) => p.id));

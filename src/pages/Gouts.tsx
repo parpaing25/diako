@@ -112,12 +112,39 @@ export default function Gouts() {
         <Compteur n={stats?.familles} quoi="familles" />
       </div>
 
-      <div role="tablist" className="mt-5 flex gap-1.5">
+      {/* 🔴 LE CONTRAT ARIA ETAIT A MOITIE ECRIT. `role="tab"` + `aria-selected`
+          annoncaient une structure a onglets, mais SANS `role="tabpanel"`,
+          sans `aria-controls`, et sans navigation aux fleches. Un lecteur
+          d'ecran disait « onglet 1 sur 3 » puis ne trouvait aucun panneau a
+          annoncer, et les fleches — le geste attendu dans une barre d'onglets —
+          ne faisaient rien. Promettre une semantique sans la tenir est pire que
+          de simples boutons : la personne cherche un comportement absent.
+
+          ⚠ TABINDEX TOURNANT (roving). Dans une vraie barre d'onglets, Tab entre
+            dans la barre puis en SORT vers le panneau ; ce sont les fleches qui
+            changent d'onglet. D'ou `tabIndex={-1}` sur les onglets inactifs. */}
+      <div
+        role="tablist"
+        aria-label="Filtrer le carnet"
+        className="mt-5 flex gap-1.5"
+        onKeyDown={(e) => {
+          const pas = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+          if (!pas) return;
+          e.preventDefault();
+          const i = ONGLETS.findIndex((o) => o.cle === onglet);
+          const suivant = ONGLETS[(i + pas + ONGLETS.length) % ONGLETS.length];
+          setOnglet(suivant.cle);
+          document.getElementById(`onglet-${suivant.cle}`)?.focus();
+        }}
+      >
         {ONGLETS.map((o) => (
           <button
             key={o.cle}
+            id={`onglet-${o.cle}`}
             role="tab"
             aria-selected={onglet === o.cle}
+            aria-controls="panneau-gouts"
+            tabIndex={onglet === o.cle ? 0 : -1}
             onClick={() => setOnglet(o.cle)}
             className={cn(
               "min-h-9 rounded-full border px-4 text-sm font-semibold transition",
@@ -130,6 +157,8 @@ export default function Gouts() {
           </button>
         ))}
       </div>
+
+      <div id="panneau-gouts" role="tabpanel" aria-labelledby={`onglet-${onglet}`} tabIndex={0}>
 
       {erreur && <EtatErreur className="mt-5" onReessayer={() => void charger()} />}
 
@@ -274,6 +303,7 @@ export default function Gouts() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

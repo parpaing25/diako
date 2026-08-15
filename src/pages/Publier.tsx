@@ -46,7 +46,18 @@ export default function Publier() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [type, setType] = useState("recit");
+  /**
+   * L'INTENTION VENUE DU COMPOSEUR.
+   *
+   * ⚠ Elle est lue UNE FOIS, au montage. La relire a chaque rendu re-ouvrirait
+   *   le selecteur de fichiers a chaque frappe, et re-forcerait le type que la
+   *   personne vient peut-etre de changer.
+   */
+  const [intention] = useState(() => new URLSearchParams(window.location.search));
+  const [type, setType] = useState(() => {
+    const t = intention.get("type");
+    return t && TYPES.some((x) => x.cle === t) ? t : "recit";
+  });
   const [texte, setTexte] = useState("");
   const [lieu, setLieu] = useState("");
   const [plat, setPlat] = useState("");
@@ -58,6 +69,37 @@ export default function Publier() {
   // la publication trouvable.
   const [destinations, setDestinations] = useState<Lieu[]>([]);
   const [plats, setPlats] = useState<Plat[]>([]);
+  /**
+   * DONNER SUITE A L'INTENTION, une fois la page montee.
+   *
+   * ⚠ `?photo=1` ouvre le selecteur de fichiers ; `?champ=lieu|plat` amene le
+   *   champ concerne et lui donne le focus. Sans cela, le bouton « Photo » du
+   *   composeur menait au formulaire vierge et il fallait re-chercher le
+   *   bouton d'ajout — le geste etait annonce puis pas tenu.
+   *
+   * ⚠ LE SELECTEUR DE FICHIERS EST OUVERT DANS UN `setTimeout`. Ouvert
+   *   synchroniquement au montage, certains navigateurs mobiles le bloquent :
+   *   ils exigent que l'ouverture descende d'un geste utilisateur recent, et
+   *   le clic du composeur a eu lieu sur l'ecran precedent. Un tour de boucle
+   *   suffit a le rattacher au cycle courant.
+   */
+  useEffect(() => {
+    if (!user) return;
+    if (intention.get("photo") === "1") {
+      const t = window.setTimeout(() => fileRef.current?.click(), 120);
+      return () => window.clearTimeout(t);
+    }
+    const champ = intention.get("champ");
+    if (champ === "lieu" || champ === "plat") {
+      const t = window.setTimeout(() => {
+        const el = document.getElementById(champ) as HTMLSelectElement | null;
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        el?.focus({ preventScroll: true });
+      }, 200);
+      return () => window.clearTimeout(t);
+    }
+  }, [intention, user]);
+
   useEffect(() => {
     void chargerDestinations(200).then(setDestinations).catch(() => undefined);
     void chargerPlats(200).then(setPlats).catch(() => undefined);

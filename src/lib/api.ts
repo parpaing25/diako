@@ -469,7 +469,10 @@ export async function envoyerMessage(convId: string, body: string) {
 /* ── Modération ────────────────────────────────────────────────────────── */
 
 export async function signaler(
-  cible: "post" | "comment" | "profile" | "message",
+  /** ⚠ `page` et `attraction` ouverts par la migration 0044 : c'est le
+   *  seul moyen qu'un visiteur corrige une fiche importee d'OpenStreetMap,
+   *  dont le releve peut dater de plusieurs annees. */
+  cible: "post" | "comment" | "profile" | "message" | "page" | "attraction",
   id: string,
   raison: string
 ) {

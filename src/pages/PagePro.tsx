@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   Bookmark,
   Clock,
+  Flag,
   Globe,
   MapPin,
   MessageCircle,
@@ -38,6 +39,7 @@ import {
   type Avis,
   type Fiche,
 } from "@/lib/etablissements";
+import { signaler } from "@/lib/api";
 import { afficherNumero, lienAppel, lienWhatsApp, peutRecevoirWhatsApp } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -199,6 +201,41 @@ export default function PagePro() {
       return;
     }
     setRevendicationOuverte(true);
+  }
+
+  /**
+   * Signale une erreur sur la fiche.
+   *
+   * ⚠ ON DEMANDE CE QUI EST FAUX. Un signalement sans motif oblige a rouvrir la
+   *   fiche pour deviner, et la plupart finissent au panier. `prompt` est
+   *   rustique mais il marche partout, y compris sur les Android d'entree de
+   *   gamme vises — une feuille de saisie sur mesure viendra avec la console
+   *   de moderation.
+   * ⚠ AUCUNE SUPPRESSION AUTOMATIQUE : le masquage au 3e signalement vaut pour
+   *   du contenu abusif, pas pour un annuaire. Trois personnes agacees
+   *   pourraient faire disparaitre un hotel qui existe.
+   */
+  async function signalerFiche() {
+    if (!fiche) return;
+    if (!user) {
+      toast("Connexion requise", {
+        description: "Créez un compte pour signaler une erreur.",
+        action: { label: "Créer un compte", onClick: () => navigate("/auth") },
+      });
+      return;
+    }
+    const motif = window.prompt(
+      "Qu'est-ce qui est faux sur cette fiche ?\n(tarif, numéro, adresse, établissement fermé…)"
+    );
+    if (!motif?.trim()) return;
+    try {
+      await signaler("page", fiche.id, motif.trim().slice(0, 500));
+      toast.success("Merci — c'est noté.", {
+        description: "Nous vérifions et corrigeons la fiche.",
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Le signalement n'a pas pu partir.");
+    }
   }
 
   async function partager() {
@@ -923,6 +960,22 @@ export default function PagePro() {
                   Tarifs vérifiés le {new Date(fiche.rates_checked_at).toLocaleDateString("fr-FR")}.
                 </p>
               )}
+
+              {/* 🔴 CE BOUTON N'EXISTAIT PAS, alors que le rail de droite
+                  invitait deja a « signaler une erreur depuis la fiche ». La
+                  phrase engageait le produit sur un geste qu'il n'offrait pas,
+                  et sur le point le plus sensible — la fraicheur des prix.
+                  ⚠ C'est devenu le canal le plus utile du site : 3 158 fiches
+                    viennent d'OpenStreetMap, ou un releve peut dater de
+                    plusieurs annees. Un etablissement ferme, deplace ou renomme
+                    n'avait aucun moyen d'etre corrige. */}
+              <button
+                onClick={() => void signalerFiche()}
+                className="inline-flex min-h-10 items-center gap-1.5 self-start rounded-full border border-input px-4 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+                Signaler une erreur sur cette fiche
+              </button>
 
               {/* ⭐ FICHE ÉDITORIALE. Au lancement, c'est Diako qui saisit les
                   établissements : la fiche dit alors D'OÙ vient l'information

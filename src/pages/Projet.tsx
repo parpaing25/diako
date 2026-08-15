@@ -101,6 +101,20 @@ export default function Projet() {
       return navigate("/auth");
     }
     if (!envies.length) return toast.error("Choisissez au moins une envie.");
+
+    /* 🔴 CORRIGE : `budget ? Number(...) : null` ne testait que la CHAINE,
+       jamais le resultat. « 3 millions » ou « 3.000.000 » donnaient `NaN`, que
+       PostgREST ecrit en `null` : le budget disparaissait SANS un mot, et le
+       voyageur croyait l'avoir communique. Le champ est libre (`inputMode`
+       n'est qu'un indice de clavier), donc ce cas est frequent, pas theorique. */
+    const budgetBrut = budget.replace(/[\s.]/g, "").replace(",", ".");
+    const budgetAr = budgetBrut ? Number(budgetBrut) : null;
+    if (budgetBrut && !Number.isFinite(budgetAr)) {
+      return toast.error("Budget illisible", {
+        description: "Écrivez-le en chiffres seulement, par exemple 3000000.",
+      });
+    }
+
     setEnvoi(true);
     try {
       await creerProjet({
@@ -111,11 +125,17 @@ export default function Projet() {
         adults: adultes,
         // ⚠ Les ÂGES des enfants, pas leur nombre : les tarifs enfants
         //   dépendent de tranches, et un hébergeur ne peut pas chiffrer sans.
+        // 🔴 CORRIGE : `"".split(",")` rend `[""]`, et `Number("")` rend 0 —
+        //    qui passe le filtre `n >= 0`. Un champ VIDE annoncait donc un
+        //    nourrisson de zero an, et l'hebergeur chiffrait un lit bebe que
+        //    personne n'avait demande.
         children_ages: enfants
           .split(",")
-          .map((x) => Number(x.trim()))
-          .filter((n) => Number.isFinite(n) && n >= 0 && n < 18),
-        budget_ar: budget ? Number(budget.replace(/\s/g, "")) : null,
+          .map((x) => x.trim())
+          .filter((x) => x !== "")
+          .map(Number)
+          .filter((n) => Number.isInteger(n) && n >= 0 && n < 18),
+        budget_ar: budgetAr,
         notes: notes.trim() || null,
       });
       toast.success("Projet publié. Les professionnels peuvent y répondre.");
@@ -187,9 +207,25 @@ export default function Projet() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Bloc titre="Dates" aide="fixes ou ±N jours">
+                {/* ⚠ DEUX CHAMPS DE DATE SANS ETIQUETTE : un lecteur d'ecran
+                    annoncait « champ date » deux fois de suite, sans dire lequel
+                    est le depart. `aria-label` suffit ici — un `<label>` visible
+                    doublerait le titre du bloc juste au-dessus. */}
                 <div className="flex flex-wrap gap-2">
-                  <input type="date" value={du} onChange={(e) => setDu(e.target.value)} className={champ} />
-                  <input type="date" value={au} onChange={(e) => setAu(e.target.value)} className={champ} />
+                  <input
+                    type="date"
+                    aria-label="Date de départ"
+                    value={du}
+                    onChange={(e) => setDu(e.target.value)}
+                    className={champ}
+                  />
+                  <input
+                    type="date"
+                    aria-label="Date de retour"
+                    value={au}
+                    onChange={(e) => setAu(e.target.value)}
+                    className={champ}
+                  />
                 </div>
                 <label className="dk-secondaire mt-2 flex items-center gap-2">
                   souplesse ±
@@ -197,6 +233,7 @@ export default function Projet() {
                     type="number"
                     min={0}
                     max={30}
+                    aria-label="Souplesse sur les dates, en jours"
                     value={souplesse}
                     onChange={(e) => setSouplesse(Number(e.target.value))}
                     className="w-16 rounded-lg border border-input bg-background px-2 py-1 text-[16px]"
@@ -213,6 +250,7 @@ export default function Projet() {
                       type="number"
                       min={1}
                       max={30}
+                      aria-label="Nombre d'adultes"
                       value={adultes}
                       onChange={(e) => setAdultes(Number(e.target.value))}
                       className="w-16 rounded-lg border border-input bg-background px-2 py-1 text-[16px]"
@@ -232,20 +270,34 @@ export default function Projet() {
             <Bloc titre="Budget total" aide="en ariary — laissez vide si vous ne savez pas encore">
               <input
                 inputMode="numeric"
+                aria-label="Budget total du voyage, en ariary"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="par exemple 3 000 000"
+                placeholder="par exemple 3000000"
                 className={champ}
               />
-              {budget && Number(budget.replace(/\s/g, "")) > 0 && (
-                <p className="dk-secondaire mt-1.5 tabular-nums">
-                  {ariary(Number(budget.replace(/\s/g, "")))} au total
-                </p>
-              )}
+              {/* ⚠ MEME LECTURE QUE L'ENVOI. Cet apercu utilisait sa propre
+                  conversion : sur « 3 millions » il affichait « NaN Ar », et
+                  sur une saisie a points il affichait un montant DIFFERENT de
+                  celui qui partait en base. Deux lectures d'un meme champ
+                  finissent toujours par se contredire. */}
+              {(() => {
+                const brut = budget.replace(/[\s.]/g, "").replace(",", ".");
+                const n = brut ? Number(brut) : null;
+                if (!brut) return null;
+                return Number.isFinite(n) && n! > 0 ? (
+                  <p className="dk-secondaire mt-1.5 tabular-nums">{ariary(n!)} au total</p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-accent-strong">
+                    Chiffres seulement — par exemple 3000000.
+                  </p>
+                );
+              })()}
             </Bloc>
 
             <Bloc titre="Précisions" aide="ce qui compte pour vous, ce que vous voulez éviter">
               <textarea
+                aria-label="Précisions sur votre voyage"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}

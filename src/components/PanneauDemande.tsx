@@ -34,10 +34,13 @@ import { cn } from "@/lib/utils";
 export function PanneauDemande({
   fiche,
   onEcrire,
+  onRevendiquer,
 }: {
   fiche: Fiche;
   /** Ouvre la conversation avec l'établissement — même action qu'« Écrire ». */
   onEcrire: () => void;
+  /** Ouvre la revendication — même action que « C'est mon établissement ». */
+  onRevendiquer: () => void;
 }) {
   const [nuits, setNuits] = useState(1);
 
@@ -199,13 +202,26 @@ export function PanneauDemande({
       )}
 
       {/* Sur une fiche sans gérant, c'est le seul moteur de reprise en main —
-          et 45 fiches sur 54 sont dans ce cas. */}
+          et 3 100 fiches sur 3 158 sont dans ce cas.
+          🔴 CET ENCART N'AVAIT AUCUN BOUTON. Il posait la question et
+             s'arrêtait là : ni `<button>`, ni `<Link>`. Le vrai bouton
+             (« C'est mon établissement ») n'existe que sous l'onglet « infos »,
+             qu'il faut d'abord sélectionner. Un hôtelier qui trouve sa fiche
+             depuis WhatsApp voyait donc l'appel à agir dans le panneau
+             collant, cherchait où cliquer — et il n'y avait rien.
+          ⚠ Un encart d'appel à l'action sans action est un cul-de-sac. */}
       {!fiche.owner_id && (
         <div className="rounded-2xl border border-dashed border-border p-4">
           <p className="text-sm font-semibold">Vous gérez cet établissement ?</p>
           <p className="dk-secondaire mt-1 leading-relaxed">
             Réclamez la page pour corriger vos tarifs et répondre aux demandes.
           </p>
+          <button
+            onClick={onRevendiquer}
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-primary text-sm font-semibold text-primary"
+          >
+            C'est mon établissement
+          </button>
         </div>
       )}
     </aside>

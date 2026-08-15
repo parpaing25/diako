@@ -187,6 +187,20 @@ export default function PagePro() {
     }
   }
 
+  /** ⚠ UNE SEULE FONCTION POUR LES DEUX BOUTONS de revendication — celui de
+   *  l'onglet « infos » et celui du panneau collant. Dupliquer la logique les
+   *  aurait laisses diverger au premier changement. */
+  function revendiquerFiche() {
+    if (!user) {
+      toast("Connexion requise", {
+        description: "Créez un compte pour revendiquer votre établissement.",
+        action: { label: "Créer un compte", onClick: () => navigate("/auth") },
+      });
+      return;
+    }
+    setRevendicationOuverte(true);
+  }
+
   async function partager() {
     const url = `${window.location.origin}/p/${slug}`;
     try {
@@ -931,16 +945,7 @@ export default function PagePro() {
                     </p>
                   )}
                   <button
-                    onClick={() => {
-                      if (!user) {
-                        toast("Connexion requise", {
-                          description: "Créez un compte pour revendiquer votre établissement.",
-                        });
-                        navigate("/auth");
-                        return;
-                      }
-                      setRevendicationOuverte(true);
-                    }}
+                    onClick={revendiquerFiche}
                     className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
                   >
                     C'est mon établissement
@@ -952,7 +957,11 @@ export default function PagePro() {
         </div>
         </div>
 
-        <PanneauDemande fiche={fiche} onEcrire={() => void ecrire()} />
+        <PanneauDemande
+          fiche={fiche}
+          onEcrire={() => void ecrire()}
+          onRevendiquer={revendiquerFiche}
+        />
       </div>
 
       {revendicationOuverte && (

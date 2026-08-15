@@ -45,6 +45,15 @@ export interface NavItem {
    *    on ne coupe pas la source.
    */
   railDesktop?: boolean;
+  /**
+   * ⚠ LE GROUPE DU RAIL, repris de la maquette « Explorer regions » de Claude
+   *   Design. Seize entrees a plat se lisent comme une liste de courses : l'oeil
+   *   ne sait pas par ou commencer. Trois intentions — DECOUVRIR, PREPARER,
+   *   CHEZ MOI — donnent trois points d'entree au lieu de seize.
+   */
+  groupe?: "decouvrir" | "preparer" | "chez_moi";
+  /** Le compte affiche a droite de l'entree, quand il est CONNU et VRAI. */
+  compteur?: "destinations" | "plats" | "sites";
   promesse?: string;
 }
 
@@ -77,28 +86,28 @@ export const NAV_PRINCIPAL: NavItem[] = [
  */
 export const NAV_COMPLET: NavItem[] = [
   { to: "/", label: "Fil", icon: Home, pret: true },
-  { to: "/explorer", label: "Explorer les destinations", icon: Compass, pret: true },
-  { to: "/plats", label: "Atlas des plats", icon: UtensilsCrossed, pret: true },
-  { to: "/circuits", label: "Circuits", icon: Route, pret: true },
-  { to: "/sites", label: "Sites et parcs", icon: Trees, pret: true },
-  { to: "/evenements", label: "Événements", icon: CalendarDays, pret: true },
+  { to: "/explorer", label: "Destinations", icon: Compass, pret: true, groupe: "decouvrir", compteur: "destinations" },
+  { to: "/plats", label: "Atlas des plats", icon: UtensilsCrossed, pret: true, groupe: "decouvrir", compteur: "plats" },
+  { to: "/circuits", label: "Circuits", icon: Route, pret: true, groupe: "decouvrir" },
+  { to: "/sites", label: "Sites et parcs", icon: Trees, pret: true, groupe: "decouvrir", compteur: "sites" },
+  { to: "/evenements", label: "Événements", icon: CalendarDays, pret: true, groupe: "decouvrir" },
   /* ⚠ AJOUTE APRES L'AUDIT : `/projet` n'avait qu'UN SEUL lien dans tout le
      depot — la carte du bas de SideNav, qui n'apparait qu'a 1280 px. Sur la
      cible du produit (390 px), l'ecran que le code decrit comme « le seul
      endroit ou l'offre vient au voyageur » n'etait joignable qu'en tapant
      l'URL a la main. */
-  { to: "/projet", label: "Mon projet de voyage", icon: Compass, pret: true },
-  { to: "/quand-partir", label: "Quand partir", icon: Sun, pret: true },
-  { to: "/y-aller", label: "Y aller", icon: Route, pret: true },
-  { to: "/guides", label: "Guides", icon: Mountain, pret: true },
+  { to: "/projet", label: "Mon projet de voyage", icon: Compass, pret: true, groupe: "preparer" },
+  { to: "/quand-partir", label: "Quand partir", icon: Sun, pret: true, groupe: "preparer" },
+  { to: "/y-aller", label: "Y aller", icon: Route, pret: true, groupe: "preparer" },
+  { to: "/guides", label: "Guides", icon: Mountain, pret: true, groupe: "decouvrir" },
   { to: "/carte", label: "Carte", icon: Map, pret: true },
   { to: "/recherche", label: "Rechercher", icon: Search, pret: true },
   { to: "/publier", label: "Publier", icon: Plus, pret: true, railDesktop: false },
-  { to: "/favoris", label: "Mon carnet", icon: Bookmark, pret: true, railDesktop: false },
-  { to: "/gouts", label: "Mon carnet de goûts", icon: UtensilsCrossed, pret: true, railDesktop: false },
+  { to: "/favoris", label: "Mon carnet", icon: Bookmark, pret: true, railDesktop: false, groupe: "chez_moi" },
+  { to: "/gouts", label: "Mon carnet de goûts", icon: UtensilsCrossed, pret: true, railDesktop: false, groupe: "chez_moi" },
   { to: "/messages", label: "Messages", icon: MessageCircle, pret: true, railDesktop: false },
   { to: "/notifications", label: "Notifications", icon: Bell, pret: true, railDesktop: false },
-  { to: "/pro", label: "Espace pro", icon: Briefcase, pret: true },
+  { to: "/pro", label: "Espace pro", icon: Briefcase, pret: true, groupe: "chez_moi" },
   { to: "/compte", label: "Mon compte", icon: User, pret: true, railDesktop: false },
   { to: "/parametres", label: "Paramètres", icon: Settings, pret: true },
 ];
@@ -110,6 +119,19 @@ export const NAV_COMPLET: NavItem[] = [
  *   c'est le rail seul qui se raccourcit.
  */
 export const NAV_RAIL = NAV_COMPLET.filter((e) => e.railDesktop !== false);
+
+/**
+ * Les groupes du rail, dans l'ordre de la maquette.
+ *
+ * ⚠ « Fil », « Carte » et « Rechercher » restent HORS GROUPE, en tete : ce sont
+ *   les trois gestes qu'on fait sans y penser. Les ranger sous un intitule les
+ *   ralentirait pour rien.
+ */
+export const GROUPES_RAIL: { cle: NonNullable<NavItem["groupe"]>; titre: string }[] = [
+  { cle: "decouvrir", titre: "Découvrir" },
+  { cle: "preparer", titre: "Préparer" },
+  { cle: "chez_moi", titre: "Chez moi" },
+];
 
 /** Ce qui est réellement en construction, affiché tel quel aux visiteurs. */
 export const FEUILLE_DE_ROUTE = [

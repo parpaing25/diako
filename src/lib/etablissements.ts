@@ -1146,7 +1146,7 @@ export async function mesPublicationsAimees(): Promise<PublicationAimee[]> {
 /** « 85 000 Ar ». Les montants sont des entiers d'ariary, jamais de décimales. */
 export function ariary(montant: number | null | undefined): string {
   if (montant === null || montant === undefined) return "—";
-  return `${Math.round(montant).toLocaleString("fr-FR").replace(/ | /g, " ")} Ar`;
+  return `${Math.round(montant).toLocaleString("fr-FR").replace(/ | /g, " ")} Ar`;
 }
 
 export const UNITES: Record<string, string> = {

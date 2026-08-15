@@ -23,9 +23,14 @@ jobs:
       - name: Vérifier les types
         run: npm run typecheck
 
+      # ⚠ BLOQUANT DEPUIS LE 15/08/2026. Ce verrou était en `continue-on-error`,
+      #   c'est-à-dire qu'il n'en était pas un : seize erreurs y dormaient sans
+      #   que rien ne les signale, et l'audit de production les a trouvées avant
+      #   la CI. Les seuls cas légitimes sont désormais déclarés un par un dans
+      #   `eslint.config.js`, avec leur motif. Une règle désactivée sans raison
+      #   est une dette qu'on ne voit plus ; avec raison, c'est une décision.
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       # 01/08/2026 : Diako n'avait AUCUN test. Ce verrou devient bloquant des
       # la premiere batterie (40 tests sur le balisage schema.org et les

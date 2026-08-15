@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { BadgeVerification } from "@/components/Badges";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserData } from "@/contexts/UserDataContext";
 import { useSEO } from "@/hooks/useSEO";
 import {
   construireCircuitJsonLd,
@@ -106,6 +107,10 @@ export default function PagePro() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  /** ⚠ Le PROFIL, pas seulement la session : c'est `account_type` qui decide
+   *  qui peut revendiquer, et cette page ne le chargeait pas du tout. */
+  const { profile } = useUserData();
+  const estPro = profile?.account_type === "pro";
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absente" | "erreur">("chargement");
@@ -229,6 +234,21 @@ export default function PagePro() {
       toast("Connexion requise", {
         description: "Créez un compte pour revendiquer votre établissement.",
         action: { label: "Créer un compte", onClick: () => navigate("/auth") },
+      });
+      return;
+    }
+    // 🔴 LA BASE REFUSE DEJA (migration 0070), MAIS ELLE REFUSE EN POSTGRES.
+    //    Sans ce test, un voyageur qui clique recevait l'exception brute
+    //    « Seuls les comptes professionnels peuvent revendiquer un
+    //    etablissement » dans un toast. On lui dit la meme chose en francais,
+    //    et surtout on lui donne le geste qui debloque.
+    // ⚠ Ce n'est PAS le controle de securite — celui-la est en base. C'est
+    //   l'explication. Cacher un bouton n'a jamais empeche un appel d'API.
+    if (!estPro) {
+      toast("Réservé aux professionnels", {
+        description:
+          "Déclarez-vous hôtelier, restaurateur, guide ou agence pour revendiquer un établissement.",
+        action: { label: "Je suis un pro", onClick: () => navigate("/compte") },
       });
       return;
     }
@@ -1033,6 +1053,7 @@ export default function PagePro() {
                   {fiche.source && <SourceLiee texte={fiche.source} />}
                   <button
                     onClick={revendiquerFiche}
+                    hidden={!!user && !estPro}
                     className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
                   >
                     C'est mon établissement
@@ -1048,6 +1069,7 @@ export default function PagePro() {
           fiche={fiche}
           onEcrire={() => void ecrire()}
           onRevendiquer={revendiquerFiche}
+          peutRevendiquer={!user || estPro}
         />
       </div>
 

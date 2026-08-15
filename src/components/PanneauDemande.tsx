@@ -35,12 +35,17 @@ export function PanneauDemande({
   fiche,
   onEcrire,
   onRevendiquer,
+  peutRevendiquer = true,
 }: {
   fiche: Fiche;
   /** Ouvre la conversation avec l'établissement — même action qu'« Écrire ». */
   onEcrire: () => void;
   /** Ouvre la revendication — même action que « C'est mon établissement ». */
   onRevendiquer: () => void;
+  /** ⚠ `false` = voyageur CONNECTE : on retire le bloc entier plutot que de
+   *  lui proposer un geste que la base refusera. `true` couvre aussi le
+   *  visiteur non connecte, qui peut encore se declarer professionnel. */
+  peutRevendiquer?: boolean;
 }) {
   const [nuits, setNuits] = useState(1);
 
@@ -211,6 +216,7 @@ export function PanneauDemande({
              collant, cherchait où cliquer — et il n'y avait rien.
           ⚠ Un encart d'appel à l'action sans action est un cul-de-sac. */}
       {!fiche.owner_id && (
+        peutRevendiquer && (
         <div className="rounded-2xl border border-dashed border-border p-4">
           <p className="text-sm font-semibold">Vous gérez cet établissement ?</p>
           <p className="dk-secondaire mt-1 leading-relaxed">
@@ -223,6 +229,7 @@ export function PanneauDemande({
             C'est mon établissement
           </button>
         </div>
+        )
       )}
     </aside>
   );

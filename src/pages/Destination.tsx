@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EtatErreur, Squelettes } from "@/components/Etats";
-import { ariary } from "@/lib/etablissements";
+import { ariary, recitsDuLieu } from "@/lib/etablissements";
+import { ImageProgressive } from "@/components/ImageProgressive";
 import { cn } from "@/lib/utils";
 
 /**
@@ -64,6 +65,7 @@ interface Fiche {
 export default function Destination() {
   const { slug } = useParams<{ slug: string }>();
   const [f, setF] = useState<Fiche | null>(null);
+  const [recits, setRecits] = useState<Awaited<ReturnType<typeof recitsDuLieu>>>([]);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absente" | "erreur">("chargement");
   useReveal(f);
 
@@ -80,6 +82,13 @@ export default function Destination() {
   useEffect(() => {
     void charger();
   }, [charger]);
+
+  // ⚠ Chargement SÉPARÉ de la fiche : les récits ne doivent pas retarder
+  //   l'affichage du reste, et leur absence ne casse rien.
+  useEffect(() => {
+    if (!f?.lieu?.slug) return;
+    void recitsDuLieu(f.lieu.slug, 6).then(setRecits).catch(() => undefined);
+  }, [f?.lieu?.slug]);
 
   useSEO({
     titre: f ? `${f.lieu.name_fr} — où dormir et où manger` : "Destination",
@@ -139,10 +148,24 @@ export default function Destination() {
       {f.lieu.summary && <p className="dk-corps mt-3 max-w-prose">{f.lieu.summary}</p>}
 
       {/* ── Les chiffres, calculés, jamais lus dans un compteur dérivé ── */}
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {/* 🔴 « 1 récit » N'ÉTAIT PAS CLIQUABLE. Un compteur qui ne mène nulle
+            part est une frustration : on apprend qu'un témoignage existe sur
+            Isalo, sans aucun moyen de le lire. C'était pourtant le seul
+            contenu VIVANT de la fiche. */}
+        {f.nb_recits > 0 && (
+          <a
+            href="#recits"
+            className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
+          >
+            {f.nb_recits} récit{f.nb_recits > 1 ? "s" : ""} — les lire
+          </a>
+        )}
         {[
           f.nb_pages > 0 && `${f.nb_pages} adresse${f.nb_pages > 1 ? "s" : ""}`,
-          f.nb_recits > 0 && `${f.nb_recits} récit${f.nb_recits > 1 ? "s" : ""}`,
+          // ⚠ Ce badge-la est CLIQUABLE : voir plus bas. Les autres sont des
+          // faits, celui-ci mene a du contenu.
+          null,
           f.prix_des != null && `dès ${ariary(f.prix_des)}/nuit`,
         ]
           .filter(Boolean)
@@ -314,6 +337,45 @@ export default function Destination() {
                 >
                   <Compass className="h-3.5 w-3.5" aria-hidden="true" />
                   {e.nom}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ── ILS Y SONT ALLÉS ──────────────────────────────────────────────
+          ⚠ CE BLOC EST LA RAISON D'ÊTRE DU SITE. Tout le reste de la fiche
+            vient de nous — un import OSM, une saisonnalité saisie à la main.
+            Ceci vient de quelqu'un qui y est allé, et c'est ce qu'un voyageur
+            cherche en premier. Le mettre en bas de colonne serait le cacher.
+          ⚠ La photo d'un récit devient de fait la photo du lieu : quand un
+            visiteur partage, on lui demande le lieu (champ obligatoire de
+            /publier), et sa photo remonte ici pour les suivants. */}
+      {recits.length > 0 && (
+        <section id="recits" className="rounded-2xl border border-border bg-card p-4">
+          <p className="dk-etiquette">Ils y sont allés</p>
+          <ul className="mt-3 space-y-3">
+            {recits.map((r) => (
+              <li key={r.id}>
+                <Link to={`/post/${r.id}`} className="dk-carte group block">
+                  {r.media[0]?.url && (
+                    <span className="mb-2 block aspect-[16/10] overflow-hidden rounded-xl bg-muted">
+                      <ImageProgressive
+                        src={r.media[0].url}
+                        alt=""
+                        ajustement="cover"
+                        largeurAffichee="(min-width:1280px) 300px, 92vw"
+                      />
+                    </span>
+                  )}
+                  <span className="dk-secondaire block">
+                    {r.auteur || "Un voyageur"} ·{" "}
+                    {new Date(r.created_at).toLocaleDateString("fr-FR")}
+                  </span>
+                  <span className="mt-0.5 line-clamp-3 block text-sm group-hover:text-primary">
+                    {r.body?.trim() || "(photo)"}
+                  </span>
                 </Link>
               </li>
             ))}

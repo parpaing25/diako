@@ -1240,3 +1240,61 @@ export const UNITES: Record<string, string> = {
 export function unite(code: string | null | undefined): string {
   return (code && UNITES[code]) || "";
 }
+
+/**
+ * LES RÉCITS PUBLIÉS SUR UN LIEU.
+ *
+ * 🔴 LA FICHE ANNONÇAIT « 1 récit » SANS CHEMIN POUR LE LIRE. Un compteur qui
+ *    ne mène nulle part est une frustration : on apprend qu'il existe un
+ *    témoignage sur Isalo, et on n'a aucun moyen d'y accéder. C'était le seul
+ *    contenu VIVANT de la fiche, et il était invisible.
+ *
+ * ⚠ ON FILTRE SUR `visibilite`, pas seulement sur `status` : un récit que son
+ *   auteur a gardé pour lui n'a rien à faire sur une page publique.
+ */
+export async function recitsDuLieu(
+  /** Le SLUG du lieu : la fiche de destination ne porte pas son identifiant. */
+  slug: string,
+  limite = 6
+): Promise<
+  {
+    id: string;
+    body: string | null;
+    media: { url: string }[];
+    created_at: string;
+    auteur: string | null;
+    avatar: string | null;
+    reactions_count: number;
+  }[]
+> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      "id, body, media, created_at, reactions_count, author_id, " +
+        "profiles!posts_author_id_fkey(display_name, avatar_url), " +
+        // ⚠ `!inner` OBLIGATOIRE pour filtrer sur la table liee : sans lui,
+        //   PostgREST applique `places.slug` a l'imbrication seule et garde
+        //   TOUS les recits, avec `place` mis a null.
+        "place:places!inner(slug)"
+    )
+    .eq("places.slug", slug)
+    .eq("status", "published")
+    .eq("visibilite", "public")
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  type L = {
+    id: string; body: string | null; media: unknown; created_at: string;
+    reactions_count: number;
+    profiles: { display_name: string | null; avatar_url: string | null } | null;
+  };
+  return ((data ?? []) as unknown as L[]).map((r) => ({
+    id: r.id,
+    body: r.body,
+    media: (r.media as { url: string }[]) ?? [],
+    created_at: r.created_at,
+    auteur: r.profiles?.display_name ?? null,
+    avatar: r.profiles?.avatar_url ?? null,
+    reactions_count: r.reactions_count,
+  }));
+}

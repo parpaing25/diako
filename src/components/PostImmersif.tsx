@@ -95,6 +95,13 @@ export function PostImmersif({
           prioritaire={prioritaire}
         />
       ) : (
+        /* ⚠ SEUL ENDROIT DE CE FICHIER OU LE JETON S'APPLIQUE : ici le fond est
+           `bg-primary`, donc `primary-foreground` s'inverse correctement avec le
+           theme. Partout ailleurs l'ecran est un plein ecran NOIR avec une photo
+           et des voiles sombres : le texte y reste blanc en dur, parce que la
+           surface derriere lui ne change pas avec le theme.
+           ⚠ Un jeton de couleur suit la surface qui est DERRIERE le texte, pas
+             la palette de la page. */
         <div className="grid h-full w-full place-items-center bg-primary px-8">
           <p className="max-w-prose whitespace-pre-line text-center text-lg text-primary-foreground">{texte}</p>
         </div>
@@ -106,7 +113,7 @@ export function PostImmersif({
       <header className="absolute inset-x-0 top-0 flex items-center gap-2.5 px-4 pt-3">
         <Link
           to={`/user/${post.author.id}`}
-          className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/20 text-xs font-semibold text-primary-foreground ring-1 ring-white/40"
+          className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/20 text-xs font-semibold text-white ring-1 ring-white/40"
         >
           {post.author.avatar ? (
             <img src={getThumbUrl(post.author.avatar)} alt="" width={36} height={36} className="h-9 w-9 object-cover" />
@@ -115,9 +122,9 @@ export function PostImmersif({
           )}
         </Link>
         <div className="min-w-0 leading-tight">
-          <p className="truncate text-sm font-semibold text-primary-foreground drop-shadow">{nom}</p>
+          <p className="truncate text-sm font-semibold text-white drop-shadow">{nom}</p>
           {post.place && (
-            <p className="flex items-center gap-0.5 text-xs text-primary-foreground/85 drop-shadow">
+            <p className="flex items-center gap-0.5 text-xs text-white/85 drop-shadow">
               <MapPin className="h-3 w-3" aria-hidden="true" />
               {post.place}
             </p>
@@ -131,30 +138,30 @@ export function PostImmersif({
           onClick={reagir}
           aria-pressed={!!reaction}
           aria-label="J'aime"
-          className="grid h-12 w-12 place-items-center rounded-full text-primary-foreground drop-shadow-lg"
+          className="grid h-12 w-12 place-items-center rounded-full text-white drop-shadow-lg"
         >
           <Heart
             className={cn("h-7 w-7 transition-transform", reaction && "scale-110 fill-accent text-accent")}
             aria-hidden="true"
           />
         </button>
-        <span className="-mt-1 text-xs font-semibold text-primary-foreground drop-shadow">{nbReactions || ""}</span>
+        <span className="-mt-1 text-xs font-semibold text-white drop-shadow">{nbReactions || ""}</span>
 
         <button
           onClick={() => onCommenter(post)}
           aria-label="Commenter"
-          className="mt-2 grid h-12 w-12 place-items-center rounded-full text-primary-foreground drop-shadow-lg"
+          className="mt-2 grid h-12 w-12 place-items-center rounded-full text-white drop-shadow-lg"
         >
           <MessageCircle className="h-7 w-7" aria-hidden="true" />
         </button>
-        <span className="-mt-1 text-xs font-semibold text-primary-foreground drop-shadow">
+        <span className="-mt-1 text-xs font-semibold text-white drop-shadow">
           {post.comments_count || ""}
         </span>
 
         <button
           onClick={() => void partager()}
           aria-label="Partager"
-          className="mt-2 grid h-12 w-12 place-items-center rounded-full text-primary-foreground drop-shadow-lg"
+          className="mt-2 grid h-12 w-12 place-items-center rounded-full text-white drop-shadow-lg"
         >
           <Send className="h-7 w-7" aria-hidden="true" />
         </button>
@@ -163,7 +170,7 @@ export function PostImmersif({
           onClick={enregistrer}
           aria-pressed={favori}
           aria-label="Enregistrer"
-          className="mt-2 grid h-12 w-12 place-items-center rounded-full text-primary-foreground drop-shadow-lg"
+          className="mt-2 grid h-12 w-12 place-items-center rounded-full text-white drop-shadow-lg"
         >
           <Bookmark className={cn("h-7 w-7", favori && "fill-white")} aria-hidden="true" />
         </button>
@@ -186,12 +193,12 @@ export function PostImmersif({
               deplie && "max-h-[45dvh] overflow-y-auto pr-1"
             )}
           >
-            <p className="whitespace-pre-line text-sm leading-relaxed text-primary-foreground drop-shadow">
+            <p className="whitespace-pre-line text-sm leading-relaxed text-white drop-shadow">
               {visible}
               {long && !deplie && (
                 <button
                   onClick={() => setDeplie(true)}
-                  className="ml-1 font-semibold text-primary-foreground/80"
+                  className="ml-1 font-semibold text-white/80"
                 >
                   plus
                 </button>
@@ -200,7 +207,7 @@ export function PostImmersif({
             {deplie && (
               <button
                 onClick={() => setDeplie(false)}
-                className="mt-1 text-xs font-semibold text-primary-foreground/70"
+                className="mt-1 text-xs font-semibold text-white/70"
               >
                 reduire
               </button>

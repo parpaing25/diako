@@ -38,7 +38,17 @@ export function DiakoHero({
   }, []);
 
   return (
-    <section className="dk-colonne px-4 pt-4">
+    /* 🔴 CORRIGE : ce bandeau portait encore `.dk-colonne`, qui le bridait a
+       620 px. Le fil en dessous a ete libere au passage a la coque v4, pas lui :
+       sur un ecran large, l'entete et les regions s'arretaient au tiers de la
+       zone de contenu, avec un vide a leur droite — precisement le vide que
+       l'elargissement devait supprimer.
+       ⚠ La colonne de LECTURE reste bornee la ou on lit vraiment : un recit
+         ouvert, une page legale. Un bandeau n'est pas de la lecture longue,
+         c'est une banniere — elle occupe la largeur qu'on lui donne. Ce qui a
+         besoin d'une longueur de ligne lisible (le titre, le sous-titre) la
+         garde par son propre `max-w`, ligne par ligne. */
+    <section className="px-4 pt-4">
       {/* ── Salutation + recherche ─────────────────────────────────────── */}
       <div className="dk-papier relative overflow-hidden rounded-3xl border border-border bg-secondary px-5 py-7 md:px-8 md:py-9">
         <div className="dk-tissage absolute inset-x-0 top-0" aria-hidden="true" />
@@ -120,10 +130,15 @@ export function DiakoHero({
                   className="group w-[200px] shrink-0 snap-start overflow-hidden rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-md md:w-[228px]"
                 >
                   <div className="relative flex aspect-video items-center justify-center bg-primary/95">
-                    <span className="px-3 text-center text-sm font-semibold text-white">
+                    <span className="px-3 text-center text-sm font-semibold text-primary-foreground">
                       {d.name_fr}
                     </span>
                     {d.region && (
+                      /* ⚠ CELLE-CI RESTE EN BLANC, et c'est voulu : son fond est
+                         un voile NOIR, pas le teal. `primary-foreground` devient
+                         de l'encre sombre en mode nuit — donc du sombre sur du
+                         noir. Le jeton suit la surface qui est DERRIÈRE, pas la
+                         couleur d'à côté. */
                       <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
                         {d.region}
                       </span>
@@ -175,7 +190,7 @@ export function DiakoHero({
                 }`}
               >
                 <Icon
-                  className={`h-6 w-6 md:h-7 md:w-7 ${actif ? "text-white" : "text-muted-foreground"}`}
+                  className={`h-6 w-6 md:h-7 md:w-7 ${actif ? "text-primary-foreground" : "text-muted-foreground"}`}
                   aria-hidden="true"
                 />
               </span>

@@ -207,15 +207,41 @@ if (file_put_contents($targetPath, $binary) === false) {
 
 @chmod($targetPath, 0644);
 
-// ── Miniature WebP ~480px (pour le feed) — best-effort, ne bloque pas l'upload ──
+// ── TROIS TAILLES WEBP, pas une ─────────────────────────────────────────────
+//
+// 🔴 CE QUE ÇA CORRIGE. Il n'existait qu'UNE vignette, à 480 px. Entre elle et
+//    l'original (jusqu'à 2000 px), rien. Conséquence sur le site : une carte de
+//    grille fait ~390 px et prenait la vignette — nette. Mais une couverture de
+//    fiche fait 800 px et devait prendre l'ORIGINAL, soit ~730 Ko pour occuper
+//    800 px. C'est de là que venaient à la fois la lenteur ET le flou : trop
+//    petit ou beaucoup trop gros, jamais la bonne taille.
+//
+// ⚠ 480 / 960 / 1600 couvrent les trois usages réels : vignette de grille,
+//   couverture de fiche, et plein écran sur un portable en 2x. Au-delà de
+//   1600, on sert l'original — il n'y a plus d'écran malgache pour le voir.
+//
+// ⚠ QUALITÉ CROISSANTE AVEC LA TAILLE. Une vignette supporte 72 : elle est vue
+//   petite. Une image plein écran à 72 montre ses artefacts dans les ciels et
+//   les dégradés — exactement ce que produit une photo de plage malgache.
+//
+// ⚠ BEST-EFFORT, JAMAIS BLOQUANT. Si `imagewebp` manque ou si une taille
+//   échoue, l'envoi réussit quand même : perdre la photo parce qu'une variante
+//   n'a pas pu être écrite serait absurde.
 $thumbUrl = null;
+$variantes = [];
 if (preg_match('/\.(jpe?g|png|webp)$/i', $filename)) {
-  $thumbPath = preg_replace('/\.(jpe?g|png|webp)$/i', '.thumb.webp', $targetPath);
-  $thumbRel  = preg_replace('/\.(jpe?g|png|webp)$/i', '.thumb.webp', $filename);
-  if (@fnk_generate_thumb($targetPath, $thumbPath, 480, 72)) {
-    $schemeT = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $hostT = $_SERVER['HTTP_HOST'] ?? 'fonenako.mg';
-    $thumbUrl = $schemeT . '://' . $hostT . '/uploads/' . $folder . '/' . $thumbRel;
+  $schemeT = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+  $hostT = $_SERVER['HTTP_HOST'] ?? 'fonenako.mg';
+
+  foreach ([[480, 72, '.thumb.webp'], [960, 80, '.w960.webp'], [1600, 84, '.w1600.webp']] as $v) {
+    list($dim, $q, $suffixe) = $v;
+    $vPath = preg_replace('/\.(jpe?g|png|webp)$/i', $suffixe, $targetPath);
+    $vRel  = preg_replace('/\.(jpe?g|png|webp)$/i', $suffixe, $filename);
+    if (@fnk_generate_thumb($targetPath, $vPath, $dim, $q)) {
+      $url = $schemeT . '://' . $hostT . '/uploads/' . $folder . '/' . $vRel;
+      $variantes[(string)$dim] = $url;
+      if ($dim === 480) $thumbUrl = $url;
+    }
   }
 }
 
@@ -227,5 +253,9 @@ respond(200, [
   'success' => true,
   'url' => $publicUrl,
   'thumb_url' => $thumbUrl,
+  // ⚠ Les trois tailles, pour que le client puisse composer un `srcset` sans
+  //   deviner les noms de fichiers. Deviner marcherait aujourd'hui et casserait
+  //   le jour ou le suffixe change.
+  'variants' => $variantes,
   'path' => $targetPath,
 ]);

@@ -11,3 +11,28 @@ export function getThumbUrl(url: string | undefined | null): string {
   // remplace l'extension image par .thumb.webp (en préservant un éventuel ?query)
   return url.replace(/\.(jpe?g|png|webp)(\?.*)?$/i, '.thumb.webp$2');
 }
+
+/**
+ * LES TROIS TAILLES, pour un `srcset` honnête.
+ *
+ * 🔴 IL N'Y AVAIT QU'UNE VIGNETTE, À 480 px. Entre elle et l'original (jusqu'à
+ *    2000 px), rien. Une couverture de fiche fait 800 px : elle devait donc
+ *    prendre l'ORIGINAL, ~730 Ko pour occuper 800 px. C'est de là que venaient
+ *    à la fois la lenteur ET le flou — trop petit, ou beaucoup trop gros,
+ *    jamais la bonne taille.
+ *
+ * ⚠ ON NE DEVINE PAS L'EXISTENCE DES VARIANTES. Les images posées avant ce
+ *   changement n'ont que la vignette 480 : annoncer un `1600w` qui rend 404
+ *   ferait afficher un cadre vide. Le `srcset` ne liste donc que 480 et
+ *   l'original, sauf quand l'appelant sait que les variantes existent.
+ */
+export function jeuDeTailles(url: string | null | undefined): string | null {
+  if (!url || !url.includes("/uploads/")) return null;
+  const base = url.replace(/\.(jpe?g|png|webp)(\?.*)?$/i, "");
+  const q = url.match(/(\?.*)$/)?.[1] ?? "";
+  return [
+    `${base}.thumb.webp${q} 480w`,
+    `${base}.w960.webp${q} 960w`,
+    `${base}.w1600.webp${q} 1600w`,
+  ].join(", ");
+}

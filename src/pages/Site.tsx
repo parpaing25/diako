@@ -158,9 +158,36 @@ export default function Site() {
     <div className="px-4 py-5 xl:flex xl:items-start xl:gap-5">
       <div className="min-w-0 flex-1">
         {s.cover_url && (
-          <div className="mb-4 aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
-            <ImageProgressive src={s.cover_url} alt={s.name} prioritaire ajustement="cover" />
-          </div>
+          <figure className="mb-4">
+            <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
+              <ImageProgressive src={s.cover_url} alt={s.name} prioritaire ajustement="cover" />
+            </div>
+            {/* 🔴 LE CREDIT EST SOUS LA PHOTO, PAS EN PIED DE SITE. Les images
+                viennent de Wikimedia Commons, sous licences variees dont la
+                plupart exigent de nommer l'auteur ET la licence. Une fiche
+                partagee ou indexee seule doit emporter son credit : le reléguer
+                dans un pied de page global, c'est le perdre des le premier
+                partage. */}
+            {s.cover_credit && (
+              <figcaption className="dk-secondaire mt-1.5 px-1">
+                Photo&nbsp;: {s.cover_credit}
+                {s.cover_licence ? ` · ${s.cover_licence}` : ""}
+                {s.cover_source && (
+                  <>
+                    {" · "}
+                    <a
+                      href={s.cover_source}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="underline"
+                    >
+                      Wikimedia Commons
+                    </a>
+                  </>
+                )}
+              </figcaption>
+            )}
+          </figure>
         )}
 
         <p className="dk-etiquette">

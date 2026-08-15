@@ -213,6 +213,13 @@ export interface SiteListe {
   kind: string;
   summary: string | null;
   cover_url: string | null;
+  /** ⚠ Le credit voyage AVEC la photo. Les images viennent de Wikimedia
+   *  Commons, sous licences variees dont la plupart exigent de nommer l'auteur
+   *  ET la licence : une couverture affichee sans ces trois champs est une
+   *  violation, pas un oubli de forme. */
+  cover_credit: string | null;
+  cover_licence: string | null;
+  cover_source: string | null;
   fee_resident_ar: number | null;
   fee_nonresident_ar: number | null;
   guide_required: boolean;
@@ -226,17 +233,79 @@ export interface SiteListe {
 const COLONNES_SITE =
   "id, slug, name, kind, summary, cover_url, fee_resident_ar, fee_nonresident_ar, " +
   "guide_required, guide_fee_group_ar, best_months, fady, rates_checked_at, " +
+  "cover_credit, cover_licence, cover_source, " +
   "place:places(slug, name_fr, region)";
 
-export async function chargerSites(limite = 24): Promise<SiteListe[]> {
-  const { data, error } = await supabase
+/** Les 12 genres de sites reellement presents en base, dans l'ordre d'interet. */
+export const GENRES_SITE = [
+  "reserve", "parc", "sommet", "plage", "patrimoine", "site",
+  "point_de_vue", "cascade", "grotte", "musee", "parc_animalier", "oeuvre",
+  // ⚠ `source` et `aire` existent en base (14 et 4 lignes). Les omettre ici
+  //   les rendait invisibles au filtre — atteignables seulement en faisant
+  //   defiler « Tous » sur 2 429 fiches, donc pas atteignables.
+  "source", "aire",
+] as const;
+
+export interface FiltreSites {
+  genre?: string;
+  region?: string;
+  q?: string;
+  /** Curseur = le `name` du dernier site recu. */
+  apres?: string | null;
+  limite?: number;
+}
+
+/**
+ * La liste des sites — filtrable, et qui va jusqu'au bout.
+ *
+ * 🔴 CE QUE CA CORRIGE. L'ecran chargeait 24 sites tries par nom croissant, sur
+ *    2 474 en base : la page s'arretait aux « A », et 2 450 sites n'etaient
+ *    atteignables par AUCUN chemin. Un annuaire dont on ne peut pas voir le
+ *    fond n'est pas un annuaire.
+ *
+ * ⚠ PAGINATION PAR CURSEUR, JAMAIS PAR OFFSET. Un `range(24, 48)` decale toute
+ *   la suite des qu'une ligne est ajoutee ou publiee entre deux pages :
+ *   doublons et sites sautes. Le curseur est le nom du dernier recu.
+ *
+ * ⚠ LE TRI RESTE ALPHABETIQUE parce que c'est le seul ordre TOTAL et STABLE
+ *   disponible : trier « les documentes d'abord » ferait remonter les memes
+ *   180 fiches a chaque page et casserait le curseur. Le tri par interet est
+ *   rendu par le FILTRE (genre), pas par l'ordre.
+ */
+export async function chargerSites(f: FiltreSites = {}): Promise<SiteListe[]> {
+  // 🔴 `!inner` EST OBLIGATOIRE POUR FILTRER SUR LA TABLE LIEE. Sans lui,
+  //    PostgREST applique `places.region` A L'IMBRICATION SEULE : la ligne est
+  //    gardee, avec `place` mis a null. On aurait obtenu 24 sites « de la
+  //    Diana » dont aucun n'est dans la Diana, et sans lieu affiche. Le filtre
+  //    aurait eu l'air de marcher tout en ne filtrant rien.
+  // ⚠ `places.region` porte le NOM COMPLET (« Haute Matsiatra »), pas un slug.
+  let r = supabase
     .from("attractions")
-    .select(COLONNES_SITE)
-    .eq("is_published", true)
+    .select(f.region ? COLONNES_SITE.replace("place:places(", "place:places!inner(") : COLONNES_SITE)
+    .eq("is_published", true);
+
+  if (f.genre) r = r.eq("kind", f.genre);
+  if (f.region) r = r.eq("places.region", f.region);
+  if (f.q?.trim()) r = r.ilike("name", `%${f.q.trim()}%`);
+  if (f.apres) r = r.gt("name", f.apres);
+
+  const { data, error } = await r
     .order("name", { ascending: true })
-    .limit(limite);
+    .limit(f.limite ?? 24);
   if (error) throw error;
   return (data as unknown as SiteListe[]) ?? [];
+}
+
+/** Combien de sites par genre — sert a n'afficher que les filtres qui rendent
+ *  quelque chose, et a annoncer le volume reel de l'annuaire. */
+export async function compterSites(): Promise<{ total: number; parGenre: Record<string, number> }> {
+  const { data, error } = await supabase.rpc("compter_sites");
+  if (error) throw error;
+  const l = (data ?? []) as unknown as { kind: string; n: number }[];
+  return {
+    total: l.reduce((s, x) => s + Number(x.n), 0),
+    parGenre: Object.fromEntries(l.map((x) => [x.kind, Number(x.n)])),
+  };
 }
 
 export async function chargerSite(slug: string): Promise<SiteListe | null> {

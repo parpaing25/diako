@@ -1293,6 +1293,12 @@ export type Database = {
       };
       itineraire_axe: { Args: { p_axe: string | null; p_depuis?: string }; Returns: Json };
       trajets_depuis: { Args: { p_lieu: string }; Returns: Json };
+      /** ⚠ Compte cote BASE. PostgREST plafonne toute reponse a 1 000 lignes
+       *  SANS LE DIRE : compter 2 474 sites cote client aurait rendu 1 000. */
+      compter_sites: {
+        Args: Record<string, never>;
+        Returns: { kind: string; n: number }[];
+      };
       restaurants_par_plat: {
         Args: { p_plat: string; p_lieu?: string | null; p_limite?: number };
         Returns: {

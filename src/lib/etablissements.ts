@@ -328,19 +328,47 @@ export async function ecrireALEtablissement(pageId: string): Promise<string> {
 
 /* ── Référentiels ──────────────────────────────────────────────────────── */
 
-/** Les destinations mises en avant : celles marquées touristiques. */
-export async function chargerDestinations(limite = 60): Promise<Lieu[]> {
-  const { data, error } = await supabase
+/**
+ * Les destinations mises en avant : celles marquées touristiques.
+ *
+ * 🔴 UNE LIMITE FIXE EST UN PIÈGE QUI SE REFERME TOUT SEUL. Le catalogue est
+ *    passé de 87 à 524 destinations le jour où les lieux abritant un parc, une
+ *    cascade ou un musée y sont entrés — et la limite de 200, posée quand il y
+ *    en avait 87, a recommencé à en couper 324 EN SILENCE. C'est la deuxième
+ *    fois que ce même écran perd des destinations de cette façon.
+ *
+ * ⚠ D'OÙ LA PAGINATION PAR CURSEUR, et non une limite relevée une fois de plus.
+ *   Le curseur est le nom, seul ordre TOTAL et STABLE disponible : trier par
+ *   `nb_posts` d'abord ferait remonter les mêmes lieux à chaque page.
+ *
+ * ⚠ ET UN PLAFOND DUR À 1 000 CÔTÉ POSTGREST, qu'on demande ou non davantage.
+ *   Une limite qu'on demande n'est pas une limite qu'on obtient.
+ */
+export async function chargerDestinations(
+  limite = 60,
+  apres?: string | null
+): Promise<Lieu[]> {
+  let r = supabase
     .from("places")
     .select(
       "id, slug, name_fr, name_mg, kind, region, axe, is_touristique, summary, why_go, nb_pages, nb_posts, lat, lng"
     )
-    .eq("is_touristique", true)
-    .order("nb_posts", { ascending: false })
-    .order("name_fr")
-    .limit(limite);
+    .eq("is_touristique", true);
+  if (apres) r = r.gt("name_fr", apres);
+  const { data, error } = await r.order("name_fr").limit(Math.min(limite, 1000));
   if (error) throw error;
   return (data as Lieu[]) ?? [];
+}
+
+/** Combien de destinations en tout — pour que l'écran annonce un chiffre vrai
+ *  et non le nombre de vignettes qu'il a réussi à charger. */
+export async function compterDestinations(): Promise<number> {
+  const { count, error } = await supabase
+    .from("places")
+    .select("id", { count: "exact", head: true })
+    .eq("is_touristique", true);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 export async function chargerLieu(slug: string): Promise<Lieu | null> {

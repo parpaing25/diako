@@ -6,6 +6,7 @@ import { FicheCard } from "@/components/FicheCard";
 import {
   CATEGORIES,
   chargerDestinations,
+  compterDestinations,
   chargerLieu,
   chargerSaisons,
   chercherPages,
@@ -53,12 +54,19 @@ const COULEUR_SAISON: Record<string, string> = {
  *    silence. On accepte désormais les deux — et le lien des publications
  *    pointe vers la recherche, qui sait résoudre « Nosy be » en « nosy-be ».
  */
+/** ⚠ Assez pour remplir deux rangees sur un ecran large sans faire attendre un
+ *  telephone en 3G. Le reste vient au « voir plus ». */
+const PAR_PAGE_DEST = 48;
+
 export default function Explorer() {
   useReveal();
   const [params] = useSearchParams();
   const slug = params.get("lieu") ?? params.get("q");
 
   const [destinations, setDestinations] = useState<Lieu[]>([]);
+  const [totalDest, setTotalDest] = useState<number | null>(null);
+  const [encore, setEncore] = useState(false);
+  const [finiDest, setFiniDest] = useState(false);
   const [lieu, setLieu] = useState<Lieu | null>(null);
   const [saisons, setSaisons] = useState<
     { month: number; rating: string; reason: string | null }[]
@@ -68,7 +76,11 @@ export default function Explorer() {
   const [chargement, setChargement] = useState(true);
 
   useSEO({
-    titre: lieu ? lieu.name_fr : "Explorer Madagascar — 178 destinations",
+    titre: lieu
+      ? lieu.name_fr
+      : totalDest
+        ? `Explorer Madagascar — ${totalDest} destinations`
+        : "Explorer Madagascar",
     description: lieu?.summary ??
       "Les destinations de Madagascar, avec leur saisonnalite, leurs acces reels et les adresses qui s'y trouvent.",
     url: "/explorer",
@@ -79,12 +91,20 @@ export default function Explorer() {
     try {
       if (!slug) {
         setLieu(null);
-        // ⚠ 200 ET NON 80. Le referentiel compte 87 destinations touristiques :
-        //   la limite de 80 en laissait SEPT inatteignables depuis le catalogue,
-        //   sans aucun bouton « charger la suite » pour les rattraper. Une
-        //   limite doit etre au-dessus du volume reel, ou s'accompagner d'une
-        //   pagination — jamais juste en dessous, en silence.
-        setDestinations(await chargerDestinations(200));
+        // 🔴 UNE LIMITE FIXE EST UN PIEGE QUI SE REFERME TOUT SEUL. Cet ecran
+        //    a deja perdu des destinations une fois (limite 80 pour 87 lieux).
+        //    On l'avait passee a 200 ; le catalogue est monte a 524 le jour ou
+        //    les lieux abritant un parc ou une cascade y sont entres, et 324
+        //    ont recommence a disparaitre EN SILENCE. Une limite au-dessus du
+        //    volume du jour n'est pas une solution, c'est un report.
+        // ⚠ D'ou une PAGINATION, qui ne se perime pas.
+        const [page, n] = await Promise.all([
+          chargerDestinations(PAR_PAGE_DEST),
+          compterDestinations().catch(() => null),
+        ]);
+        setDestinations(page);
+        setTotalDest(n);
+        setFiniDest(page.length < PAR_PAGE_DEST);
       } else {
         const l = await chargerLieu(slug);
         setLieu(l);
@@ -281,8 +301,10 @@ export default function Explorer() {
         <h1 className="text-2xl font-semibold">Explorer Madagascar</h1>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Les destinations du pays, avec leur saison et les établissements sur
-        place.
+        {totalDest
+          ? `${totalDest.toLocaleString("fr-FR")} destinations`
+          : "Les destinations du pays"}
+        , avec leur saison et les établissements sur place.
       </p>
 
       {chargement ? (
@@ -326,6 +348,39 @@ export default function Explorer() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* ⚠ « Voir plus » plutot qu'un defilement infini : sur une grille de
+          vignettes, le defilement infini rend le pied de page inatteignable. */}
+      {!chargement && destinations.length > 0 && !finiDest && (
+        <div className="mt-5 flex justify-center">
+          <button
+            onClick={async () => {
+              setEncore(true);
+              try {
+                const suite = await chargerDestinations(
+                  PAR_PAGE_DEST,
+                  destinations[destinations.length - 1].name_fr
+                );
+                setFiniDest(suite.length < PAR_PAGE_DEST);
+                setDestinations((avant) => {
+                  const vus = new Set(avant.map((x) => x.slug));
+                  return [...avant, ...suite.filter((x) => !vus.has(x.slug))];
+                });
+              } finally {
+                setEncore(false);
+              }
+            }}
+            disabled={encore}
+            className="min-h-11 rounded-full border border-input px-6 text-sm font-semibold hover:border-primary hover:text-primary disabled:opacity-60"
+          >
+            {encore
+              ? "Chargement…"
+              : totalDest
+                ? `Voir plus — ${destinations.length} sur ${totalDest.toLocaleString("fr-FR")}`
+                : "Voir plus de destinations"}
+          </button>
         </div>
       )}
     </div>

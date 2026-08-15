@@ -1146,6 +1146,10 @@ export type Database = {
           precision_geo: string | null;
         }[];
       };
+      quand_partir: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
       fiche_destination: {
         Args: { p_slug: string };
         Returns: unknown;

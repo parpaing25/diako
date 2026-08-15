@@ -137,7 +137,14 @@ export default function Plat() {
   ].filter(Boolean) as string[];
 
   return (
-    <div className="px-4 py-5">
+    /* ═══ GABARIT G3 — la fiche plat, sections + reperes ═══════════════════
+       ⚠ CE QUI MONTE DANS LA COLONNE DE DROITE : les variantes d'orthographe
+         et le geste « marquer goute ». Les variantes ne sont pas une curiosite
+         — ce sont elles qui font que « ravi-toto » trouve ce plat, et les
+         montrer explique au lecteur pourquoi la recherche a marche. Le geste,
+         lui, doit rester sous la main pendant toute la lecture. */
+    <div className="px-4 py-5 xl:flex xl:items-start xl:gap-5">
+      <div className="min-w-0 flex-1 xl:max-w-[620px]">
       {p.photo_url && (
         <div className="mb-4 aspect-[3/2] overflow-hidden rounded-2xl bg-muted">
           <ImageProgressive src={p.photo_url} alt={p.name_fr} ajustement="cover" />
@@ -223,7 +230,7 @@ export default function Plat() {
       ) : null}
 
       {/* ── Où en manger ─────────────────────────────────────────────── */}
-      <section className="dk-reveal mt-6">
+      <section className="dk-reveal mt-6" id="ou-en-manger">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="dk-etiquette">Où en manger</h2>
           {f.adresses.length > 0 && (
@@ -316,6 +323,53 @@ export default function Plat() {
           {f.nb_recits} récit{f.nb_recits > 1 ? "s" : ""} tague{f.nb_recits > 1 ? "nt" : ""} ce plat.
         </p>
       )}
+      </div>
+
+      {/* ── COLONNE « REPERES » ─────────────────────────────────────────── */}
+      <aside className="mt-6 shrink-0 space-y-3 xl:sticky xl:top-20 xl:mt-0 xl:w-[340px]">
+        {f.alias.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="dk-etiquette">Aussi ecrit</p>
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {f.alias.map((a) => (
+                <li
+                  key={a}
+                  className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium"
+                >
+                  {a}
+                </li>
+              ))}
+            </ul>
+            {/* ⚠ La phrase compte autant que la liste : elle apprend au lecteur
+                que l'orthographe n'a pas d'importance sur ce site. */}
+            <p className="dk-secondaire mt-2.5 leading-relaxed">
+              {f.alias.length} facon{f.alias.length > 1 ? "s" : ""} de l'ecrire.
+              Toutes menent ici — c'est ce qui fait marcher la recherche.
+            </p>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-accent-strong/25 bg-accent/[0.07] p-4">
+          <p className="dk-etiquette text-accent-strong">Mon carnet de gouts</p>
+          <p className="dk-secondaire mt-2 leading-relaxed">
+            Marquez ce plat goute, il rejoint votre carnet. Aucune adresse n'est
+            encore saisie : le carnet, lui, marche des aujourd'hui.
+          </p>
+          <Link
+            to="/gouts"
+            className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-accent-strong/40 text-sm font-semibold text-accent-strong"
+          >
+            Ouvrir mon carnet
+          </Link>
+        </div>
+
+        <Link
+          to="/plats"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-input text-sm font-semibold"
+        >
+          Les 95 plats de l'atlas
+        </Link>
+      </aside>
     </div>
   );
 }

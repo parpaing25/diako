@@ -55,6 +55,7 @@ const Site = lazy(() => import("./pages/Site"));
 const Evenements = lazy(() => import("./pages/Evenements"));
 const Projet = lazy(() => import("./pages/Projet"));
 const Guides = lazy(() => import("./pages/Guides"));
+const QuandPartir = lazy(() => import("./pages/QuandPartir"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -139,6 +140,9 @@ function Shell() {
 
       {/* ── Les guides : le trafic de recherche avant que l'annuaire soit
              fourni. Une seule page, deux vues, selon le slug. ── */}
+      {/* ⚠ La page qui exploite le fosse defensif : 5 destinations x 12 mois
+             avec leur RAISON. Personne d'autre ne publie le pourquoi. */}
+      <Route path="/quand-partir" element={<QuandPartir />} />
       <Route path="/guides" element={<Guides />} />
       <Route path="/guides/:slug" element={<Guides />} />
       <Route path="/messages" element={<Messages />} />

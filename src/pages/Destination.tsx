@@ -116,7 +116,17 @@ export default function Destination() {
   const moisCourant = f.saisons[new Date().getMonth()];
 
   return (
-    <div className="px-4 py-5">
+    /* ═══ GABARIT G3 — DOSSIER EDITORIAL ══════════════════════════════════
+       620 sections + 340 reperes + 250 « autour » a 1920.
+
+       ⚠ POURQUOI CET ECRAN GAGNE LE PLUS A L'ELARGISSEMENT. Sur telephone,
+         une destination cache ses saisons, ses acces, ses adresses et ses
+         recits derriere des rubriques qu'on fait defiler l'une apres l'autre.
+         Ici tout est visible en meme temps, et la troisieme colonne accueille
+         ce que le referentiel sait deja du VOISINAGE — c'est-a-dire la seule
+         matiere abondante du produit. */
+    <div className="px-4 py-5 xl:flex xl:items-start xl:gap-5">
+      <div className="min-w-0 flex-1 xl:max-w-[620px]">
       {/* ── Identité ─────────────────────────────────────────────────── */}
       <p className="dk-etiquette">
         {f.lieu.region ?? f.lieu.kind}
@@ -227,8 +237,15 @@ export default function Destination() {
         </section>
       )}
 
-      {/* ── Les deux actions qui comptent ────────────────────────────── */}
-      <div className="mt-6 grid grid-cols-2 gap-2">
+      </div>
+
+      {/* ── COLONNE « REPERES » : ce qu'on fait de cette page ──────────────
+          ⚠ Les deux actions montent ICI a partir de `xl`. Sur telephone elles
+            sont sous le calendrier, c'est-a-dire a deux ecrans de defilement
+            du titre : celui qui a decide d'y aller devait remonter pour agir.
+            Collees, elles restent sous la main pendant toute la lecture. */}
+      <aside className="mt-6 shrink-0 space-y-3 xl:sticky xl:top-20 xl:mt-0 xl:w-[340px]">
+      <div className="grid grid-cols-2 gap-2">
         <Link
           to={`/recherche?lieu=${f.lieu.slug}&cat=hotel`}
           className={cn(
@@ -253,8 +270,40 @@ export default function Destination() {
         </Link>
       </div>
 
+      {f.lieu.lat != null && (
+        <Link
+          to={`/carte?lieu=${f.lieu.slug}`}
+          className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-input text-sm font-semibold"
+        >
+          <MapPin className="h-4 w-4" aria-hidden="true" />
+          Voir sur la carte
+        </Link>
+      )}
+
+      {/* ⚠ CE BLOC EST LE PLUS UTILE DE LA PAGE AUJOURD'HUI. 173 destinations
+          sur 178 n'ont pas de saisonnalite et 137 pas d'acces : sans lui, la
+          plupart des fiches n'auraient presque rien a montrer. Le referentiel
+          des plats, lui, est complet — il donne toujours quelque chose a
+          lire. */}
+      <div className="rounded-2xl border border-accent-strong/25 bg-accent/[0.07] p-4">
+        <p className="dk-etiquette text-accent-strong">Manger ici</p>
+        <p className="dk-secondaire mt-2 leading-relaxed">
+          95 plats malgaches sont referencies, avec leurs 254 orthographes.
+          Cherchez celui que vous voulez gouter, la fiche dit ou en trouver.
+        </p>
+        <Link
+          to="/plats"
+          className="mt-3 inline-flex min-h-10 items-center rounded-full bg-accent-strong px-4 text-sm font-semibold text-accent-foreground"
+        >
+          Ouvrir l'atlas des plats
+        </Link>
+      </div>
+      </aside>
+
+      {/* ── COLONNE « AUTOUR » — n'apparait qu'a 1920 ──────────────────── */}
+      <aside className="mt-6 hidden shrink-0 space-y-3 large:sticky large:top-20 large:mt-0 large:block large:w-[250px]">
       {f.enfants.length > 0 && (
-        <section className="dk-reveal mt-6">
+        <section className="dk-reveal">
           <h2 className="dk-etiquette">Aux alentours</h2>
           <ul className="mt-2 flex flex-wrap gap-2">
             {f.enfants.map((e) => (
@@ -272,15 +321,20 @@ export default function Destination() {
         </section>
       )}
 
-      {f.lieu.lat != null && (
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <p className="dk-etiquette">Raconter</p>
+        <p className="dk-secondaire mt-2 leading-relaxed">
+          Vous connaissez {f.lieu.name_fr} ? Un recit, un tarif releve, une
+          route praticable : c'est ce qui construit la fiche.
+        </p>
         <Link
-          to={`/carte?lieu=${f.lieu.slug}`}
-          className="mt-6 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-medium"
+          to="/publier"
+          className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-input text-sm font-semibold"
         >
-          <MapPin className="h-4 w-4" aria-hidden="true" />
-          Voir sur la carte
+          Publier un recit
         </Link>
-      )}
+      </div>
+      </aside>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { TagRow } from "@/components/TagRow";
 import { toast } from "sonner";
 import {
   Bookmark,
@@ -403,15 +404,18 @@ export function PostCard({
           </p>
         )}
 
-        {post.dish && (
-          <Link
-            to={`/recherche?q=${encodeURIComponent(post.dish)}`}
-            className="mt-2 inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs hover:bg-muted"
-          >
-            <UtensilsCrossed className="h-3 w-3 text-accent" aria-hidden="true" />
-            {post.dish}
-          </Link>
-        )}
+        {/* ⚠ LES TROIS TAGS, ENSEMBLE ET TOUJOURS DANS LE MEME ORDRE.
+            Le plat etait seul ici, et le lieu vivait tout en haut dans la
+            ligne d'auteur : les trois gestes qui font le graphe du produit
+            — taguer un lieu, un etablissement, un plat — n'etaient donc
+            jamais lisibles d'un coup. Code couleur constant : teal le lieu,
+            encre l'etablissement, corail le plat. */}
+        <TagRow
+          className="mt-2.5"
+          lieu={post.place ? { nom: post.place } : null}
+          etablissement={post.page_name ? { nom: post.page_name } : null}
+          plat={post.dish ? { nom: post.dish } : null}
+        />
 
         {nbCommentaires > 0 && !ouvert && (
           <button

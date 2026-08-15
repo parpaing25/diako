@@ -160,6 +160,21 @@ export async function basculerDegustation(dishId: string, postId?: string | null
   return true;
 }
 
+/**
+ * Bascule une degustation depuis un SLUG.
+ *
+ * ⚠ La RPC `fiche_plat` ne rend pas l'identifiant du plat, seulement son slug.
+ *   Plutot que d'elargir la RPC — et de la redeployer pour une colonne — on
+ *   resout ici, en une requete indexee sur une colonne unique.
+ */
+export async function basculerDegustationParSlug(slug: string, postId?: string | null) {
+  const { data, error } = await supabase.from("dishes").select("id").eq("slug", slug).limit(1);
+  if (error) throw error;
+  const id = (data?.[0] as { id: string } | undefined)?.id;
+  if (!id) throw new Error("Plat introuvable.");
+  return basculerDegustation(id, postId);
+}
+
 /* ── CIRCUITS ──────────────────────────────────────────────────────────── */
 
 export interface CircuitListe {

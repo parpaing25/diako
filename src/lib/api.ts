@@ -36,6 +36,13 @@ export interface Post {
   place: string | null;
   dish: string | null;
   page_name: string | null;
+  /* ⚠ PAS DE SLUG ICI, ET C'EST ASSUME POUR L'INSTANT. La jointure
+   *  `lieu:places(slug)` ne type pas : `posts` n'a pas ses relations declarees
+   *  dans le types.ts maintenu a la main, et Supabase rend alors un
+   *  GenericStringError. Les tags retombent donc sur `/recherche?q=<nom>` —
+   *  qui RESOUT le nom contre le referentiel et ouvre la bonne fiche. Le geste
+   *  boucle, avec un ecran d'ecart. A reprendre quand les relations seront
+   *  declarees. */
   created_at: string;
   reactions_count: number;
   comments_count: number;

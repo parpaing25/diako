@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Flame, Star, Utensils } from "lucide-react";
+import { Check, Flame, Star, Utensils } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { basculerDegustationParSlug, monCarnet } from "@/lib/decouverte";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
-import { EtatErreur, EtatVide, Squelettes } from "@/components/Etats";
+import { EmptyState, EtatErreur, Squelettes } from "@/components/Etats";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { Fourchette, Prix } from "@/components/Prix";
 import { cn } from "@/lib/utils";
@@ -64,7 +67,18 @@ export default function Plat() {
   const { slug } = useParams<{ slug: string }>();
   const [f, setF] = useState<Fiche | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absente" | "erreur">("chargement");
+  const { user } = useAuth();
+  /** ⚠ L'etat vient du CARNET, pas d'un compteur local : rouvrir la page doit
+   *  montrer la verite, pas ce qu'on croyait avoir clique. */
+  const [goute, setGoute] = useState(false);
   useReveal(f);
+
+  useEffect(() => {
+    if (!user || !f) return;
+    void monCarnet()
+      .then((c) => setGoute(c.some((d) => d.plat?.slug === f.plat.slug)))
+      .catch(() => undefined);
+  }, [user, f]);
 
   const charger = useCallback(async () => {
     if (!slug) return;
@@ -163,6 +177,44 @@ export default function Plat() {
         </ul>
       )}
 
+      {/* ── LE GESTE QUI RELIE L'ATLAS AU CARNET ───────────────────────────
+          ⚠ C'est la seule mecanique du produit qui fonctionne avec UN membre
+            inscrit : marquer un plat goute n'a besoin de personne d'autre.
+            Elle doit donc etre a portee de pouce sur chaque fiche, et pas
+            seulement dans le carnet. */}
+      <button
+        onClick={async () => {
+          if (!user)
+            return toast("Connexion requise", {
+              description: "Créez un compte pour tenir votre carnet de goûts.",
+            });
+          const avant = goute;
+          setGoute(!avant);
+          try {
+            setGoute(await basculerDegustationParSlug(p.slug));
+          } catch {
+            setGoute(avant);
+            toast.error("L'enregistrement a échoué.");
+          }
+        }}
+        aria-pressed={goute}
+        className={cn(
+          "dk-onde mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold transition",
+          goute
+            ? "border border-ok bg-ok-soft text-ok"
+            : "bg-accent-strong text-accent-foreground"
+        )}
+      >
+        {goute ? (
+          <>
+            <Check className="h-4 w-4" aria-hidden="true" />
+            Goûté
+          </>
+        ) : (
+          "Marquer goûté"
+        )}
+      </button>
+
       {p.ingredients?.length ? (
         <p className="dk-secondaire mt-3">
           <span className="font-semibold text-foreground">Dedans : </span>
@@ -180,13 +232,36 @@ export default function Plat() {
         </div>
 
         {f.adresses.length === 0 ? (
-          <EtatVide
+          <EmptyState
             className="mt-2"
             icone={Utensils}
-            titre="Aucune adresse ne le sert encore"
-            texte="Aucune carte de restaurant n'est saisie pour l'instant. Vous connaissez un endroit où on en mange bien ? Racontez-le, ou créez la page de l'établissement."
-            action="Raconter un repas"
-            lien="/publier"
+            manque="Aucune adresse ne le sert encore sur Diako."
+            action={{ libelle: "Je sais où en trouver", lien: "/publier" }}
+            contenuReel={
+              <>
+                <p className="dk-secondaire leading-relaxed">
+                  Zéro carte de restaurant saisie à ce jour. La liste s'affichera
+                  avec le prix du plat chez chacun, sa distance et son horaire.
+                  En attendant, ce plat porte déjà sa fiche et ses{" "}
+                  {f.alias.length} variantes d'orthographe — ce sont elles qui
+                  font marcher la recherche.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    to="/plats"
+                    className="inline-flex min-h-10 items-center rounded-full border border-input px-4 text-sm font-semibold"
+                  >
+                    Parcourir les 95 plats
+                  </Link>
+                  <Link
+                    to="/pro"
+                    className="inline-flex min-h-10 items-center rounded-full border border-input px-4 text-sm font-semibold"
+                  >
+                    Inviter un restaurant
+                  </Link>
+                </div>
+              </>
+            }
           />
         ) : (
           <ul className="mt-2 divide-y divide-border overflow-hidden rounded-2xl border border-border">

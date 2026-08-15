@@ -35,6 +35,27 @@ $sbUrl    = 'https://eifrwecaszzqrdwjjjbu.supabase.co';
 $anonKey  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZnJ3ZWNhc3p6cXJkd2pqamJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NTM5OTYsImV4cCI6MjA3MDAyOTk5Nn0.Ks8epc1CiOyj7Y4AYGL9zRHHoZscQJ7_nWbqwMNcVMQ';
 $headers  = ['apikey: ' . $anonKey, 'Authorization: Bearer ' . $anonKey];
 
+/**
+ * Lit une collection PostgREST EN ENTIER, par pages de 1 000.
+ *
+ * 🔴 CE QUE ÇA CORRIGE. `&limit=5000` ne sert à rien : PostgREST plafonne une
+ *    réponse à 1 000 lignes, silencieusement. Après l'import des 23 régions, le
+ *    sitemap ne déclarait donc que 1 000 des 3 158 fiches — les deux tiers de
+ *    l'annuaire restaient invisibles pour Google, sans le moindre signal.
+ *    ⚠ Une limite qu'on demande n'est pas une limite qu'on obtient.
+ */
+function lire_tout(string $url, array $headers, int $max = 20000): array {
+    $tout = []; $pas = 1000;
+    for ($decalage = 0; $decalage < $max; $decalage += $pas) {
+        $u = $url . '&offset=' . $decalage . '&limit=' . $pas;
+        $lot = lire($u, $headers);
+        if (!$lot) break;
+        $tout = array_merge($tout, $lot);
+        if (count($lot) < $pas) break;
+    }
+    return $tout;
+}
+
 function lire(string $url, array $headers): array {
     $ch = curl_init();
     curl_setopt_array($ch, [
@@ -95,9 +116,9 @@ $lieux = lire(
     $headers
 );
 
-$fiches = lire(
+$fiches = lire_tout(
     $sbUrl . '/rest/v1/pages?select=slug,updated_at,cover_url,name,completeness'
-           . '&is_published=eq.true&order=updated_at.desc&limit=5000',
+           . '&is_published=eq.true&order=updated_at.desc',
     $headers
 );
 

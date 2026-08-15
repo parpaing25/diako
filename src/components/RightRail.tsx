@@ -19,11 +19,30 @@ const MOIS = [
   "juillet", "août", "septembre", "octobre", "novembre", "décembre",
 ];
 
-interface Saison {
+/**
+ * ⚠ CE BLOC NE DIT PLUS « OÙ IL FAIT BEAU », IL DIT CE QUI SE PASSE.
+ *
+ * 🔴 Il affichait la saisonnalité météo de cinq destinations — « Isalo · sec ».
+ *    Vrai, mais sans conséquence : personne ne prend un vol parce qu'il fait
+ *    sec. Ce qui décide d'un voyage, ce sont les baleines de juillet à octobre,
+ *    la vanille verte de fin juillet, le Sômarôho début août.
+ *
+ * ⚠ CHAQUE LIGNE PORTE SA SOURCE ET SON DEGRÉ DE CERTITUDE. La plupart de ces
+ *   rendez-vous n'ont pas de date fixe : le Sômarôho s'est tenu en juillet en
+ *   2023 et en août depuis. On affiche la PÉRIODE telle qu'elle a été vérifiée,
+ *   avec sa réserve — jamais un jour inventé pour faire propre.
+ */
+interface Evenement {
   slug: string;
-  nom: string;
+  titre: string;
+  genre: string;
+  lieu: string | null;
   region: string | null;
-  raison: string | null;
+  periode: string | null;
+  description: string | null;
+  source: string | null;
+  confiance: string | null;
+  recurrent: boolean;
 }
 
 interface Vogue {
@@ -144,7 +163,7 @@ export function RightRail() {
     };
   }, [villeDeclaree]);
 
-  const [saison, setSaison] = useState<Saison[] | null>(null);
+  const [saison, setSaison] = useState<Evenement[] | null>(null);
   const [vogue, setVogue] = useState<Vogue[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const mois = MOIS[new Date().getMonth()];
@@ -180,8 +199,8 @@ export function RightRail() {
     // Trois appels, une seule fois, en parallèle. Aucun canal temps réel : la
     // règle d'egress du projet le réserve au chat et aux notifications.
     void supabase
-      .rpc("saison_du_mois", { p_mois: null, p_limite: 5 })
-      .then(({ data }) => setSaison((data as Saison[] | null) ?? []));
+      .rpc("saison_en_cours", { p_mois: null })
+      .then(({ data }) => setSaison((data as unknown as Evenement[] | null) ?? []));
     void supabase.rpc("stats_diako").then(({ data }) => setStats(data as Stats | null));
     // ⚠ LA POSITION VIENT DE LA VILLE DÉCLARÉE, jamais du GPS. Demander la
     //   géolocalisation pour classer un bloc de rail serait disproportionné —
@@ -336,23 +355,55 @@ export function RightRail() {
             La saison en cours
           </h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Où il fait bon aller en {mois}.
+            Ce qui se passe en {mois}.
           </p>
-          <ul className="mt-3 space-y-2.5">
-            {saison.map((s) => (
-              <li key={s.slug}>
-                <Link to={`/lieu/${s.slug}`} className="dk-ligne-tendance group block">
-                  <span className="text-sm font-semibold group-hover:text-primary">{s.nom}</span>
-                  {s.region && (
-                    <span className="ml-1.5 text-xs text-muted-foreground">{s.region}</span>
-                  )}
-                  {s.raison && (
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{s.raison}</span>
-                  )}
-                </Link>
+          <ul className="mt-3 space-y-3">
+            {saison.slice(0, 6).map((s) => (
+              <li key={s.slug} className="dk-ligne-tendance">
+                <p className="text-sm font-semibold">{s.titre}</p>
+                {(s.lieu || s.region) && (
+                  <p className="dk-secondaire">
+                    {[s.lieu, s.region].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+                {/* ⚠ LA PÉRIODE TELLE QU'ELLE A ÉTÉ VÉRIFIÉE, avec sa réserve.
+                    « Début août, jour variable selon les années » est une
+                    information utile ; un faux « 8 août » fait rater un vol. */}
+                {s.periode && (
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                    {s.periode}
+                  </p>
+                )}
+                {/* ⚠ ON DIT CE QU'ON NE SAIT PAS. Un rendez-vous non confirmé
+                    ou non annuel doit le porter à l'écran : c'est la
+                    différence entre informer et faire déplacer quelqu'un pour
+                    rien. */}
+                {(s.confiance === "incertaine" || !s.recurrent) && (
+                  <p className="mt-0.5 text-xs font-medium text-warn">
+                    {!s.recurrent
+                      ? "Ne se répète pas chaque année — à vérifier."
+                      : "Dates non confirmées pour cette année."}
+                  </p>
+                )}
+                {s.source && (
+                  <a
+                    href={s.source}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="mt-0.5 inline-block text-[11px] text-muted-foreground underline"
+                  >
+                    source
+                  </a>
+                )}
               </li>
             ))}
           </ul>
+          <Link
+            to="/evenements"
+            className="dk-secondaire mt-3 inline-block text-primary"
+          >
+            Tous les événements
+          </Link>
         </section>
       )}
 

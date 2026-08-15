@@ -1340,6 +1340,16 @@ export type Database = {
         };
         Returns: string;
       };
+      /** ⚠ Rend la PERIODE verifiee, pas une date : la plupart des rendez-vous
+       *  malgaches n'ont pas de jour fixe d'une annee a l'autre. */
+      saison_en_cours: {
+        Args: { p_mois?: number | null };
+        Returns: {
+          slug: string; titre: string; genre: string; lieu: string | null;
+          region: string | null; periode: string | null; description: string | null;
+          source: string | null; confiance: string | null; recurrent: boolean;
+        }[];
+      };
       devenir_pro: {
         Args: { p_metier: string };
         Returns: undefined;

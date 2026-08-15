@@ -69,16 +69,25 @@ export function Commentaires({ postId }: { postId: string }) {
         <ul className="space-y-3">
           {liste.map((c) => (
             <li key={c.id} className="flex gap-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-muted text-xs font-semibold">
+              {/* ⚠ LA PHOTO ET LE NOM MENENT AU PROFIL. C'etait le seul endroit
+                  du produit ou un auteur s'affichait sans etre cliquable : on
+                  lisait un commentaire utile sans pouvoir savoir qui parle. */}
+              <Link
+                to={`/user/${c.author_id}`}
+                className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-muted text-xs font-semibold"
+              >
                 {c.auteur.avatar ? (
                   <img src={getThumbUrl(c.auteur.avatar)} alt="" width={32} height={32} className="h-8 w-8 object-cover" />
                 ) : (
                   (c.auteur.name || "?").slice(0, 1).toUpperCase()
                 )}
-              </span>
+              </Link>
               <div className="min-w-0 flex-1">
                 <p className="text-sm">
-                  <span className="font-semibold">{c.auteur.name || "Membre"}</span> {c.body}
+                  <Link to={`/user/${c.author_id}`} className="font-semibold hover:underline">
+                    {c.auteur.name || "Membre"}
+                  </Link>{" "}
+                  {c.body}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">{ilYA(c.created_at)}</p>
               </div>

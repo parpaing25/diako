@@ -755,13 +755,39 @@ export async function supprimerCircuit(id: string) {
   if (error) throw error;
 }
 
+/**
+ * Les jours DEJA saisis d'un circuit.
+ *
+ * 🔴 CETTE LECTURE N'EXISTAIT PAS, et c'est ce qui rendait l'enregistrement
+ *    destructeur. Le formulaire partait toujours de jours VIDES, et
+ *    `enregistrerJoursCircuit` supprime avant d'inserer : rouvrir l'itineraire
+ *    d'un circuit deja rempli puis enregistrer l'EFFACAIT entierement, sans un
+ *    mot. Personne ne l'a rencontre parce qu'aucun circuit n'existe encore ;
+ *    ca aurait mordu la premiere agence a en saisir un.
+ */
+export async function chargerJoursCircuit(tourId: string): Promise<
+  { jour: number; titre: string; detail: string | null; nuitee: string | null }[]
+> {
+  const { data, error } = await supabase
+    .from("tour_days")
+    .select("jour, titre, detail, nuitee")
+    .eq("tour_id", tourId)
+    .order("jour");
+  if (error) throw error;
+  return (data as { jour: number; titre: string; detail: string | null; nuitee: string | null }[]) ?? [];
+}
+
 export async function enregistrerJoursCircuit(
   tourId: string,
   jours: { jour: number; titre: string; detail?: string | null; nuitee?: string | null }[]
 ): Promise<void> {
+  // ⚠ ON REFUSE D'EFFACER SUR UN LOT VIDE. « Supprimer puis inserer » est
+  //   acceptable pour remplacer un itineraire ; ca ne doit jamais servir a le
+  //   vider par accident. Un appel sans jours est presque toujours un
+  //   formulaire qui n'a pas fini de charger.
+  if (!jours.length) return;
   const { error: eSuppr } = await supabase.from("tour_days").delete().eq("tour_id", tourId);
   if (eSuppr) throw eSuppr;
-  if (!jours.length) return;
   const { error } = await supabase
     .from("tour_days")
     .insert(jours.map((j) => ({ ...j, tour_id: tourId })));

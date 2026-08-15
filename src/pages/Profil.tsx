@@ -5,6 +5,11 @@ import { MapPin, MessageCircle, UserMinus, UserPlus } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  profilPublic,
+  publicationsPubliques,
+  type ProfilPublic as ProfilPublicRPC,
+} from "@/lib/api";
 import { getAvatarUrl } from "@/lib/supabaseImage";
 import { basculerAbonnement, ouvrirConversation } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
@@ -36,6 +41,7 @@ export default function Profil() {
   const { user } = useAuth();
   const [profil, setProfil] = useState<ProfilPublic | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [pub_, setPublic_] = useState<ProfilPublicRPC | null>(null);
   const [suivi, setSuivi] = useState(false);
   const [chargement, setChargement] = useState(true);
   useSEO({
@@ -50,7 +56,27 @@ export default function Profil() {
     if (!id) return;
     (async () => {
       setChargement(true);
-      const { data } = await supabase.from("profiles").select(COLONNES).eq("id", id).maybeSingle();
+      // 🔴 ON PASSE PAR `profil_public()`, PAS PAR LA TABLE. La lecture directe
+      //    ignorait `profil_expose()` et surtout `posts.visibilite` : une
+      //    publication que la personne venait de marquer privée restait
+      //    affichée ici. Le réglage aurait eu l'air de marcher partout sauf
+      //    sur l'écran qu'il est censé protéger.
+      const pub = await profilPublic(id).catch(() => null);
+      setPublic_(pub);
+      const data = pub
+        ? {
+            id: pub.id,
+            display_name: pub.nom,
+            avatar_url: pub.avatar,
+            bio: pub.bio,
+            home_place: pub.ville,
+            account_type: pub.type,
+            verification: pub.verification,
+            followers_count: pub.nb_abonnes,
+            following_count: pub.nb_abonnements,
+            posts_count: pub.nb_publications,
+          }
+        : null;
       setProfil((data as ProfilPublic) ?? null);
 
       if (user && user.id !== id) {
@@ -63,21 +89,20 @@ export default function Profil() {
         setSuivi(!!f);
       }
 
-      const { data: ps } = await supabase
-        .from("posts")
-        .select("id,kind,body,media,place,dish,page_name,created_at,reactions_count,comments_count,saves_count")
-        .eq("author_id", id)
-        .eq("status", "published")
-        .order("created_at", { ascending: false })
-        .limit(20);
+      // ⚠ `publications_publiques()` filtre sur status ET visibilite, et
+      //   refuse de rendre quoi que ce soit si le profil n'est pas exposé.
+      const ps = await publicationsPubliques(id, null, 20).catch(() => []);
 
       type L = {
         id: string; kind: string; body: string | null; media: unknown;
-        place: string | null; dish: string | null; page_name: string | null;
-        created_at: string; reactions_count: number; comments_count: number; saves_count: number;
+        place: string | null; dish: string | null; page_name?: string | null;
+        created_at: string; reactions_count: number; comments_count: number;
+        saves_count?: number;
       };
       setPosts(
         ((ps ?? []) as unknown as L[]).map((p) => ({
+          page_name: null,
+          saves_count: 0,
           ...p,
           media: (p.media as Post["media"]) ?? [],
           author: {
@@ -222,6 +247,56 @@ export default function Profil() {
           <span><strong>{profil.following_count}</strong> <span className="text-muted-foreground">abonnements</span></span>
         </div>
       </div>
+
+      {/* ⚠ CE QU'ON VIENT CHERCHER CHEZ UN PRO : ses etablissements. Sans ce
+          bloc, le profil d'un hotelier ne montre que ses recits — et le
+          visiteur reparait sans avoir trouve l'hotel. */}
+      {pub_ && pub_.pages.length > 0 && (
+        <section className="mt-6 md:px-4">
+          <h2 className="dk-etiquette px-4 md:px-0">
+            {pub_.pages.length === 1 ? "Son établissement" : "Ses établissements"}
+          </h2>
+          <ul className="mt-2 grid gap-2 px-4 sm:grid-cols-2 md:px-0">
+            {pub_.pages.map((g) => (
+              <li key={g.slug}>
+                <Link
+                  to={`/p/${g.slug}`}
+                  className="flex min-h-[64px] items-center gap-3 rounded-xl border border-border bg-card p-3 transition hover:border-primary"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{g.nom}</span>
+                    <span className="dk-secondaire block truncate">
+                      {[g.categories?.[0], g.lieu].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ⚠ `lieux` vaut `null` quand la personne n'a PAS ouvert ses lieux — ce
+          qui n'est pas la meme chose qu'un tableau vide (« elle n'a rien
+          publie »). On ne montre rien dans le premier cas, et surtout on ne
+          dit pas qu'elle n'a voyage nulle part. */}
+      {pub_?.lieux && pub_.lieux.length > 0 && (
+        <section className="mt-6 md:px-4">
+          <h2 className="dk-etiquette px-4 md:px-0">Où {moi ? "je suis" : "il ou elle est"} allé</h2>
+          <ul className="mt-2 flex flex-wrap gap-1.5 px-4 md:px-0">
+            {pub_.lieux.map((l) => (
+              <li key={l}>
+                <Link
+                  to={`/recherche?q=${encodeURIComponent(l)}`}
+                  className="inline-flex min-h-8 items-center rounded-full border border-border px-3 text-xs hover:border-primary hover:text-primary"
+                >
+                  {l}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="mt-6 space-y-0 md:space-y-4 md:px-4">
         {posts.length === 0 ? (

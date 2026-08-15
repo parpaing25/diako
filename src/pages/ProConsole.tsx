@@ -22,6 +22,7 @@ import {
   enregistrerActivite,
   enregistrerChambre,
   enregistrerCircuit,
+  chargerJoursCircuit,
   enregistrerJoursCircuit,
   enregistrerPlat,
   enregistrerPrixCircuit,
@@ -1544,6 +1545,25 @@ function JoursCircuit({
   const [jours, setJours] = useState(
     Array.from({ length: nbJours }, (_, i) => ({ jour: i + 1, titre: "", detail: "" }))
   );
+
+  // 🔴 LE FORMULAIRE NE RELISAIT JAMAIS CE QUI EXISTE. Il partait de jours
+  //    vides, et l'enregistrement supprime avant d'inserer : rouvrir
+  //    l'itineraire d'un circuit deja rempli puis enregistrer l'effacait
+  //    entierement, sans un mot.
+  useEffect(() => {
+    if (!ouvert) return;
+    void chargerJoursCircuit(tourId)
+      .then((deja) => {
+        if (!deja.length) return;
+        setJours(
+          Array.from({ length: nbJours }, (_, i) => {
+            const j = deja.find((x) => x.jour === i + 1);
+            return { jour: i + 1, titre: j?.titre ?? "", detail: j?.detail ?? "" };
+          })
+        );
+      })
+      .catch(() => undefined);
+  }, [ouvert, tourId, nbJours]);
 
   if (!ouvert) {
     return (

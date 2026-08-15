@@ -46,7 +46,13 @@ export function BottomNav() {
                   className={cn(
                     "grid place-items-center",
                     centre
-                      ? "h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-background"
+                      /* ⚠ CORAIL, pas teal (ecran M1). Le bouton central est
+                         le seul appel a CONTRIBUER de toute la barre : il doit
+                         se distinguer des quatre entrees de navigation, pas
+                         s'y fondre. `accent-strong` et non `accent` : il porte
+                         une icone sur fond plein, et le corail clair ne passe
+                         pas le contraste. */
+                      ? "h-12 w-12 rounded-full bg-accent-strong text-accent-foreground shadow-lg ring-4 ring-background"
                       : "h-6 w-6"
                   )}
                 >

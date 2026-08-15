@@ -39,6 +39,22 @@ const Post = lazy(() => import("./pages/Post"));
 const Mentions = lazy(() => import("./pages/Mentions"));
 const Confidentialite = lazy(() => import("./pages/Confidentialite"));
 const Cgu = lazy(() => import("./pages/Cgu"));
+/* ═══ LES ECRANS DU DESIGN FINAL ════════════════════════════════════════
+   ⚠ TOUS EN `lazy()`. Ce sont neuf routes de plus : chargees d'emblee, elles
+     alourdiraient le paquet initial que tout le monde telecharge, y compris
+     ceux qui ne viennent que lire le fil sur une 3G.
+   ⚠ CHACUNE EST BRANCHEE SUR UNE VRAIE TABLE (migrations 0032/0033). La regle
+     du projet interdit une entree de navigation vers un ecran mort : ce qu'on
+     y ecrit se garde, meme si les listes sont vides aujourd'hui. */
+const Plats = lazy(() => import("./pages/Plats"));
+const Gouts = lazy(() => import("./pages/Gouts"));
+const Circuits = lazy(() => import("./pages/Circuits"));
+const Circuit = lazy(() => import("./pages/Circuit"));
+const Sites = lazy(() => import("./pages/Sites"));
+const Site = lazy(() => import("./pages/Site"));
+const Evenements = lazy(() => import("./pages/Evenements"));
+const Projet = lazy(() => import("./pages/Projet"));
+const Guides = lazy(() => import("./pages/Guides"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -105,6 +121,26 @@ function Shell() {
           produit, il ne pouvait pas rester invisible. */}
       <Route path="/lieu/:slug" element={<Destination />} />
       <Route path="/plat/:slug" element={<Plat />} />
+
+      {/* ── L'aventure culinaire — le differenciant du produit, et la seule
+             brique sociale qui fonctionne avec un seul membre inscrit. ── */}
+      <Route path="/plats" element={<Plats />} />
+      <Route path="/gouts" element={<Gouts />} />
+
+      {/* ── Voyager : circuits, sites et parcs, evenements ── */}
+      <Route path="/circuits" element={<Circuits />} />
+      <Route path="/circuit/:slug" element={<Circuit />} />
+      <Route path="/sites" element={<Sites />} />
+      <Route path="/site/:slug" element={<Site />} />
+      <Route path="/evenements" element={<Evenements />} />
+
+      {/* ── L'inverse de l'annonce : l'offre vient au voyageur. ── */}
+      <Route path="/projet" element={<Projet />} />
+
+      {/* ── Les guides : le trafic de recherche avant que l'annuaire soit
+             fourni. Une seule page, deux vues, selon le slug. ── */}
+      <Route path="/guides" element={<Guides />} />
+      <Route path="/guides/:slug" element={<Guides />} />
       <Route path="/messages" element={<Messages />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/user/:id" element={<Profil />} />

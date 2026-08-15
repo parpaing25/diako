@@ -34,13 +34,6 @@
     <link rel="manifest" href="/manifest.json" />
 
     <!-- Police auto-hébergée : préchargée, aucun appel externe. -->
-    <link
-      rel="preload"
-      as="font"
-      type="font/woff2"
-      href="/fonts/inter-latin-var-v20.woff2"
-      crossorigin
-    />
 
     <!-- app-init.js pose le thème, applique le CSS préchargé AVANT le montage de
          React et enregistre le service worker de façon retardée. Priorité haute :
@@ -126,7 +119,7 @@
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
       body {
-        font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         color: var(--dk-ink);
         background: var(--dk-bg);
         -webkit-font-smoothing: antialiased;

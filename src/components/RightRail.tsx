@@ -291,6 +291,28 @@ export function RightRail() {
         </section>
       )}
 
+      {/* ── L'AVENTURE CULINAIRE (écran D1) ──────────────────────────────
+          ⚠ C'EST LE SEUL BLOC DU RAIL DONT LA MATIÈRE EST ABONDANTE. Partout
+            ailleurs Diako compte des zéros — 0 avis, 0 carte, 1 membre. Ici il
+            a 95 plats et 254 orthographes, et il peut le dire sans rien
+            embellir. C'est pour ça qu'il passe AVANT la feuille de route. */}
+      <section className="rounded-2xl border border-accent-strong/25 bg-accent/[0.07] p-4">
+        <h2 className="dk-etiquette text-accent-strong">Aventure culinaire</h2>
+        <p className="mt-2 text-[15px] font-bold leading-tight">
+          95 plats à goûter, 254 façons de les écrire
+        </p>
+        <p className="dk-secondaire mt-2 leading-relaxed">
+          Cherchez un plat, ouvrez sa fiche, marquez-le goûté. Les adresses
+          viendront des cartes publiées par les restaurants.
+        </p>
+        <Link
+          to="/plats"
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong text-sm font-semibold text-accent-foreground"
+        >
+          Ouvrir l'atlas
+        </Link>
+      </section>
+
       {/* ── L'avancement réel ─────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="dk-etiquette">Ce qui arrive sur Diako</h2>

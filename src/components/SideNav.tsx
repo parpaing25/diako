@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { NAV_COMPLET } from "@/lib/nav";
 import { prechargerRoute } from "@/lib/prechargerRoute";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,26 @@ export function SideNav() {
           </li>
         ))}
       </ul>
+
+      {/* ── LE PROJET DE VOYAGE, AU BAS DU RAIL (écran D1) ────────────────
+          ⚠ POURQUOI IL EST ICI ET PAS DANS LA LISTE. C'est le seul endroit du
+            produit où l'offre vient au voyageur au lieu de l'inverse — et
+            c'est ce qui fonctionne le mieux quand l'annuaire est encore mince :
+            on ne demande pas de comparer 54 fiches, on demande de décrire un
+            voyage une fois. Une ligne de menu parmi seize l'aurait noyé. */}
+      <Link
+        to="/projet"
+        onPointerDown={() => prechargerRoute("/projet")}
+        className="mt-4 block rounded-2xl border border-border bg-card p-4 transition hover:border-primary"
+      >
+        <p className="dk-etiquette">Mon projet de voyage</p>
+        <p className="dk-secondaire mt-1.5 leading-relaxed">
+          Décrivez-le une fois, les agences et les hôtels répondent.
+        </p>
+        <span className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-input text-sm font-semibold">
+          Commencer
+        </span>
+      </Link>
     </nav>
   );
 }

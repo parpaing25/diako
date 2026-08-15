@@ -20,6 +20,13 @@ export default {
       screens: { large: "1920px" },
       colors: {
         or: "hsl(var(--or))",
+        /* Jetons du DESIGN-HANDOFF §1, exposes a Tailwind. */
+        "teal-soft": "hsl(var(--teal-soft))",
+        "coral-soft": "hsl(var(--coral-soft))",
+        gold: { DEFAULT: "hsl(var(--gold))", soft: "hsl(var(--gold-soft))" },
+        "line-soft": "hsl(var(--line-soft))",
+        ok: { DEFAULT: "hsl(var(--ok))", soft: "hsl(var(--ok-soft))" },
+        warn: { DEFAULT: "hsl(var(--warn))", soft: "hsl(var(--warn-soft))" },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -73,7 +80,7 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        sans: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
         // Serif et mono du SYSTEME : zero octet telecharge sur 3G.
         serif: ["Georgia", "Iowan Old Style", "Times New Roman", "serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Cascadia Mono", "Menlo", "monospace"],

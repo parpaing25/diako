@@ -18,17 +18,30 @@ import { getThumbUrl } from "@/lib/imageThumb";
 import { Carrousel } from "@/components/Carrousel";
 import { cn } from "@/lib/utils";
 
-/** Les six reactions de la maquette. « J'y vais » et « bon prix » disent des
- *  choses qu'un coeur ne dit pas — et ce sont elles qui nourrissent le
- *  classement du fil. Les codes sont ceux ecrits en base. */
+/**
+ * LES SIX REACTIONS NOMMEES — design final, « des mots, pas des visages ».
+ *
+ * 🔴 CES CODES ETAIENT REFUSES PAR LA BASE. La contrainte de `reactions`
+ *    n'autorisait que jaime/adore/waouh/utile : quatre de ces six boutons
+ *    partaient en erreur 23514 et l'optimisme de l'interface etait annule.
+ *    Avec un seul membre inscrit, l'echec ressemblait a une latence. La
+ *    migration 0031 aligne enfin la contrainte sur cette liste.
+ *
+ * ⚠ « Utile » et « Bon prix » sont les deux qui font la valeur de Diako :
+ *   elles disent ce qu'un coeur ne dit pas, et ce sont elles qui nourrissent
+ *   le classement du fil.
+ */
 const REACTIONS = [
-  { code: "jaime", label: "J'aime" },
   { code: "utile", label: "Utile" },
   { code: "beau", label: "Beau" },
   { code: "jy_vais", label: "J'y vais" },
   { code: "bon_prix", label: "Bon prix" },
+  { code: "merci", label: "Merci" },
   { code: "prudence", label: "Prudence" },
 ] as const;
+
+/** Le geste d'un seul appui. ⚠ Plus « jaime » : ce code n'existe plus en base. */
+const REACTION_PAR_DEFAUT = "utile";
 import {
   basculerFavori,
   basculerReaction,
@@ -98,7 +111,7 @@ export function PostCard({
   const [pulseCoeur, setPulseCoeur] = useState(false);
   const [pulseSignet, setPulseSignet] = useState(false);
 
-  async function reagir(type = "jaime") {
+  async function reagir(type: string = REACTION_PAR_DEFAUT) {
     if (!connecte()) return;
     const avant = reaction;
     // Toucher la meme reaction la retire ; en toucher une autre la remplace.
@@ -289,7 +302,7 @@ export function PostCard({
             setChoixOuvert((o) => !o);
           }}
           aria-pressed={!!reaction}
-          aria-label="J'aime"
+          aria-label={reaction ? `Reaction : ${REACTIONS.find((r) => r.code === reaction)?.label ?? reaction}` : "Marquer comme utile"}
           className={cn(
             "relative grid h-10 w-10 place-items-center rounded-full hover:bg-muted",
             reaction ? "text-accent" : "text-foreground",
@@ -367,7 +380,9 @@ export function PostCard({
       <div className="px-4">
         {nbReactions > 0 && (
           <p className="text-sm font-semibold">
-            {nbReactions} j'aime
+            {/* ⚠ Plus « j'aime » : la reaction par defaut est « Utile », et le
+                compteur agrege les six. Un libelle neutre est le seul juste. */}
+            {nbReactions} reaction{nbReactions > 1 ? "s" : ""}
           </p>
         )}
 

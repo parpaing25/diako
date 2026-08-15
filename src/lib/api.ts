@@ -178,7 +178,12 @@ export async function supprimerPost(id: string) {
 /* ── Réactions ─────────────────────────────────────────────────────────── */
 
 /** Bascule la réaction. Renvoie le type courant, ou null si retirée. */
-export async function basculerReaction(postId: string, type = "jaime"): Promise<string | null> {
+/**
+ * ⚠ LE DEFAUT EST « utile », PLUS « jaime ». Le code `jaime` n'est plus
+ *   autorise par la contrainte de la table depuis la migration 0031 : le
+ *   design final remplace le coeur muet par six reactions nommees.
+ */
+export async function basculerReaction(postId: string, type = "utile"): Promise<string | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();

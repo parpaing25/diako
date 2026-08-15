@@ -65,6 +65,89 @@ export function EtatVide({
 }
 
 /**
+ * L'ÉTAT VIDE STRICT — composant n°4 du DESIGN-HANDOFF §4.
+ *
+ * ⚠ TROIS OBLIGATIONS, ET LE COMPOSANT REFUSE DE RENDRE S'IL EN MANQUE UNE :
+ *     ① dire ce qui manque, sans détour ;
+ *     ② offrir une action possible tout de suite ;
+ *     ③ proposer du contenu réel à parcourir en attendant.
+ *   « Jamais deux sur trois. »
+ *
+ * ⚠ POURQUOI UNE CONTRAINTE AUSSI DURE, plutôt que des props facultatives.
+ *   Le vide est l'état le plus FRÉQUENT de Diako : 0 avis, 0 carte de
+ *   restaurant, 0 circuit, 1 membre. Si le troisième volet est facultatif, il
+ *   sera oublié partout, et le site ressemblera à une coquille — alors qu'il
+ *   possède 178 destinations et 95 plats à montrer. Rendre l'oubli visible en
+ *   développement est le seul moyen de tenir la règle sur trente écrans.
+ *
+ * ⚠ IL NE LÈVE PAS D'EXCEPTION EN PRODUCTION. Faire tomber une page entière
+ *   parce qu'un état vide est incomplet serait pire que le défaut lui-même :
+ *   on écrit dans la console, et on affiche ce qu'on a.
+ */
+export function EmptyState({
+  manque,
+  action,
+  contenuReel,
+  icone: Icone,
+  className,
+}: {
+  /** ① Ce qui manque, dit sans détour. « Aucune carte n'est encore saisie ici. » */
+  manque: string;
+  /** ② Une action possible tout de suite. */
+  action: { libelle: string; lien?: string; onClick?: () => void };
+  /** ③ Du vrai contenu à parcourir — pas une illustration. */
+  contenuReel: React.ReactNode;
+  icone?: LucideIcon;
+  className?: string;
+}) {
+  const incomplet =
+    !manque?.trim() || !action?.libelle?.trim() || contenuReel == null || contenuReel === false;
+
+  if (incomplet && import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[EmptyState] Les trois obligations sont requises : manque, action, contenuReel. Reçu :",
+      { manque, action, contenuReel }
+    );
+  }
+
+  return (
+    <div className={cn("rounded-2xl border border-dashed border-border p-6", className)}>
+      <div className="flex items-start gap-3">
+        {Icone && (
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">
+            <Icone className="h-5 w-5 text-primary" aria-hidden="true" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold leading-snug">{manque}</p>
+          {action?.libelle &&
+            (action.lien ? (
+              <Link
+                to={action.lien}
+                className="mt-3 inline-flex min-h-11 items-center rounded-full bg-primary px-5 font-medium text-primary-foreground"
+              >
+                {action.libelle}
+              </Link>
+            ) : (
+              <button
+                onClick={action.onClick}
+                className="mt-3 inline-flex min-h-11 items-center rounded-full bg-primary px-5 font-medium text-primary-foreground"
+              >
+                {action.libelle}
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {contenuReel != null && contenuReel !== false && (
+        <div className="mt-5 border-t border-border pt-4">{contenuReel}</div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Une erreur RÉCUPÉRABLE.
  *
  * ⚠ « Rien n'est perdu » n'est pas une politesse : sur ce marché, la coupure

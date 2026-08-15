@@ -47,7 +47,7 @@ export function PostImmersif({
   async function reagir() {
     if (!connecte()) return;
     const avant = reaction;
-    setReaction(avant ? null : "jaime");
+    setReaction(avant ? null : "utile"); // ⚠ « jaime » refuse en base depuis 0031
     setNbReactions((n) => n + (avant ? -1 : 1));
     try {
       setReaction(await basculerReaction(post.id));

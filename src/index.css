@@ -4,18 +4,12 @@
    Cible : Android bas/moyen de gamme, 390 px, 3G malgache.
    =========================================================================== */
 
-/* Inter variable AUTO-HEBERGEE : zero appel a Google Fonts
-   (= un aller-retour DNS + TLS de moins sur 3G). */
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("/fonts/inter-latin-var-v20.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
-    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
+/* ⚠ AUCUNE POLICE TELECHARGEE — regle CLAUDE.md, appliquee le 15/08/26.
+   Le site auto-hebergeait Inter en variable (48 Ko de woff2). Zero appel a
+   Google Fonts, certes, mais 48 Ko quand meme : sur la 3G malgande visee, ce
+   sont plusieurs secondes avant le premier texte lisible, pour un dessin de
+   caractere que personne ne remarquera sur un Android d'entree de gamme.
+   La pile systeme rend exactement le meme gabarit et ne coute rien. */
 
 @tailwind base;
 @tailwind components;
@@ -84,6 +78,21 @@
     --sidebar-accent-foreground: 191 47% 12%;
     --sidebar-border: 35 25% 89%;
     --sidebar-ring: 185 81% 29%;
+
+    /* ═══ JETONS DU DESIGN-HANDOFF §1 ═══════════════════════════════════
+       Les roles ci-dessus (--primary, --accent…) restent la source pour
+       Tailwind. Ceux-ci ajoutent ce qui manquait au systeme : les fonds
+       d'accent, les etats ouvert/ferme, et le second niveau de separateur.
+       Memes valeurs que la maquette, converties en HSL. */
+    --teal-soft: 185 26% 93%;       /* #E7F2F3 — fond d'accent teal */
+    --coral-soft: 14 79% 95%;       /* #FDEDE8 — fond d'accent corail */
+    --gold: 41 68% 69%;             /* #E8C77A — bande tissee, jalons */
+    --gold-soft: 41 100% 95%;       /* #FFF6E5 — bons plans, fady */
+    --line-soft: 35 39% 90%;        /* #EFE7DB — separateur interne */
+    --ok: 143 47% 28%;              /* #256B3D — ouvert, actif : 5,9:1 */
+    --ok-soft: 137 34% 94%;         /* #E9F5EC */
+    --warn: 43 78% 30%;             /* #8A6412 — ferme bientot : 5,5:1 */
+    --warn-soft: 41 100% 95%;       /* #FFF6E5 */
   }
 
   .dark {
@@ -110,7 +119,12 @@
     --or: 41 62% 58%;
 
     --accent-strong: 14 100% 70%;
-    --accent: 14 100% 66%
+    /* ⚠ IL MANQUAIT LE POINT-VIRGULE ICI. Sans lui, le navigateur lisait
+       « 14 100% 66% --accent-foreground: 191 46% 12% » comme UNE seule valeur :
+       --accent devenait invalide dans hsl(), et --accent-foreground n'existait
+       plus du tout en mode sombre. Une couleur d'accent cassee sur tout le
+       theme nuit, pour un caractere. */
+    --accent: 14 100% 66%;
     --accent-foreground: 191 46% 12%;
 
     --destructive: 0 62% 50%;
@@ -130,6 +144,19 @@
     --sidebar-accent-foreground: 185 25% 94%;
     --sidebar-border: 191 25% 20%;
     --sidebar-ring: 173 66% 50%;
+
+    /* Les memes jetons, retournes pour la nuit. ⚠ Ne pas les oublier : un
+       jeton defini seulement dans :root garde sa valeur CLAIRE en mode
+       sombre, et une pastille verte pale sur fond noir devient illisible. */
+    --teal-soft: 185 30% 16%;
+    --coral-soft: 14 35% 18%;
+    --gold: 41 62% 58%;
+    --gold-soft: 43 30% 16%;
+    --line-soft: 191 22% 18%;
+    --ok: 143 45% 62%;
+    --ok-soft: 143 30% 14%;
+    --warn: 43 70% 62%;
+    --warn-soft: 43 30% 14%;
   }
 
   * {

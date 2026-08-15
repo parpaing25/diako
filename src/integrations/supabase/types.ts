@@ -267,6 +267,132 @@ export type Database = {
         Relationships: [];
       };
 
+      /* LES ECRANS NOUVEAUX (migrations 0032 et 0033)
+         Ajoutes A LA MAIN, et non par `supabase gen types`. Le fichier genere
+         remplace la nullabilite par `| null` la ou ce depot attend
+         `| undefined`, et perd l'export `Profile` : le remplacer en bloc casse
+         une quinzaine d'appels dans etablissements.ts et api.ts. Tant que ces
+         ecarts ne sont pas repris un par un, on complete a la main. */
+
+      dish_tastings: {
+        Row: { id: string; user_id: string; dish_id: string; post_id: string | null;
+               tasted_at: string; note: string | null } & Horodate;
+        Insert: { id?: string; user_id: string; dish_id: string; post_id?: string | null;
+                  tasted_at?: string; note?: string | null; created_at?: string };
+        Update: { tasted_at?: string; note?: string | null };
+        Relationships: [];
+      };
+
+      tour_departures: {
+        Row: { id: string; tour_id: string; starts_on: string; seats_total: number | null;
+               seats_left: number | null; guaranteed: boolean } & Horodate;
+        Insert: { id?: string; tour_id: string; starts_on: string; seats_total?: number | null;
+                  seats_left?: number | null; guaranteed?: boolean; created_at?: string };
+        Update: { starts_on?: string; seats_left?: number | null; guaranteed?: boolean };
+        Relationships: [];
+      };
+
+      attractions: {
+        Row: { id: string; slug: string; name: string; kind: string; place_id: string | null;
+               manager: string | null; summary: string | null; description: string | null;
+               cover_url: string | null; lat: number | null; lng: number | null;
+               fee_resident_ar: number | null; fee_nonresident_ar: number | null;
+               guide_required: boolean; guide_fee_group_ar: number | null;
+               ticket_validity_days: number | null; circuits: Json; fady: string[];
+               best_months: number[]; gear_needed: string[]; species: string[];
+               opening_hours: string | null; rates_checked_at: string | null;
+               is_published: boolean; updated_at: string } & Horodate;
+        Insert: { id?: string; slug: string; name: string; kind?: string; place_id?: string | null;
+                  manager?: string | null; summary?: string | null; description?: string | null;
+                  cover_url?: string | null; lat?: number | null; lng?: number | null;
+                  fee_resident_ar?: number | null; fee_nonresident_ar?: number | null;
+                  guide_required?: boolean; guide_fee_group_ar?: number | null;
+                  ticket_validity_days?: number | null; circuits?: Json; fady?: string[];
+                  best_months?: number[]; gear_needed?: string[]; species?: string[];
+                  opening_hours?: string | null; rates_checked_at?: string | null;
+                  is_published?: boolean; created_at?: string; updated_at?: string };
+        Update: Partial<{ name: string; summary: string | null; description: string | null;
+                          fee_resident_ar: number | null; fee_nonresident_ar: number | null;
+                          guide_required: boolean; guide_fee_group_ar: number | null;
+                          fady: string[]; best_months: number[];
+                          rates_checked_at: string | null; is_published: boolean }>;
+        Relationships: [];
+      };
+
+      events: {
+        Row: { id: string; slug: string; title: string; kind: string; place_id: string | null;
+               page_id: string | null; starts_on: string; ends_on: string | null; yearly: boolean;
+               summary: string | null; description: string | null; poster_url: string | null;
+               price_ar: number | null; price_unit: string | null; organizer: string | null;
+               is_published: boolean } & Horodate;
+        Insert: { id?: string; slug: string; title: string; kind?: string; place_id?: string | null;
+                  page_id?: string | null; starts_on: string; ends_on?: string | null;
+                  yearly?: boolean; summary?: string | null; description?: string | null;
+                  poster_url?: string | null; price_ar?: number | null; price_unit?: string | null;
+                  organizer?: string | null; is_published?: boolean; created_at?: string };
+        Update: Partial<{ title: string; starts_on: string; ends_on: string | null;
+                          summary: string | null; is_published: boolean }>;
+        Relationships: [];
+      };
+
+      trip_requests: {
+        Row: { id: string; user_id: string; envies: string[]; place_ids: string[];
+               date_from: string | null; date_to: string | null; date_flex_days: number | null;
+               adults: number; children_ages: number[]; budget_ar: number | null;
+               budget_eur: number | null; notes: string | null; status: string;
+               closed_at: string | null } & Horodate;
+        Insert: { id?: string; user_id: string; envies?: string[]; place_ids?: string[];
+                  date_from?: string | null; date_to?: string | null;
+                  date_flex_days?: number | null; adults?: number; children_ages?: number[];
+                  budget_ar?: number | null; budget_eur?: number | null; notes?: string | null;
+                  status?: string; created_at?: string };
+        Update: Partial<{ status: string; closed_at: string | null; notes: string | null }>;
+        Relationships: [];
+      };
+
+      trip_offers: {
+        Row: { id: string; request_id: string; page_id: string; author_id: string; title: string;
+               body: string | null; price_ar: number | null; price_unit: string;
+               pax: number | null; includes: string[]; excludes: string[];
+               valid_until: string | null; status: string } & Horodate;
+        Insert: { id?: string; request_id: string; page_id: string; author_id: string;
+                  title: string; body?: string | null; price_ar?: number | null;
+                  price_unit?: string; pax?: number | null; includes?: string[];
+                  excludes?: string[]; valid_until?: string | null; status?: string;
+                  created_at?: string };
+        Update: Partial<{ status: string; body: string | null; price_ar: number | null }>;
+        Relationships: [];
+      };
+
+      bookings: {
+        Row: { id: string; page_id: string; user_id: string | null; kind: string;
+               date_from: string | null; date_to: string | null; adults: number;
+               children_ages: number[]; message: string | null; contact_name: string | null;
+               contact_phone: string | null; status: string;
+               first_reply_at: string | null } & Horodate;
+        Insert: { id?: string; page_id: string; user_id?: string | null; kind?: string;
+                  date_from?: string | null; date_to?: string | null; adults?: number;
+                  children_ages?: number[]; message?: string | null;
+                  contact_name?: string | null; contact_phone?: string | null;
+                  status?: string; created_at?: string };
+        Update: Partial<{ status: string; first_reply_at: string | null }>;
+        Relationships: [];
+      };
+
+      guides: {
+        Row: { id: string; slug: string; title: string; kind: string; place_id: string | null;
+               summary: string | null; body: string | null; cover_url: string | null;
+               is_published: boolean; published_at: string | null;
+               updated_at: string } & Horodate;
+        Insert: { id?: string; slug: string; title: string; kind?: string;
+                  place_id?: string | null; summary?: string | null; body?: string | null;
+                  cover_url?: string | null; is_published?: boolean;
+                  published_at?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<{ title: string; summary: string | null; body: string | null;
+                          is_published: boolean; published_at: string | null }>;
+        Relationships: [];
+      };
+
       /* ── RÉFÉRENTIELS (migrations 0004-0006) ────────────────────────────
          Lecture publique, écriture réservée à l'administration : le client
          ne fait que les lire, d'où des Update volontairement à `never`. */
@@ -300,6 +426,15 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      /* Les variantes d'orthographe : 254 lignes. C'est ce qui fait que
+         « ravi-toto » trouve le ravitoto — et l'atlas en affiche le compte. */
+      dish_aliases: {
+        Row: { id: string; dish_id: string; alias: string; norm: string | null };
+        Insert: { id?: string; dish_id: string; alias: string; norm?: string | null };
+        Update: { alias?: string };
+        Relationships: [];
+      };
+
       dishes: {
         Row: {
           id: string;

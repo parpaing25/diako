@@ -94,7 +94,7 @@ export function Feed() {
   const mobile = useEstMobile();
   const [posts, setPosts] = useState<PostSitue[]>([]);
   // Les cartes se posent en arrivant a l'ecran ; relance a chaque page recue.
-  useReveal(posts.length);
+  useReveal(posts);
   const [chargement, setChargement] = useState(true);
   const [fini, setFini] = useState(false);
   const [erreur, setErreur] = useState(false);

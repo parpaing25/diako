@@ -65,7 +65,7 @@ export default function Plats() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
   const [fini, setFini] = useState(false);
-  useReveal(plats.length);
+  useReveal(plats);
 
   const charger = useCallback(
     async (curseur?: string | null) => {

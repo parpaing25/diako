@@ -47,7 +47,7 @@ function ListeGuides() {
   const [guides, setGuides] = useState<Guide[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
-  useReveal(guides.length);
+  useReveal(guides);
 
   const charger = useCallback(async () => {
     setChargement(true);

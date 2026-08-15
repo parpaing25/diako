@@ -72,7 +72,7 @@ export default function QuandPartir() {
   const [etat, setEtat] = useState<"chargement" | "ok" | "erreur">("chargement");
   const moisCourant = new Date().getMonth() + 1;
   const [moisChoisi, setMoisChoisi] = useState<number>(moisCourant);
-  useReveal(d?.lieux.length);
+  useReveal(d?.lieux);
 
   const charger = useCallback(async () => {
     setEtat("chargement");

@@ -35,13 +35,13 @@ const COLONNES =
   "id,display_name,avatar_url,bio,home_place,account_type,verification,followers_count,following_count,posts_count";
 
 export default function Profil() {
-  useReveal();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [profil, setProfil] = useState<ProfilPublic | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [pub_, setPublic_] = useState<ProfilPublicRPC | null>(null);
+  useReveal(posts);
   const [suivi, setSuivi] = useState(false);
   const [chargement, setChargement] = useState(true);
   useSEO({

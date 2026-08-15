@@ -42,7 +42,7 @@ export default function Circuits() {
   const [circuits, setCircuits] = useState<CircuitListe[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
-  useReveal(circuits.length);
+  useReveal(circuits);
 
   const charger = useCallback(async () => {
     setChargement(true);

@@ -88,7 +88,7 @@ export default function YAller() {
   const [d, setD] = useState<Donnees | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "erreur">("chargement");
   const [mode, setMode] = useState<string | null>(null);
-  useReveal(d?.trajets.length);
+  useReveal(d?.trajets);
 
   const charger = useCallback(async () => {
     setEtat("chargement");

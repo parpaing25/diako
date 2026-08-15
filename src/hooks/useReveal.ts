@@ -16,6 +16,22 @@ import { useEffect } from "react";
  * Chaque élément est libéré dès qu'il a été vu : l'animation ne rejoue pas
  * quand on remonte, ce qui serait du clignotement, pas de la finition.
  */
+/**
+ * 🔴 LE PIÈGE DE LA DÉPENDANCE — lire avant d'appeler ce hook.
+ *
+ *    Passer `liste.length` NE SUFFIT PAS. Filtrer une liste de 24 éléments et
+ *    en obtenir 24 autres ne change pas la longueur : l'effet ne se relance
+ *    pas. Or React a créé de NOUVEAUX nœuds (les clés ont changé), sans
+ *    `data-vu` — et `.dk-reveal` part à `opacity: 0`. La page paraît VIDE,
+ *    sans la moindre erreur.
+ *
+ *    Constaté en production sur /sites : filtrer par région n'affichait plus
+ *    rien alors que la requête rendait bien 24 résultats.
+ *
+ * ⚠ PASSER LE TABLEAU, pas sa taille. Sa référence change à chaque `setState`,
+ *   donc l'effet se relance à chaque arrivée de données — ce qui est
+ *   exactement la condition voulue.
+ */
 export function useReveal(dependance?: unknown) {
   useEffect(() => {
     const doux = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

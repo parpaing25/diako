@@ -43,7 +43,7 @@ export default function Evenements() {
   const [evts, setEvts] = useState<Evenement[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
-  useReveal(evts.length);
+  useReveal(evts);
 
   const charger = useCallback(async () => {
     setChargement(true);

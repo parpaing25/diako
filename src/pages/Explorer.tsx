@@ -59,12 +59,12 @@ const COULEUR_SAISON: Record<string, string> = {
 const PAR_PAGE_DEST = 48;
 
 export default function Explorer() {
-  useReveal();
   const [params] = useSearchParams();
   const slug = params.get("lieu") ?? params.get("q");
 
   const [destinations, setDestinations] = useState<Lieu[]>([]);
   const [totalDest, setTotalDest] = useState<number | null>(null);
+  useReveal(destinations);
   const [encore, setEncore] = useState(false);
   const [finiDest, setFiniDest] = useState(false);
   const [lieu, setLieu] = useState<Lieu | null>(null);

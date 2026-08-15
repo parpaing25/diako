@@ -57,7 +57,7 @@ export default function Gouts() {
   const [stats, setStats] = useState<Awaited<ReturnType<typeof statsAtlas>> | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
-  useReveal(onglet + carnet.length);
+  useReveal([onglet, carnet, tous]);
 
   const charger = useCallback(async () => {
     setChargement(true);

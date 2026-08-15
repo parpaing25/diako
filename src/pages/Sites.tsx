@@ -79,7 +79,7 @@ export default function Sites() {
   const [q, setQ] = useState("");
   const [recherche, setRecherche] = useState("");
   const [compte, setCompte] = useState<{ total: number; parGenre: Record<string, number> } | null>(null);
-  useReveal(sites.length);
+  useReveal(sites);
 
   // ⚠ GARDE-FOU DE CONCURRENCE. Changer de genre pendant qu'une page arrive
   //   ferait afficher le résultat de l'ANCIEN filtre par-dessus le nouveau —

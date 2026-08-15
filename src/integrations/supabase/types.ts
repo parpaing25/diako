@@ -1350,6 +1350,8 @@ export type Database = {
           source: string | null; confiance: string | null; recurrent: boolean;
         }[];
       };
+      projet_statut: { Args: { p_id: string; p_statut: string; p_motif?: string | null }; Returns: undefined };
+      projet_prolonger: { Args: { p_id: string; p_jours?: number }; Returns: string };
       devenir_pro: {
         Args: { p_metier: string };
         Returns: undefined;

@@ -401,6 +401,9 @@ export interface Projet {
   notes: string | null;
   status: string;
   created_at: string;
+  /** ⚠ Calculee par declencheur depuis date_to + souplesse — jamais saisie. */
+  expire_le: string | null;
+  motif_cloture: string | null;
 }
 
 /** ⚠ UN SEUL PROJET OUVERT PAR MEMBRE — garanti par un index unique partiel. */
@@ -408,9 +411,17 @@ export async function monProjet(): Promise<Projet | null> {
   const { data, error } = await supabase
     .from("trip_requests")
     .select(
-      "id, envies, date_from, date_to, date_flex_days, adults, children_ages, budget_ar, notes, status, created_at"
+      "id, envies, date_from, date_to, date_flex_days, adults, children_ages, " +
+        "budget_ar, notes, status, created_at, expire_le, motif_cloture"
     )
-    .eq("status", "ouvert")
+    // 🔴 ON NE FILTRE PLUS SUR « ouvert ». Un projet mis en pause ou expire
+    //    DISPARAISSAIT de l'ecran, et son proprietaire n'avait plus aucun moyen
+    //    de le rouvrir : le bouton « Mettre en pause » aurait detruit l'acces a
+    //    ce qu'il met en pause.
+    // ⚠ On ecarte seulement les FINS — annule, honore, clos — pour que l'ecran
+    //   propose d'en creer un nouveau plutot que d'exhumer un projet termine.
+    .not("status", "in", "(annule,honore,clos)")
+    .order("created_at", { ascending: false })
     .limit(1);
   if (error) throw error;
   return (data?.[0] as unknown as Projet) ?? null;
@@ -511,4 +522,33 @@ export async function demandesDeLaPage(pageId: string): Promise<Demande[]> {
     .limit(100);
   if (error) throw error;
   return (data as unknown as Demande[]) ?? [];
+}
+
+/**
+ * Changer le statut du projet.
+ *
+ * ⚠ « EXPIRÉ » NE S'ÉCRIT PAS : il se déduit de la date. Un projet dont la date
+ *   est passée est expiré parce que la date est passée, pas parce qu'une tâche
+ *   a tourné — donc aucune fenêtre pendant laquelle l'écran dirait « ouvert »
+ *   alors qu'il ne l'est plus.
+ */
+export function statutEffectif(p: { status: string; expire_le?: string | null }): string {
+  if (["annule", "honore", "clos", "pause"].includes(p.status)) return p.status;
+  if (p.expire_le && p.expire_le < new Date().toISOString().slice(0, 10)) return "expire";
+  return p.status;
+}
+
+export async function changerStatutProjet(id: string, statut: string, motif?: string) {
+  const { error } = await supabase.rpc("projet_statut", {
+    p_id: id,
+    p_statut: statut,
+    p_motif: motif ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function prolongerProjet(id: string, jours = 30): Promise<string | null> {
+  const { data, error } = await supabase.rpc("projet_prolonger", { p_id: id, p_jours: jours });
+  if (error) throw error;
+  return (data as string | null) ?? null;
 }

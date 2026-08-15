@@ -1295,6 +1295,23 @@ export type Database = {
       trajets_depuis: { Args: { p_lieu: string }; Returns: Json };
       /** ⚠ Compte cote BASE. PostgREST plafonne toute reponse a 1 000 lignes
        *  SANS LE DIRE : compter 2 474 sites cote client aurait rendu 1 000. */
+      /** ⚠ Charge les points de la ZONE VISIBLE, et rend `total_zone` : le
+       *  compte AVANT troncature, pour que l'ecran puisse dire ce qu'il cache
+       *  au lieu de laisser croire que la carte est complete. */
+      carte_zone: {
+        Args: {
+          p_sud: number; p_ouest: number; p_nord: number; p_est: number;
+          p_categorie?: string | null; p_types?: string[]; p_limite?: number;
+        };
+        Returns: {
+          genre: string; id: string; slug: string; name: string;
+          categories: string[]; cover_url: string | null;
+          lat: number; lng: number; precision_geo: string;
+          place_name: string | null; price_min_ar: number | null;
+          price_min_unit: string | null; rating_avg: number | null;
+          rating_count: number | null; total_zone: number;
+        }[];
+      };
       compter_sites: {
         Args: Record<string, never>;
         Returns: { kind: string; n: number }[];

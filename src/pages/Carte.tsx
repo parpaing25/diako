@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
  */
 
 interface PointCarte {
+  /** `page` = etablissement, `site` = parc, sommet, plage, patrimoine. */
+  genre: "page" | "site";
   id: string;
   slug: string;
   name: string;
@@ -35,17 +37,35 @@ interface PointCarte {
   lat: number;
   lng: number;
   precision_geo: "exacte" | "lieu";
-  geo_source: string | null;
   place_name: string | null;
   price_min_ar: number | null;
   price_min_unit: string | null;
-  rating_avg: number;
-  rating_count: number;
+  rating_avg: number | null;
+  rating_count: number | null;
+  /** Combien de points existent DANS LA ZONE, avant la troncature. Sert a
+   *  ecrire « 800 sur 1 240 ici », jamais a laisser croire que c'est tout. */
+  total_zone: number;
 }
 
 const CENTRE_MADAGASCAR: [number, number] = [-18.9, 46.9];
 
+/** ⚠ Les genres de SITES ont leurs propres pictos : une plage et un hotel sur
+ *  la meme epingle « 📍 » rendraient la carte illisible. */
 const EMOJI: Record<string, string> = {
+  reserve: "🌿",
+  parc: "🌳",
+  sommet: "⛰️",
+  plage: "🏖️",
+  patrimoine: "🏛️",
+  site: "💧",
+  point_de_vue: "👁️",
+  cascade: "💦",
+  grotte: "🕳️",
+  musee: "🖼️",
+  parc_animalier: "🦎",
+  oeuvre: "🗿",
+  source: "♨️",
+  aire: "🧺",
   hotel: "🛏️",
   restaurant: "🍽️",
   agence_voyage: "🧭",
@@ -78,21 +98,56 @@ export default function Carte() {
   );
   const [choisis, setChoisis] = useState<PointCarte[] | null>(null);
 
-  // ── Une seule requête, tout Madagascar ────────────────────────────────
-  useEffect(() => {
-    void supabase
-      .rpc("pages_carte", { p_categorie: null, p_limite: 600 })
-      .then(({ data, error }) => {
-        if (error) toast.error("La carte n'a pas pu être chargée.");
-        setPoints((data as PointCarte[] | null) ?? []);
-        setChargement(false);
-      });
+  const [totalZone, setTotalZone] = useState(0);
+  // ⚠ Garde-fou de concurrence : deux deplacements rapides rendaient parfois
+  //   l'ancienne zone PAR-DESSUS la nouvelle. On ne garde que la derniere.
+  const versionZone = useRef(0);
+
+  /**
+   * 🔴 LA CARTE CHARGE CE QU'ON REGARDE.
+   *
+   *    Avant, une seule requete demandait 600 fiches pour tout Madagascar — sur
+   *    3 302 publiees, et sans AUCUN des 2 429 sites. Plus des deux tiers de
+   *    l'annuaire n'apparaissaient nulle part, et rien a l'ecran ne le disait :
+   *    un visiteur en concluait qu'il n'y a rien a Morondava.
+   *
+   * ⚠ ON ANNONCE CE QU'ON CACHE. `total_zone` compte AVANT la troncature :
+   *   l'ecran ecrit « 800 sur 1 240 ici — zoomez » plutot que de laisser croire
+   *   que la carte est complete. Une troncature muette se lit comme une absence.
+   */
+  const chargerZone = useCallback(async () => {
+    const m = carte.current;
+    if (!m) return;
+    const mien = ++versionZone.current;
+    const b = m.getBounds();
+    const { data, error } = await supabase.rpc("carte_zone", {
+      p_sud: b.getSouth(),
+      p_ouest: b.getWest(),
+      p_nord: b.getNorth(),
+      p_est: b.getEast(),
+      p_limite: 800,
+    });
+    if (mien !== versionZone.current) return;
+    if (error) {
+      toast.error("La carte n'a pas pu être chargée.");
+      setChargement(false);
+      return;
+    }
+    const l = (data as unknown as PointCarte[] | null) ?? [];
+    setPoints(l);
+    setTotalZone(l[0]?.total_zone ?? 0);
+    setChargement(false);
   }, []);
 
-  const visibles = useMemo(
-    () => (filtre === "tout" ? points : points.filter((p) => p.categories.includes(filtre))),
-    [points, filtre]
-  );
+  const visibles = useMemo(() => {
+    if (filtre === "tout") return points;
+    // ⚠ « Sites » n'est pas une categorie d'etablissement mais un GENRE de
+    //   point : le filtre doit trancher sur `genre`, sinon l'onglet rend vide
+    //   alors que 2 429 sites sont sous les yeux du visiteur.
+    if (filtre === "site_attraction")
+      return points.filter((p) => p.genre === "site" || p.categories.includes(filtre));
+    return points.filter((p) => p.genre === "page" && p.categories.includes(filtre));
+  }, [points, filtre]);
 
   // ── Initialisation, une seule fois ────────────────────────────────────
   useEffect(() => {
@@ -111,7 +166,21 @@ export default function Carte() {
     }).addTo(m);
     couche.current = L.layerGroup().addTo(m);
     carte.current = m;
+
+    // ⚠ ON ATTEND QUE LE GESTE SE TERMINE. Recharger a chaque image d'un
+    //   deplacement declencherait des dizaines de requetes par seconde ;
+    //   `moveend` ne part qu'une fois la main levee, et les 250 ms de repos
+    //   absorbent l'enchainement zoom + recentrage.
+    let minuteur: number | undefined;
+    const surDeplacement = () => {
+      window.clearTimeout(minuteur);
+      minuteur = window.setTimeout(() => void chargerZone(), 250);
+    };
+    m.on("moveend", surDeplacement);
+    void chargerZone();
     return () => {
+      window.clearTimeout(minuteur);
+      m.off("moveend", surDeplacement);
       m.remove();
       carte.current = null;
       couche.current = null;
@@ -213,10 +282,18 @@ export default function Carte() {
           <div className="flex w-max gap-1.5">
             {(["tout", ...CATEGORIES.map((c) => c.code)] as const).map((c) => {
               const actif = filtre === c;
+              // ⚠ Le compte doit suivre la MEME regle que `visibles`, sinon
+              //   l'onglet annonce « 40 » et ouvre sur une carte vide.
               const n =
                 c === "tout"
                   ? points.length
-                  : points.filter((p) => p.categories.includes(c as Categorie)).length;
+                  : c === "site_attraction"
+                    ? points.filter(
+                        (p) => p.genre === "site" || p.categories.includes(c as Categorie)
+                      ).length
+                    : points.filter(
+                        (p) => p.genre === "page" && p.categories.includes(c as Categorie)
+                      ).length;
               if (c !== "tout" && n === 0) return null;
               return (
                 <button
@@ -255,7 +332,20 @@ export default function Carte() {
         )}
         {!chargement && visibles.length === 0 && (
           <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm shadow">
-            Aucune adresse pour ce filtre
+            {totalZone > 0 ? "Rien de ce type dans cette zone" : "Aucune adresse dans cette zone"}
+          </div>
+        )}
+
+        {/* 🔴 LA CARTE DIT CE QU'ELLE NE MONTRE PAS. Elle chargeait 600 fiches
+            pour tout Madagascar — sur 5 731 points publiés — et rien ne le
+            signalait : un visiteur en concluait qu'il n'y a rien à Morondava.
+            Une troncature muette se lit comme une absence.
+            ⚠ Le message n'apparaît QUE quand il y a vraiment plus à voir : une
+              bannière permanente deviendrait du décor qu'on ne lit plus. */}
+        {!chargement && totalZone > points.length && (
+          <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-center text-xs shadow">
+            {points.length.toLocaleString("fr-FR")} affichés sur{" "}
+            {totalZone.toLocaleString("fr-FR")} ici — zoomez pour voir les autres
           </div>
         )}
 
@@ -285,15 +375,13 @@ export default function Carte() {
             ) : (
               /* D'où vient le point : un relevé OpenStreetMap ne se discute pas
                  comme une épingle posée par le gérant. */
-              choisis[0].geo_source && (
-                <p className="border-b border-border bg-primary/5 px-4 py-1.5 text-xs text-muted-foreground">
-                  Position relevée ·{" "}
-                  {choisis[0].geo_source.startsWith("OSM") ||
-                  choisis[0].geo_source.startsWith("Nominatim")
-                    ? "source OpenStreetMap"
-                    : choisis[0].geo_source}
-                </p>
-              )
+              /* ⚠ La provenance exacte du releve n'est plus remontee par
+                 `carte_zone` (elle melange etablissements et sites, qui n'ont
+                 pas la meme colonne). On dit ce qu'on sait : le point est
+                 exact. Le detail de la source est sur la fiche. */
+              <p className="border-b border-border bg-primary/5 px-4 py-1.5 text-xs text-muted-foreground">
+                Position relevée sur le terrain ou dans OpenStreetMap.
+              </p>
             )}
 
             <ul className="divide-y divide-border overflow-y-auto overscroll-contain">
@@ -330,13 +418,13 @@ export default function Carte() {
                         ) : (
                           <span className="text-xs text-muted-foreground">Tarif non communiqué</span>
                         )}
-                        {p.rating_count > 0 && (
+                        {(p.rating_count ?? 0) > 0 && (
                           <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
                             <Star
                               className="h-3 w-3 fill-amber-400 text-amber-400"
                               aria-hidden="true"
                             />
-                            {p.rating_avg.toFixed(1)}
+                            {(p.rating_avg ?? 0).toFixed(1)}
                           </span>
                         )}
                       </span>

@@ -1,0 +1,21 @@
+-- ============================================================================
+-- 0046 — WIKIDATA : DES SITES, ET SURTOUT DU TEXTE
+--
+-- 🔴 LE VRAI MANQUE N'ÉTAIT PAS LE NOMBRE DE LIGNES. Sur 1 004 sites en base,
+--    ZÉRO portait une description. Un annuaire large et muet — un nom, un point
+--    sur une carte, rien à lire — ne vaut pas mieux qu'un annuaire court.
+--
+-- ⚠ POURQUOI WIKIDATA. OpenStreetMap est épuisé pour Madagascar : le deuxième
+--   passage, avec un plafond 6,6 fois plus haut, n'a rendu que 144
+--   établissements nouveaux. Et OSM ne porte pas de description. Wikidata est
+--   en CC0 — aucune contrainte d'attribution, contrairement à l'ODbL d'OSM.
+--
+-- ⚠ ON TRACE QUAND MÊME LA PROVENANCE. `attractions` n'avait pas de colonne
+--   `source` : impossible de savoir d'où venait une ligne, donc impossible de
+--   la corriger en connaissance de cause. La CC0 n'oblige pas à citer, la
+--   qualité de la donnée, si.
+--
+-- ⚠ La RPC d'import qui accompagnait cette migration a été supprimée en 0054.
+-- ============================================================================
+
+alter table public.attractions add column if not exists source text;

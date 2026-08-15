@@ -401,7 +401,9 @@ function CartePlat({ plat }: { plat: PlatAtlas }) {
     >
       <div className="dk-zoom aspect-[4/3] bg-secondary">
         {plat.photo_url ? (
-          <ImageProgressive src={plat.photo_url} alt={plat.name_fr} ajustement="cover" />
+          <ImageProgressive src={plat.photo_url} alt={plat.name_fr} ajustement="cover"
+              largeurAffichee={"(min-width:1536px) 22vw, (min-width:1280px) 25vw, (min-width:768px) 33vw, 50vw"}
+            />
         ) : (
           <div className="grid h-full w-full place-items-center">
             <UtensilsCrossed className="h-7 w-7 text-primary/40" aria-hidden="true" />

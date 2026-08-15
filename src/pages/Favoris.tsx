@@ -143,7 +143,9 @@ export default function Favoris() {
                   >
                     <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
                       {a.cover_url ? (
-                        <ImageProgressive src={a.cover_url} alt="" ajustement="cover" />
+                        <ImageProgressive src={a.cover_url} alt="" ajustement="cover"
+              largeurAffichee={"(min-width:1280px) 30vw, (min-width:640px) 45vw, 92vw"}
+            />
                       ) : (
                         <span className="grid h-full w-full place-items-center bg-gradient-to-br from-secondary to-secondary/40 text-xs font-medium text-primary">
                           {a.name.slice(0, 2).toUpperCase()}
@@ -225,7 +227,9 @@ export default function Favoris() {
                   <Link to={`/post/${a.id}`} className="flex gap-3 p-3 hover:bg-muted/40">
                     {a.media?.[0]?.url && (
                       <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
-                        <ImageProgressive src={a.media[0].url} alt="" ajustement="cover" />
+                        <ImageProgressive src={a.media[0].url} alt="" ajustement="cover"
+              largeurAffichee={"(min-width:1280px) 30vw, (min-width:640px) 45vw, 92vw"}
+            />
                       </span>
                     )}
                     <span className="min-w-0 flex-1">

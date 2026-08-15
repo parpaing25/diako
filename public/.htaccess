@@ -18,6 +18,17 @@ Options -Indexes
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
   # ── Content-Security-Policy ───────────────────────────────────────────
+  # 🔴 `img-src` A CASSÉ TOUTES LES PHOTOS DE PROFIL GOOGLE. La connexion
+  #    Google renvoie un avatar hébergé sur lh3.googleusercontent.com ; la
+  #    première version de cette règle ne l'autorisait pas, et le navigateur le
+  #    bloquait EN SILENCE — l'écran affichait le texte de remplacement
+  #    « Ma photo de profil » à la place de l'image, sur le compte, dans le fil
+  #    et sous chaque commentaire. Une CSP qui casse la fonctionnalité qu'elle
+  #    protège n'est pas un durcissement, c'est une panne.
+  # ⚠ Toute source d'images AJOUTÉE AU PRODUIT doit être ajoutée ici le même
+  #   jour : Facebook (fbcdn) pour la connexion FB, Wikimedia pour les photos de
+  #   sites servies en secours. Le symptôme est muet, on ne le trouve qu'en
+  #   regardant la console.
   # ⚠ ELLE MANQUAIT ENTIÈREMENT. C'était le seul filet manquant contre une URL
   #   `javascript:` saisie par un gérant dans « site web » — la contrainte en
   #   base (migration 0036) ferme la porte d'entrée, la CSP ferme la sortie.
@@ -33,7 +44,7 @@ Options -Indexes
   # ⚠ LES ORIGINES AUTORISÉES SONT CELLES QUE LE SITE UTILISE VRAIMENT :
   #   Supabase (base + fonctions), o2switch (images), OpenStreetMap (tuiles de
   #   la carte). Rien d'autre — pas de CDN de police, le site n'en charge plus.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org https://*.googleusercontent.com https://*.fbcdn.net https://upload.wikimedia.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
 </IfModule>
 
 # Fichiers sensibles : jamais servis.

@@ -438,6 +438,25 @@ table {
   transition: transform 0.12s ease;
 }
 .dk-pin:hover { transform: scale(1.12); }
+/* ⚠ LA GRAPPE DE VUE D'ENSEMBLE. Sa taille varie (posée en style en ligne par
+   la carte, en racine du nombre) : on ne fixe donc NI width NI height ici,
+   sinon la variation serait écrasée. */
+.dk-grappe {
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: hsl(var(--primary) / 0.92);
+  color: hsl(var(--primary-foreground));
+  border: 2px solid hsl(var(--card));
+  font-weight: 700;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.3);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.dk-grappe:hover { transform: scale(1.08); }
+
 .dk-pin--groupe {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));

@@ -57,7 +57,9 @@ export function FicheLigne({
     >
       <div className="dk-zoom relative min-h-[168px] bg-muted">
         {fiche.cover_url ? (
-          <ImageProgressive src={fiche.cover_url} alt={fiche.name} ajustement="cover" />
+          <ImageProgressive src={fiche.cover_url} alt={fiche.name} ajustement="cover"
+              largeurAffichee={"(min-width:768px) 180px, 45vw"}
+            />
         ) : (
           <div className="grid h-full w-full place-items-center bg-gradient-to-br from-secondary to-secondary/40">
             <span className="px-3 text-center text-xs font-medium text-primary">{fiche.name}</span>

@@ -49,6 +49,20 @@ interface PointCarte {
 
 const CENTRE_MADAGASCAR: [number, number] = [-18.9, 46.9];
 
+/** ⚠ Le niveau à partir duquel on montre les adresses une par une. En dessous,
+ *  ce sont des GRAPPES : à l'échelle d'une région, un chiffre est lisible,
+ *  cinq cents épingles superposées ne le sont pas. */
+const ZOOM_DETAIL = 11;
+
+interface Grappe {
+  lat: number;
+  lng: number;
+  n: number;
+  n_sites: number;
+  exemple: string;
+  total_zone: number;
+}
+
 /** ⚠ Les genres de SITES ont leurs propres pictos : une plage et un hotel sur
  *  la meme epingle « 📍 » rendraient la carte illisible. */
 const EMOJI: Record<string, string> = {
@@ -99,6 +113,7 @@ export default function Carte() {
   const [choisis, setChoisis] = useState<PointCarte[] | null>(null);
 
   const [totalZone, setTotalZone] = useState(0);
+  const [grappes, setGrappes] = useState<Grappe[]>([]);
   // ⚠ Garde-fou de concurrence : deux deplacements rapides rendaient parfois
   //   l'ancienne zone PAR-DESSUS la nouvelle. On ne garde que la derniere.
   const versionZone = useRef(0);
@@ -120,6 +135,39 @@ export default function Carte() {
     if (!m) return;
     const mien = ++versionZone.current;
     const b = m.getBounds();
+    const zoom = m.getZoom();
+
+    // 🔴 EN DESSOUS DE ZOOM_DETAIL, ON NE DESSINE PAS DES ÉPINGLES. À
+    //    l'ouverture la carte cadre tout Madagascar : elle posait 800 `divIcon`
+    //    d'un coup, ce qui fige l'écran plusieurs secondes sur un téléphone —
+    //    l'utilisateur voit une carte vide et conclut qu'elle ne charge pas.
+    //    Elle chargeait, elle peinait. Et 800 épingles sur 1 600 km se
+    //    superposent en bouillie : personne ne lit ça.
+    if (zoom < ZOOM_DETAIL) {
+      // ⚠ La grille suit le zoom : ~40 grappes en travers quel que soit le
+      //   niveau. Un pas fixe donnerait une seule grappe pour le pays.
+      const pas = Math.max((b.getEast() - b.getWest()) / 40, 0.02);
+      const { data, error } = await supabase.rpc("carte_grappes", {
+        p_sud: b.getSouth(),
+        p_ouest: b.getWest(),
+        p_nord: b.getNorth(),
+        p_est: b.getEast(),
+        p_pas: pas,
+      });
+      if (mien !== versionZone.current) return;
+      if (error) {
+        toast.error("La carte n'a pas pu être chargée.");
+        setChargement(false);
+        return;
+      }
+      const g = (data as unknown as Grappe[] | null) ?? [];
+      setGrappes(g);
+      setPoints([]);
+      setTotalZone(g[0]?.total_zone ?? 0);
+      setChargement(false);
+      return;
+    }
+
     const { data, error } = await supabase.rpc("carte_zone", {
       p_sud: b.getSouth(),
       p_ouest: b.getWest(),
@@ -134,6 +182,7 @@ export default function Carte() {
       return;
     }
     const l = (data as unknown as PointCarte[] | null) ?? [];
+    setGrappes([]);
     setPoints(l);
     setTotalZone(l[0]?.total_zone ?? 0);
     setChargement(false);
@@ -194,6 +243,38 @@ export default function Carte() {
     if (!l || !m) return;
     l.clearLayers();
 
+    // ── Vue d'ensemble : des GRAPPES, pas des adresses ──────────────────
+    if (grappes.length) {
+      const cadre: [number, number][] = [];
+      grappes.forEach((g) => {
+        cadre.push([g.lat, g.lng]);
+        // ⚠ La pastille grossit avec le nombre, mais en RACINE : proportionnelle,
+        //   une grappe de 1 163 ferait 40 fois le diamètre d'une grappe de 1 et
+        //   masquerait la moitié du pays.
+        const d = Math.round(30 + Math.sqrt(g.n) * 2.2);
+        const taille = Math.min(d, 64);
+        const icone = L.divIcon({
+          className: "",
+          html: `<div class="dk-grappe" style="width:${taille}px;height:${taille}px">${
+            g.n > 999 ? Math.round(g.n / 100) / 10 + "k" : g.n
+          }</div>`,
+          iconSize: [taille, taille],
+          iconAnchor: [taille / 2, taille / 2],
+        });
+        L.marker([g.lat, g.lng], {
+          icon: icone,
+          title: `${g.n} adresses — ${g.exemple}`,
+        })
+          .on("click", () => {
+            // Un clic sur une grappe RAPPROCHE : c'est le seul geste qui a du
+            // sens, l'ouvrir en liste afficherait mille lignes.
+            m.setView([g.lat, g.lng], Math.max(m.getZoom() + 3, ZOOM_DETAIL));
+          })
+          .addTo(l);
+      });
+      return;
+    }
+
     const groupes = new Map<string, PointCarte[]>();
     visibles.forEach((p) => {
       const cle = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
@@ -233,7 +314,7 @@ export default function Carte() {
     if (cadre.length > 1)
       m.fitBounds(L.latLngBounds(cadre), { padding: [40, 40], maxZoom: 12 });
     else if (cadre.length === 1) m.setView(cadre[0], 12);
-  }, [visibles]);
+  }, [visibles, grappes]);
 
   const meLocaliser = () => {
     if (!navigator.geolocation) return toast.error("Géolocalisation indisponible.");
@@ -330,7 +411,7 @@ export default function Carte() {
             </p>
           </div>
         )}
-        {!chargement && visibles.length === 0 && (
+        {!chargement && visibles.length === 0 && grappes.length === 0 && (
           <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm shadow">
             {totalZone > 0 ? "Rien de ce type dans cette zone" : "Aucune adresse dans cette zone"}
           </div>
@@ -342,7 +423,17 @@ export default function Carte() {
             Une troncature muette se lit comme une absence.
             ⚠ Le message n'apparaît QUE quand il y a vraiment plus à voir : une
               bannière permanente deviendrait du décor qu'on ne lit plus. */}
-        {!chargement && totalZone > points.length && (
+        {/* ⚠ DEUX MESSAGES, PARCE QUE LES DEUX VUES NE CACHENT PAS LA MEME
+            CHOSE. En grappes, RIEN n'est caché — tout est compté, simplement
+            regroupé ; dire « 0 affichés sur 5 731 » serait faux et alarmant.
+            En vue détaillée, la troncature est réelle et doit être annoncée. */}
+        {!chargement && grappes.length > 0 && (
+          <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-center text-xs shadow">
+            {totalZone.toLocaleString("fr-FR")} adresses et sites ici — zoomez
+            pour les voir un par un
+          </div>
+        )}
+        {!chargement && grappes.length === 0 && totalZone > points.length && (
           <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-center text-xs shadow">
             {points.length.toLocaleString("fr-FR")} affichés sur{" "}
             {totalZone.toLocaleString("fr-FR")} ici — zoomez pour voir les autres

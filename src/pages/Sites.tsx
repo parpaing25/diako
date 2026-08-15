@@ -219,7 +219,9 @@ export default function Sites() {
               >
                 <div className="dk-zoom aspect-[4/3] bg-secondary">
                   {s.cover_url ? (
-                    <ImageProgressive src={s.cover_url} alt={s.name} ajustement="cover" />
+                    <ImageProgressive src={s.cover_url} alt={s.name} ajustement="cover"
+              largeurAffichee={"(min-width:1536px) 22vw, (min-width:1280px) 25vw, (min-width:768px) 33vw, 50vw"}
+            />
                   ) : (
                     <span className="grid h-full w-full place-items-center">
                       <Trees className="h-8 w-8 text-primary/40" aria-hidden="true" />

@@ -1312,6 +1312,18 @@ export type Database = {
           rating_count: number | null; total_zone: number;
         }[];
       };
+      /** ⚠ Regroupe cote BASE pour la vue d'ensemble : le reseau ne transporte
+       *  que ce qui s'affiche, et le navigateur ne pose pas 800 noeuds DOM. */
+      carte_grappes: {
+        Args: {
+          p_sud: number; p_ouest: number; p_nord: number; p_est: number;
+          p_pas: number; p_categorie?: string | null;
+        };
+        Returns: {
+          lat: number; lng: number; n: number; n_sites: number;
+          exemple: string; total_zone: number;
+        }[];
+      };
       compter_sites: {
         Args: Record<string, never>;
         Returns: { kind: string; n: number }[];

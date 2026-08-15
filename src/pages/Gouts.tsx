@@ -348,7 +348,9 @@ function Vignette({
     <div className="dk-reveal dk-carte overflow-hidden rounded-xl border border-border bg-card">
       <Link to={`/plat/${slug}`} className="dk-zoom block aspect-[4/3] bg-secondary">
         {photo ? (
-          <ImageProgressive src={photo} alt={nom} ajustement="cover" />
+          <ImageProgressive src={photo} alt={nom} ajustement="cover"
+              largeurAffichee={"(min-width:1536px) 22vw, (min-width:1280px) 25vw, (min-width:768px) 33vw, 50vw"}
+            />
         ) : (
           <span className="grid h-full w-full place-items-center">
             <UtensilsCrossed className="h-7 w-7 text-primary/40" aria-hidden="true" />

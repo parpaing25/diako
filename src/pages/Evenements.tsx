@@ -87,7 +87,9 @@ export default function Evenements() {
               <article className="dk-reveal dk-carte overflow-hidden rounded-2xl border border-border bg-card">
                 {e.poster_url && (
                   <div className="dk-zoom aspect-[16/9] bg-secondary">
-                    <ImageProgressive src={e.poster_url} alt={e.title} ajustement="cover" />
+                    <ImageProgressive src={e.poster_url} alt={e.title} ajustement="cover"
+              largeurAffichee={"(min-width:1280px) 30vw, (min-width:640px) 45vw, 92vw"}
+            />
                   </div>
                 )}
                 <div className="p-4">

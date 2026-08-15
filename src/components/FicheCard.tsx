@@ -36,7 +36,9 @@ export function FicheCard({ fiche, platCherche }: { fiche: ResultatPage; platChe
     >
       <div className="dk-zoom aspect-[4/3] w-full overflow-hidden bg-muted">
         {fiche.cover_url ? (
-          <ImageProgressive src={fiche.cover_url} alt={fiche.name} ajustement="cover" />
+          <ImageProgressive src={fiche.cover_url} alt={fiche.name} ajustement="cover"
+              largeurAffichee={"(min-width:1280px) 30vw, (min-width:640px) 45vw, 92vw"}
+            />
         ) : (
           <div className="grid h-full w-full place-items-center bg-gradient-to-br from-secondary to-secondary/40">
             <span className="px-4 text-center text-sm font-medium text-primary">{fiche.name}</span>

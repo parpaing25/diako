@@ -70,6 +70,38 @@ type Onglet = "chambres" | "carte" | "activites" | "circuits" | "avis" | "infos"
  *   slug n'existe pas, et des onglets déduits de ce que l'établissement a
  *   RÉELLEMENT publié. Un hôtel sans restaurant n'a pas d'onglet Carte.
  */
+/**
+ * Affiche `pages.source` en rendant ses URL cliquables.
+ *
+ * ⚠ LA CHAINE EST CUMULATIVE. Une fiche relevee par OpenStreetMap puis decrite
+ *   par Wikivoyage porte les DEUX provenances, separees par « · » — l'ODbL et la
+ *   CC BY-SA l'exigent chacune de leur cote. On ne remplace jamais une source,
+ *   on ajoute.
+ */
+function SourceLiee({ texte }: { texte: string }) {
+  const bouts = texte.split(/(https?:\/\/\S+)/g);
+  return (
+    <p className="mt-2 text-xs italic text-muted-foreground">
+      Source :{" "}
+      {bouts.map((b, i) =>
+        /^https?:\/\//.test(b) ? (
+          <a
+            key={i}
+            href={b}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline"
+          >
+            {b.replace(/^https?:\/\/(www\.)?/, "").slice(0, 60)}
+          </a>
+        ) : (
+          <span key={i}>{b}</span>
+        )
+      )}
+    </p>
+  );
+}
+
 export default function PagePro() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -992,11 +1024,13 @@ export default function PagePro() {
                     ses chambres, ses tarifs, ses photos, et recevra les messages
                     des voyageurs.
                   </p>
-                  {fiche.source && (
-                    <p className="mt-2 text-xs italic text-muted-foreground">
-                      Source : {fiche.source}
-                    </p>
-                  )}
+                  {/* 🔴 LA SOURCE DOIT ETRE CLIQUABLE. Une partie des textes de
+                      ces fiches vient de Wikivoyage, en CC BY-SA : la licence
+                      exige de lier l'article precis — c'est lui qui porte
+                      l'historique des auteurs. Une URL affichee en texte brut ne
+                      satisfait pas cette obligation, et personne ne la recopie
+                      a la main. */}
+                  {fiche.source && <SourceLiee texte={fiche.source} />}
                   <button
                     onClick={revendiquerFiche}
                     className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"

@@ -334,6 +334,41 @@ export default function Site() {
             )}
           </dl>
 
+          {/* 🔴 UN FAIT DATÉ VAUT MIEUX QU'UN PRIX INVENTÉ. Madagascar National
+              Parks a annoncé en mai 2026 le DOUBLEMENT des droits d'entrée,
+              applicable au 1ᵉʳ novembre 2026 — les tarifs n'avaient pas bougé
+              depuis douze ans. Aucune table officielle par parc n'est publiée :
+              les sources de presse donnent des FOURCHETTES (5 000–15 000 Ar pour
+              un Malgache, 45 000–130 000 Ar pour un étranger) et se
+              contredisent sur les résidents.
+              ⚠ On ne remplit donc AUCUN tarif de parc. Poser 45 000 Ar sur
+                255 fiches à partir d'une fourchette fabriquerait la donnée la
+                plus consultée et la plus coûteuse à se tromper de tout l'écran.
+                Ce bandeau dit ce qu'on sait, avec sa date et sa source — ce qui
+                est plus utile à un voyageur qu'un chiffre faux. */}
+          {(s.kind === "reserve" || s.kind === "parc") &&
+            s.fee_nonresident_ar == null && (
+              <p className="mt-3 flex gap-2 rounded-xl border border-gold bg-gold-soft p-3 text-xs leading-relaxed">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" aria-hidden="true" />
+                <span>
+                  Nous n'avons pas de tarif vérifié pour ce parc, et nous
+                  préférons ne rien afficher plutôt qu'un prix approximatif.
+                  À savoir&nbsp;: Madagascar National Parks a annoncé en mai 2026
+                  le <strong>doublement des droits d'entrée</strong> de ses parcs,
+                  applicable au <strong>1ᵉʳ novembre 2026</strong>. Demandez le
+                  tarif du jour à l'entrée ou à votre guide.{" "}
+                  <a
+                    href="https://www.lexpress.mg/2026/05/aires-protegees-les-tarifs-dentree-dans.html"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="underline"
+                  >
+                    L'Express de Madagascar, mai 2026
+                  </a>
+                </span>
+              </p>
+            )}
+
           {/* ⚠ Le guide par GROUPE, redit en clair : c'est l'erreur de lecture
               la plus coûteuse de cet écran. */}
           {s.guide_required && (

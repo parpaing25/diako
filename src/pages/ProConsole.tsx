@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useRetour } from "@/hooks/useRetour";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronRight, Eye, Loader2, Plus, Trash2 } from "lucide-react";
@@ -82,6 +83,8 @@ export default function ProConsole() {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  /** ⚠ Repli sur /pro seulement si on est arrive ici DIRECTEMENT. */
+  const retour = useRetour("/pro");
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "refus" | "absente">("chargement");
@@ -163,7 +166,7 @@ export default function ProConsole() {
     <div className="px-4 py-5">
       <div className="flex items-center gap-2">
         <button
-          onClick={() => navigate("/pro")}
+          onClick={retour}
           aria-label="Retour"
           className="dk-tap grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
         >

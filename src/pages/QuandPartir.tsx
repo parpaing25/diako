@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarCheck, Compass, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ChampLieu, type LieuChoisi } from "@/components/ChampLieu";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EtatErreur, Squelettes } from "@/components/Etats";
@@ -68,11 +69,46 @@ export default function QuandPartir() {
     url: "https://diako.fonenako.mg/quand-partir",
   });
 
+  /**
+   * LES DESTINATIONS QUE L'ON COMPARE.
+   *
+   * ⚠ `null` = « celles qu'on documente », c'est-a-dire le tableau par defaut.
+   *   Des que la personne en ajoute une, on passe a SA selection : elle a dit
+   *   ce qui l'interesse, on ne la noie plus sous le reste.
+   */
+  const [choisis, setChoisis] = useState<{ slug: string; nom: string }[] | null>(null);
+  const [ajout, setAjout] = useState<LieuChoisi | null>(null);
   const [d, setD] = useState<Donnees | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "erreur">("chargement");
   const moisCourant = new Date().getMonth() + 1;
   const [moisChoisi, setMoisChoisi] = useState<number>(moisCourant);
   useReveal(d?.lieux);
+
+  /**
+   * ⚠ ON DISTINGUE « PAS DOCUMENTÉ » DE « ABSENT ». Une destination ajoutée que
+   *   le référentiel ne connaît pas encore doit apparaître dans le tableau avec
+   *   une ligne qui le DIT — pas disparaître en silence. C'est la seule façon
+   *   que quelqu'un se dise « tiens, je peux la remplir ».
+   */
+  const documentes = d?.lieux ?? [];
+  const selection =
+    choisis === null
+      ? documentes.map((l) => ({ slug: l.slug, nom: l.nom }))
+      : choisis;
+  const lignes = selection.map((c) => ({
+    ...c,
+    donnees: documentes.find((l) => l.slug === c.slug) ?? null,
+  }));
+
+  function ajouter(l: LieuChoisi | null) {
+    setAjout(null);
+    if (!l?.id) return;
+    // ⚠ On part de ce qui est AFFICHÉ, pas d'une liste vide : ajouter une
+    //   destination ne doit pas effacer les cinq déjà là.
+    const base = choisis ?? documentes.map((x) => ({ slug: x.slug, nom: x.nom }));
+    if (base.some((x) => x.nom === l.nom)) return;
+    setChoisis([...base, { slug: "", nom: l.nom }]);
+  }
 
   const charger = useCallback(async () => {
     setEtat("chargement");
@@ -191,6 +227,38 @@ export default function QuandPartir() {
       {/* ── Le tableau complet, qui se lit dans les deux sens ─────────────── */}
       <section className="dk-reveal mt-8">
         <h2 className="text-lg font-semibold">L'année entière</h2>
+
+        {/* ⚠ CHOISIR CE QU'ON COMPARE. Le tableau montrait cinq destinations
+            figées : utile pour découvrir, inutile pour décider entre Nosy Be
+            et Sainte-Marie quand c'est justement la question qu'on se pose. */}
+        <div className="mt-3 max-w-md">
+          <ChampLieu valeur={ajout} onChange={ajouter} />
+        </div>
+        {choisis !== null && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {choisis.map((c) => (
+              <span
+                key={c.nom}
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs"
+              >
+                {c.nom}
+                <button
+                  onClick={() => setChoisis(choisis.filter((x) => x.nom !== c.nom))}
+                  aria-label={`Retirer ${c.nom}`}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <button
+              onClick={() => setChoisis(null)}
+              className="min-h-8 rounded-full px-3 text-xs text-primary underline underline-offset-4"
+            >
+              Revenir aux destinations documentées
+            </button>
+          </div>
+        )}
         <p className="dk-secondaire mt-1">
           Par colonne, comparez un mois entre destinations. Par ligne, lisez
           l'année d'une destination.
@@ -221,7 +289,33 @@ export default function QuandPartir() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {d.lieux.map((l) => (
+              {lignes.map((ligne) => {
+                const l = ligne.donnees;
+                /* 🔴 UNE DESTINATION AJOUTÉE MAIS NON DOCUMENTÉE GARDE SA LIGNE.
+                   La faire disparaître laisserait croire qu'elle n'a pas de
+                   saison — alors que c'est nous qui ne l'avons pas encore
+                   écrite. La ligne le dit, et propose de la remplir : c'est
+                   exactement là que le site passe de « nous remplissons » à
+                   « les gens remplissent ». */
+                if (!l)
+                  return (
+                    <tr key={ligne.nom} className="bg-card">
+                      <th
+                        scope="row"
+                        className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium"
+                      >
+                        {ligne.nom}
+                      </th>
+                      <td colSpan={12} className="px-3 py-2 text-xs text-muted-foreground">
+                        Pas encore documentée —{" "}
+                        <Link to="/publier?type=recit" className="text-primary underline underline-offset-4">
+                          racontez-y un voyage
+                        </Link>{" "}
+                        et sa saison s'écrira.
+                      </td>
+                    </tr>
+                  );
+                return (
                 <tr key={l.slug} className="bg-card">
                   <th scope="row" className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium">
                     <Link to={`/lieu/${l.slug}`} className="hover:text-primary">
@@ -251,7 +345,8 @@ export default function QuandPartir() {
                     );
                   })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

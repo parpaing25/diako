@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRetour } from "@/hooks/useRetour";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -99,6 +100,7 @@ export default function Carte() {
   });
 
   const navigate = useNavigate();
+  const retour = useRetour("/");
   const [params] = useSearchParams();
   const divCarte = useRef<HTMLDivElement>(null);
   const carte = useRef<L.Map | null>(null);
@@ -341,7 +343,7 @@ export default function Carte() {
     <div className="fixed inset-0 z-10 flex flex-col bg-background pt-[var(--header-h,3.5rem)]">
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
         <button
-          onClick={() => navigate(-1)}
+          onClick={retour}
           aria-label="Retour"
           className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-muted"
         >

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { Flame, Heart, MessageCircle, Bookmark, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserData } from "@/contexts/UserDataContext";
 import { FEUILLE_DE_ROUTE } from "@/lib/nav";
 import { choisirEnVogue } from "@/lib/tendance";
 import { cn } from "@/lib/utils";
@@ -105,6 +106,44 @@ function Compteur({ valeur }: { valeur: number }) {
  * masqué en CSS : un composant masqué fait quand même ses requêtes.
  */
 export function RightRail() {
+  const { profile } = useUserData();
+  /**
+   * La position du lecteur, DÉDUITE DE SA VILLE DÉCLARÉE.
+   *
+   * ⚠ On resout la ville une fois, en base, contre le referentiel des lieux.
+   *   Pas de GPS : demander la geolocalisation pour classer un bloc de rail
+   *   serait disproportionne, et une demande non sollicitee est refusee par
+   *   reflexe — ce qui fermerait la porte la ou on en a vraiment besoin.
+   */
+  const [ici, setIci] = useState<{ lat: number; lng: number } | null>(null);
+  const villeDeclaree = profile?.home_place ?? null;
+
+  useEffect(() => {
+    if (!villeDeclaree) {
+      setIci(null);
+      return;
+    }
+    let vivant = true;
+    void supabase
+      .rpc("chercher_lieux", { p_q: villeDeclaree, p_limite: 1 })
+      .then(({ data }) => {
+        const l = (data as { id: string }[] | null)?.[0];
+        if (!vivant || !l) return;
+        void supabase
+          .from("places")
+          .select("lat,lng")
+          .eq("id", l.id)
+          .maybeSingle()
+          .then(({ data: d }) => {
+            const c = d as { lat: number | null; lng: number | null } | null;
+            if (vivant && c?.lat != null && c.lng != null) setIci({ lat: c.lat, lng: c.lng });
+          });
+      });
+    return () => {
+      vivant = false;
+    };
+  }, [villeDeclaree]);
+
   const [saison, setSaison] = useState<Saison[] | null>(null);
   const [vogue, setVogue] = useState<Vogue[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -144,13 +183,21 @@ export function RightRail() {
       .rpc("saison_du_mois", { p_mois: null, p_limite: 5 })
       .then(({ data }) => setSaison((data as Saison[] | null) ?? []));
     void supabase.rpc("stats_diako").then(({ data }) => setStats(data as Stats | null));
-    void supabase.rpc("recits_en_vogue", { p_limite: 12 }).then(({ data }) => {
+    // ⚠ LA POSITION VIENT DE LA VILLE DÉCLARÉE, jamais du GPS. Demander la
+    //   géolocalisation pour classer un bloc de rail serait disproportionné —
+    //   et une demande non sollicitée est refusée par réflexe, ce qui ferme la
+    //   porte pour les cas où on en a vraiment besoin (« près de moi »).
+    //   Sans ville déclarée, le terme de proximité vaut zéro et le classement
+    //   reste celui de l'attention : on ne devine pas une position.
+    void supabase
+      .rpc("recits_en_vogue", { p_limite: 12, p_lat: ici?.lat ?? null, p_lng: ici?.lng ?? null })
+      .then(({ data }) => {
       // Le tirage pondéré se fait CÔTÉ CLIENT : la base rend les meilleurs,
       // le rail en montre quatre différents à chaque visite.
       const tous = (data as Vogue[] | null) ?? [];
       setVogue(choisirEnVogue(tous, 4));
     });
-  }, [inutile]);
+  }, [inutile, ici]);
 
   const total = vogue?.reduce(
     (t, v) => Math.max(t, v.reactions_count + v.comments_count + v.saves_count),

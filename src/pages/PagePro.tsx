@@ -288,8 +288,8 @@ export default function PagePro() {
         {fiche.cover_url ? (
           <ImageProgressive src={fiche.cover_url} alt={fiche.name} prioritaire ajustement="cover" />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-gradient-to-br from-primary to-primary-soft">
-            <span className="px-6 text-center text-xl font-semibold text-white">{fiche.name}</span>
+          <div className="grid h-full w-full place-items-center bg-primary">
+            <span className="px-6 text-center text-xl font-semibold text-primary-foreground">{fiche.name}</span>
           </div>
         )}
       </div>

@@ -57,7 +57,16 @@ export function MenuMobile({ ouvert, fermer }: { ouvert: boolean; fermer: () => 
   if (!ouvert) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+    /* 🔴 DÉFAUT CORRIGÉ : ce tiroir était resté `lg:hidden` alors que le bouton
+       qui l'ouvre est passé à `xl:hidden` en même temps que la barre latérale.
+       Entre 1024 et 1279 px — iPad Air en paysage, portable 1366×768 à 125 % —
+       le bouton était visible, mais le tiroir masqué par CSS. Au clic, les
+       effets ci-dessus s'exécutaient quand même : `body.overflow = "hidden"`
+       était posé sur un panneau en `display:none`. La page cessait de défiler,
+       rien ne s'affichait, aucune erreur en console.
+       ⚠ Les deux seuils doivent bouger ENSEMBLE. Un bouton et son panneau sont
+         une seule fonction : les séparer produit exactement ce blocage muet. */
+    <div className="fixed inset-0 z-50 xl:hidden">
       <button
         aria-label="Fermer le menu"
         onClick={fermer}

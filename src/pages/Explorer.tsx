@@ -128,10 +128,10 @@ export default function Explorer() {
 
     return (
       <div className="pb-6">
-        <div className="flex h-40 items-center justify-center bg-gradient-to-br from-primary to-primary-soft md:h-56 md:rounded-2xl">
+        <div className="flex h-40 items-center justify-center bg-primary md:h-56 md:rounded-2xl">
           <div className="px-6 text-center">
-            <h1 className="text-2xl font-semibold text-white md:text-3xl">{lieu.name_fr}</h1>
-            {lieu.region && <p className="mt-1 text-sm text-white/85">{lieu.region}</p>}
+            <h1 className="text-2xl font-semibold text-primary-foreground md:text-3xl">{lieu.name_fr}</h1>
+            {lieu.region && <p className="mt-1 text-sm text-primary-foreground/85">{lieu.region}</p>}
           </div>
         </div>
 

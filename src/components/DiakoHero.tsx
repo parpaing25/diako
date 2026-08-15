@@ -119,7 +119,7 @@ export function DiakoHero({
                   onClick={() => navigate(`/lieu/${d.slug}`)}
                   className="group w-[200px] shrink-0 snap-start overflow-hidden rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-md md:w-[228px]"
                 >
-                  <div className="relative flex aspect-video items-center justify-center bg-gradient-to-br from-primary/85 to-primary-soft">
+                  <div className="relative flex aspect-video items-center justify-center bg-primary/95">
                     <span className="px-3 text-center text-sm font-semibold text-white">
                       {d.name_fr}
                     </span>

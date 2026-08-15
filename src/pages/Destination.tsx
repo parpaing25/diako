@@ -247,7 +247,7 @@ export default function Destination() {
       <aside className="mt-6 shrink-0 space-y-3 xl:sticky xl:top-20 xl:mt-0 xl:w-[340px]">
       <div className="grid grid-cols-2 gap-2">
         <Link
-          to={`/recherche?lieu=${f.lieu.slug}&cat=hotel`}
+          to={`/recherche?q=${encodeURIComponent(f.lieu.name_fr)}&cat=hotel`}
           className={cn(
             "inline-flex min-h-12 items-center justify-center gap-1.5 rounded-full px-4 font-semibold",
             f.nb_ou_dormir > 0
@@ -259,7 +259,7 @@ export default function Destination() {
           Où dormir ({f.nb_ou_dormir})
         </Link>
         <Link
-          to={`/recherche?lieu=${f.lieu.slug}&cat=restaurant`}
+          to={`/recherche?q=${encodeURIComponent(f.lieu.name_fr)}&cat=restaurant`}
           className={cn(
             "inline-flex min-h-12 items-center justify-center gap-1.5 rounded-full px-4 font-semibold",
             f.nb_ou_manger > 0 ? "border border-primary text-primary" : "border border-input text-muted-foreground"

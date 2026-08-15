@@ -199,6 +199,13 @@ export async function publier(entree: {
   /** Les rattachements au référentiel : c'est sur EUX que la recherche porte. */
   place_id?: string | null;
   dish_id?: string | null;
+  /** ⚠ Le prix d'une publication va toujours par TROIS : montant, unité, date
+   *  du releve. Un montant seul ne veut rien dire (50 000 Ar la nuit ou par
+   *  groupe ?) et sans date il se lit comme un prix d'aujourd'hui. La base
+   *  refuse d'ailleurs un montant sans unite. */
+  price_ar?: number | null;
+  price_unit?: string | null;
+  price_on?: string | null;
 }): Promise<string> {
   const {
     data: { user },
@@ -218,6 +225,9 @@ export async function publier(entree: {
       place_id: entree.place_id || null,
       dish: entree.dish || null,
       dish_id: entree.dish_id || null,
+      price_ar: entree.price_ar ?? null,
+      price_unit: entree.price_ar != null ? entree.price_unit || null : null,
+      price_on: entree.price_ar != null ? entree.price_on || null : null,
     })
     .select("id")
     .maybeSingle();

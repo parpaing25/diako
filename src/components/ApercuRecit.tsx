@@ -22,6 +22,20 @@ import { cn } from "@/lib/utils";
  */
 
 /** Le même seuil que `PostCard` — s'il change là-bas, il change ici. */
+/** ⚠ Le même vocabulaire que `typesPublication` : deux tables d'unités
+ *  divergeraient au premier ajout. */
+const LIBELLE_UNITE: Record<string, string> = {
+  personne: "par personne",
+  portion: "la portion",
+  nuit: "la nuit",
+  chambre: "par chambre",
+  jour: "la journée",
+  trajet: "le trajet",
+  entree: "l'entrée",
+  vehicule: "par véhicule",
+  groupe: "par groupe",
+};
+
 const SEUIL_TEXTE = 180;
 
 export function ApercuRecit({
@@ -32,6 +46,7 @@ export function ApercuRecit({
   plat,
   etablissement,
   photos,
+  prix,
   className,
 }: {
   auteur: string;
@@ -41,6 +56,9 @@ export function ApercuRecit({
   plat?: string | null;
   etablissement?: string | null;
   photos: { url: string }[];
+  /** ⚠ Le prix va par TROIS. On ne l'affiche que complet : un montant sans son
+   *  unite se lit de travers, et c'est l'erreur la plus couteuse du produit. */
+  prix?: { montant: number; unite: string; le?: string | null } | null;
   className?: string;
 }) {
   const long = texte.length > SEUIL_TEXTE;
@@ -98,6 +116,22 @@ export function ApercuRecit({
           />
         </div>
       </article>
+
+      {prix && (
+        <div className="mt-2 rounded-xl border border-primary/25 bg-secondary px-3.5 py-2.5">
+          <p className="text-lg font-bold tabular-nums text-primary">
+            {new Intl.NumberFormat("fr-FR").format(prix.montant)} Ar
+            <span className="ml-1.5 text-sm font-medium text-muted-foreground">
+              {LIBELLE_UNITE[prix.unite] ?? prix.unite}
+            </span>
+          </p>
+          {prix.le && (
+            <p className="dk-secondaire mt-0.5">
+              Relevé le {new Date(prix.le).toLocaleDateString("fr-FR")}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Le seul conseil qui vaille : ce qui manque à CETTE publication. */}
       <ul className="mt-3 space-y-1.5">

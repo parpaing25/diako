@@ -106,6 +106,9 @@ export type Database = {
           place_id: string | null;
           dish: string | null;
           dish_id: string | null;
+          price_ar: number | null;
+          price_unit: string | null;
+          price_on: string | null;
           page_name: string | null;
           reactions_count: number;
           comments_count: number;
@@ -124,6 +127,9 @@ export type Database = {
           place_id?: string | null;
           dish?: string | null;
           dish_id?: string | null;
+          price_ar?: number | null;
+          price_unit?: string | null;
+          price_on?: string | null;
           page_name?: string | null;
           reactions_count?: number;
           comments_count?: number;
@@ -1314,6 +1320,14 @@ export type Database = {
       };
       /** ⚠ Regroupe cote BASE pour la vue d'ensemble : le reseau ne transporte
        *  que ce qui s'affiche, et le navigateur ne pose pas 800 noeuds DOM. */
+      chercher_lieux: {
+        Args: { p_q: string; p_limite?: number };
+        Returns: {
+          id: string; slug: string; nom: string; region: string | null;
+          district: string | null; kind: string; nb_pages: number;
+          touristique: boolean; via_alias: string | null;
+        }[];
+      };
       feed_filtre: {
         Args: {
           p_mode?: string; p_curseur?: string | null; p_limite?: number;

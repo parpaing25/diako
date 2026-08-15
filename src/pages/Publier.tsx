@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
 import { publier, type Media } from "@/lib/api";
+import { ApercuRecit } from "@/components/ApercuRecit";
 import {
   chargerDestinations,
   chargerPlats,
@@ -160,7 +161,14 @@ export default function Publier() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-5">
+    /* ═══ GABARIT G6 — SAISIE ET APERCU ═══════════════════════════════════
+       ⚠ LE GRAND ECRAN SERT A VOIR L'EFFET DE CE QU'ON SAISIT. Ce qu'on ecrit
+         dans un formulaire ne ressemble jamais a ce que les autres verront :
+         le texte est coupe a 180 caracteres dans le fil, la photo passe en
+         16/9, et les trois tags apparaissent sous elle. Sans apercu, on
+         decouvre la coupure APRES avoir publie. */
+    <div className="mx-auto flex max-w-[1250px] items-start justify-center gap-6 px-4 py-5">
+      <div className="min-w-0 max-w-2xl flex-1">
       <h1 className="text-2xl font-semibold">Publier</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Racontez, partagez une adresse, signalez un bon plan.
@@ -314,6 +322,16 @@ export default function Publier() {
           Annuler
         </button>
       </div>
+      </div>
+
+      <ApercuRecit
+        auteur={user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Vous"}
+        avatar={user?.user_metadata?.avatar_url ?? null}
+        texte={texte}
+        lieu={lieu || null}
+        plat={plat || null}
+        photos={photos}
+      />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { useAuth } from "./AuthContext";
 // select('*') anonyme renvoie de toute façon 401 — chaque colonne doit être
 // explicitement accordée à `anon`.
 export const PROFILE_COLUMNS =
-  "id,display_name,avatar_url,cover_url,bio,home_place,language,account_type,verification,followers_count,following_count,posts_count,created_at";
+  "id,display_name,avatar_url,cover_url,bio,home_place,language,account_type,verification,followers_count,following_count,posts_count,created_at,metier_pro,lieux_publics";
 
 type ProfileLite = Pick<
   Profile,
@@ -20,6 +20,8 @@ type ProfileLite = Pick<
   | "home_place"
   | "language"
   | "account_type"
+  | "metier_pro"
+  | "lieux_publics"
   | "verification"
   | "followers_count"
   | "following_count"

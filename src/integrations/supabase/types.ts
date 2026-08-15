@@ -36,6 +36,7 @@ export type Database = {
         Row: {
           account_type: string;
           metier_pro: string | null;
+          lieux_publics: boolean;
           avatar_url: string | null;
           bio: string | null;
           cover_url: string | null;
@@ -55,6 +56,7 @@ export type Database = {
         Insert: {
           account_type?: string;
           metier_pro?: string | null;
+          lieux_publics?: boolean;
           avatar_url?: string | null;
           bio?: string | null;
           cover_url?: string | null;
@@ -74,6 +76,7 @@ export type Database = {
         Update: {
           account_type?: string;
           metier_pro?: string | null;
+          lieux_publics?: boolean;
           avatar_url?: string | null;
           bio?: string | null;
           cover_url?: string | null;
@@ -112,6 +115,7 @@ export type Database = {
           price_ar: number | null;
           price_unit: string | null;
           price_on: string | null;
+          visibilite: string;
           page_name: string | null;
           reactions_count: number;
           comments_count: number;
@@ -133,6 +137,7 @@ export type Database = {
           price_ar?: number | null;
           price_unit?: string | null;
           price_on?: string | null;
+          visibilite?: string;
           page_name?: string | null;
           reactions_count?: number;
           comments_count?: number;
@@ -151,6 +156,8 @@ export type Database = {
           dish_id?: string | null;
           page_name?: string | null;
           status?: string;
+          /** ⚠ Le choix de l'AUTEUR, distinct de `status` qui est la moderation. */
+          visibilite?: string;
         };
         Relationships: [];
       };
@@ -1325,6 +1332,10 @@ export type Database = {
        *  que ce qui s'affiche, et le navigateur ne pose pas 800 noeuds DOM. */
       /** ⚠ SEUL chemin vers un compte professionnel : l'UPDATE direct de
        *  `account_type` est refuse par declencheur depuis la migration 0069. */
+      mes_publications: { Args: { p_curseur?: string | null; p_limite?: number; p_kind?: string | null }; Returns: unknown };
+      mon_activite: { Args: Record<string, never>; Returns: unknown };
+      profil_public: { Args: { p_id: string }; Returns: unknown };
+      publications_publiques: { Args: { p_id: string; p_curseur?: string | null; p_limite?: number }; Returns: unknown };
       devenir_pro: {
         Args: { p_metier: string };
         Returns: undefined;

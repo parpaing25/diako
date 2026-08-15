@@ -545,3 +545,131 @@ export async function signaler(
     .insert({ target_type: cible, target_id: id, reporter_id: user.id, reason: raison });
   if (error && error.code !== "23505") throw error; // 23505 = déjà signalé
 }
+
+/* ── Profil, historique et visibilité ──────────────────────────────────── */
+
+export interface PublicationMienne {
+  id: string;
+  kind: string;
+  body: string | null;
+  media: Media[];
+  place: string | null;
+  dish: string | null;
+  created_at: string;
+  status: string;
+  visibilite: "public" | "prive";
+  reactions_count: number;
+  comments_count: number;
+  saves_count: number;
+  price_ar: number | null;
+  price_unit: string | null;
+  price_on: string | null;
+}
+
+/**
+ * MON historique — tout, y compris ce que j'ai gardé pour moi.
+ *
+ * ⚠ DEUX FONCTIONS SÉPARÉES, ET PAS UN DRAPEAU. `publications_publiques()` sert
+ *   le profil public ; celle-ci sert son propriétaire. Une fonction unique avec
+ *   un « je suis le propriétaire » finit toujours par fuiter au premier appelant
+ *   qui l'oublie.
+ */
+export async function mesPublications(opts: {
+  curseur?: string | null;
+  limite?: number;
+  kind?: string | null;
+} = {}): Promise<PublicationMienne[]> {
+  const { data, error } = await supabase.rpc("mes_publications", {
+    p_curseur: opts.curseur ?? null,
+    p_limite: opts.limite ?? 12,
+    p_kind: opts.kind ?? null,
+  });
+  if (error) throw error;
+  return (data as unknown as PublicationMienne[]) ?? [];
+}
+
+export interface MonActivite {
+  publications: number;
+  privees: number;
+  bons_plans: number;
+  assiettes: number;
+  lieux: number;
+  plats_goutes: number;
+  carnet: number;
+  mes_pages: number;
+}
+
+export async function monActivite(): Promise<MonActivite> {
+  const { data, error } = await supabase.rpc("mon_activite");
+  if (error) throw error;
+  return data as unknown as MonActivite;
+}
+
+/**
+ * Rendre une publication publique ou privée.
+ *
+ * ⚠ `visibilite` N'EST PAS `status`. `status` est la modération — `hidden` est
+ *   subi, posé par le déclencheur au 3ᵉ signalement. `visibilite` est la
+ *   décision de l'auteur. Les confondre ferait republier, le jour où la
+ *   modération lève un masquage, un texte que son auteur voulait privé.
+ */
+export async function changerVisibilite(id: string, prive: boolean) {
+  const { error } = await supabase
+    .from("posts")
+    .update({ visibilite: prive ? "prive" : "public" })
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+}
+
+export interface ProfilPublic {
+  id: string;
+  nom: string | null;
+  avatar: string | null;
+  couverture: string | null;
+  bio: string | null;
+  ville: string | null;
+  type: string;
+  metier: string | null;
+  verification: string;
+  membre_depuis: string;
+  nb_abonnes: number;
+  nb_abonnements: number;
+  nb_publications: number;
+  pages: { slug: string; nom: string; categories: string[]; photo: string | null; lieu: string | null }[];
+  /** `null` quand la personne n'a pas ouvert ses lieux — pas quand elle n'a pas voyagé. */
+  lieux: string[] | null;
+}
+
+export async function profilPublic(id: string): Promise<ProfilPublic | null> {
+  const { data, error } = await supabase.rpc("profil_public", { p_id: id });
+  if (error) throw error;
+  return (data as unknown as ProfilPublic) ?? null;
+}
+
+export async function publicationsPubliques(
+  id: string,
+  curseur?: string | null,
+  limite = 12
+): Promise<PublicationMienne[]> {
+  const { data, error } = await supabase.rpc("publications_publiques", {
+    p_id: id,
+    p_curseur: curseur ?? null,
+    p_limite: limite,
+  });
+  if (error) throw error;
+  return (data as unknown as PublicationMienne[]) ?? [];
+}
+
+/** ⚠ Faux par défaut : un historique de déplacements ne peut pas être
+ *  opt-out rétroactif. C'est à la personne de l'ouvrir. */
+export async function ouvrirMesLieux(ouvert: boolean) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Connexion requise.");
+  const { error } = await supabase
+    .from("profiles")
+    .update({ lieux_publics: ouvert })
+    .eq("id", user.id)
+    .select("id");
+  if (error) throw error;
+}

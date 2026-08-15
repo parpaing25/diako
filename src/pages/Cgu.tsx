@@ -1,10 +1,11 @@
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { PageLegale } from "@/components/PageLegale";
 
 export default function Cgu() {
   useDocumentTitle("Conditions d'utilisation");
   return (
-    <article className="prose prose-sm mx-auto max-w-2xl px-4 py-10 dark:prose-invert">
-      <h1>Conditions d'utilisation</h1>
+    <PageLegale titre="Conditions d'utilisation" majLe="31 juillet 2026">
+      
       <p>
         En créant un compte ou en utilisant Diako, vous acceptez les règles
         ci-dessous. Elles sont courtes et écrites pour être comprises.
@@ -89,7 +90,7 @@ export default function Cgu() {
         <a href="mailto:contact.fonenako@gmail.com">contact.fonenako@gmail.com</a>.
       </p>
 
-      <p className="text-xs">Dernière mise à jour : 31 juillet 2026.</p>
-    </article>
+      
+    </PageLegale>
   );
 }

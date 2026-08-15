@@ -100,8 +100,13 @@ export default function EspacePro() {
 
       {chargement && <div className="dk-skeleton mt-5 h-28 rounded-2xl" />}
 
+      {/* Gabarit G1 : les fiches d'un gérant se comparent en colonnes, pas en
+          pile. Un hôtelier qui tient trois pages doit voir les trois d'un coup
+          pour repérer celle qui n'est pas à jour.
+          ⚠ Le commentaire est ICI et non dans le `&&` : une accolade JSX ne
+            peut pas être le premier enfant d'une expression conditionnelle. */}
       {!chargement && etabs.length > 0 && (
-        <ul className="mt-5 space-y-3">
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 large:grid-cols-3">
           {etabs.map((e) => (
             <li key={e.id} className="rounded-2xl border border-border p-4">
               <div className="flex items-start justify-between gap-3">

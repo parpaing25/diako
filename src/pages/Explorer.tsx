@@ -225,7 +225,7 @@ export default function Explorer() {
             </div>
 
             {etabs.length > 0 ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
                 {etabs.map((e) => (
                   <FicheCard key={e.id} fiche={e} />
                 ))}
@@ -276,13 +276,13 @@ export default function Explorer() {
       </p>
 
       {chargement ? (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="dk-skeleton h-32 rounded-2xl" />
           ))}
         </div>
       ) : (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
           {destinations.map((d) => (
             <Link
               key={d.slug}

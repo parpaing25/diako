@@ -101,10 +101,26 @@ export default function Post() {
   }
 
   return (
-    <div className="dk-colonne px-4 py-5">
-      <PostCard post={post} onSupprime={() => setEtat("absent")} />
+    /* ═══ GABARIT G2 — LECTURE LONGUE ══════════════════════════════════════
+       ⚠ LE TEXTE NE S'ÉLARGIT PAS, JAMAIS. Un récit fait 1 494 caractères en
+         moyenne sur ce site : au-delà de ~620 px de colonne, l'œil perd la
+         ligne en revenant à la gauche. Ce qui change avec la place, c'est ce
+         qui ACCOMPAGNE le texte — ici les commentaires, qui passent de
+         dessous à côté à partir de `large` (1920 px).
 
-      <section aria-labelledby="titre-commentaires" className="mt-4 rounded-2xl border border-border p-4">
+       ⚠ LA COLONNE DE COMMENTAIRES NE DISPARAÎT PAS QUAND ELLE EST VIDE. Une
+         page qui change de forme selon ce qu'elle contient est illisible : le
+         lecteur qui revient ne retrouve pas ses repères. Elle porte alors le
+         champ de réponse et l'invitation. */
+    <div className="px-4 py-5 large:flex large:items-start large:justify-center large:gap-6">
+      <div className="dk-colonne large:mx-0 large:w-[700px] large:max-w-[700px] large:shrink-0">
+        <PostCard post={post} onSupprime={() => setEtat("absent")} />
+      </div>
+
+      <section
+        aria-labelledby="titre-commentaires"
+        className="dk-colonne mt-4 rounded-2xl border border-border p-4 large:mx-0 large:mt-0 large:w-[518px] large:max-w-[518px] large:shrink-0"
+      >
         <h2 id="titre-commentaires" className="text-sm font-semibold">
           Commentaires
         </h2>

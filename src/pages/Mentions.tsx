@@ -1,10 +1,11 @@
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { PageLegale } from "@/components/PageLegale";
 
 export default function Mentions() {
   useDocumentTitle("Mentions légales");
   return (
-    <article className="prose prose-sm mx-auto max-w-2xl px-4 py-10 dark:prose-invert">
-      <h1>Mentions légales</h1>
+    <PageLegale titre="Mentions légales" majLe="31 juillet 2026">
+      
 
       <h2>Éditeur du site</h2>
       <p>
@@ -52,7 +53,7 @@ export default function Mentions() {
         droits est interdit et entraîne son retrait.
       </p>
 
-      <p className="text-xs">Dernière mise à jour : 31 juillet 2026.</p>
-    </article>
+      
+    </PageLegale>
   );
 }

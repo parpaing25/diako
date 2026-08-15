@@ -79,7 +79,13 @@ export default function Notifications() {
   }
 
   return (
-    <div className="px-4 py-5">
+    /* ⚠ COLONNE DE LECTURE, PAS PLEINE LARGEUR. Une notification est une ligne
+       courte : etiree sur 1242 px, la date se retrouve a trente centimetres du
+       texte et l'oeil doit traverser l'ecran pour relier les deux. Le gabarit
+       G5 prevoit un second volet de detail ; il n'aura de sens qu'avec un
+       contenu a detailler — aujourd'hui une notification renvoie directement
+       vers son objet, ce qui est plus court d'un clic. */
+    <div className="mx-auto max-w-[640px] px-4 py-5">
       <h1 className="text-2xl font-semibold">Notifications</h1>
 
       {chargement ? (

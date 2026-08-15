@@ -235,7 +235,11 @@ export default function Messages() {
 
   /* ── Liste des conversations ─────────────────────────────────────────── */
   return (
-    <div className="px-4 py-5">
+    /* Meme regle que les notifications : une liste de conversations est faite
+       de lignes courtes. Le deux-volets du gabarit G5 viendra quand il y aura
+       des conversations a afficher — il y en a zero aujourd'hui, pour un seul
+       membre inscrit. */
+    <div className="mx-auto max-w-[720px] px-4 py-5">
       <h1 className="text-2xl font-semibold">Messages</h1>
 
       {chargementListe ? (

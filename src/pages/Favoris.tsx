@@ -134,7 +134,7 @@ export default function Favoris() {
               libelle="Chercher un établissement"
             />
           ) : (
-            <ul className="dk-stagger grid gap-3 sm:grid-cols-2">
+            <ul className="dk-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
               {adresses.map((a) => (
                 <li key={a.id}>
                   <Link

@@ -1,10 +1,11 @@
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { PageLegale } from "@/components/PageLegale";
 
 export default function Confidentialite() {
   useDocumentTitle("Confidentialité");
   return (
-    <article className="prose prose-sm mx-auto max-w-2xl px-4 py-10 dark:prose-invert">
-      <h1>Confidentialité</h1>
+    <PageLegale titre="Confidentialité" majLe="31 juillet 2026">
+      
       <p>
         Ce texte décrit exactement ce que Diako collecte aujourd'hui. Il sera mis
         à jour à chaque nouvelle fonctionnalité.
@@ -57,7 +58,7 @@ export default function Confidentialite() {
         La suppression est définitive et efface également vos publications.
       </p>
 
-      <p className="text-xs">Dernière mise à jour : 31 juillet 2026.</p>
-    </article>
+      
+    </PageLegale>
   );
 }

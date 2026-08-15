@@ -242,7 +242,7 @@ export async function chargerSites(limite = 24): Promise<SiteListe[]> {
 export async function chargerSite(slug: string): Promise<SiteListe | null> {
   const { data, error } = await supabase
     .from("attractions")
-    .select(COLONNES_SITE + ", description, manager, circuits, gear_needed, species, opening_hours, ticket_validity_days, lat, lng")
+    .select(COLONNES_SITE + ", description, source, manager, circuits, gear_needed, species, opening_hours, ticket_validity_days, lat, lng")
     .eq("slug", slug)
     .eq("is_published", true)
     .limit(1);

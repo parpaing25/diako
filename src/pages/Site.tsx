@@ -29,6 +29,7 @@ import { chargerSite, type SiteListe } from "@/lib/decouverte";
 
 interface SiteComplet extends SiteListe {
   description?: string | null;
+  source?: string | null;
   manager?: string | null;
   circuits?: { nom: string; duree?: string; niveau?: string }[];
   gear_needed?: string[];
@@ -40,6 +41,56 @@ interface SiteComplet extends SiteListe {
 }
 
 const MOIS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+
+/**
+ * D'ou vient le texte de cette fiche.
+ *
+ * ⚠ TROIS PROVENANCES, TROIS REGIMES. Wikipedia est en CC BY-SA : citer et lier
+ *   la licence est OBLIGATOIRE. Wikidata est en CC0 : rien n'est exige, mais on
+ *   cite quand meme — un lecteur qui voit une erreur doit savoir ou la corriger.
+ *   OpenStreetMap est en ODbL : l'attribution est exigee aussi.
+ * ⚠ LA CHAINE STOCKEE EST « <Source> · <reference> ». On n'affiche un lien que
+ *   si la reference est une URL ou un identifiant qu'on sait resoudre ; sinon
+ *   on affiche le texte brut plutot qu'un lien casse.
+ */
+function Attribution({ source }: { source: string }) {
+  const [origine, ref] = source.split(" · ");
+  let href: string | null = null;
+  let licence: { nom: string; url: string } | null = null;
+
+  if (/^https?:\/\//.test(ref ?? "")) {
+    href = ref;
+    licence = { nom: "CC BY-SA 4.0", url: "https://creativecommons.org/licenses/by-sa/4.0/deed.fr" };
+  } else if (origine === "Wikidata" && /^Q\d+$/.test(ref ?? "")) {
+    href = `https://www.wikidata.org/wiki/${ref}`;
+    licence = { nom: "CC0", url: "https://creativecommons.org/publicdomain/zero/1.0/deed.fr" };
+  } else if (origine === "OpenStreetMap") {
+    href = ref ? `https://www.openstreetmap.org/${ref}` : "https://www.openstreetmap.org/";
+    licence = { nom: "ODbL", url: "https://opendatacommons.org/licenses/odbl/" };
+  }
+
+  return (
+    <p className="dk-secondaire mt-4 max-w-[70ch]">
+      Source&nbsp;:{" "}
+      {href ? (
+        <a href={href} target="_blank" rel="noreferrer noopener" className="text-primary underline">
+          {origine}
+        </a>
+      ) : (
+        origine
+      )}
+      {licence && (
+        <>
+          {" · "}
+          <a href={licence.url} target="_blank" rel="noreferrer noopener" className="underline">
+            {licence.nom}
+          </a>
+        </>
+      )}
+      . Une erreur&nbsp;? Corrigez-la à la source, elle reviendra ici.
+    </p>
+  );
+}
 
 export default function Site() {
   const { slug } = useParams<{ slug: string }>();
@@ -129,6 +180,16 @@ export default function Site() {
         {s.description && (
           <p className="dk-corps mt-3 max-w-[70ch] text-muted-foreground">{s.description}</p>
         )}
+
+        {/* 🔴 L'ATTRIBUTION EST UNE OBLIGATION, PAS UNE POLITESSE. Le texte de
+            ces fiches vient de Wikipédia (CC BY-SA) ou de Wikidata (CC0). La
+            CC BY-SA impose de citer la source ET de lier la licence : afficher
+            l'extrait sans ce bloc serait une violation, pas une négligence de
+            forme. Le lien pointe l'article PRÉCIS, pas la page d'accueil —
+            c'est lui qui porte l'historique des auteurs.
+            ⚠ Elle est DANS la page, pas en pied de site : une fiche partagée ou
+              indexée seule doit emporter sa source avec elle. */}
+        {s.source && <Attribution source={s.source} />}
 
         {/* ── LES FADY ─────────────────────────────────────────────────── */}
         {s.fady.length > 0 && (

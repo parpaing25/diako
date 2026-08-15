@@ -135,9 +135,25 @@ export function Prix({
         <span className="dk-sous-titre text-muted-foreground">
           {montant === null ? "Tarif non communiqué" : "Nous consulter"}
         </span>
+        {/* ⚠ ON DIT CE QU'ON SAIT, SANS LE PRÉSENTER COMME ACTUEL. Un tarif
+            périmé était retiré ET tu : l'écran affichait « Nous consulter »
+            alors qu'on connaissait le dernier montant relevé et sa date. Sur un
+            marché où presque aucun établissement ne publie ses prix, « 55 000 Ar
+            relevés en juin 2023 » aide un voyageur à préparer son budget ;
+            « Nous consulter » ne l'aide en rien.
+            ⚠ Le montant est en petit, en gris, DERRIÈRE la mention de son âge —
+              jamais mis en avant comme un prix en cours. La hiérarchie visuelle
+              porte l'avertissement, pas le chiffre. */}
         {montant !== null && (
           <span className="text-xs text-accent-strong">
             Tarifs non confirmés depuis plus de 6 mois
+            {confirmeLe && (
+              <span className="block font-normal text-muted-foreground">
+                Dernier relevé&nbsp;: {ARIARY.format(montant)}&nbsp;Ar
+                {unite ? ` ${LIBELLE_UNITE[unite]}` : ""}, le{" "}
+                {new Date(confirmeLe).toLocaleDateString("fr-FR")}. À reconfirmer.
+              </span>
+            )}
           </span>
         )}
       </span>

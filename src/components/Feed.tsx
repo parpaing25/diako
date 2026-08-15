@@ -5,7 +5,14 @@ import { PostCard } from "@/components/PostCard";
 import { PostImmersif } from "@/components/PostImmersif";
 import { Commentaires } from "@/components/Commentaires";
 import { useEstMobile } from "@/hooks/useEstMobile";
-import { PAR_PALIER, chargerFeed, type Post } from "@/lib/api";
+import {
+  PAR_PALIER,
+  chargerFilFiltre,
+  modesFilDisponibles,
+  type ModeFil,
+  type PostSitue,
+} from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useReveal } from "@/hooks/useReveal";
 
 /**
@@ -15,6 +22,61 @@ import { useReveal } from "@/hooks/useReveal";
  *   pour la meme decision, et c'est la mauvaise qui gagnait.
  */
 const PAR_PAGE = PAR_PALIER;
+
+/**
+ * LES QUATRE ENTREES DU FIL (maquette D1).
+ *
+ * ⚠ ON N'AFFICHE QUE CE QUI REPOND. « Abonnements » quand on ne suit personne,
+ *   « Assiettes » quand aucun plat n'est tague : l'onglet ouvrirait sur un
+ *   ecran vide, ce qui se lit comme une panne et non comme une absence de
+ *   contenu. La barre se remplit d'elle-meme a mesure que le site vit.
+ */
+const MODES: { cle: ModeFil; label: string }[] = [
+  { cle: "tout", label: "Découvrir" },
+  { cle: "abonnements", label: "Abonnements" },
+  { cle: "pres_de_moi", label: "Près de moi" },
+  { cle: "assiettes", label: "Assiettes" },
+];
+
+function BarreFil({
+  mode,
+  dispo,
+  onChoisir,
+}: {
+  mode: ModeFil;
+  dispo: { abonnements: boolean; assiettes: boolean };
+  onChoisir: (m: ModeFil) => void;
+}) {
+  const visibles = MODES.filter((m) => {
+    if (m.cle === "abonnements") return dispo.abonnements;
+    if (m.cle === "assiettes") return dispo.assiettes;
+    if (m.cle === "pres_de_moi")
+      return typeof navigator !== "undefined" && "geolocation" in navigator;
+    return true;
+  });
+  // Un seul onglet n'est pas un filtre, c'est du décor.
+  if (visibles.length < 2) return null;
+
+  return (
+    <div className="mb-4 flex flex-wrap gap-1.5 px-4 md:px-0">
+      {visibles.map((m) => (
+        <button
+          key={m.cle}
+          onClick={() => onChoisir(m.cle)}
+          aria-pressed={mode === m.cle}
+          className={cn(
+            "min-h-9 rounded-full border px-4 text-sm font-semibold transition",
+            mode === m.cle
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-card hover:border-primary hover:text-primary"
+          )}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Le fil — deux présentations, une seule logique.
@@ -30,45 +92,91 @@ const PAR_PAGE = PAR_PALIER;
  */
 export function Feed() {
   const mobile = useEstMobile();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostSitue[]>([]);
   // Les cartes se posent en arrivant a l'ecran ; relance a chaque page recue.
   useReveal(posts.length);
   const [chargement, setChargement] = useState(true);
   const [fini, setFini] = useState(false);
   const [erreur, setErreur] = useState(false);
-  const [commentaires, setCommentaires] = useState<Post | null>(null);
+  const [commentaires, setCommentaires] = useState<PostSitue | null>(null);
   const enVol = useRef(false);
   const sentinelle = useRef<HTMLDivElement>(null);
 
-  const charger = useCallback(async (curseur?: string | null) => {
-    if (enVol.current) return;
-    enVol.current = true;
-    try {
-      // ⚠ LE PALIER EST RELU A CHAQUE APPEL, et la MEME valeur sert a demander
-      //   et a conclure. Fige au chargement du module, il restait a 8 pour qui
-      //   avait ouvert le site en fenetre etroite puis elargi — et surtout,
-      //   demander 12 en comparant a 8 (ou l'inverse) fait declarer le fil
-      //   « termine » alors qu'il reste des publications.
-      const palier = PAR_PAGE();
-      const page = await chargerFeed(curseur, palier);
-      setErreur(false);
-      if (page.length < palier) setFini(true);
-      setPosts((avant) => {
-        if (!curseur) return page;
-        const vus = new Set(avant.map((p) => p.id));
-        return [...avant, ...page.filter((p) => !vus.has(p.id))];
-      });
-    } catch {
-      setErreur(true);
-    } finally {
-      enVol.current = false;
-      setChargement(false);
-    }
-  }, []);
+  const [mode, setMode] = useState<ModeFil>("tout");
+  const [dispo, setDispo] = useState({ abonnements: false, assiettes: false });
+  const [ici, setIci] = useState<{ lat: number; lng: number } | null>(null);
+  // ⚠ Garde-fou de concurrence : changer d'onglet pendant un chargement
+  //   affichait la reponse de l'ANCIEN mode par-dessus le nouveau.
+  const version = useRef(0);
 
   useEffect(() => {
-    void charger(null);
+    modesFilDisponibles().then(setDispo).catch(() => undefined);
+  }, []);
+
+  const charger = useCallback(
+    async (curseur?: string | null, apresKm?: number | null) => {
+      if (enVol.current) return;
+      enVol.current = true;
+      const mien = ++version.current;
+      try {
+        // ⚠ LE PALIER EST RELU A CHAQUE APPEL, et la MEME valeur sert a demander
+        //   et a conclure. Fige au chargement du module, il restait a 8 pour qui
+        //   avait ouvert le site en fenetre etroite puis elargi — et surtout,
+        //   demander 12 en comparant a 8 (ou l'inverse) fait declarer le fil
+        //   « termine » alors qu'il reste des publications.
+        const palier = PAR_PAGE();
+        const page = await chargerFilFiltre({
+          mode,
+          curseur,
+          apresKm,
+          lat: ici?.lat,
+          lng: ici?.lng,
+          limite: palier,
+        });
+        if (mien !== version.current) return;
+        setErreur(false);
+        if (page.length < palier) setFini(true);
+        setPosts((avant) => {
+          if (!curseur && apresKm == null) return page;
+          const vus = new Set(avant.map((p) => p.id));
+          return [...avant, ...page.filter((p) => !vus.has(p.id))];
+        });
+      } catch {
+        if (mien === version.current) setErreur(true);
+      } finally {
+        enVol.current = false;
+        if (mien === version.current) setChargement(false);
+      }
+    },
+    [mode, ici]
+  );
+
+  useEffect(() => {
+    setChargement(true);
+    setFini(false);
+    void charger(null, null);
   }, [charger]);
+
+  /**
+   * ⚠ « PRES DE MOI » DEMANDE LA POSITION AU MOMENT DU CLIC, jamais au
+   *   chargement de la page. Une demande de geolocalisation non sollicitee est
+   *   refusee par reflexe, et le navigateur ne la repropose plus ensuite.
+   */
+  function choisirMode(m: ModeFil) {
+    if (m === "pres_de_moi" && !ici) {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          setIci({ lat: coords.latitude, lng: coords.longitude });
+          setMode("pres_de_moi");
+        },
+        () => setMode("tout"),
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+      return;
+    }
+    setMode(m);
+  }
 
   // Sentinelle ré-armée sur posts.length : sans cela, sur grand écran elle
   // reste visible et la page suivante n'est jamais demandée — le fil se fige.
@@ -78,14 +186,18 @@ export function Feed() {
     const obs = new IntersectionObserver(
       (e) => {
         if (e[0]?.isIntersecting && posts.length > 0) {
-          void charger(posts[posts.length - 1].created_at);
+          const dernier = posts[posts.length - 1];
+          // ⚠ Le curseur CHANGE DE NATURE selon le mode : « pres de moi » trie
+          //   par distance, reprendre a une date y saute des recits.
+          if (mode === "pres_de_moi") void charger(null, dernier.distance_km ?? null);
+          else void charger(dernier.created_at, null);
         }
       },
       { threshold: 0.1, rootMargin: "600px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [posts, fini, chargement, charger]);
+  }, [posts, fini, chargement, charger, mode]);
 
   if (chargement) {
     return mobile ? (
@@ -129,8 +241,19 @@ export function Feed() {
   if (posts.length === 0) {
     return (
       <div className="px-4 md:px-0">
+        <BarreFil mode={mode} dispo={dispo} onChoisir={choisirMode} />
         <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center">
-          <p className="font-medium">Le fil est vide</p>
+          {/* ⚠ ON DIT QUEL FIL EST VIDE. « Le fil est vide » sous l'onglet
+              « Près de moi » laisse croire que le site entier l'est. */}
+          <p className="font-medium">
+            {mode === "pres_de_moi"
+              ? "Aucun récit près de vous"
+              : mode === "abonnements"
+                ? "Rien de neuf chez ceux que vous suivez"
+                : mode === "assiettes"
+                  ? "Aucune assiette publiée pour l'instant"
+                  : "Le fil est vide"}
+          </p>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Soyez le premier à raconter un voyage, partager une adresse ou
             signaler un bon plan.
@@ -229,6 +352,7 @@ export function Feed() {
   // occuperait une cellule et créerait un trou en fin de rangée.
   return (
     <div>
+      <BarreFil mode={mode} dispo={dispo} onChoisir={choisirMode} />
       <div className="grid gap-4 lg:grid-cols-2 large:grid-cols-3">
         {posts.map((p) => (
           <PostCard

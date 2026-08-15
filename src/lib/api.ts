@@ -61,6 +61,56 @@ export interface Post {
 export const PAR_PALIER = () =>
   typeof window !== "undefined" && window.innerWidth >= 1024 ? 12 : 8;
 
+/** Les quatre entrées du fil de la maquette D1. */
+export type ModeFil = "tout" | "abonnements" | "pres_de_moi" | "assiettes";
+
+export interface PostSitue extends Post {
+  /** Renseignée seulement en mode « près de moi » : c'est le CURSEUR. */
+  distance_km?: number | null;
+}
+
+/**
+ * Le fil, filtré.
+ *
+ * ⚠ LE CURSEUR CHANGE DE NATURE SELON LE MODE. « Près de moi » trie par
+ *   distance : reprendre à une date y saute des récits et en répète d'autres.
+ *   D'où `apresKm`, qui n'a de sens que dans ce mode — et `curseur`, qui n'en a
+ *   pas dans ce mode.
+ */
+export async function chargerFilFiltre(opts: {
+  mode: ModeFil;
+  curseur?: string | null;
+  apresKm?: number | null;
+  lat?: number | null;
+  lng?: number | null;
+  limite?: number;
+}): Promise<PostSitue[]> {
+  const { data, error } = await supabase.rpc("feed_filtre", {
+    p_mode: opts.mode,
+    p_curseur: opts.curseur ?? null,
+    p_limite: opts.limite ?? PAR_PALIER(),
+    p_lat: opts.lat ?? null,
+    p_lng: opts.lng ?? null,
+    p_apres_km: opts.apresKm ?? null,
+  });
+  if (error) throw error;
+  return (data as unknown as PostSitue[]) ?? [];
+}
+
+/** ⚠ Ce que l'écran a le DROIT de proposer : un onglet qui ouvre sur du vide se
+ *  lit comme une panne, pas comme une absence de contenu. */
+export async function modesFilDisponibles(): Promise<{
+  abonnements: boolean;
+  assiettes: boolean;
+}> {
+  const { data, error } = await supabase.rpc("fil_modes_disponibles");
+  if (error) throw error;
+  return (data as unknown as { abonnements: boolean; assiettes: boolean }) ?? {
+    abonnements: false,
+    assiettes: false,
+  };
+}
+
 export async function chargerFeed(curseur?: string | null, limite = PAR_PALIER()): Promise<Post[]> {
   const { data, error } = await supabase.rpc("get_feed", {
     p_curseur: curseur ?? null,

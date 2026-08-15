@@ -1314,6 +1314,17 @@ export type Database = {
       };
       /** ⚠ Regroupe cote BASE pour la vue d'ensemble : le reseau ne transporte
        *  que ce qui s'affiche, et le navigateur ne pose pas 800 noeuds DOM. */
+      feed_filtre: {
+        Args: {
+          p_mode?: string; p_curseur?: string | null; p_limite?: number;
+          p_lat?: number | null; p_lng?: number | null; p_apres_km?: number | null;
+        };
+        Returns: unknown;
+      };
+      fil_modes_disponibles: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
       carte_grappes: {
         Args: {
           p_sud: number; p_ouest: number; p_nord: number; p_est: number;

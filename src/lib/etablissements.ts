@@ -1004,15 +1004,32 @@ export async function definirCuisines(pageId: string, slugs: string[]): Promise<
  * accordée automatiquement — accepter un transfert donne accès aux messages
  * des clients, ça ne peut pas dépendre d'un clic.
  */
+export interface DossierRevendication {
+  message?: string;
+  tel?: string;
+  /** ⚠ Declaratifs. Leur presence ne prouve RIEN et n'accorde aucun badge :
+   *  recopier le meme numero dans les deux cases passe tout controle de forme. */
+  nif?: string | null;
+  stat?: string | null;
+  /** Chemins dans le bucket PRIVE `justificatifs` — jamais des URL publiques. */
+  piece?: string | null;
+  photoLieu?: string | null;
+  role?: string | null;
+}
+
 export async function revendiquer(
   pageId: string,
-  message: string,
-  telephone: string
+  d: DossierRevendication
 ): Promise<string> {
   const { data, error } = await supabase.rpc("revendiquer_page", {
     p_page: pageId,
-    p_message: message || null,
-    p_tel: telephone || null,
+    p_message: d.message || null,
+    p_tel: d.tel || null,
+    p_nif: d.nif ?? null,
+    p_stat: d.stat ?? null,
+    p_piece: d.piece ?? null,
+    p_photo_lieu: d.photoLieu ?? null,
+    p_role: d.role ?? null,
   });
   if (error) throw error;
   return data as string;

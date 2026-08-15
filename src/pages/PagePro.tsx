@@ -41,6 +41,7 @@ import {
   type Fiche,
 } from "@/lib/etablissements";
 import { signaler } from "@/lib/api";
+import { Revendication } from "@/components/Revendication";
 import { afficherNumero, lienAppel, lienWhatsApp, peutRecevoirWhatsApp } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -1074,10 +1075,7 @@ export default function PagePro() {
       </div>
 
       {revendicationOuverte && (
-        <Revendication
-          fiche={fiche}
-          onFerme={() => setRevendicationOuverte(false)}
-        />
+        <Revendication ficheId={fiche.id} ficheNom={fiche.name} onFerme={() => setRevendicationOuverte(false)} />
       )}
     </div>
   );
@@ -1091,84 +1089,6 @@ export default function PagePro() {
  * l'établissement. Un simple clic ne peut pas suffire — un coup de téléphone,
  * si.
  */
-function Revendication({ fiche, onFerme }: { fiche: Fiche; onFerme: () => void }) {
-  const [message, setMessage] = useState("");
-  const [tel, setTel] = useState("");
-  const [envoi, setEnvoi] = useState(false);
-
-  async function envoyer() {
-    setEnvoi(true);
-    try {
-      await revendiquer(fiche.id, message, tel);
-      toast.success("Demande envoyée", {
-        description: "Nous vous rappelons pour vérifier, puis la fiche vous est transférée.",
-      });
-      onFerme();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "La demande n'a pas pu être envoyée.");
-    } finally {
-      setEnvoi(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-end sm:place-items-center">
-      <button
-        aria-label="Fermer"
-        onClick={onFerme}
-        className="absolute inset-0 bg-black/50"
-      />
-      <div className="relative w-full max-w-md rounded-t-2xl bg-background p-5 sm:rounded-2xl">
-        <h2 className="text-lg font-semibold">Reprendre {fiche.name}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Nous vérifions chaque demande par téléphone avant de transférer une
-          fiche : elle donne accès aux messages de vos clients.
-        </p>
-
-        <label className="mt-4 block text-sm font-medium" htmlFor="tel-revendication">
-          Votre numéro
-        </label>
-        <input
-          id="tel-revendication"
-          value={tel}
-          onChange={(e) => setTel(e.target.value)}
-          inputMode="tel"
-          placeholder="034 00 000 00"
-          className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-sm"
-        />
-
-        <label className="mt-3 block text-sm font-medium" htmlFor="msg-revendication">
-          Un mot pour nous
-        </label>
-        <textarea
-          id="msg-revendication"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={3}
-          maxLength={1000}
-          placeholder="Je suis le gérant, voici comment me joindre…"
-          className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-sm"
-        />
-
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => void envoyer()}
-            disabled={envoi}
-            className="min-h-11 rounded-full bg-primary px-6 font-medium text-primary-foreground disabled:opacity-50"
-          >
-            {envoi ? "Envoi…" : "Envoyer ma demande"}
-          </button>
-          <button
-            onClick={onFerme}
-            className="min-h-11 rounded-full border border-input px-5 text-sm font-medium"
-          >
-            Annuler
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /** Une ligne de carte : le nom tel que le restaurateur l'écrit, et son prix. */
 function PlatLigne({ plat }: { plat: Fiche["menu_items"][number] }) {

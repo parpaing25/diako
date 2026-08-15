@@ -1258,10 +1258,6 @@ export type Database = {
       mes_publications_aimees: { Args: { p_limite?: number }; Returns: Json };
       marquer_conversation_lue: { Args: { p_conv: string }; Returns: number };
       messages_non_lus: { Args: Record<string, never>; Returns: number };
-      revendiquer_page: {
-        Args: { p_page: string; p_message: string | null; p_tel: string | null };
-        Returns: string;
-      };
       agent_chercher: {
         Args: {
           p_lieu?: string | null;
@@ -1336,6 +1332,14 @@ export type Database = {
       mon_activite: { Args: Record<string, never>; Returns: unknown };
       profil_public: { Args: { p_id: string }; Returns: unknown };
       publications_publiques: { Args: { p_id: string; p_curseur?: string | null; p_limite?: number }; Returns: unknown };
+      revendiquer_page: {
+        Args: {
+          p_page: string; p_message?: string | null; p_tel?: string | null;
+          p_nif?: string | null; p_stat?: string | null; p_piece?: string | null;
+          p_photo_lieu?: string | null; p_role?: string | null;
+        };
+        Returns: string;
+      };
       devenir_pro: {
         Args: { p_metier: string };
         Returns: undefined;

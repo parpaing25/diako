@@ -5,10 +5,16 @@ import { PostCard } from "@/components/PostCard";
 import { PostImmersif } from "@/components/PostImmersif";
 import { Commentaires } from "@/components/Commentaires";
 import { useEstMobile } from "@/hooks/useEstMobile";
-import { chargerFeed, type Post } from "@/lib/api";
+import { PAR_PALIER, chargerFeed, type Post } from "@/lib/api";
 import { useReveal } from "@/hooks/useReveal";
 
-const PAR_PAGE = 6;
+/**
+ * ⚠ RENDU A `PAR_PALIER()`. Un `const PAR_PAGE = 6` fige ici rendait mort le
+ *   calcul 8/12 d'api.ts, ecrit precisement pour ne pas faire pagayer un
+ *   visiteur de bureau ni gaver un telephone en 3G. Deux sources de verite
+ *   pour la meme decision, et c'est la mauvaise qui gagnait.
+ */
+const PAR_PAGE = PAR_PALIER();
 
 /**
  * Le fil — deux présentations, une seule logique.

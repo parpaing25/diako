@@ -79,7 +79,12 @@ export default function Explorer() {
     try {
       if (!slug) {
         setLieu(null);
-        setDestinations(await chargerDestinations(80));
+        // ⚠ 200 ET NON 80. Le referentiel compte 87 destinations touristiques :
+        //   la limite de 80 en laissait SEPT inatteignables depuis le catalogue,
+        //   sans aucun bouton « charger la suite » pour les rattraper. Une
+        //   limite doit etre au-dessus du volume reel, ou s'accompagner d'une
+        //   pagination — jamais juste en dessous, en silence.
+        setDestinations(await chargerDestinations(200));
       } else {
         const l = await chargerLieu(slug);
         setLieu(l);

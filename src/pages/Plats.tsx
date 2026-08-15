@@ -163,7 +163,15 @@ export default function Plats() {
 
       <div className="min-w-0 flex-1">
         <p className="dk-etiquette">Atlas culinaire</p>
-        <h1 className="dk-titre mt-1">95 plats malgaches, et où les trouver</h1>
+        {/* ⚠ LE CHIFFRE VIENT DE LA BASE. Il etait ecrit en dur ici, a six
+            lignes du composant `<Chiffre n={stats?.plats}>` qui affiche le
+            vrai. Le jour ou un 96e plat entre au referentiel, un titre fige
+            devient faux — et rien ne le signale.
+            La regle du projet : un chiffre affiche vient de la base, ou il
+            n'est pas affiche. */}
+        <h1 className="dk-titre mt-1">
+          {stats ? `${stats.plats} plats malgaches, et où les trouver` : "Les plats malgaches, et où les trouver"}
+        </h1>
         <p className="dk-corps mt-3 max-w-[70ch] text-muted-foreground">
           Chaque plat porte ses variantes d'orthographe, ses ingrédients, sa
           famille et sa région. C'est ce référentiel qui permet à «&nbsp;ravi-toto&nbsp;»

@@ -32,6 +32,20 @@ const ROUTES: Record<string, () => Promise<unknown>> = {
   "/notifications": () => import("@/pages/Notifications"),
   "/favoris": () => import("@/pages/Favoris"),
   "/compte": () => import("@/pages/Compte"),
+  // ⚠ AJOUTEES APRES L'AUDIT : la table ne connaissait que 8 des 19 routes, et
+  //   les 11 manquantes etaient precisement les pages recentes — celles dont
+  //   le morceau n'est dans aucun cache et coute donc le plus cher a ouvrir.
+  "/plats": () => import("@/pages/Plats"),
+  "/gouts": () => import("@/pages/Gouts"),
+  "/quand-partir": () => import("@/pages/QuandPartir"),
+  "/y-aller": () => import("@/pages/YAller"),
+  "/circuits": () => import("@/pages/Circuits"),
+  "/sites": () => import("@/pages/Sites"),
+  "/evenements": () => import("@/pages/Evenements"),
+  "/projet": () => import("@/pages/Projet"),
+  "/guides": () => import("@/pages/Guides"),
+  "/carte": () => import("@/pages/Carte"),
+  "/parametres": () => import("@/pages/Parametres"),
 };
 
 const dejaDemandees = new Set<string>();

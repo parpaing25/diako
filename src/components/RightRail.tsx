@@ -314,7 +314,10 @@ export function RightRail() {
       <section className="rounded-2xl border border-accent-strong/25 bg-accent/[0.07] p-4">
         <h2 className="dk-etiquette text-accent-strong">Aventure culinaire</h2>
         <p className="mt-2 text-[15px] font-bold leading-tight">
-          95 plats à goûter, 254 façons de les écrire
+          {/* Meme regle : `stats` est deja charge quelques lignes plus haut. */}
+          {stats
+            ? `${stats.plats} plats à goûter, et autant de façons de les écrire`
+            : "Les plats malgaches, et où les trouver"}
         </p>
         <p className="dk-secondaire mt-2 leading-relaxed">
           Cherchez un plat, ouvrez sa fiche, marquez-le goûté. Les adresses

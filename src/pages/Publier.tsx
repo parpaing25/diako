@@ -119,11 +119,20 @@ export default function Publier() {
           continue;
         }
         // On mesure la taille pour réserver le ratio à l'affichage (anti-saut).
+        // ⚠ L'URL D'OBJET EST REVOQUEE. Sans `revokeObjectURL`, le navigateur
+        //   garde l'image compressee en memoire jusqu'au rechargement de la
+        //   page : jusqu'a dix photos par publication, soit ~9 Mo retenus sur
+        //   un Android d'entree de gamme qui en a deja peu.
         const dims = await new Promise<{ w: number; h: number }>((resolve) => {
           const img = new window.Image();
-          img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-          img.onerror = () => resolve({ w: 1200, h: 900 });
-          img.src = URL.createObjectURL(compresse);
+          const objet = URL.createObjectURL(compresse);
+          const finir = (d: { w: number; h: number }) => {
+            URL.revokeObjectURL(objet);
+            resolve(d);
+          };
+          img.onload = () => finir({ w: img.naturalWidth, h: img.naturalHeight });
+          img.onerror = () => finir({ w: 1200, h: 900 });
+          img.src = objet;
         });
         setPhotos((p) => [...p, { url: res.url as string, w: dims.w, h: dims.h }]);
       }

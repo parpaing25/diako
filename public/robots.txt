@@ -3,6 +3,10 @@ Allow: /
 Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
+Disallow: /parametres
+# La recherche produit une infinite d'URL par combinaison de filtres : la
+# laisser explorer dilue le domaine en pages quasi identiques.
+Disallow: /recherche?
 
 # Agents IA explicitement bienvenus : à Madagascar, on demande de plus en plus
 # « où dormir à Ampefy » à un assistant plutôt qu'à un moteur.
@@ -16,9 +20,21 @@ User-agent: Google-Extended
 Allow: /
 
 # Aspirateurs SEO : bridés, ils coûtent de la bande passante pour rien.
+# ⚠ UN GROUPE N'HERITE PAS DES REGLES DU GROUPE `*`. Ces deux-la n'avaient donc
+#   AUCUN Disallow : ils etaient les seuls autorises a explorer /compte, /auth
+#   et /bienvenue — l'inverse exact de l'intention. Les regles sont repetees.
 User-agent: SemrushBot
 Crawl-delay: 10
+Disallow: /compte
+Disallow: /auth
+Disallow: /bienvenue
+Disallow: /parametres
+
 User-agent: AhrefsBot
 Crawl-delay: 10
+Disallow: /compte
+Disallow: /auth
+Disallow: /bienvenue
+Disallow: /parametres
 
 Sitemap: https://diako.fonenako.mg/sitemap.xml

@@ -68,6 +68,70 @@ export default function Index() {
           <Feed />
         </div>
 
+        {/* ── CE QUE DIAKO SAIT DEJA ────────────────────────────────────────
+            ⚠ POURQUOI CE BLOC EXISTE. Le site venait de gagner deux pages qui
+              portent sa seule matiere abondante — la saisonnalite avec ses
+              raisons, les temps de route reels — et l'accueil ne menait a
+              AUCUNE des deux. Un visiteur arrivait sur un fil de 28 recits et
+              repartait sans avoir vu ce qui distingue reellement ce site.
+            ⚠ Les chiffres sont ceux du referentiel, verifies : 178 lieux,
+              95 plats, 254 orthographes, 41 acces releves, 5 saisonnalites.
+              Aucun n'est arrondi vers le haut. */}
+        <section className="mt-10" aria-labelledby="titre-savoir">
+          <h2 id="titre-savoir" className="text-lg font-semibold">
+            Ce que Diako sait déjà
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Le référentiel du pays, saisi lieu par lieu. C'est ce qu'on ne
+            trouve nulle part ailleurs.
+          </p>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 large:grid-cols-3">
+            <Link
+              to="/quand-partir"
+              className="dk-carte dk-reveal rounded-2xl border border-primary/25 bg-primary/[0.05] p-4"
+            >
+              <p className="dk-etiquette text-primary">Quand partir où</p>
+              <p className="mt-1.5 font-bold leading-tight">
+                Cinq destinations, douze mois, et la raison
+              </p>
+              <p className="dk-secondaire mt-1.5 leading-relaxed">
+                Savoir qu'un mois est déconseillé ne sert à rien si on ignore
+                que ce sont les pistes qui sont coupées — ou les baleines qu'on
+                va rater.
+              </p>
+            </Link>
+
+            <Link
+              to="/y-aller"
+              className="dk-carte dk-reveal rounded-2xl border border-border bg-card p-4"
+            >
+              <p className="dk-etiquette">Y aller</p>
+              <p className="mt-1.5 font-bold leading-tight">
+                46 km/h sur goudron, pas 90
+              </p>
+              <p className="dk-secondaire mt-1.5 leading-relaxed">
+                41 trajets chronométrés sur le terrain. Divisez vos kilomètres
+                par ces chiffres-là, et vous arriverez avant la nuit.
+              </p>
+            </Link>
+
+            <Link
+              to="/plats"
+              className="dk-carte dk-reveal rounded-2xl border border-accent-strong/25 bg-accent/[0.06] p-4"
+            >
+              <p className="dk-etiquette text-accent-strong">Atlas des plats</p>
+              <p className="mt-1.5 font-bold leading-tight">
+                95 plats, 254 façons de les écrire
+              </p>
+              <p className="dk-secondaire mt-1.5 leading-relaxed">
+                C'est ce référentiel qui fait que «&nbsp;ravi-toto&nbsp;» trouve
+                ce que les cartes appellent autrement.
+              </p>
+            </Link>
+          </div>
+        </section>
+
         <section className="mt-10" aria-labelledby="titre-etabs">
           <div className="flex items-end justify-between gap-3">
             <div>

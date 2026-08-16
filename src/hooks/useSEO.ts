@@ -21,7 +21,13 @@ import { useEffect } from "react";
 const TITRE_BASE = "Diako — Voyage & tourisme à Madagascar";
 const DESC_BASE =
   "Trouvez où dormir, où manger et avec qui partir à Madagascar. Hôtels, restaurants et agences de voyage, avec leurs vrais tarifs, leurs menus et leurs circuits.";
-const IMAGE_BASE = "https://diako.fonenako.mg/media/diako-logo.png";
+/* 🔴 C'ETAIT LE LOGO DE 482 Ko, ET IL CASSAIT LES PARTAGES. `index.html` sert
+      deja `og-diako.jpg` — 1200x630, le format que reclament Facebook et
+      WhatsApp — mais ce hook l'ECRASAIT des la premiere navigation interne, en
+      remettant un carre de 1920x1920. WhatsApp renonce a afficher une vignette
+      au-dela d'environ 300 Ko : un lien Diako partage depuis l'app arrivait
+      donc sans image, sur le canal par lequel ce site va circuler le plus. */
+const IMAGE_BASE = "https://diako.fonenako.mg/media/og-diako.jpg";
 const SITE = "https://diako.fonenako.mg";
 
 export interface MetaSEO {

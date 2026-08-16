@@ -22,11 +22,24 @@ export function Carrousel({
   prioritaire = false,
   /** `couvrir` remplit le cadre (fil immersif), `contenir` montre toute l'image. */
   ajustement = "couvrir",
+  /**
+   * 🔴 CE PARAMÈTRE MANQUAIT, ET C'EST CE QUI RENDAIT LE FIL SI LENT.
+   *    `ImageProgressive` n'émet un `srcset` QUE si on lui dit la largeur réelle
+   *    du créneau — sans elle, le navigateur n'a aucun moyen de choisir et
+   *    télécharge l'ORIGINAL. Mesuré : 728 Ko à 1 Mo par photo, 2,99 à 3,61 s
+   *    hors 3G, et la vignette EN PLUS. Cinq photos par publication, trois
+   *    publications à l'écran : le fil demandait plus de dix mégaoctets.
+   *    Avec la largeur, il prend la variante 960 — 78 Ko mesurés.
+   * ⚠ Le défaut de « 100vw » est le cas du fil immersif, qui occupe tout
+   *   l'écran. Un appelant qui affiche plus petit DOIT le dire.
+   */
+  largeurAffichee = "100vw",
 }: {
   images: Media[];
   alt?: string;
   prioritaire?: boolean;
   ajustement?: "couvrir" | "contenir";
+  largeurAffichee?: string;
 }) {
   const [index, setIndex] = useState(0);
   const piste = useRef<HTMLDivElement>(null);
@@ -65,6 +78,7 @@ export function Carrousel({
               h={m.h}
               prioritaire={prioritaire && i === 0}
               ajustement={ajustement === "couvrir" ? "cover" : "contain"}
+              largeurAffichee={largeurAffichee}
             />
           </div>
         ))}

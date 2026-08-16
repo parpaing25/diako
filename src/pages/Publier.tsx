@@ -80,7 +80,7 @@ export default function Publier() {
 
   // ⚠ Le lieu et le plat étaient choisis dans deux listes de HUIT entrées
   // écrites en dur : Diego, Majunga, Tuléar, Ranomafana n'y figuraient pas.
-  // Ils viennent maintenant du référentiel — 178 lieux, 95 plats — et on
+  // Ils viennent maintenant du référentiel — 508 lieux, 95 plats — et on
   // enregistre l'IDENTIFIANT, pas seulement le libellé : c'est lui qui rend
   // la publication trouvable.
   const [plats, setPlats] = useState<Plat[]>([]);
@@ -512,10 +512,14 @@ ${a} ` : `${a} `));
 
         {def.prix !== null && (
           <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-sm font-medium">
+            {/* ⚠ `label htmlFor`, PAS UN PARAGRAPHE. Visuellement identique,
+                mais un `<p>` ne nomme rien : un lecteur d'écran annonçait
+                « zone d'édition » sans dire laquelle, et le clic sur le titre
+                ne donnait pas le focus au champ. */}
+            <label htmlFor="montant" className="block text-sm font-medium">
               Prix payé
               {def.prix === true && <span className="text-accent-strong"> *</span>}
-            </p>
+            </label>
             {/* ⚠ LES TROIS VONT ENSEMBLE. Un montant sans unité ne veut rien
                 dire — 50 000 Ar la nuit ou par groupe ? — et sans date il se
                 lit comme un prix d'aujourd'hui. La base refuse d'ailleurs un

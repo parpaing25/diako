@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
  *   exactement ce qu'un tableau sait faire et qu'une suite de fiches ne sait
  *   pas — et c'est la raison d'être d'un grand écran.
  *
- * ⚠ LA COUVERTURE EST ANNONCÉE EN CLAIR : 5 destinations sur 178. Ne montrer
+ * ⚠ LA COUVERTURE EST ANNONCÉE EN CLAIR : 5 destinations sur 508. Ne montrer
  *   que les cinq sans le dire laisserait croire que le reste du pays n'a pas
  *   de saison.
  */
@@ -36,7 +36,7 @@ const MOIS_LONG = [
 ];
 
 const NOTE = {
-  ideale: { mot: "idéal", classe: "bg-ok text-white", pastille: "bg-ok" },
+  ideale: { mot: "idéal", classe: "bg-ok text-ok-foreground", pastille: "bg-ok" },
   correcte: { mot: "correct", classe: "bg-ok-soft text-ok", pastille: "bg-ok-soft" },
   deconseillee: {
     mot: "déconseillé",
@@ -333,7 +333,7 @@ export default function QuandPartir() {
                           className={cn(
                             "grid h-8 w-full place-items-center rounded text-[10px] font-bold",
                             m?.note ? NOTE[m.note].pastille : "bg-muted",
-                            m?.note === "ideale" && "text-white",
+                            m?.note === "ideale" && "text-ok-foreground",
                             m?.note === "correcte" && "text-ok",
                             m?.note === "deconseillee" && "text-accent-strong",
                             moisChoisi === i + 1 && "ring-2 ring-primary ring-offset-1"

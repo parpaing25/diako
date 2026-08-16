@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { GRANDES_REGIONS, grandeRegionDe, type GrandeRegion } from "@/lib/grandesRegions";
 
 /**
  * ACCÈS AUX DONNÉES DE L'ÉCRAN EXPLORER — la descente pays › région › ville.

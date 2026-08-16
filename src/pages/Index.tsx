@@ -74,9 +74,13 @@ export default function Index() {
               raisons, les temps de route reels — et l'accueil ne menait a
               AUCUNE des deux. Un visiteur arrivait sur un fil de 28 recits et
               repartait sans avoir vu ce qui distingue reellement ce site.
-            ⚠ Les chiffres sont ceux du referentiel, verifies : 178 lieux,
-              95 plats, 254 orthographes, 41 acces releves, 5 saisonnalites.
-              Aucun n'est arrondi vers le haut. */}
+            🔴 CES CHIFFRES ONT DEJA MENTI UNE FOIS. Ils annonçaient « 178
+              lieux » et « 41 acces » — recopies a la main a l'epoque, jamais
+              revus depuis l'import : le referentiel en porte 508 et 42.
+              Recomptes le 17/08/2026 par requete : 508 destinations, 95 plats,
+              254 orthographes, 42 acces releves, 5 saisonnalites sur 12 mois.
+              Ceux qui bougent souvent passent par `useStats()` ; ceux ecrits
+              ici sont stables. Aucun n'est arrondi vers le haut. */}
         <section className="mt-10" aria-labelledby="titre-savoir">
           <h2 id="titre-savoir" className="text-lg font-semibold">
             Ce que Diako sait déjà
@@ -111,7 +115,7 @@ export default function Index() {
                 46 km/h sur goudron, pas 90
               </p>
               <p className="dk-secondaire mt-1.5 leading-relaxed">
-                41 trajets chronométrés sur le terrain. Divisez vos kilomètres
+                42 trajets chronométrés sur le terrain. Divisez vos kilomètres
                 par ces chiffres-là, et vous arriverez avant la nuit.
               </p>
             </Link>

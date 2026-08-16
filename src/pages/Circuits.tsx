@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Compass, Mountain } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
+import { compteur, useStats } from "@/hooks/useStats";
 import { useReveal } from "@/hooks/useReveal";
 import { EmptyState, EtatErreur } from "@/components/Etats";
 import { BadgeVerification } from "@/components/Badges";
@@ -32,6 +33,7 @@ const DIFFICULTE: Record<string, string> = {
 };
 
 export default function Circuits() {
+  const stats = useStats();
   useSEO({
     titre: "Circuits à Madagascar — itinéraires et agences",
     description:
@@ -123,9 +125,9 @@ export default function Circuits() {
             <>
               <p className="dk-secondaire leading-relaxed">
                 En attendant, le référentiel porte déjà de quoi préparer un
-                itinéraire soi-même : 178 destinations, dont 41 avec leurs accès
-                réels depuis Antananarivo — distances, durées de route et état
-                des pistes.
+                itinéraire soi-même : {compteur(stats?.destinations)} destinations,
+                avec leurs accès réels depuis Antananarivo — distances, durées de
+                route et état des pistes.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
@@ -133,7 +135,7 @@ export default function Circuits() {
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-semibold"
                 >
                   <Compass className="h-4 w-4" aria-hidden="true" />
-                  Explorer les 178 destinations
+                  Explorer les destinations
                 </Link>
                 <Link
                   to="/carte"

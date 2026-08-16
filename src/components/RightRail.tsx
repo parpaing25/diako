@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { Flame, Heart, MessageCircle, Bookmark, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useStats } from "@/hooks/useStats";
 import { useUserData } from "@/contexts/UserDataContext";
 import { FEUILLE_DE_ROUTE } from "@/lib/nav";
 import { choisirEnVogue } from "@/lib/tendance";
@@ -55,15 +56,6 @@ interface Vogue {
   comments_count: number;
   saves_count: number;
   auteur_nom: string | null;
-}
-
-interface Stats {
-  recits: number;
-  etablissements: number;
-  destinations: number;
-  plats: number;
-  membres: number;
-  vues_7j: number;
 }
 
 /**
@@ -165,7 +157,11 @@ export function RightRail() {
 
   const [saison, setSaison] = useState<Evenement[] | null>(null);
   const [vogue, setVogue] = useState<Vogue[] | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
+  /* ⚠ LES COMPTEURS VIENNENT DU CACHE PARTAGÉ. `SideNav` demandait le même
+        `stats_diako()` de son côté : deux allers-retours identiques à chaque
+        chargement desktop. `useStats` mémorise la promesse au niveau du module,
+        donc le second appelant réutilise la réponse du premier. */
+  const stats = useStats();
   const mois = MOIS[new Date().getMonth()];
   const { pathname } = useLocation();
   /**
@@ -201,7 +197,6 @@ export function RightRail() {
     void supabase
       .rpc("saison_en_cours", { p_mois: null })
       .then(({ data }) => setSaison((data as unknown as Evenement[] | null) ?? []));
-    void supabase.rpc("stats_diako").then(({ data }) => setStats(data as Stats | null));
     // ⚠ LA POSITION VIENT DE LA VILLE DÉCLARÉE, jamais du GPS. Demander la
     //   géolocalisation pour classer un bloc de rail serait disproportionné —
     //   et une demande non sollicitée est refusée par réflexe, ce qui ferme la

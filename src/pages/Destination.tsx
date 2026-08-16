@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  *   lot 1 et n'était affiché NULLE PART. On construisait l'avantage sans le
  *   montrer.
  *
- * ⚠ CE QUI EST HONNÊTE ICI. Sur 178 destinations, 5 seulement ont leur
+ * ⚠ CE QUI EST HONNÊTE ICI. Sur 508 destinations, 5 seulement ont leur
  *   saisonnalité saisie et 41 leurs accès. Le calendrier ne s'affiche donc que
  *   là où il est renseigné, et là où il manque l'écran le dit et invite à
  *   compléter — plutôt que de montrer douze cases grises qui ressembleraient à
@@ -356,8 +356,8 @@ export default function Destination() {
         </Link>
       )}
 
-      {/* ⚠ CE BLOC EST LE PLUS UTILE DE LA PAGE AUJOURD'HUI. 173 destinations
-          sur 178 n'ont pas de saisonnalite et 137 pas d'acces : sans lui, la
+      {/* ⚠ CE BLOC EST LE PLUS UTILE DE LA PAGE AUJOURD'HUI. 503 destinations
+          sur 508 n'ont pas de saisonnalite et 466 pas d'acces : sans lui, la
           plupart des fiches n'auraient presque rien a montrer. Le referentiel
           des plats, lui, est complet — il donne toujours quelque chose a
           lire. */}

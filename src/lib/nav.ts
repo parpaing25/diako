@@ -112,7 +112,12 @@ export const NAV_COMPLET: NavItem[] = [
   { to: "/y-aller", label: "Y aller", icon: Route, pret: true, groupe: "preparer" },
   { to: "/guides", label: "Guides", icon: Mountain, pret: false, groupe: "decouvrir" },
   { to: "/carte", label: "Carte", icon: Map, pret: true },
-  { to: "/recherche", label: "Rechercher", icon: Search, pret: true },
+  /* 🔴 RETIRÉS DU RAIL GAUCHE sur demande du propriétaire, captures à l'appui :
+     · « Rechercher » — la recherche vit déjà dans l'entête, sur TOUTES les
+       pages ; une deuxième porte dans le rail n'ajoute rien et prend une ligne.
+     · « Paramètres » — déjà dans le menu du profil (avatar, en haut à droite).
+     Les ROUTES restent câblées : seul le rail ne les liste plus. */
+  { to: "/recherche", label: "Rechercher", icon: Search, pret: true, railDesktop: false },
   { to: "/publier", label: "Publier", icon: Plus, pret: true, railDesktop: false },
   { to: "/favoris", label: "Mon carnet", icon: Bookmark, pret: true, railDesktop: false, groupe: "chez_moi" },
   { to: "/gouts", label: "Mon carnet de goûts", icon: UtensilsCrossed, pret: true, railDesktop: false, groupe: "chez_moi" },
@@ -120,7 +125,7 @@ export const NAV_COMPLET: NavItem[] = [
   { to: "/notifications", label: "Notifications", icon: Bell, pret: true, railDesktop: false },
   { to: "/pro", label: "Espace pro", icon: Briefcase, pret: true, groupe: "chez_moi" },
   { to: "/compte", label: "Mon compte", icon: User, pret: true, railDesktop: false },
-  { to: "/parametres", label: "Paramètres", icon: Settings, pret: true },
+  { to: "/parametres", label: "Paramètres", icon: Settings, pret: true, railDesktop: false },
 ];
 
 /**
@@ -147,7 +152,7 @@ export const GROUPES_RAIL: { cle: NonNullable<NavItem["groupe"]>; titre: string 
 /** Ce qui est réellement en construction, affiché tel quel aux visiteurs. */
 export const FEUILLE_DE_ROUTE = [
   { quoi: "Fil des voyageurs", etat: "ouvert" as const },
-  { quoi: "178 destinations et 95 plats référencés", etat: "ouvert" as const },
+  { quoi: "Destinations et plats référencés", etat: "ouvert" as const },
   { quoi: "Recherche par destination, par plat et par budget", etat: "ouvert" as const },
   { quoi: "Pages des hôtels, restaurants et agences", etat: "ouvert" as const },
   { quoi: "Premiers établissements référencés", etat: "en cours" as const },

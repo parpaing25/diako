@@ -118,7 +118,7 @@ function ListeGuides() {
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-semibold"
                 >
                   <Compass className="h-4 w-4" aria-hidden="true" />
-                  Les 178 destinations
+                  Les destinations
                 </Link>
                 <Link
                   to="/plats"

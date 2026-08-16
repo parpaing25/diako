@@ -93,6 +93,24 @@ export default function Post() {
     );
   }
 
+  if (etat === "erreur") {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <p className="font-medium">La publication n'a pas pu être chargée</p>
+        <button
+          onClick={() => void charger()}
+          className="mt-4 min-h-10 rounded-full border border-input px-5 text-sm font-medium"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  /* 🔴 CES DEUX BLOCS ÉTAIENT DANS LE MAUVAIS ORDRE. `!post` est vrai aussi
+        quand la requête a échoué : une coupure réseau annonçait « Cette
+        publication n'existe plus », sans bouton Réessayer. On dit à quelqu'un
+        que son récit a été retiré parce que sa 3G a hoqueté. */
   if (etat === "absent" || !post) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
@@ -110,19 +128,6 @@ export default function Post() {
     );
   }
 
-  if (etat === "erreur") {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="font-medium">La publication n'a pas pu être chargée</p>
-        <button
-          onClick={() => void charger()}
-          className="mt-4 min-h-10 rounded-full border border-input px-5 text-sm font-medium"
-        >
-          Réessayer
-        </button>
-      </div>
-    );
-  }
 
   return (
     /* ═══ GABARIT G2 — LECTURE LONGUE ══════════════════════════════════════

@@ -48,7 +48,7 @@ def variante_manquante(url):
         return True
 
 
-def renvoyer(octets, chemin_relatif):
+def renvoyer(octets, chemin_relatif, dossier="pages"):
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as t:
         t.write(octets)
         tmp = t.name
@@ -56,7 +56,10 @@ def renvoyer(octets, chemin_relatif):
         p = subprocess.run(
             ["curl", "-s", "-S", "-L", "--post301", "--post302", "--post303",
              "-c", BOCAL, "-b", BOCAL, "--max-time", "180", "-A", AGENT,
-             "-H", "X-API-Key: " + CLE, "-F", "folder=pages",
+             # ⚠ LE DOSSIER N'EST PLUS CODÉ EN DUR. Il l'était (« pages ») et
+             #   la régénération des photos du FIL — uploads/posts/… — aurait
+             #   réécrit chaque photo au mauvais endroit, ou planté avant.
+             "-H", "X-API-Key: " + CLE, "-F", "folder=" + dossier,
              "-F", "filename=" + chemin_relatif,
              "-F", "file=@" + tmp.replace("\\", "/") + ";type=image/jpeg", HOTE],
             capture_output=True, timeout=300)
@@ -77,7 +80,10 @@ def renvoyer(octets, chemin_relatif):
 def traiter(urls):
     faits = ignores = rates = 0
     for i, url in enumerate(urls, 1):
-        rel = url.split("/uploads/pages/", 1)[1]
+        # ⚠ Le dossier se lit dans l'URL : pages, posts ou profiles. La version
+        #   précédente supposait « pages » et levait IndexError sur le reste.
+        reste = url.split("/uploads/", 1)[1]
+        dossier, rel = reste.split("/", 1)
         try:
             if not variante_manquante(url):
                 ignores += 1
@@ -90,7 +96,7 @@ def traiter(urls):
                     im.thumbnail((COTE_MAX, COTE_MAX), Image.LANCZOS)
                 buf = io.BytesIO()
                 im.save(buf, "JPEG", quality=QUALITE, optimize=True, progressive=True)
-            renvoyer(buf.getvalue(), rel)
+            renvoyer(buf.getvalue(), rel, dossier)
             faits += 1
             print(f"  {i:3}/{len(urls)} {rel[:52]:54} {avant[0]}x{avant[1]} "
                   f"{len(brut)//1024} Ko -> {buf.tell()//1024} Ko", flush=True)

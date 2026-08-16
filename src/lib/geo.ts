@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
  *   En voyage, la question est littéralement géographique : on est sur une
  *   plage, il est midi, on veut ce qui est à moins de dix kilomètres. Diako a
  *   de vraies coordonnées en base — sur les lieux ET sur les établissements —
- *   donc le calcul se fait côté serveur, sur les 178 lieux réels, et rend une
+ *   donc le calcul se fait côté serveur, sur les 508 lieux réels, et rend une
  *   DISTANCE et pas une approximation de ville.
  *
  * La position n'est jamais envoyée à un service tiers : elle part vers notre

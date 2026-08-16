@@ -288,6 +288,11 @@ export function PostCard({
           <Carrousel
             images={post.media}
             alt={post.place ? `${post.place}, Madagascar` : nom}
+            /* ⚠ La carte du fil desktop vit dans une grille : une colonne sur
+               écran large, deux à partir de 1280, trois à 1920. Sans cette
+               indication le navigateur téléchargeait l'original pour occuper
+               ~390 px. */
+            largeurAffichee="(min-width: 1920px) 33vw, (min-width: 1280px) 45vw, (min-width: 768px) 90vw, 100vw"
           />
         </div>
       )}

@@ -25,7 +25,11 @@ export default {
         "coral-soft": "hsl(var(--coral-soft))",
         gold: { DEFAULT: "hsl(var(--gold))", soft: "hsl(var(--gold-soft))" },
         "line-soft": "hsl(var(--line-soft))",
-        ok: { DEFAULT: "hsl(var(--ok))", soft: "hsl(var(--ok-soft))" },
+        ok: {
+          DEFAULT: "hsl(var(--ok))",
+          soft: "hsl(var(--ok-soft))",
+          foreground: "hsl(var(--ok-foreground))",
+        },
         warn: { DEFAULT: "hsl(var(--warn))", soft: "hsl(var(--warn-soft))" },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

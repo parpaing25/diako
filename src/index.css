@@ -91,6 +91,14 @@
     --line-soft: 35 39% 90%;        /* #EFE7DB — separateur interne */
     --ok: 143 47% 28%;              /* #256B3D — ouvert, actif : 5,9:1 */
     --ok-soft: 137 34% 94%;         /* #E9F5EC */
+    /* 🔴 CE TOKEN EXISTE PARCE QUE `text-white` SUR `bg-ok` DEVENAIT ILLISIBLE.
+          En clair, `--ok` est un vert foncé et le blanc passe à 5,9:1 ; en
+          sombre il devient un vert CLAIR (62 % de luminosité) et le même blanc
+          tombe à 1,8:1 — trois fois sous le seuil AA. Les pastilles « idéal »
+          de /quand-partir, qui sont l'information principale de la page,
+          disparaissaient donc pour tout visiteur en thème sombre. Un premier
+          plan apparié bascule avec le fond ; une couleur écrite en dur, non. */
+    --ok-foreground: 0 0% 100%;
     --warn: 43 78% 30%;             /* #8A6412 — ferme bientot : 5,5:1 */
     --warn-soft: 41 100% 95%;       /* #FFF6E5 */
   }
@@ -155,6 +163,8 @@
     --line-soft: 191 22% 18%;
     --ok: 143 45% 62%;
     --ok-soft: 143 30% 14%;
+    /* Vert clair en sombre → il faut du texte SOMBRE dessus (≈ 9,4:1). */
+    --ok-foreground: 143 60% 8%;
     --warn: 43 70% 62%;
     --warn-soft: 43 30% 14%;
   }

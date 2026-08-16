@@ -77,7 +77,7 @@ export function EtatVide({
  *   Le vide est l'état le plus FRÉQUENT de Diako : 0 avis, 0 carte de
  *   restaurant, 0 circuit, 1 membre. Si le troisième volet est facultatif, il
  *   sera oublié partout, et le site ressemblera à une coquille — alors qu'il
- *   possède 178 destinations et 95 plats à montrer. Rendre l'oubli visible en
+ *   possède 508 destinations et 95 plats à montrer. Rendre l'oubli visible en
  *   développement est le seul moyen de tenir la règle sur trente écrans.
  *
  * ⚠ IL NE LÈVE PAS D'EXCEPTION EN PRODUCTION. Faire tomber une page entière

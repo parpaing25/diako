@@ -326,9 +326,25 @@ export interface Evenement {
   slug: string;
   title: string;
   kind: string;
-  starts_on: string;
+  /** 🔴 NUL SUR LES 42 ÉVÉNEMENTS PUBLIÉS. Le type le déclarait `string`, non
+   *  nullable — et c'est ce mensonge de type qui a laissé passer le défaut :
+   *  `new Date(null)` rend l'époque Unix, et l'écran affichait « chaque année
+   *  vers le 1 janvier » sur QUARANTE-DEUX cartes sur quarante-deux. */
+  starts_on: string | null;
   ends_on: string | null;
   yearly: boolean;
+  /** La période telle qu'une source la donne : « Début août, jour variable
+   *  selon la lune ». C'est la SEULE date honnête dont on dispose, et elle
+   *  n'était pas même sélectionnée. */
+  periode: string | null;
+  /** Les mois concernés, 1 à 12. Renseigné sur les 42. */
+  mois: number[] | null;
+  /** ⚠ Migration 0079 : un événement sans source ne s'affiche pas comme un
+   *  fait établi. La source est cliquable à l'écran. */
+  source: string | null;
+  /** Le lieu en texte quand aucun lieu du référentiel ne correspond. */
+  lieu_libre: string | null;
+  description: string | null;
   summary: string | null;
   poster_url: string | null;
   price_ar: number | null;
@@ -341,12 +357,14 @@ export async function chargerEvenements(limite = 24): Promise<Evenement[]> {
   const { data, error } = await supabase
     .from("events")
     .select(
-      "id, slug, title, kind, starts_on, ends_on, yearly, summary, poster_url, price_ar, " +
-        "price_unit, organizer, place:places(slug, name_fr, region)"
+      "id, slug, title, kind, starts_on, ends_on, yearly, periode, mois, source, lieu_libre, description, summary, poster_url, price_ar, price_unit, organizer, place:places(slug, name_fr, region)"
     )
     .eq("is_published", true)
-    .order("starts_on", { ascending: true })
-    .limit(limite);
+    // ⚠ ON NE TRIE PLUS SUR `starts_on` : il est nul partout, donc le tri
+    //   n'ordonnait rien et l'ordre dépendait du hasard du plan. Le classement
+    //   par mois se fait à l'écran, qui seul sait quel mois on est.
+    .order("title", { ascending: true })
+    .limit(Math.min(limite, 200));
   if (error) throw error;
   return (data as unknown as Evenement[]) ?? [];
 }

@@ -1123,11 +1123,18 @@ function FormTarif({ roomTypeId, onFini }: { roomTypeId: string; onFini: () => P
         value={prix}
         onChange={(e) => setPrix(Number(e.target.value))}
         placeholder="Prix en Ar"
+        aria-label="Prix en ariary"
         className={champCss}
       />
-      <input type="date" value={du} onChange={(e) => setDu(e.target.value)} className={champCss} />
-      <input type="date" value={au} onChange={(e) => setAu(e.target.value)} className={champCss} />
-      <select value={pension} onChange={(e) => setPension(e.target.value)} className={champCss}>
+      {/* ⚠ UN CHAMP DATE N'A PAS DE TEXTE À LUI. Sans `aria-label`, ces deux-là
+          s'annoncent tous les deux « date » : impossible de savoir lequel est le
+          début du tarif et lequel la fin. */}
+      <input type="date" aria-label="Tarif valable à partir du" value={du}
+        onChange={(e) => setDu(e.target.value)} className={champCss} />
+      <input type="date" aria-label="Tarif valable jusqu'au" value={au}
+        onChange={(e) => setAu(e.target.value)} className={champCss} />
+      <select aria-label="Formule d'hébergement" value={pension}
+        onChange={(e) => setPension(e.target.value)} className={champCss}>
         <option value="">Sans précision</option>
         <option value="chambre_seule">Chambre seule</option>
         <option value="petit_dej">Petit déjeuner inclus</option>
@@ -1322,11 +1329,13 @@ function FormPlat({
         value={prix}
         onChange={(e) => setPrix(Number(e.target.value))}
         placeholder="Prix en Ar"
+        aria-label="Prix en ariary"
         className={champCss}
       />
       {/* ⭐ Le rattachement au référentiel : facultatif, mais c'est LUI qui
           fait remonter le restaurant dans « qui sert du ravitoto ». */}
       <select
+        aria-label="Plat du référentiel correspondant"
         value={dishId}
         onChange={(e) => setDishId(e.target.value)}
         className={cn(champCss, "sm:col-span-2")}

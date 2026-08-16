@@ -62,9 +62,24 @@ export default defineConfig(({ mode }) => ({
         scope: "/",
         start_url: "/",
         orientation: "portrait-primary",
+        /* 🔴 CE MANIFESTE DECLARAIT DEUX TAILLES FAUSSES ET ROGNAIT LE LOGO.
+              - `diako-logo.png` etait annonce 512x512 : il fait 1920x1920 pour
+                482 Ko. Android le telechargeait en entier pour l'afficher a
+                192 px — sur une 3G malgache, l'installation de l'app payait
+                un demi-megaoctet pour une vignette.
+              - `favicon.png` etait annonce 192x192 : il fait 64x64. Un systeme
+                qui fait confiance a la declaration l'agrandit x3 et affiche
+                une icone floue.
+              - `purpose: "any maskable"` sur une image NON masquable : Android
+                rogne un cercle dedans en supposant une zone de securite de
+                20 %, ce qui coupait le logo. « any » et « maskable » ne
+                designent pas le meme dessin et ne doivent pas partager un
+                fichier — d'ou l'entree dediee ci-dessous.
+              Les trois fichiers justes existaient deja dans public/media. */
         icons: [
-          { src: "/media/diako-logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
-          { src: "/media/favicon.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/media/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/media/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/media/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       injectManifest: {

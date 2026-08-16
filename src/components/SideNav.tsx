@@ -1,7 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { GROUPES_RAIL, NAV_RAIL } from "@/lib/nav";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useStats } from "@/hooks/useStats";
 import { prechargerRoute } from "@/lib/prechargerRoute";
 import { cn } from "@/lib/utils";
 
@@ -21,13 +20,7 @@ export function SideNav() {
    *   d'un coup. En redemander trois separement couterait trois allers-retours
    *   sur une 3G, pour la meme information.
    */
-  const [comptes, setComptes] = useState<Record<string, number> | null>(null);
-  useEffect(() => {
-    void supabase.rpc("stats_diako").then(({ data }) => {
-      const d = data as Record<string, number> | null;
-      if (d) setComptes(d);
-    });
-  }, []);
+  const comptes = useStats() as unknown as Record<string, number> | null;
 
   return (
     <nav

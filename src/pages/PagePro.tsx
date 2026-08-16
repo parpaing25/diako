@@ -349,6 +349,27 @@ export default function PagePro() {
     );
   }
 
+  if (etat === "erreur") {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <p className="font-medium">La fiche n'a pas pu être chargée</p>
+        <button
+          onClick={() => void charger()}
+          className="mt-4 min-h-10 rounded-full border border-input px-5 text-sm font-medium"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  /* 🔴 L'ORDRE DE CES DEUX BLOCS ÉTAIT INVERSÉ, ET C'EST UN VRAI DÉFAUT.
+        `!fiche` est vrai AUSSI quand la requête a échoué : une coupure réseau —
+        banale en 3G malgache — affichait donc « Cet établissement n'existe
+        pas », sans bouton Réessayer, sur l'écran le plus partagé par lien du
+        produit. On dit à quelqu'un que son hôtel n'existe pas parce que sa
+        connexion a hoqueté. Le cas ERREUR se traite d'abord ; ce qui reste ici
+        est une vraie 404. */
   // Une vraie 404 : un lien périmé ne doit jamais présenter silencieusement
   // un AUTRE établissement avec ses tarifs.
   if (etat === "absente" || !fiche) {
@@ -368,19 +389,6 @@ export default function PagePro() {
     );
   }
 
-  if (etat === "erreur") {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="font-medium">La fiche n'a pas pu être chargée</p>
-        <button
-          onClick={() => void charger()}
-          className="mt-4 min-h-10 rounded-full border border-input px-5 text-sm font-medium"
-        >
-          Réessayer
-        </button>
-      </div>
-    );
-  }
 
   const onglets: { cle: Onglet; label: string; visible: boolean }[] = [
     { cle: "chambres", label: "Chambres", visible: fiche.rooms.length > 0 },
@@ -558,6 +566,7 @@ export default function PagePro() {
               images={fiche.gallery.map((url) => ({ url }))}
               alt={fiche.name}
               ajustement="couvrir"
+              largeurAffichee="(min-width: 1280px) 620px, 100vw"
             />
           </div>
         )}
@@ -701,6 +710,7 @@ export default function PagePro() {
                       images={fiche.menu_photos.map((m) => ({ url: m.url }))}
                       alt="Carte de l'établissement"
                       ajustement="contenir"
+                      largeurAffichee="(min-width: 1280px) 620px, 100vw"
                     />
                   </div>
                 </section>

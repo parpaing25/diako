@@ -20,6 +20,15 @@ import {
   type Offre,
   type Projet as ProjetType,
 } from "@/lib/decouverte";
+import { ChoixEnvie } from "@/components/ChoixEnvie";
+import {
+  ENVIES,
+  enregistrerChoix,
+  lienDuChoix,
+  relireChoix,
+  type Choix,
+  type TableChoix,
+} from "@/lib/envies";
 import { cn } from "@/lib/utils";
 
 /**
@@ -44,14 +53,11 @@ import { cn } from "@/lib/utils";
  *   « Réserver » ni « Payer » : Diako met en relation et n'encaisse rien.
  */
 
-const ENVIES = [
-  { code: "nature", label: "nature" },
-  { code: "plage", label: "plage" },
-  { code: "trek", label: "trek" },
-  { code: "culture", label: "culture" },
-  { code: "gastronomie", label: "gastronomie" },
-  { code: "indecis", label: "je ne sais pas encore" },
-];
+/* ⚠ LA TABLE DES ENVIES VIENT DE `src/lib/envies.ts`, elle n'est plus recopiée
+   ici. Elle l'était, et le composant de choix en avait sa propre copie : deux
+   listes qui doivent rester identiques divergent au premier ajout, et une envie
+   proposée d'un côté sans rien derrière de l'autre est indébogable pour qui la
+   signale. */
 
 export default function Projet() {
   useSEO({
@@ -82,6 +88,41 @@ export default function Projet() {
   /** Le même formulaire sert à créer ET à modifier : deux écrans distincts
    *  divergeraient au premier champ ajouté. */
   const [edition, setEdition] = useState(false);
+  /** Les lieux et les plats retenus, toutes envies confondues.
+   *  ⚠ On garde la TABLE d'origine avec la référence : sans elle, personne ne
+   *    sait si un identifiant désigne une plage ou un plat, et l'écriture en
+   *    base le refuserait. */
+  const [choix, setChoix] = useState<Choix[]>([]);
+  const [enregistre, setEnregistre] = useState(false);
+  const refsChoisies = new Set(choix.map((c) => c.ref));
+
+  /** ⚠ ENREGISTRE L'ÉTAT COMPLET. La fonction en base remplace les trois
+   *  tableaux : envoyer un sous-ensemble effacerait le reste. */
+  const basculerChoix = useCallback(
+    async (s: { ref: string; table: TableChoix; nom: string }) => {
+      const avant = choix;
+      const apres = avant.some((c) => c.ref === s.ref)
+        ? avant.filter((c) => c.ref !== s.ref)
+        : [...avant, { ref: s.ref, table: s.table, slug: "", nom: s.nom, kind: "", cover_url: null }];
+      setChoix(apres);
+      if (!projet) return; // ⚠ Sans projet ouvert, le choix vit à l'écran et
+                           //   sera enregistré à la publication.
+      setEnregistre(true);
+      try {
+        await enregistrerChoix(projet.id, apres);
+        setChoix(await relireChoix(projet.id));
+      } catch (e) {
+        // 🔴 ON REVIENT EN ARRIÈRE À L'ÉCRAN. Sans ça, la case resterait cochée
+        //    alors que la base a refusé : le voyageur croirait son choix
+        //    enregistré, et les agences ne le verraient jamais.
+        setChoix(avant);
+        toast.error(e instanceof Error ? e.message : "Le choix n'a pas pu être enregistré.");
+      } finally {
+        setEnregistre(false);
+      }
+    },
+    [choix, projet]
+  );
 
   function ouvrirEdition(p: ProjetType) {
     setEnvies(p.envies);
@@ -102,7 +143,14 @@ export default function Projet() {
     try {
       const p = await monProjet();
       setProjet(p);
-      setOffres(p ? await offresDuProjet(p.id) : []);
+      // ⚠ RELIRE, sinon un projet rouvert perdrait ses lieux À L'ÉCRAN alors
+      //   qu'ils sont bien en base — et le voyageur les choisirait deux fois.
+      const [o, c] = await Promise.all([
+        p ? offresDuProjet(p.id) : Promise.resolve([]),
+        p ? relireChoix(p.id) : Promise.resolve([] as Choix[]),
+      ]);
+      setOffres(o);
+      setChoix(c);
     } catch {
       setErreur(true);
     } finally {
@@ -163,7 +211,11 @@ export default function Projet() {
         toast.success("Projet mis à jour.");
         setEdition(false);
       } else {
-        await creerProjet(champs);
+        const id = await creerProjet(champs);
+        // ⚠ Les choix faits AVANT la création n'avaient pas de projet où aller :
+        //   on les pose maintenant, sinon ils disparaissent au moment même où
+        //   le projet devient visible des professionnels.
+        if (choix.length) await enregistrerChoix(id, choix);
         toast.success("Projet publié. Les professionnels peuvent y répondre.");
       }
       await charger();
@@ -205,6 +257,7 @@ export default function Projet() {
         {projet && !edition ? (
           <RecapProjet
             projet={projet}
+            choix={choix}
             onModifier={() => ouvrirEdition(projet)}
             onChange={() => void charger()}
           />
@@ -234,6 +287,30 @@ export default function Projet() {
                   </li>
                 ))}
               </ul>
+
+              {/* 🔴 CE QUI MANQUAIT : RIEN DERRIÈRE L'ÉTIQUETTE. On cochait
+                  « plage » et c'était fini. On propose désormais les plages,
+                  et le voyageur dit lesquelles l'intéressent — c'est ce qui
+                  permet à une agence de répondre autre chose qu'un devis type.
+                  ⚠ Une envie par bloc, dans l'ordre où elles ont été cochées :
+                    empiler cinq listes ouvertes d'un coup rendrait l'écran
+                    illisible sur un téléphone. */}
+              {envies.map((code) => (
+                <ChoixEnvie
+                  key={code}
+                  envie={code}
+                  choisis={refsChoisies}
+                  onBasculer={(x) => void basculerChoix(x)}
+                />
+              ))}
+
+              {choix.length > 0 && (
+                <p className="dk-secondaire mt-2">
+                  {choix.length} lieu{choix.length > 1 ? "x" : ""} retenu
+                  {choix.length > 1 ? "s" : ""}
+                  {enregistre && " · enregistrement…"}
+                </p>
+              )}
             </section>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -635,10 +712,12 @@ function MenuStatut({
 
 function RecapProjet({
   projet,
+  choix,
   onModifier,
   onChange,
 }: {
   projet: ProjetType;
+  choix: Choix[];
   onModifier: () => void;
   onChange: () => void;
 }) {
@@ -696,6 +775,27 @@ function RecapProjet({
           {new Date(projet.created_at).toLocaleDateString("fr-FR")}
         </Ligne>
       </dl>
+      {/* ⚠ LES LIEUX RETENUS SONT CLIQUABLES. Un choix qu'on ne peut pas
+          rouvrir n'est qu'une étiquette : on doit pouvoir vérifier ce qu'on a
+          coché avant que des agences ne chiffrent dessus. */}
+      {choix.length > 0 && (
+        <div className="mt-4">
+          <p className="dk-etiquette">Ce que vous aimeriez voir</p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {choix.map((c) => (
+              <li key={c.ref}>
+                <Link
+                  to={lienDuChoix(c)}
+                  className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium hover:border-primary hover:text-primary"
+                >
+                  {c.nom}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {projet.notes && <p className="dk-corps mt-3 text-muted-foreground">{projet.notes}</p>}
     </section>
   );

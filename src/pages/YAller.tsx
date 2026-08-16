@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EtatErreur, Squelettes } from "@/components/Etats";
+import Planificateur from "@/components/trajet/Planificateur";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,6 +30,17 @@ import { cn } from "@/lib/utils";
  *   ligne sur 42 : quarante-et-une cases vides se liraient « tableau cassé »
  *   plutôt que « donnée manquante ». Il s'affiche là où il existe, et nulle
  *   part ailleurs.
+ *
+ * ⚠ LE PLANIFICATEUR PASSE DEVANT LE TABLEAU. Le tableau répond à « combien de
+ *   temps pour aller là-bas ? » ; la question qu'on se pose vraiment est
+ *   « je pars à 6 h, j'arrive quand, et où est-ce que je dors ? ». Les 42
+ *   lignes ne sont pas une liste : ce sont les arêtes d'un graphe de 43 lieux,
+ *   et les mettre bout à bout suffit à répondre — sans ajouter une seule donnée.
+ *
+ * ⚠ LE PLANIFICATEUR EST INDÉPENDANT DU RESTE DE LA PAGE. Il s'appuie sur deux
+ *   RPC livrées par les migrations 0099/0100 ; tant qu'elles ne sont pas
+ *   appliquées, LUI SEUL affiche qu'il n'est pas actif. Le tableau ci-dessous,
+ *   servi par `y_aller`, ne dépend de rien de neuf.
  */
 
 const ICONE: Record<string, typeof Bus> = {
@@ -79,9 +91,9 @@ const LENT = 30;
 
 export default function YAller() {
   useSEO({
-    titre: "Y aller — temps de route réels à Madagascar",
+    titre: "Y aller — planificateur de trajet et temps de route réels à Madagascar",
     description:
-      "Combien de temps met-on vraiment pour rejoindre les destinations malgaches ? Distances, durées relevées, état des routes et vitesse effective — 46 km/h sur goudron, pas 90.",
+      "Antananarivo → Toliara par la RN7 : itinéraire, durées relevées tronçon par tronçon, heure d'arrivée réelle et alerte si la nuit tombe avant. 46 km/h sur goudron, pas 90.",
     url: "https://diako.fonenako.mg/y-aller",
   });
 
@@ -134,6 +146,9 @@ export default function YAller() {
         vitesse théorique. C'est toute la différence entre arriver au coucher du
         soleil et arriver de nuit sur une piste.
       </p>
+
+      {/* ── LE PLANIFICATEUR — la question qu'on se pose vraiment ─────────── */}
+      <Planificateur />
 
       {/* ── LA VITESSE RÉELLE PAR MODE — le cœur de la page ───────────────── */}
       <section className="dk-reveal mt-6">

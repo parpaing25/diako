@@ -30,6 +30,10 @@ const ProConsole = lazy(() => import("./pages/ProConsole"));
 const Parametres = lazy(() => import("./pages/Parametres"));
 const Favoris = lazy(() => import("./pages/Favoris"));
 const Carte = lazy(() => import("./pages/Carte"));
+/* ⚠ AUCUNE ENTRÉE DE NAVIGATION NE MÈNE ICI, ET C'EST VOULU. Cet écran répond
+     « réservé » à 100 % des visiteurs sauf un : l'afficher dans le rail serait
+     un lien qui ne mène nulle part pour tout le monde. On y va par l'adresse. */
+const Admin = lazy(() => import("./pages/Admin"));
 const Destination = lazy(() => import("./pages/Destination"));
 const Plat = lazy(() => import("./pages/Plat"));
 const Messages = lazy(() => import("./pages/Messages"));
@@ -117,6 +121,7 @@ function Shell() {
       {/* Console de gestion : la garde de propriete est dans la page. */}
       <Route path="/pro/:slug" element={<ProConsole />} />
       <Route path="/parametres" element={<Parametres />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="/favoris" element={<Favoris />} />
       <Route path="/carte" element={<Carte />} />
       {/* Les deux fiches du referentiel : c'est lui le fosse defensif du

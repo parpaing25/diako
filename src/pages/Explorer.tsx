@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Compass, MapPin, Mountain } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Compass, MapPin, Mountain } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EmptyState, EtatErreur } from "@/components/Etats";
@@ -187,11 +187,46 @@ function PalierRegions() {
 
       {etat === "chargement" && <Squelettes hauteur="h-52" />}
 
+      {/* 🔴 LES CINQ BANDES SONT REPLIÉES, ET C'EST TOUT L'INTÉRÊT. Les groupes
+             existaient déjà, mais s'ouvraient tous ensemble : le premier écran
+             d'/explorer, c'étaient 23 cartes à couverture photo — plusieurs
+             mégaoctets, et un long défilement avant même de comprendre qu'il y
+             a une structure. Replié, on lit d'abord les cinq noms que le
+             voyageur a déjà en tête : « la côte est » vient avant
+             « Fitovinany ».
+
+          ⚠ `<details>` NATIF, PAS UN ÉTAT REACT. Il apporte le clavier, le rôle
+            ARIA, l'ouverture par la recherche dans la page du navigateur et
+            l'impression complète — gratuitement. Un `useState` sur un `<div>`
+            aurait dû refaire tout ça à la main, et l'aurait raté quelque part.
+
+          ⚠ ET LES IMAGES NE PARTENT PAS TANT QUE LA BANDE EST FERMÉE : le
+            contenu d'un `<details>` fermé n'est pas rendu, donc aucun `<img>`
+            n'existe. C'est le vrai gain sur une 3G. */}
       {etat === "ok" &&
         groupes.map((g) => (
-          <section key={g.titre} className="mt-7">
-            <h2 className="dk-etiquette">{g.titre}</h2>
-            <ul className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
+          <details key={g.titre} className="group mt-3 rounded-2xl border border-border bg-card">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <span className="flex items-center gap-2.5">
+                <Mountain className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                <span className="text-left">
+                  <span className="block font-bold leading-tight">{g.titre}</span>
+                  <span className="dk-secondaire block text-muted-foreground">
+                    {pluriel(g.cartes.length, "région")} ·{" "}
+                    {pluriel(
+                      g.cartes.reduce((s, r) => s + r.nb_destinations, 0),
+                      "destination"
+                    )}
+                  </span>
+                </span>
+              </span>
+              {/* `aria-hidden` : `<summary>` annonce déjà l'état plié/déplié. */}
+              <ChevronDown
+                className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              />
+            </summary>
+            <ul className="grid gap-3 px-4 pb-4 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
               {g.cartes.map((r) => (
                 <li key={r.slug}>
                   <Carte
@@ -211,7 +246,7 @@ function PalierRegions() {
                 </li>
               ))}
             </ul>
-          </section>
+          </details>
         ))}
 
       {etat === "ok" && liste.length === 0 && (

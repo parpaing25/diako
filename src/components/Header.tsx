@@ -8,6 +8,7 @@ import { getAvatarUrl } from "@/lib/supabaseImage";
 import { MenuCompte } from "@/components/MenuCompte";
 import { SearchBar } from "@/components/SearchBar";
 import { MenuMobile } from "@/components/MenuMobile";
+import { RetourEntete } from "@/components/RetourEntete";
 import { compterNonLues } from "@/lib/api";
 import {
   compterMessagesNonLus,
@@ -67,6 +68,11 @@ export function Header() {
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
+
+          {/* ⚠ AVANT LE LOGO, comme partout ailleurs : le retour se cherche en
+              haut à gauche. Il ne s'affiche que s'il y a réellement une page
+              derrière — voir RetourEntete. */}
+          <RetourEntete />
 
           {/* ⚠ Le vrai logo, et non plus le nom en typographie. Servi en WebP
               de 5,6 Ko : le fichier d'origine fait 1920 px pour 494 Ko, soit

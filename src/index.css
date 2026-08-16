@@ -213,7 +213,13 @@ table {
   max-width: 100%;
 }
 
-:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+/* ⚠ MÊME EXCEPTION QUE LA RÈGLE JUMELLE EN FIN DE FICHIER : jamais de contour
+   sur `tabindex="-1"`. Ce fichier porte DEUX règles de focus — celle-ci et
+   celle de la section « focus au clavier » — et corriger une seule des deux ne
+   corrige rien : l'autre continue d'encadrer `<main id="contenu">` à chaque
+   navigation. C'est ce doublon qui a fait survivre le « cadre teal » au
+   premier correctif. */
+:where(a, button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   border-radius: 6px;
@@ -706,10 +712,28 @@ button:not(:disabled):active,
 @keyframes dk-image-posee { from { opacity: 0; } to { opacity: 1; } }
 .dk-image-posee { animation: dk-image-posee 0.4s ease-out both; }
 
-/* ── L'entrée de page, appliquée au conteneur de routes ──────────────────*/
+/* ── L'entrée de page, appliquée au conteneur de routes ──────────────────
+   🔴 PLUS AUCUN `transform` ICI, ET C'EST LE CORRECTIF DE L'ACCUEIL MOBILE
+      VIDE. L'animation glissait la page de 6 px (`translateY(6px)` → `none`)
+      avec `fill-mode: both`. Or `both` laisse la DERNIÈRE image-clé appliquée
+      pour toujours, et Blink résout un `transform: none` animé en
+      `matrix(1, 0, 0, 1, 0, 0)` — l'identité, mais PAS `none`. Un élément dont
+      le transform n'est pas `none` devient le BLOC CONTENEUR de tous ses
+      descendants `position: fixed` : le fil mobile (`fixed inset-x-0 bottom-0
+      top-14`) se calait donc sur un `.dk-page` de hauteur 0 au lieu du
+      viewport, et se résolvait à `height: 0`. Les 8 publications étaient dans
+      le DOM ; pas un pixel ne se peignait. L'entête et le pied de page, hors
+      de `.dk-page`, restaient parfaits — d'où « rien entre les deux ».
+      Mesuré en navigateur : `offsetParent = DIV.dk-page`, `height = 0`.
+   ⚠ ON GARDE `both` ET L'OPACITÉ. Supprimer `both` seul aurait laissé 260 ms
+     pendant lesquelles le fil restait écrasé, puis un saut. L'opacité seule ne
+     crée pas de bloc conteneur : l'entrée reste douce, le piège disparaît.
+   ⚠ RÈGLE À RETENIR POUR TOUT CE FICHIER : aucun `transform`, `filter`,
+     `perspective` ni `will-change` de ces propriétés sur un ANCÊTRE d'un
+     élément `position: fixed`. C'est le même piège qui guette `.dk-reveal`. */
 @keyframes dk-page {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 .dk-page { animation: dk-page 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
@@ -727,8 +751,16 @@ button:not(:disabled):active,
 
 /* ── Le focus au clavier, visible et net ─────────────────────────────────
    ⚠ Jamais `outline: none` sans remplacement : c'est ce qui rend un site
-     inutilisable au clavier sans que personne ne s'en aperçoive. */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+     inutilisable au clavier sans que personne ne s'en aperçoive.
+   🔴 MAIS PAS SUR `tabindex="-1"`. Ces éléments-là ne sont focalisables que
+      par PROGRAMME — `<main id="contenu">` reçoit le focus à chaque changement
+      de page pour les lecteurs d'écran (App.tsx). Les encadrer dessinait un
+      trait teal pleine largeur sous l'entête à CHAQUE navigation : c'est le
+      « cadre » que le propriétaire voyait sur sa capture. Un contour de focus
+      sert à retrouver où l'on est au CLAVIER ; un focus posé par script n'est
+      pas une position du clavier. Cette règle étant écrite après
+      `@tailwind utilities`, elle battait le `outline-none` du composant. */
+:where(a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
   border-radius: 6px;

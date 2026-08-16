@@ -151,33 +151,6 @@
       #dk-shell .cols { display: flex; gap: 24px; width: 100%; }
       #dk-shell .rail { display: none; }
       #dk-shell .main { flex: 1 1 auto; min-width: 0; padding: 24px 16px; }
-      #dk-shell .hero {
-        background: var(--dk-sand);
-        border-radius: 24px;
-        padding: 40px 20px;
-      }
-      #dk-shell .hero h1 {
-        margin: 0;
-        font-size: 24px;
-        line-height: 1.25;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-      }
-      #dk-shell .hero p {
-        margin: 12px 0 0;
-        font-size: 16px;
-        line-height: 1.6;
-        color: #3c4f53;
-        max-width: 60ch;
-      }
-      #dk-shell .hero .marque {
-        margin: 0 0 4px; font-size: 14px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.04em; color: var(--dk-primary);
-      }
-      #dk-shell .hero .bar {
-        margin-top: 24px; height: 48px; max-width: 42rem;
-        border: 1px solid var(--dk-border); border-radius: 999px; background: #FFFFFF;
-      }
       #dk-shell .apropos { margin-top: 40px; }
       #dk-shell .apropos h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
       #dk-shell .apropos p {
@@ -192,9 +165,6 @@
         #dk-shell header { padding: 0 24px; } #dk-shell .cols { padding: 0 24px; }
         #dk-shell .rail { display: block; width: 224px; flex: 0 0 224px; border-right: 1px solid var(--dk-border); }
         #dk-shell .main { padding: 24px 16px 24px 0; }
-        #dk-shell .hero { padding: 56px 40px; }
-        #dk-shell .hero h1 { font-size: 44px; line-height: 1.1; }
-        #dk-shell .hero p { font-size: 18px; }
         /* La barre du bas est md:hidden côté React : sans cette règle, une bande
            blanche de 64 px clignotait en bas des écrans d'ordinateur. */
         #dk-shell nav { display: none; }
@@ -202,8 +172,6 @@
       @media (prefers-color-scheme: dark) {
         :root { --dk-bg: #0c1a1d; --dk-ink: #eaf2f3; --dk-border: #1d3236; --dk-sand: #16292d; }
         #dk-shell .search { background: #16292d; }
-        #dk-shell .hero p { color: #a8bcc0; }
-        #dk-shell .hero .bar { background: #12242782; }
       }
     </style>
   </head>
@@ -219,21 +187,20 @@
       <div class="cols">
         <div class="rail"></div>
         <div class="main">
-          <div class="hero">
-            <p class="marque">Diako</p>
-            <h1>Diako — où dormir, où manger, avec qui partir à Madagascar</h1>
-            <p>
-              Les hôtels, les restaurants et les agences de voyage du pays, avec
-              leurs vrais tarifs, leurs menus et leurs circuits.
-            </p>
-            <div class="bar"></div>
-          </div>
+          <!-- 🔴 LE BANDEAU D'ACCUEIL A ÉTÉ RETIRÉ ICI AUSSI. Il l'avait été
+               de React sur demande du propriétaire — capture d'écran, barré en
+               rouge — mais ce squelette statique continuait de le PEINDRE avant
+               l'hydratation : le bandeau supprimé réapparaissait à chaque
+               chargement, le temps que React prenne la main. Retirer un élément
+               d'un seul des deux rendus ne le retire pas de l'écran.
+               ⚠ Le commentaire ci-dessous affirmait « React rend exactement le
+                 même contenu, il n'y a donc aucun clignotement » : c'était vrai
+                 quand il a été écrit, et faux depuis la suppression du bandeau.
 
-          <!-- Ce texte est servi en HTML STATIQUE, donc lisible par un robot
-               qui n'exécute pas JavaScript — dont le vérificateur de l'écran de
-               consentement OAuth de Google, qui exige que la page d'accueil
-               nomme l'application et explique son objectif. React rend
-               exactement le même contenu, il n'y a donc aucun clignotement. -->
+               Ce texte-ci reste : il est servi en HTML STATIQUE, donc lisible
+               par un robot qui n'exécute pas JavaScript — dont le vérificateur
+               de l'écran de consentement OAuth de Google, qui exige que la page
+               d'accueil nomme l'application et explique son objectif. -->
           <section class="apropos">
             <h2>À propos de Diako</h2>
             <p>

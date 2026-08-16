@@ -88,7 +88,13 @@ export const NAV_COMPLET: NavItem[] = [
   { to: "/", label: "Fil", icon: Home, pret: true },
   { to: "/explorer", label: "Destinations", icon: Compass, pret: true, groupe: "decouvrir", compteur: "destinations" },
   { to: "/plats", label: "Atlas des plats", icon: UtensilsCrossed, pret: true, groupe: "decouvrir", compteur: "plats" },
-  { to: "/circuits", label: "Circuits", icon: Route, pret: true, groupe: "decouvrir" },
+  /* 🔴 `pret: false` PARCE QUE LA TABLE EST VIDE. Mesuré : 0 circuit, 0 guide
+     publiés. Ces deux entrées menaient à un écran qui ne peut rien afficher, et
+     la pastille « bientôt » — dont le commentaire de SideNav dit qu'elle « dit
+     la vérité AVANT le clic » — ne s'affichait sur aucune des deux. On promet
+     un catalogue, on ouvre le vide : c'est le clic de trop qui fait douter du
+     reste du site. À repasser à `true` le jour où ces tables se remplissent. */
+  { to: "/circuits", label: "Circuits", icon: Route, pret: false, groupe: "decouvrir" },
   { to: "/sites", label: "Sites et parcs", icon: Trees, pret: true, groupe: "decouvrir", compteur: "sites" },
   { to: "/evenements", label: "Événements", icon: CalendarDays, pret: true, groupe: "decouvrir" },
   /* ⚠ AJOUTE APRES L'AUDIT : `/projet` n'avait qu'UN SEUL lien dans tout le
@@ -96,10 +102,15 @@ export const NAV_COMPLET: NavItem[] = [
      cible du produit (390 px), l'ecran que le code decrit comme « le seul
      endroit ou l'offre vient au voyageur » n'etait joignable qu'en tapant
      l'URL a la main. */
-  { to: "/projet", label: "Mon projet de voyage", icon: Compass, pret: true, groupe: "preparer" },
+  /* 🔴 L'ENTRÉE « Mon projet de voyage » A ÉTÉ RETIRÉE D'ICI. Elle faisait
+     DOUBLON : le rail portait la ligne de menu ET la carte de bas de rail
+     (SideNav.tsx), toutes deux vers /projet. Le propriétaire l'a signalé
+     capture à l'appui. On garde la CARTE, pas la ligne : c'est le seul endroit
+     du produit où l'offre vient au voyageur, une ligne parmi seize l'aurait
+     noyé — et c'est précisément l'argument écrit dans SideNav.tsx. */
   { to: "/quand-partir", label: "Quand partir", icon: Sun, pret: true, groupe: "preparer" },
   { to: "/y-aller", label: "Y aller", icon: Route, pret: true, groupe: "preparer" },
-  { to: "/guides", label: "Guides", icon: Mountain, pret: true, groupe: "decouvrir" },
+  { to: "/guides", label: "Guides", icon: Mountain, pret: false, groupe: "decouvrir" },
   { to: "/carte", label: "Carte", icon: Map, pret: true },
   { to: "/recherche", label: "Rechercher", icon: Search, pret: true },
   { to: "/publier", label: "Publier", icon: Plus, pret: true, railDesktop: false },

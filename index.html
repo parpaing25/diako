@@ -29,6 +29,9 @@
          logo de 1920 px et 494 Ko : Safari le telechargeait en entier pour
          l'afficher en 60 px. -->
     <link rel="apple-touch-icon" sizes="180x180" href="/media/apple-touch-icon.png" />
+    <!-- ⚠ LES DEUX, PAS UNE. Chrome a déprécié la forme `apple-` et le dit en
+         console à chaque chargement ; iOS, lui, ne connaît QUE celle-là. -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Diako" />

@@ -157,17 +157,56 @@ self.addEventListener("fetch", (event) => {
       caches.match(req).then((hit) => {
         const net = fetch(req)
           .then((res) => {
-            if (res.ok) {
+            /* 🔴 `res.ok` NE SUFFIT PAS ICI, ET C'EST CE QUI EMPOISONNAIT LE
+                  CACHE. Le `.htaccess` du site renvoie toute URL inconnue vers
+                  `index.html` : un fichier SUPPRIMÉ répond « 200 OK,
+                  text/html » et non 404. Or le déploiement supprime les
+                  anciens assets (69 au dernier envoi). Un visiteur qui revient
+                  avec un `index.html` en cache demande donc un morceau à
+                  l'ancien hachage, reçoit du HTML, et cette ligne le rangeait
+                  DANS LE CACHE sous l'URL du .js — définitivement. Le morceau
+                  chargé à la demande ne s'exécutera plus jamais, même après un
+                  nouveau déploiement.
+
+                  C'est très probablement pourquoi « la carte ne sort pas »
+                  alors que le reste du site marche : /carte est le plus gros
+                  morceau différé du bundle, donc le premier à manquer, et le
+                  seul écran dont TOUT le contenu vient de ce morceau.
+
+                  On vérifie donc le TYPE, pas le code. */
+            const type = res.headers.get("Content-Type") || "";
+            const estDuCode =
+              type.includes("javascript") ||
+              type.includes("ecmascript") ||
+              type.includes("css") ||
+              type.includes("json");
+            if (res.ok && estDuCode) {
               const copy = res.clone();
               caches.open(RUNTIME).then((c) => {
                 c.put(req, copy);
                 trim(RUNTIME, 60);
               });
+              return res;
             }
-            return res;
+            // ⚠ Du HTML là où on attend un module : le fichier n'existe plus.
+            //   On PURGE l'entrée empoisonnée d'un déploiement précédent et on
+            //   laisse échouer franchement — la page se rechargera (voir
+            //   `vite:preloadError` dans src/main.tsx), ce qui rapatriera un
+            //   index.html frais pointant vers les bons hachages.
+            caches.open(RUNTIME).then((c) => c.delete(req));
+            throw new Error("module absent (repli HTML)");
           })
-          .catch(() => hit);
-        return hit || net;
+          .catch((e) => {
+            // Un `hit` peut lui-même être empoisonné par un ancien SW : on ne
+            // le rend que s'il est bien du code.
+            if (hit && !(hit.headers.get("Content-Type") || "").includes("text/html")) return hit;
+            throw e;
+          });
+        /* ⚠ ON NE REND PLUS `hit ||` AVEUGLÉMENT : si le cache porte du HTML
+             hérité d'un ancien SW, le servir rejouerait la panne à chaque
+             visite, y compris après correction. */
+        if (hit && !(hit.headers.get("Content-Type") || "").includes("text/html")) return hit;
+        return net;
       })
     );
   }

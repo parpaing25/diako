@@ -50,38 +50,17 @@ export default defineConfig(({ mode }) => ({
       //   l'entete sert `diako-marque-96.webp`, qui pese 5,5 Ko. Le commentaire
       //   ci-dessous dit « la coquille, rien de plus » ; il n'etait pas suivi.
       includeAssets: ["media/favicon.png", "offline.html"],
-      manifest: {
-        name: "Diako — Voyage & tourisme a Madagascar",
-        short_name: "Diako",
-        description:
-          "Trouvez ou dormir, ou manger et avec qui partir a Madagascar. Hotels, restaurants, agences de voyage.",
-        lang: "fr",
-        theme_color: "#0E7C86",
-        background_color: "#ffffff",
-        display: "standalone",
-        scope: "/",
-        start_url: "/",
-        orientation: "portrait-primary",
-        /* 🔴 CE MANIFESTE DECLARAIT DEUX TAILLES FAUSSES ET ROGNAIT LE LOGO.
-              - `diako-logo.png` etait annonce 512x512 : il fait 1920x1920 pour
-                482 Ko. Android le telechargeait en entier pour l'afficher a
-                192 px — sur une 3G malgache, l'installation de l'app payait
-                un demi-megaoctet pour une vignette.
-              - `favicon.png` etait annonce 192x192 : il fait 64x64. Un systeme
-                qui fait confiance a la declaration l'agrandit x3 et affiche
-                une icone floue.
-              - `purpose: "any maskable"` sur une image NON masquable : Android
-                rogne un cercle dedans en supposant une zone de securite de
-                20 %, ce qui coupait le logo. « any » et « maskable » ne
-                designent pas le meme dessin et ne doivent pas partager un
-                fichier — d'ou l'entree dediee ci-dessous.
-              Les trois fichiers justes existaient deja dans public/media. */
-        icons: [
-          { src: "/media/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: "/media/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-          { src: "/media/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-        ],
-      },
+      /* 🔴 CE PLUGIN NE FABRIQUE PLUS DE MANIFESTE, ET C'EST UN PIÈGE RÉSOLU.
+            Il en écrivait un second — `manifest.webmanifest` — que RIEN ne
+            charge : `index.html` pointe sur `/manifest.json`, écrit à la main
+            dans `public/`, et c'est lui que le navigateur lit. Deux manifestes
+            coexistaient donc, avec des icônes différentes. Corriger celui d'ici
+            (ce que je viens de faire, en pure perte) donnait l'illusion d'avoir
+            réparé l'installation de l'app sans rien changer sur l'appareil.
+            Une seule source de vérité désormais : public/manifest.json, qui
+            porte en plus les raccourcis, `share_target` et `launch_handler`
+            que la version générée n'avait pas. */
+      manifest: false,
       injectManifest: {
         // PRECACHE = LA COQUILLE, RIEN DE PLUS.
         // Fonenako precachait 154 fichiers / 3,7 Mo derriere le dos du visiteur :

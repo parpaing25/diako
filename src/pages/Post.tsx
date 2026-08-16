@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { useRetour } from "@/hooks/useRetour";
 import { useSEO } from "@/hooks/useSEO";
 import { PostCard } from "@/components/PostCard";
 import { Commentaires } from "@/components/Commentaires";
@@ -26,6 +28,18 @@ export default function Post() {
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<TypePost | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absent" | "erreur">("chargement");
+
+  /**
+   * ⚠ ON N'ARRIVE JAMAIS ICI PAR HASARD. Cet écran est la cible des
+   *   notifications (« Untel a commenté votre publication ») et du bouton
+   *   Partager : on y vient TOUJOURS d'ailleurs, et rien ne ramenait à cet
+   *   ailleurs — ni le fil qu'on faisait défiler, ni la fiche du lieu, ni la
+   *   liste des notifications qu'on était en train de dépouiller.
+   * ⚠ Repli sur le fil, pas sur la recherche : un récit lu par un lien reçu
+   *   n'a pas de destination propre, et le fil est l'endroit où les récits
+   *   vivent — c'est déjà ce que propose l'écran « publication retirée ».
+   */
+  const retour = useRetour("/");
 
   /**
    * ⚠ C'ETAIT `useDocumentTitle` SEUL : le titre de l'onglet changeait, mais ni
@@ -124,6 +138,17 @@ export default function Post() {
          champ de réponse et l'invitation. */
     <div className="px-4 py-5 large:flex large:items-start large:justify-center large:gap-6">
       <div className="dk-colonne large:mx-0 large:w-[700px] large:max-w-[700px] large:shrink-0">
+        {/* ⚠ AU-DESSUS DU RÉCIT, pas flottant : ici on lit, et une pastille
+            posée sur le texte gênerait le défilement au pouce.
+            ⚠ `min-h-11` = 44 px de haut, et le libellé écrit donne la largeur
+              — un bouton de retour raté fait sortir du site. */}
+        <button
+          onClick={retour}
+          className="mb-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Retour
+        </button>
         <PostCard post={post} onSupprime={() => setEtat("absent")} />
       </div>
 

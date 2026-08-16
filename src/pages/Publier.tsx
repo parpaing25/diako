@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Image, Info, Loader2, Sparkles, UtensilsCrossed, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Image,
+  Info,
+  Loader2,
+  Sparkles,
+  UtensilsCrossed,
+  X,
+} from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useAuth } from "@/contexts/AuthContext";
 import { compressImage } from "@/lib/imageCompression";
@@ -10,7 +18,14 @@ import { publier, type Media } from "@/lib/api";
 import { ApercuRecit } from "@/components/ApercuRecit";
 import { chargerPlats, type Plat } from "@/lib/etablissements";
 import { ChampLieu, type LieuChoisi } from "@/components/ChampLieu";
-import { TYPES, UNITES, defDuType } from "@/lib/typesPublication";
+import {
+  AVERTISSEMENT_LIEU_LIBRE,
+  RAISON_LIEU_PHOTO,
+  TYPES,
+  UNITES,
+  defDuType,
+  lieuExige,
+} from "@/lib/typesPublication";
 import { cn } from "@/lib/utils";
 
 /**
@@ -191,11 +206,29 @@ export default function Publier() {
     }
   }
 
+  /**
+   * Le nom du plat retenu — `null` dès que le type n'a pas de champ « plat ».
+   * ⚠ Un seul calcul pour l'aperçu ET pour l'envoi : quand les deux traduisent
+   *   l'identifiant chacun de leur côté, l'un des deux finit par diverger.
+   */
+  const platChoisi = def.plat === null ? null : plats.find((p) => p.id === plat)?.name_fr ?? null;
+
   /** Le montant tel que la base l'attend, ou `null`. */
   const montantAr = (() => {
     const n = Number(montant.replace(/[^\d]/g, ""));
     return Number.isFinite(n) && n > 0 ? n : null;
   })();
+
+  /**
+   * LA PHOTO EMPORTE LE LIEU.
+   *
+   * ⚠ C'est le NOMBRE de photos déjà jointes qui décide, pas le type choisi :
+   *   une photo ajoutée sur un récit ou sur une question rend le lieu exigé
+   *   exactement comme sur le type « Photo ». Le calcul vit ici, à côté de
+   *   `manques`, pour que le libellé, l'aide et le verrou du bouton lisent tous
+   *   la MÊME valeur — trois copies de la règle en laisseraient une derrière.
+   */
+  const lieuObligatoire = lieuExige(def, photos.length);
 
   /**
    * Ce qui manque encore, DIT À L'ÉCRAN.
@@ -207,6 +240,10 @@ export default function Publier() {
   const manques: string[] = [];
   if (def.texteObligatoire && !texte.trim()) manques.push(def.labelTexte.toLowerCase());
   if (def.photos === true && photos.length === 0) manques.push("au moins une photo");
+  // ⚠ On nomme la photo dans le manque : « le lieu » seul se lit comme une
+  //   formalité, « le lieu de la photo » dit d'où vient l'exigence.
+  if (lieuObligatoire && !lieu)
+    manques.push(photos.length > 0 ? "le lieu de la photo" : "le lieu");
   if (def.plat === true && !plat) manques.push("le plat");
   if (def.prix === true && montantAr === null) manques.push("le montant");
   if (!def.texteObligatoire && def.photos !== true && !texte.trim() && photos.length === 0)
@@ -224,12 +261,24 @@ export default function Publier() {
         kind: type,
         body: texte,
         media: photos,
-        // ⚠ Le NOM part toujours, l'identifiant seulement s'il existe : un lieu
-        //   ecrit a la main reste affichable et cherchable par son nom.
+        // 🔴 CE COMMENTAIRE DISAIT LE CONTRAIRE DE LA VÉRITÉ : « un lieu écrit
+        //    à la main reste cherchable par son nom ». Il ne l'est pas. La
+        //    recherche résout d'abord le terme contre le référentiel puis
+        //    appelle `recitsParLieu(place_id)` ; rien n'interroge `posts.place`
+        //    en texte. Le nom part donc pour l'AFFICHAGE seulement, et c'est
+        //    `place_id` — lui seul — qui rend la publication atteignable.
+        //    L'écran le dit maintenant (`AVERTISSEMENT_LIEU_LIBRE`).
         place: lieu?.nom ?? null,
         place_id: lieu?.id ?? null,
-        dish: plats.find((p) => p.id === plat)?.name_fr ?? null,
-        dish_id: plat || null,
+        // 🔴 LE PLAT PARTAIT MÊME QUAND LE TYPE NE LE DEMANDE PAS. Choisir un
+        //    plat sur « Assiette » puis basculer sur « Question » masquait le
+        //    champ mais gardait la valeur : la question partait avec un
+        //    `dish_id` invisible, et se retrouvait dans l'onglet « Assiettes »
+        //    du fil — qui ne filtre QUE sur `dish_id is not null`. Le prix
+        //    était déjà protégé par ce même garde (`def.prix === null`) ; le
+        //    plat ne l'était pas.
+        dish: platChoisi,
+        dish_id: def.plat === null ? null : plat || null,
         price_ar: def.prix === null ? null : montantAr,
         price_unit: unite,
         price_on: dateReleve || null,
@@ -397,16 +446,45 @@ ${a} ` : `${a} `));
              seule chose qui fait un bon plan ; les assiettes n'étaient
              reliées à aucun plat de l'atlas. */}
       <div className="mt-5 space-y-4">
-        <div>
-          <label htmlFor="lieu" className="mb-1 block text-sm font-medium">
-            Lieu
-          </label>
-          <ChampLieu id="lieu" valeur={lieu} onChange={setLieu} />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Le lieu rend votre publication trouvable : elle remonte sur la fiche
-            de la destination et dans la recherche.
-          </p>
-        </div>
+        {/* ═══ LE LIEU, EXIGÉ DÈS QU'IL Y A UNE PHOTO ═══════════════════════
+            🔴 IL ÉTAIT FACULTATIF PARTOUT, MÊME SUR UNE PUBLICATION QUI NE
+               PORTE QU'UNE IMAGE. Une photo sans lieu n'est atteignable par
+               aucun chemin de lecture — fiche de destination, recherche et
+               « près de moi » interrogent tous `place_id`. Elle tombait dans
+               le fil, descendait, et disparaissait pour tout le monde, y
+               compris pour celui qui l'avait prise.
+            ⚠ L'étoile, l'aide et le verrou du bouton lisent la même
+              `lieuObligatoire` : trois formulations de la règle en laisseraient
+              une derrière au premier changement. */}
+        {def.lieu !== null && (
+          <div>
+            <label htmlFor="lieu" className="mb-1 block text-sm font-medium">
+              Lieu
+              {lieuObligatoire && <span className="text-accent-strong"> *</span>}
+            </label>
+            <ChampLieu id="lieu" valeur={lieu} onChange={setLieu} />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {lieuObligatoire
+                ? RAISON_LIEU_PHOTO
+                : "Le lieu rend votre publication trouvable : elle remonte sur la fiche de la destination et dans la recherche."}
+            </p>
+            {/* ⚠ ON NE REFUSE PAS LE NOM ÉCRIT À LA MAIN — le référentiel n'est
+                jamais complet, et refuser un nom que la personne CONNAÎT la
+                ferait renoncer à publier. Mais on ne laisse pas croire non plus
+                que le champ rempli suffit : sans rattachement, la publication
+                reste introuvable. Dire ce que ça coûte vaut mieux que le
+                découvrir trois semaines plus tard. */}
+            {lieu && !lieu.id && (
+              <p className="mt-2 flex gap-2 rounded-xl border border-gold bg-gold-soft p-3 text-xs leading-relaxed">
+                <AlertTriangle
+                  className="mt-0.5 h-4 w-4 shrink-0 text-warn"
+                  aria-hidden="true"
+                />
+                <span>{AVERTISSEMENT_LIEU_LIBRE}</span>
+              </p>
+            )}
+          </div>
+        )}
 
         {def.plat !== null && (
           <div>
@@ -536,7 +614,7 @@ ${a} ` : `${a} `));
         avatar={user?.user_metadata?.avatar_url ?? null}
         texte={texte}
         lieu={lieu?.nom ?? null}
-        plat={plats.find((p) => p.id === plat)?.name_fr ?? null}
+        plat={platChoisi}
         photos={photos}
         prix={
           def.prix !== null && montantAr !== null

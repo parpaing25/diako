@@ -55,7 +55,12 @@ export interface DefType {
   /** Amorces cliquables : elles s'insèrent dans le texte. */
   amorces: string[];
   texteObligatoire: boolean;
-  /** `null` = champ absent, `false` = proposé, `true` = exigé. */
+  /**
+   * `null` = champ absent, `false` = proposé, `true` = exigé.
+   * ⚠ Pour le lieu, `false` n'est pas un état stable : il devient exigé dès
+   *   qu'une photo est jointe. Passer par `lieuExige()` et jamais par ce champ
+   *   brut, sinon le verrou saute selon l'appelant.
+   */
   lieu: boolean | null;
   plat: boolean | null;
   prix: boolean | null;
@@ -135,7 +140,12 @@ export const TYPES: DefType[] = [
     lieu: false,
     plat: null,
     prix: null,
-    photos: null,
+    // 🔴 LA DÉFINITION DISAIT « champ absent » ALORS QUE L'ÉCRAN OFFRAIT LE
+    //    BOUTON « Ajouter des photos ». Une photo aide souvent une question
+    //    (« c'est quoi ce fruit ? ») : c'est la définition qui avait tort, pas
+    //    l'écran. Elle dit maintenant « proposé », et la règle du lieu
+    //    ci-dessous s'y applique comme partout ailleurs.
+    photos: false,
   },
   {
     cle: "photo",
@@ -146,14 +156,58 @@ export const TYPES: DefType[] = [
     placeholder: "Ce qu'on voit, quand, depuis où…",
     amorces: [],
     texteObligatoire: false,
-    lieu: false,
+    // ⚠ Ce type porte TOUJOURS une photo : le lieu y est donc exigé d'entrée,
+    //   avant même le premier fichier — l'étoile ne doit pas apparaître après
+    //   coup, quand la personne croit avoir fini.
+    lieu: true,
     plat: null,
     prix: null,
     photos: true,
-    raisonExigence: "Une publication « photo » sans photo n'a rien à montrer.",
+    raisonExigence:
+      "Une publication « photo » sans photo n'a rien à montrer — et sans lieu, personne ne la retrouvera.",
   },
 ];
 
 export function defDuType(cle: string): DefType {
   return TYPES.find((t) => t.cle === cle) ?? TYPES[0];
 }
+
+/**
+ * LE LIEU DEVIENT OBLIGATOIRE DÈS QU'UNE PHOTO EST JOINTE.
+ *
+ * 🔴 CE QUE ÇA CORRIGE. Le lieu était facultatif partout, y compris sur une
+ *    publication qui ne porte qu'une image — et `def.lieu` n'était même lu
+ *    nulle part. Or une photo sans lieu n'est atteignable par AUCUN chemin de
+ *    lecture : la fiche de destination et la recherche interrogent `place_id`
+ *    (`recitsParLieu`), le mode « près de moi » du fil joint `places` sur
+ *    `place_id` et écarte tout ce qui n'a pas de coordonnées, et le compteur
+ *    de lieux du profil compte des `place_id` distincts. La photo tombait dans
+ *    le fil, descendait, et disparaissait — y compris pour celui qui l'a prise.
+ *
+ * ⚠ ON EXIGE UN LIEU, PAS UN LIEU DU RÉFÉRENTIEL. Refuser un nom que la
+ *   personne CONNAÎT la ferait renoncer à publier, et le référentiel n'est
+ *   jamais complet. L'écran dit alors ce que le nom écrit à la main coûte
+ *   (voir `AVERTISSEMENT_LIEU_LIBRE`) au lieu de le refuser.
+ */
+export function lieuExige(def: DefType, nbPhotos: number): boolean {
+  if (def.lieu === null) return false;
+  return def.lieu === true || nbPhotos > 0;
+}
+
+/**
+ * ⚠ LA RAISON EST DITE, PAS SEULEMENT LA RÈGLE. Une contrainte qu'on
+ *   n'explique pas se contourne : on tape n'importe quoi pour débloquer le
+ *   bouton, et la publication est perdue quand même.
+ */
+export const RAISON_LIEU_PHOTO =
+  "Sans lieu, personne ne retrouvera cette photo : ni sur la fiche de la destination, ni dans la recherche, ni dans « près de moi ».";
+
+/**
+ * 🔴 CE QUE LA SAISIE LIBRE FAIT VRAIMENT. Un nom écrit à la main part dans
+ *    `place` et laisse `place_id` nul. Aucun écran de lecture n'interroge
+ *    `place` en texte : la recherche résout d'abord le terme contre le
+ *    référentiel puis appelle `recitsParLieu(id)`. Le champ est donc rempli,
+ *    la publication reste introuvable, et rien ne le disait.
+ */
+export const AVERTISSEMENT_LIEU_LIBRE =
+  "Ce nom s'affichera, mais il ne rattache la publication à rien : elle n'apparaîtra ni sur la fiche de la destination, ni dans la recherche, ni dans « près de moi ». Si l'une des propositions correspond, choisissez-la plutôt.";

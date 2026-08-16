@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AlertCircle, ArrowLeft, Check, CheckCheck, MessageCircle, Send } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useRetour } from "@/hooks/useRetour";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatLive, type Msg } from "@/hooks/useChatLive";
 import { getThumbUrl } from "@/lib/imageThumb";
@@ -58,6 +59,20 @@ export default function Messages() {
     user?.id
   );
 
+  /**
+   * 🔴 « RETOUR AUX CONVERSATIONS » EMPILAIT AU LIEU DE DÉPILER. Le bouton
+   *    faisait `setParams({})` SANS `{ replace: true }` : quitter une
+   *    conversation POUSSAIT `/messages` par-dessus `/messages?c=…`, si bien
+   *    que le bouton retour d'Android rouvrait aussitôt la conversation qu'on
+   *    venait de quitter — et la deuxième pression la refermait, en boucle.
+   *    Le reste du dépôt passe l'option (Recherche, Compte) ; ici elle
+   *    manquait, sur le seul écran où l'on entre et ressort sans arrêt.
+   * ⚠ Le repli ne sert qu'à ceux qui arrivent SANS historique — notification
+   *   ou lien direct vers une conversation. Là, il n'y a rien derrière, et la
+   *   liste des conversations est le seul endroit qui ait un sens.
+   */
+  const retour = useRetour("/messages");
+
   useEffect(() => {
     if (authLoading || !user) {
       if (!authLoading) setChargementListe(false);
@@ -112,9 +127,13 @@ export default function Messages() {
     return (
       <div className="flex h-[calc(100dvh-3.5rem)] flex-col">
         <div className="dk-glass sticky top-0 z-10 flex items-center gap-3 border-b border-border px-4 py-3">
+          {/* ⚠ L'ÉTIQUETTE NE PROMET PLUS LES CONVERSATIONS. Le bouton ramène
+              maintenant d'où l'on vient : depuis la fiche d'un hôtel, c'est la
+              fiche. Annoncer « Retour aux conversations » à un lecteur d'écran
+              décrirait une destination que le geste ne tient pas toujours. */}
           <button
-            onClick={() => setParams({})}
-            aria-label="Retour aux conversations"
+            onClick={retour}
+            aria-label="Retour"
             className="dk-tap grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />

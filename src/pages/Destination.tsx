@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Bus, Compass, MapPin, Plane, Ship, Utensils } from "lucide-react";
+import { ArrowLeft, Bus, Compass, MapPin, Plane, Ship, Utensils } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRetour } from "@/hooks/useRetour";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EtatErreur, Squelettes } from "@/components/Etats";
@@ -75,6 +76,18 @@ export default function Destination() {
   const [etat, setEtat] = useState<"chargement" | "ok" | "absente" | "erreur">("chargement");
   useReveal(f);
 
+  /**
+   * 🔴 LE MÊME LIEU AVAIT DEUX ÉCRANS, ET UN SEUL SAVAIT SORTIR. La variante
+   *    allégée (/explorer?lieu=…) porte « Toutes les destinations » depuis
+   *    toujours ; ce dossier complet, lui, n'offrait rien — et c'est celui vers
+   *    lequel pointent les liens partagés. L'écart se voit d'un écran à
+   *    l'autre.
+   * ⚠ Repli sur l'annuaire des destinations, comme la variante allégée : c'est
+   *   de là qu'on arrive presque toujours, et l'accueil ne veut rien dire
+   *   depuis une fiche de lieu.
+   */
+  const retour = useRetour("/explorer");
+
   const charger = useCallback(async () => {
     if (!slug) return;
     setEtat("chargement");
@@ -142,6 +155,18 @@ export default function Destination() {
          matiere abondante du produit. */
     <div className="px-4 py-5 xl:flex xl:items-start xl:gap-5">
       <div className="min-w-0 flex-1 xl:max-w-[620px]">
+      {/* ⚠ AVANT LA PHOTO, et non posé dessus : la couverture est absente sur
+          la plupart des destinations, un bouton flottant se retrouverait alors
+          sur le titre. Ici il est au même endroit dans les deux cas.
+          ⚠ `min-h-11` = 44 px de haut : c'est le premier geste de l'écran. */}
+      <button
+        onClick={retour}
+        className="mb-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Retour
+      </button>
+
       {/* ── La photo, quand la destination en a une ───────────────────── */}
       {f.lieu.cover_url && (
         <figure className="relative -mx-4 mb-4 h-44 overflow-hidden sm:mx-0 sm:h-56 sm:rounded-2xl">

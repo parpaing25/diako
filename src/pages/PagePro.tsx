@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  ArrowLeft,
   Bookmark,
   Clock,
   Flag,
@@ -15,6 +16,7 @@ import {
 import { BadgeVerification } from "@/components/Badges";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
+import { useRetour } from "@/hooks/useRetour";
 import { useSEO } from "@/hooks/useSEO";
 import {
   construireCircuitJsonLd,
@@ -123,6 +125,19 @@ export default function PagePro() {
   const [envoi, setEnvoi] = useState(false);
   const [revendicationOuverte, setRevendicationOuverte] = useState(false);
   const [gardee, setGardee] = useState(false);
+
+  /**
+   * ⚠ LE REPLI N'EST PAS L'ACCUEIL. Cette fiche est ce qui se partage le plus
+   *   par lien : celui qui l'ouvre depuis WhatsApp n'a RIEN derrière lui, et le
+   *   déposer sur le fil d'actualité ne répond pas à ce qu'il cherchait. On le
+   *   pose là où il aurait trouvé l'établissement lui-même — la destination
+   *   dont il dépend, ou la recherche quand la fiche n'est rattachée à aucun
+   *   lieu du référentiel.
+   * ⚠ Le repli se recalcule quand la fiche arrive : tant qu'elle charge, le
+   *   bouton n'est pas affiché, donc aucun clic ne peut partir sur /recherche
+   *   par défaut.
+   */
+  const retour = useRetour(fiche?.place ? `/lieu/${fiche.place.slug}` : "/recherche");
 
   // Titre, description, aperçu de partage et canonique — tirés de la fiche.
   // Partager un hôtel sur WhatsApp montrait jusqu'ici le titre et l'image de
@@ -389,6 +404,22 @@ export default function PagePro() {
   return (
     <div className="pb-8">
       <div className="relative h-40 w-full overflow-hidden bg-muted md:h-64 md:rounded-2xl">
+        {/* 🔴 CET ÉCRAN N'AVAIT AUCUN RETOUR. C'est pourtant celui qu'on ouvre
+            depuis un lien reçu : sur téléphone, la seule sortie était le geste
+            système, et le rater fait quitter le site.
+            ⚠ POSÉ SUR LA COUVERTURE, pas au-dessus : une barre supplémentaire
+              repousserait la photo, qui est l'image LCP de la page.
+            ⚠ FOND OPAQUE OBLIGATOIRE — sur une façade blanche en plein soleil,
+              une flèche nue devient invisible.
+            ⚠ `dk-tap` porte la zone de frappe à 44 px sans grossir la
+              pastille : c'est le premier geste de l'écran. */}
+        <button
+          onClick={retour}
+          aria-label="Retour"
+          className="dk-tap absolute left-2 top-2 z-10 grid h-10 w-10 place-items-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
         {fiche.cover_url ? (
           <ImageProgressive src={fiche.cover_url} alt={fiche.name} prioritaire ajustement="cover" />
         ) : (

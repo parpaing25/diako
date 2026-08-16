@@ -14,6 +14,8 @@ import {
   type ResultatPage,
 } from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
+import { jeuDeTailles } from "@/lib/imageThumb";
+import { GRANDES_REGIONS } from "@/lib/grandesRegions";
 import { useReveal } from "@/hooks/useReveal";
 
 const MOIS = [
@@ -74,6 +76,13 @@ export default function Explorer() {
   const [etabs, setEtabs] = useState<ResultatPage[]>([]);
   const [categorie, setCategorie] = useState<string | null>(null);
   const [chargement, setChargement] = useState(true);
+  /** Grande région choisie, puis éventuellement une région administrative
+   *  précise à l'intérieur. `null` = tout Madagascar. */
+  const [grande, setGrande] = useState<string | null>(null);
+  const [regionFine, setRegionFine] = useState<string | null>(null);
+
+  const gr = GRANDES_REGIONS.find((g) => g.code === grande) ?? null;
+  const regionsFiltre = regionFine ? [regionFine] : gr ? gr.regions : null;
 
   useSEO({
     titre: lieu
@@ -99,8 +108,8 @@ export default function Explorer() {
         //    volume du jour n'est pas une solution, c'est un report.
         // ⚠ D'ou une PAGINATION, qui ne se perime pas.
         const [page, n] = await Promise.all([
-          chargerDestinations(PAR_PAGE_DEST),
-          compterDestinations().catch(() => null),
+          chargerDestinations(PAR_PAGE_DEST, null, regionsFiltre),
+          compterDestinations(regionsFiltre).catch(() => null),
         ]);
         setDestinations(page);
         setTotalDest(n);
@@ -122,7 +131,11 @@ export default function Explorer() {
     } finally {
       setChargement(false);
     }
-  }, [slug, categorie]);
+    // ⚠ `regionsFiltre` EST UN TABLEAU RECONSTRUIT À CHAQUE RENDU : le placer
+    //   tel quel en dépendance relancerait la requête en boucle. On dépend donc
+    //   du CHOIX — deux chaînes — et non de sa forme dérivée.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, categorie, grande, regionFine]);
 
   useEffect(() => {
     void charger();
@@ -158,11 +171,48 @@ export default function Explorer() {
 
     return (
       <div className="pb-6">
-        <div className="flex h-40 items-center justify-center bg-primary md:h-56 md:rounded-2xl">
-          <div className="px-6 text-center">
-            <h1 className="text-2xl font-semibold text-primary-foreground md:text-3xl">{lieu.name_fr}</h1>
-            {lieu.region && <p className="mt-1 text-sm text-primary-foreground/85">{lieu.region}</p>}
+        {/* ── L'ENTÊTE : LA PHOTO QUAND ELLE EXISTE, L'APLAT SINON ──────────
+            🔴 CET ENTÊTE ÉTAIT UN RECTANGLE DE COULEUR. 160 px de bleu plein
+               en haut de chaque destination — sur un produit de VOYAGE, dont
+               tout l'argument est de donner envie d'aller quelque part. Les
+               photos existaient (198 sur les sites), mais `places` n'avait
+               aucune colonne pour en porter une : c'est ce que 0082 corrige.
+
+            ⚠ ET L'APLAT RESTE, pour les 18 300 destinations sans photo. Un
+              cadre gris « image manquante » serait pire que la couleur : il
+              signale un défaut là où il n'y a qu'une donnée non saisie.
+
+            ⚠ LE VOILE SOMBRE N'EST PAS DÉCORATIF. Le titre est blanc ; sur une
+              photo de plage surexposée il devient illisible sans lui. */}
+        <div className="relative flex h-40 items-center justify-center overflow-hidden bg-primary md:h-56 md:rounded-2xl">
+          {lieu.cover_url && (
+            <>
+              <img
+                src={lieu.cover_url}
+                srcSet={jeuDeTailles(lieu.cover_url) ?? undefined}
+                sizes="(min-width: 768px) 900px, 100vw"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="eager"
+                /* La photo de l'entête est le plus gros élément de l'écran :
+                   c'est elle qui décide du LCP. */
+                fetchPriority="high"
+              />
+              <div className="absolute inset-0 bg-black/40" aria-hidden="true" />
+            </>
+          )}
+          <div className="relative px-6 text-center">
+            <h1 className="text-2xl font-semibold text-primary-foreground drop-shadow md:text-3xl">{lieu.name_fr}</h1>
+            {lieu.region && <p className="mt-1 text-sm text-primary-foreground/85 drop-shadow">{lieu.region}</p>}
           </div>
+          {lieu.cover_credit && (
+            /* Le crédit voyage AVEC la photo — il ne se met pas dans un pied
+               de page global, où il se perd au premier remaniement. */
+            <p className="absolute bottom-1 right-2 text-[10px] text-white/70">
+              {lieu.cover_credit}
+            </p>
+          )}
         </div>
 
         <div className="px-4">
@@ -302,16 +352,110 @@ export default function Explorer() {
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
         {totalDest
-          ? `${totalDest.toLocaleString("fr-FR")} destinations`
+          ? `${totalDest.toLocaleString("fr-FR")} destination${totalDest > 1 ? "s" : ""}`
           : "Les destinations du pays"}
-        , avec leur saison et les établissements sur place.
+        {gr ? ` dans ${regionFine ?? gr.libelle}` : ""}, avec leur saison et les
+        établissements sur place.
       </p>
+
+      {/* ── PAR GRANDE RÉGION ────────────────────────────────────────────
+          ⚠ CINQ ENTRÉES, PAS VINGT-TROIS. Un voyageur ne pense pas en
+            « Fitovinany » mais en « côte est » ; et vingt-trois boutons font
+            une barre de filtres plus haute que les résultats sur un téléphone.
+            Les régions administratives restent accessibles au deuxième rang,
+            une fois la grande région choisie. */}
+      <nav aria-label="Filtrer par région" className="mt-4">
+        <ul className="flex flex-wrap gap-1.5">
+          <li>
+            <button
+              onClick={() => {
+                setGrande(null);
+                setRegionFine(null);
+              }}
+              aria-pressed={!grande}
+              className={cn(
+                "min-h-9 rounded-full border px-3.5 text-sm font-medium transition",
+                !grande
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border hover:border-primary hover:text-primary"
+              )}
+            >
+              Tout Madagascar
+            </button>
+          </li>
+          {GRANDES_REGIONS.map((g) => (
+            <li key={g.code}>
+              <button
+                onClick={() => {
+                  setGrande(g.code === grande ? null : g.code);
+                  setRegionFine(null);
+                }}
+                aria-pressed={grande === g.code}
+                className={cn(
+                  "min-h-9 rounded-full border px-3.5 text-sm font-medium transition",
+                  grande === g.code
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border hover:border-primary hover:text-primary"
+                )}
+              >
+                {g.libelle}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {gr && (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {gr.regions.map((r) => (
+              <li key={r}>
+                <button
+                  onClick={() => setRegionFine(r === regionFine ? null : r)}
+                  aria-pressed={regionFine === r}
+                  className={cn(
+                    "min-h-8 rounded-full border px-2.5 text-xs transition",
+                    regionFine === r
+                      ? "border-primary bg-secondary text-primary"
+                      : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                  )}
+                >
+                  {r}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </nav>
 
       {chargement ? (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="dk-skeleton h-32 rounded-2xl" />
           ))}
+        </div>
+      ) : destinations.length === 0 ? (
+        /* 🔴 UNE GRILLE VIDE N'EST PAS UN RÉSULTAT, C'EST UNE PANNE APPARENTE.
+           Filtrer sur une région sans destination renvoyait un `<div>` vide :
+           la page semblait cassée, et rien n'indiquait qu'il fallait relâcher
+           le filtre. C'est exactement ce qu'on nous a signalé sur Analamanga. */
+        <div className="mt-5 rounded-2xl border border-dashed border-border px-5 py-12 text-center">
+          <p className="font-medium">
+            Aucune destination référencée{gr ? ` dans ${regionFine ?? gr.libelle}` : ""}
+          </p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Le référentiel ne couvre pas encore cette zone. Essayez une région
+            voisine, ou revenez à tout Madagascar.
+          </p>
+          {grande && (
+            <button
+              onClick={() => {
+                setGrande(null);
+                setRegionFine(null);
+              }}
+              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground"
+            >
+              Voir tout Madagascar
+            </button>
+          )}
         </div>
       ) : (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
@@ -324,8 +468,26 @@ export default function Explorer() {
                  lieu selon la porte d'entree, et le catalogue servait
                  systematiquement le plus pauvre. */
               to={`/lieu/${d.slug}`}
-              className="group rounded-2xl border border-border p-4 transition hover:border-primary/40 hover:shadow-sm"
+              className="group overflow-hidden rounded-2xl border border-border transition hover:border-primary/40 hover:shadow-sm"
             >
+              {/* ⚠ LA VIGNETTE N'OCCUPE LA PLACE QUE SI ELLE EXISTE. Réserver
+                  un bandeau de 128 px sur les 18 300 destinations sans photo
+                  transformerait la grille en enfilade de rectangles vides —
+                  une carte sans image doit rester une carte compacte. */}
+              {d.cover_url && (
+                <div className="relative h-32 w-full overflow-hidden bg-muted">
+                  <img
+                    src={d.cover_url}
+                    srcSet={jeuDeTailles(d.cover_url) ?? undefined}
+                    sizes="(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                  />
+                </div>
+              )}
+              <div className={cn("p-4", d.cover_url && "pt-3")}>
               <div className="flex items-start justify-between gap-2">
                 <h2 className="font-semibold leading-tight">{d.name_fr}</h2>
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -346,6 +508,7 @@ export default function Explorer() {
                   </span>
                 )}
               </div>
+              </div>
             </Link>
           ))}
         </div>
@@ -361,7 +524,12 @@ export default function Explorer() {
               try {
                 const suite = await chargerDestinations(
                   PAR_PAGE_DEST,
-                  destinations[destinations.length - 1].name_fr
+                  destinations[destinations.length - 1].name_fr,
+                  /* ⚠ LE FILTRE DOIT SUIVRE LA PAGINATION. Sans lui, « voir
+                     plus » sur « Nord » ramenait la suite de TOUT Madagascar
+                     par ordre alphabétique : la liste se contaminait au
+                     deuxième écran, et le compteur devenait faux. */
+                  regionsFiltre
                 );
                 setFiniDest(suite.length < PAR_PAGE_DEST);
                 setDestinations((avant) => {

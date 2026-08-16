@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Inbox, MessageCircle } from "lucide-react";
+import { ChevronDown, Inbox, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
@@ -10,9 +10,13 @@ import { BadgeVerification } from "@/components/Badges";
 import { Prix } from "@/components/Prix";
 import { ariary } from "@/lib/etablissements";
 import {
+  changerStatutProjet,
   creerProjet,
+  majProjet,
   monProjet,
   offresDuProjet,
+  prolongerProjet,
+  statutEffectif,
   type Offre,
   type Projet as ProjetType,
 } from "@/lib/decouverte";
@@ -75,6 +79,21 @@ export default function Projet() {
   const [budget, setBudget] = useState("");
   const [notes, setNotes] = useState("");
   const [envoi, setEnvoi] = useState(false);
+  /** Le même formulaire sert à créer ET à modifier : deux écrans distincts
+   *  divergeraient au premier champ ajouté. */
+  const [edition, setEdition] = useState(false);
+
+  function ouvrirEdition(p: ProjetType) {
+    setEnvies(p.envies);
+    setDu(p.date_from ?? "");
+    setAu(p.date_to ?? "");
+    setSouplesse(p.date_flex_days ?? 0);
+    setAdultes(p.adults);
+    setEnfants(p.children_ages.join(", "));
+    setBudget(p.budget_ar != null ? String(p.budget_ar) : "");
+    setNotes(p.notes ?? "");
+    setEdition(true);
+  }
 
   const charger = useCallback(async () => {
     if (!user) return setChargement(false);
@@ -115,9 +134,7 @@ export default function Projet() {
       });
     }
 
-    setEnvoi(true);
-    try {
-      await creerProjet({
+    const champs = {
         envies,
         date_from: du || null,
         date_to: au || null,
@@ -137,8 +154,18 @@ export default function Projet() {
           .filter((n) => Number.isInteger(n) && n >= 0 && n < 18),
         budget_ar: budgetAr,
         notes: notes.trim() || null,
-      });
-      toast.success("Projet publié. Les professionnels peuvent y répondre.");
+    };
+
+    setEnvoi(true);
+    try {
+      if (edition && projet) {
+        await majProjet(projet.id, champs);
+        toast.success("Projet mis à jour.");
+        setEdition(false);
+      } else {
+        await creerProjet(champs);
+        toast.success("Projet publié. Les professionnels peuvent y répondre.");
+      }
       await charger();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "L'envoi a échoué.");
@@ -175,8 +202,12 @@ export default function Projet() {
 
         {erreur && <EtatErreur className="mt-5" onReessayer={() => void charger()} />}
 
-        {projet ? (
-          <RecapProjet projet={projet} />
+        {projet && !edition ? (
+          <RecapProjet
+            projet={projet}
+            onModifier={() => ouvrirEdition(projet)}
+            onChange={() => void charger()}
+          />
         ) : (
           <div className="mt-5 space-y-4">
             <section>
@@ -305,13 +336,29 @@ export default function Projet() {
               />
             </Bloc>
 
-            <button
-              onClick={() => void envoyer()}
-              disabled={envoi}
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong text-[15px] font-semibold text-accent-foreground disabled:opacity-50 sm:w-auto sm:px-8"
-            >
-              {envoi ? "Publication…" : "Publier mon projet"}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => void envoyer()}
+                disabled={envoi}
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong text-[15px] font-semibold text-accent-foreground disabled:opacity-50 sm:w-auto sm:px-8"
+              >
+                {envoi
+                  ? edition
+                    ? "Enregistrement…"
+                    : "Publication…"
+                  : edition
+                    ? "Enregistrer les modifications"
+                    : "Publier mon projet"}
+              </button>
+              {edition && (
+                <button
+                  onClick={() => setEdition(false)}
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-6 text-[15px] font-medium hover:bg-muted"
+                >
+                  Annuler la modification
+                </button>
+              )}
+            </div>
 
             <p className="dk-secondaire max-w-[70ch] leading-relaxed">
               Diako ne transmet ni votre nom ni votre téléphone. Les
@@ -437,10 +484,187 @@ function Bloc({
   );
 }
 
-function RecapProjet({ projet }: { projet: ProjetType }) {
+/* ── LE STATUT DU PROJET ────────────────────────────────────────────────────
+   Cinq états, dont un qui ne s'écrit jamais.
+
+   ⚠ « EXPIRÉ » EST DÉDUIT DE LA DATE, pas stocké. Le voyage annoncé pour août
+     est passé : le projet est expiré parce que la date est passée, pas parce
+     qu'une tâche de nuit a fini par tourner. Aucun intervalle, donc, pendant
+     lequel l'écran afficherait « ouvert » à un voyageur dont le voyage est
+     derrière lui — et pendant lequel les agences travailleraient pour rien.
+
+   🔴 « ANNULÉ » ET « J'AI TROUVÉ » SONT DES FINS, PAS DES PAUSES. La base
+      refuse de les rouvrir : rouvrir renverrait la demande aux agences qui ont
+      déjà répondu, et donnerait à celles qui ont perdu l'illusion d'une
+      seconde chance. Le menu ne propose donc rien après elles. */
+const ETATS: Record<string, { mot: string; classe: string }> = {
+  ouvert: { mot: "Ouvert", classe: "bg-primary text-primary-foreground" },
+  pause: { mot: "En pause", classe: "bg-muted text-muted-foreground" },
+  expire: { mot: "Expiré", classe: "bg-accent/20 text-accent-strong" },
+  annule: { mot: "Annulé", classe: "bg-muted text-muted-foreground" },
+  honore: { mot: "J'ai trouvé", classe: "bg-secondary text-primary" },
+};
+
+function MenuStatut({
+  projet,
+  onModifier,
+  onChange,
+}: {
+  projet: ProjetType;
+  onModifier: () => void;
+  onChange: () => void;
+}) {
+  const [ouvertMenu, setOuvertMenu] = useState(false);
+  const [occupe, setOccupe] = useState(false);
+  const etat = statutEffectif(projet);
+  const fini = etat === "annule" || etat === "honore";
+
+  async function agir(action: () => Promise<unknown>, message: string) {
+    setOccupe(true);
+    setOuvertMenu(false);
+    try {
+      await action();
+      toast.success(message);
+      onChange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "L'opération a échoué.");
+    } finally {
+      setOccupe(false);
+    }
+  }
+
+  const entrees: { cle: string; libelle: string; faire: () => void }[] = [];
+  if (!fini) {
+    entrees.push({ cle: "modifier", libelle: "Modifier le projet", faire: onModifier });
+    if (etat === "ouvert")
+      entrees.push({
+        cle: "pause",
+        libelle: "Mettre en pause",
+        faire: () =>
+          void agir(
+            () => changerStatutProjet(projet.id, "pause"),
+            "Projet en pause. Les pros ne le voient plus."
+          ),
+      });
+    if (etat === "pause")
+      entrees.push({
+        cle: "rouvrir",
+        libelle: "Rouvrir",
+        faire: () =>
+          void agir(() => changerStatutProjet(projet.id, "ouvert"), "Projet rouvert."),
+      });
+    entrees.push({
+      cle: "prolonger",
+      libelle: "Prolonger de 30 jours",
+      faire: () =>
+        void agir(async () => {
+          const d = await prolongerProjet(projet.id, 30);
+          return d;
+        }, "Projet prolongé de 30 jours."),
+    });
+    entrees.push({
+      cle: "honore",
+      libelle: "J'ai trouvé",
+      faire: () =>
+        void agir(
+          () => changerStatutProjet(projet.id, "honore"),
+          "Bon voyage. Le projet est clos."
+        ),
+    });
+    entrees.push({
+      cle: "annule",
+      libelle: "Annuler le projet",
+      faire: () =>
+        void agir(() => changerStatutProjet(projet.id, "annule"), "Projet annulé."),
+    });
+  }
+
+  const s = ETATS[etat] ?? ETATS.ouvert;
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOuvertMenu((o) => !o)}
+        disabled={occupe || !entrees.length}
+        aria-expanded={ouvertMenu}
+        aria-haspopup="menu"
+        className={cn(
+          "inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition disabled:opacity-70",
+          s.classe
+        )}
+      >
+        {s.mot}
+        {entrees.length > 0 && <ChevronDown className="h-4 w-4" aria-hidden="true" />}
+      </button>
+
+      {ouvertMenu && entrees.length > 0 && (
+        <>
+          {/* ⚠ LA ZONE DE FERMETURE EST INDISPENSABLE SUR TÉLÉPHONE. Sans elle
+              le menu ne se referme qu'en rechoisissant une entrée — donc en
+              déclenchant une action qu'on ne voulait pas. */}
+          <button
+            type="button"
+            aria-label="Fermer le menu"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setOuvertMenu(false)}
+          />
+          <ul
+            role="menu"
+            className="absolute right-0 z-20 mt-1.5 w-56 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg"
+          >
+            {entrees.map((e) => (
+              <li key={e.cle} role="none">
+                <button
+                  role="menuitem"
+                  onClick={e.faire}
+                  className={cn(
+                    "block w-full px-4 py-2.5 text-left text-sm hover:bg-muted",
+                    e.cle === "annule" && "text-accent-strong"
+                  )}
+                >
+                  {e.libelle}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RecapProjet({
+  projet,
+  onModifier,
+  onChange,
+}: {
+  projet: ProjetType;
+  onModifier: () => void;
+  onChange: () => void;
+}) {
+  const etat = statutEffectif(projet);
   return (
     <section className="mt-5 rounded-2xl border border-primary/30 bg-card p-5">
-      <p className="dk-etiquette">Votre projet est ouvert</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        {/* 🔴 CETTE LIGNE DISAIT « Votre projet est ouvert », EN DUR. Depuis que
+            la pause et l'expiration existent, elle mentait dans quatre cas sur
+            cinq — un projet expiré s'annonçait ouvert, et son propriétaire
+            attendait des réponses qui ne viendraient jamais. */}
+        <p className="dk-etiquette">
+          {etat === "ouvert" && "Votre projet est ouvert"}
+          {etat === "pause" && "Votre projet est en pause"}
+          {etat === "expire" && "Votre projet a dépassé sa date"}
+          {etat === "annule" && "Projet annulé"}
+          {etat === "honore" && "Vous avez trouvé"}
+        </p>
+        <MenuStatut projet={projet} onModifier={onModifier} onChange={onChange} />
+      </div>
+      {etat === "expire" && (
+        <p className="mt-2 text-sm text-accent-strong">
+          Les professionnels ne le voient plus. Prolongez-le de 30 jours pour le
+          remettre en avant, ou clôturez-le.
+        </p>
+      )}
       <ul className="mt-3 flex flex-wrap gap-1.5">
         {projet.envies.map((e) => (
           <li

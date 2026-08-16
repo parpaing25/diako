@@ -547,6 +547,49 @@ export async function changerStatutProjet(id: string, statut: string, motif?: st
   if (error) throw error;
 }
 
+/**
+ * Modifier un projet déjà ouvert.
+ *
+ * ⚠ POURQUOI PAS « SUPPRIMER PUIS RECRÉER ». Les propositions des agences
+ *   pendent au projet : le détruire pour le refaire emporterait les réponses
+ *   déjà reçues, et les professionnels verraient leur travail s'évaporer sans
+ *   explication. On met donc à jour EN PLACE, l'identifiant ne bouge pas.
+ *
+ * ⚠ `select('id')` APRÈS L'ÉCRITURE, jamais `.single()` : sans lui, PostgREST
+ *   ne rend rien et une politique RLS qui refuse la ligne passe pour un succès
+ *   — c'est exactement le « brouillon fantôme » déjà rencontré ailleurs.
+ */
+export async function majProjet(
+  id: string,
+  p: {
+    envies: string[];
+    date_from?: string | null;
+    date_to?: string | null;
+    date_flex_days?: number | null;
+    adults: number;
+    children_ages?: number[];
+    budget_ar?: number | null;
+    notes?: string | null;
+  }
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("trip_requests")
+    .update({
+      envies: p.envies,
+      date_from: p.date_from ?? null,
+      date_to: p.date_to ?? null,
+      date_flex_days: p.date_flex_days ?? null,
+      adults: p.adults,
+      children_ages: p.children_ages ?? [],
+      budget_ar: p.budget_ar ?? null,
+      notes: p.notes ?? null,
+    })
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("Modification refusée : ce projet n'est pas le vôtre.");
+}
+
 export async function prolongerProjet(id: string, jours = 30): Promise<string | null> {
   const { data, error } = await supabase.rpc("projet_prolonger", { p_id: id, p_jours: jours });
   if (error) throw error;

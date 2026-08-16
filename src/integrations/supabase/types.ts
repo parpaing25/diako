@@ -356,13 +356,25 @@ export type Database = {
                date_from: string | null; date_to: string | null; date_flex_days: number | null;
                adults: number; children_ages: number[]; budget_ar: number | null;
                budget_eur: number | null; notes: string | null; status: string;
+               /* 0081 — `expire_le` est CALCULÉE par déclencheur depuis
+                  date_to + souplesse : elle se lit, elle ne s'écrit pas. */
+               expire_le: string | null; motif_cloture: string | null;
                closed_at: string | null } & Horodate;
         Insert: { id?: string; user_id: string; envies?: string[]; place_ids?: string[];
                   date_from?: string | null; date_to?: string | null;
                   date_flex_days?: number | null; adults?: number; children_ages?: number[];
                   budget_ar?: number | null; budget_eur?: number | null; notes?: string | null;
                   status?: string; created_at?: string };
-        Update: Partial<{ status: string; closed_at: string | null; notes: string | null }>;
+        /* ⚠ LE VOYAGEUR PEUT MODIFIER SON PROJET, pas seulement le clore. La
+           liste ne portait que `status`, `closed_at` et `notes` : toute autre
+           écriture se voyait attribuer le type `never`, avec un message qui ne
+           nomme aucune colonne. `expire_le` reste absente — elle est calculée. */
+        Update: Partial<{
+          envies: string[]; date_from: string | null; date_to: string | null;
+          date_flex_days: number | null; adults: number; children_ages: number[];
+          budget_ar: number | null; notes: string | null;
+          status: string; closed_at: string | null;
+        }>;
         Relationships: [];
       };
 
@@ -431,6 +443,16 @@ export type Database = {
           nb_pages: number;
           nb_posts: number;
           norm: string;
+          /* 0082 — la couverture d'une destination et son crédit.
+             ⚠ CE FICHIER EST ÉCRIT À LA MAIN, il n'est pas régénéré. Une
+               colonne ajoutée en base et oubliée ici ne provoque pas une
+               erreur de type mais un `GenericStringError[]` : la requête
+               entière perd son typage, et l'appel `data as Lieu[]` échoue à la
+               compilation en accusant le mauvais endroit. */
+          cover_url: string | null;
+          cover_credit: string | null;
+          cover_licence: string | null;
+          cover_source: string | null;
         } & Horodate;
         Insert: never;
         Update: never;

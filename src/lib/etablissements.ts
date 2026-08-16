@@ -219,6 +219,11 @@ export interface Lieu {
   nb_posts: number;
   lat: number | null;
   lng: number | null;
+  /** Couverture de la destination, posée en 0082. Nulle sur l'immense majorité
+   *  des 18 345 lieux : l'écran doit savoir s'en passer, et non afficher un
+   *  cadre gris là où il n'y a rien. */
+  cover_url: string | null;
+  cover_credit: string | null;
 }
 
 export interface Plat {
@@ -346,14 +351,24 @@ export async function ecrireALEtablissement(pageId: string): Promise<string> {
  */
 export async function chargerDestinations(
   limite = 60,
-  apres?: string | null
+  apres?: string | null,
+  /** Une ou plusieurs régions administratives. Une GRANDE région en contient
+   *  plusieurs — d'où `in` et non `eq` : filtrer « Côte Est » revient à demander
+   *  six régions d'un coup, pas à inventer une colonne « grande région ». */
+  regions?: string[] | null
 ): Promise<Lieu[]> {
   let r = supabase
     .from("places")
     .select(
-      "id, slug, name_fr, name_mg, kind, region, axe, is_touristique, summary, why_go, nb_pages, nb_posts, lat, lng"
+      // ⚠ UNE SEULE CHAÎNE LITTÉRALE. PostgREST ne déduit le type du résultat
+      //   qu'à partir d'un littéral : coupée en deux avec un `+`, la liste
+      //   devient une `string` quelconque et le retour dégénère en
+      //   `GenericStringError[]`. La ligne est longue, mais la couper coûte
+      //   le typage de tout l'appel.
+      "id, slug, name_fr, name_mg, kind, region, axe, is_touristique, summary, why_go, nb_pages, nb_posts, lat, lng, cover_url, cover_credit"
     )
     .eq("is_touristique", true);
+  if (regions?.length) r = r.in("region", regions);
   if (apres) r = r.gt("name_fr", apres);
   const { data, error } = await r.order("name_fr").limit(Math.min(limite, 1000));
   if (error) throw error;
@@ -362,11 +377,16 @@ export async function chargerDestinations(
 
 /** Combien de destinations en tout — pour que l'écran annonce un chiffre vrai
  *  et non le nombre de vignettes qu'il a réussi à charger. */
-export async function compterDestinations(): Promise<number> {
-  const { count, error } = await supabase
+export async function compterDestinations(regions?: string[] | null): Promise<number> {
+  let r = supabase
     .from("places")
     .select("id", { count: "exact", head: true })
     .eq("is_touristique", true);
+  // ⚠ LE COMPTE SUIT LE FILTRE. Annoncer « 520 destinations » au-dessus d'une
+  //   liste filtrée qui en montre 81 est le genre de compteur menteur qu'on a
+  //   déjà corrigé ailleurs : le chiffre doit décrire ce qu'on voit.
+  if (regions?.length) r = r.in("region", regions);
+  const { count, error } = await r;
   if (error) throw error;
   return count ?? 0;
 }
@@ -375,7 +395,12 @@ export async function chargerLieu(slug: string): Promise<Lieu | null> {
   const { data, error } = await supabase
     .from("places")
     .select(
-      "id, slug, name_fr, name_mg, kind, region, axe, is_touristique, summary, why_go, nb_pages, nb_posts, lat, lng"
+      // ⚠ UNE SEULE CHAÎNE LITTÉRALE. PostgREST ne déduit le type du résultat
+      //   qu'à partir d'un littéral : coupée en deux avec un `+`, la liste
+      //   devient une `string` quelconque et le retour dégénère en
+      //   `GenericStringError[]`. La ligne est longue, mais la couper coûte
+      //   le typage de tout l'appel.
+      "id, slug, name_fr, name_mg, kind, region, axe, is_touristique, summary, why_go, nb_pages, nb_posts, lat, lng, cover_url, cover_credit"
     )
     .eq("slug", slug)
     .maybeSingle();

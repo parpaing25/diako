@@ -7,6 +7,7 @@ import { useReveal } from "@/hooks/useReveal";
 import { EtatErreur, Squelettes } from "@/components/Etats";
 import { ariary, recitsDuLieu } from "@/lib/etablissements";
 import { ImageProgressive } from "@/components/ImageProgressive";
+import { jeuDeTailles } from "@/lib/imageThumb";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,6 +48,11 @@ interface Fiche {
     slug: string; name_fr: string; name_mg: string | null; kind: string;
     region: string | null; summary: string | null; why_go: string[] | null;
     lat: number | null; lng: number | null;
+    /* ⚠ Aucune migration n'a été nécessaire pour les faire remonter :
+       `fiche_destination` rend `to_jsonb(p) - 'norm'`, donc TOUTE colonne
+       ajoutée à `places` arrive ici d'office. Bon à savoir dans les deux sens
+       — une colonne sensible ajoutée demain sortirait aussi. */
+    cover_url: string | null; cover_credit: string | null;
   };
   saisons: { mois: number; note: keyof typeof NOTE | null; raison: string | null }[];
   acces: {
@@ -136,6 +142,28 @@ export default function Destination() {
          matiere abondante du produit. */
     <div className="px-4 py-5 xl:flex xl:items-start xl:gap-5">
       <div className="min-w-0 flex-1 xl:max-w-[620px]">
+      {/* ── La photo, quand la destination en a une ───────────────────── */}
+      {f.lieu.cover_url && (
+        <figure className="relative -mx-4 mb-4 h-44 overflow-hidden sm:mx-0 sm:h-56 sm:rounded-2xl">
+          <img
+            src={f.lieu.cover_url}
+            srcSet={jeuDeTailles(f.lieu.cover_url) ?? undefined}
+            sizes="(min-width: 1280px) 620px, 100vw"
+            alt={`${f.lieu.name_fr} — ${f.lieu.region ?? "Madagascar"}`}
+            className="h-full w-full object-cover"
+            /* Premier élément de la page : c'est lui le LCP, il ne doit ni
+               être différé ni attendre son tour. */
+            loading="eager"
+            fetchPriority="high"
+          />
+          {f.lieu.cover_credit && (
+            <figcaption className="absolute bottom-0 right-0 rounded-tl bg-black/45 px-1.5 py-0.5 text-[10px] text-white/85">
+              {f.lieu.cover_credit}
+            </figcaption>
+          )}
+        </figure>
+      )}
+
       {/* ── Identité ─────────────────────────────────────────────────── */}
       <p className="dk-etiquette">
         {f.lieu.region ?? f.lieu.kind}

@@ -23,3 +23,14 @@ Thumbs.db
 secrets/
 .diako-secrets/
 supabase/.temp/
+
+# Relevés de travail des scripts de photos : ils portent des chemins locaux
+# (Desktop de la machine d'Andry) et se régénèrent en une commande. Le dépôt
+# est PUBLIC — rien qui décrive l'arborescence d'un poste n'a à y figurer.
+inventaire_photos.json
+rapprochement.json
+base_noms.json
+auto.json
+couvertures.json
+photos_envoyees.json
+scripts/__pycache__/

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { METIERS_PRO } from "@/lib/metiersPro";
 
 /**
  * Complétion du profil après confirmation de l'adresse e-mail.
@@ -21,7 +22,9 @@ export default function Bienvenue() {
   const [nom, setNom] = useState("");
   const [ville, setVille] = useState("");
   const [type, setType] = useState<"voyageur" | "pro">("voyageur");
-  const [metier, setMetier] = useState<string>("hotellerie");
+  // ⚠ Le premier de la liste partagée, pas une chaîne écrite ici : un défaut
+  //   codé en dur survit à la disparition du métier qu'il désigne.
+  const [metier, setMetier] = useState<string>(METIERS_PRO[0].cle);
   const [busy, setBusy] = useState(false);
   useDocumentTitle("Bienvenue");
 
@@ -154,13 +157,17 @@ export default function Bienvenue() {
               onChange={(e) => setMetier(e.target.value)}
               className="h-12 w-full rounded-xl border border-input bg-background px-4 text-base outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="hotellerie">Hôtellerie — hôtel, bungalow, chambres</option>
-              <option value="restauration">Restauration — restaurant, gargote</option>
-              <option value="guide">Guide</option>
-              <option value="agence">Agence de voyage — circuits</option>
-              <option value="transport">Transport</option>
-              <option value="artisanat">Artisanat</option>
-              <option value="autre">Autre</option>
+              {/* ⚠ LA LISTE VIENT DU MODULE PARTAGÉ, elle n'est pas recopiée
+                  ici. Elle l'était : les mêmes sept métiers vivaient en dur sur
+                  cet écran ET dans /compte. Deux listes qui doivent rester
+                  identiques divergent au premier ajout — et un métier proposé
+                  d'un côté, refusé de l'autre, est indébogable pour qui le
+                  signale. */}
+              {METIERS_PRO.map((m) => (
+                <option key={m.cle} value={m.cle}>
+                  {m.label}
+                </option>
+              ))}
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
               Vous pourrez revendiquer votre établissement ensuite — rien ne

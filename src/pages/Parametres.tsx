@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Bell, ChevronRight, Globe, Lock, LogOut, Monitor, Moon, Shield, Sun, Trash2 } from "lucide-react";
+import { Bell, ChevronRight, Lock, LogOut, Monitor, Moon, Shield, Sun, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
@@ -18,28 +18,44 @@ const MODES: { cle: Theme; label: string; icon: typeof Sun }[] = [
   { cle: "systeme", label: "Système", icon: Monitor },
 ];
 
+const CLASSE_LIGNE =
+  "flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-muted";
+
 function Ligne({
   icon: Icon,
   titre,
   detail,
   onClick,
+  to,
 }: {
   icon: typeof Bell;
   titre: string;
   detail: string;
-  onClick: () => void;
+  onClick?: () => void;
+  /** Quand le réglage vit ailleurs, la ligne y MÈNE. */
+  to?: string;
 }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-muted"
-    >
+  const contenu = (
+    <>
       <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium">{titre}</span>
         <span className="block text-xs text-muted-foreground">{detail}</span>
       </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+    </>
+  );
+
+  // ⚠ Un réglage qui mène vers un autre écran doit être un LIEN, pas un bouton
+  //   qui navigue : sinon le clic milieu, le « ouvrir dans un nouvel onglet »
+  //   et les lecteurs d'écran ne voient qu'un bouton sans destination.
+  return to ? (
+    <Link to={to} className={CLASSE_LIGNE}>
+      {contenu}
+    </Link>
+  ) : (
+    <button onClick={onClick} className={CLASSE_LIGNE}>
+      {contenu}
     </button>
   );
 }
@@ -49,7 +65,15 @@ function Ligne({
  *
  * Le sélecteur de thème est RÉEL et fonctionne immédiatement — les variables
  * de la palette sombre existaient déjà dans index.css sans que rien ne les
- * active. Le reste annonce honnêtement ce qui n'est pas encore branché.
+ * active.
+ *
+ * 🔴 PLUS AUCUNE LIGNE NE MENT ICI. « Langue » et « Confidentialité » ne
+ *    faisaient qu'un toast « Bientôt disponible ». Or la confidentialité EXISTE
+ *    et fonctionne depuis /compte (visibilité publication par publication,
+ *    ouverture des lieux visités) : la ligne y mène désormais. La langue, elle,
+ *    n'a rien derrière — pas de traduction, `profiles.language` n'est lu nulle
+ *    part — donc la ligne est RETIRÉE. Un réglage qui ne règle rien est pire
+ *    qu'un réglage absent : il fait croire que le malgache est déjà choisi.
  */
 export default function Parametres() {
   useDocumentTitle("Paramètres");
@@ -95,9 +119,6 @@ export default function Parametres() {
             ? "Activées sur cet appareil · appuyez pour couper"
             : "Être prévenu quand un établissement vous répond";
 
-  const bientot = (quoi: string) =>
-    toast("Bientôt disponible", { description: `${quoi} arrivera avec les prochaines fonctionnalités.` });
-
   return (
     <div className="mx-auto max-w-2xl px-4 py-5">
       <h1 className="text-2xl font-semibold">Paramètres</h1>
@@ -133,7 +154,7 @@ export default function Parametres() {
         </p>
       </section>
 
-      {/* ── Le reste, annoncé honnêtement ──────────────────────────────── */}
+      {/* ── Deux réglages, tous les deux branchés ──────────────────────── */}
       <section className="mt-7" aria-labelledby="titre-prefs">
         <h2 id="titre-prefs" className="text-sm font-semibold">
           Préférences
@@ -143,18 +164,33 @@ export default function Parametres() {
               le gerant repond le lendemain. Sans notification, la reponse
               attend qu'on pense a rouvrir le site — et la mise en relation ne
               se fait pas. */}
+          {/* ⚠ DÉCONNECTÉ, LA LIGNE MÈNE À /auth au lieu d'annoncer « bientôt » :
+              le push fonctionne, il lui manque seulement un compte à qui
+              rattacher l'abonnement. */}
           <Ligne
             icon={Bell}
             titre="Notifications"
             detail={detailPush}
+            to={user ? undefined : "/auth"}
             onClick={() => {
-              if (!user) return bientot("Les notifications");
               if (push === "impossible" || push === "refuse" || bascule) return;
               void basculerPush();
             }}
           />
-          <Ligne icon={Globe} titre="Langue" detail="Français · le malgache viendra plus tard" onClick={() => bientot("Le choix de la langue")} />
-          <Ligne icon={Shield} titre="Confidentialité" detail="Qui voit mon profil et mes publications — bientôt" onClick={() => bientot("Les réglages de confidentialité")} />
+          {/* ⚠ CETTE LIGNE MÈNE AU RÉGLAGE RÉEL, elle ne le reproduit pas :
+              `changerVisibilite` s'exerce publication par publication dans
+              « Mes publications », et `ouvrirMesLieux` dans « Mon profil ».
+              Les recopier ici aurait fait deux commandes pour un seul état. */}
+          <Ligne
+            icon={Shield}
+            titre="Confidentialité"
+            detail={
+              user
+                ? "Vos lieux visités, et la visibilité de chaque publication"
+                : "Connectez-vous pour choisir qui voit vos publications"
+            }
+            to={user ? "/compte?onglet=profil" : "/auth"}
+          />
         </div>
       </section>
 

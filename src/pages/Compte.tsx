@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Bookmark,
+  Briefcase,
   Camera,
   Eye,
   EyeOff,
@@ -31,6 +32,7 @@ import {
   type MonActivite,
   type PublicationMienne,
 } from "@/lib/api";
+import { METIERS_PRO, libelleMetier } from "@/lib/metiersPro";
 import { cn } from "@/lib/utils";
 
 /**
@@ -591,16 +593,170 @@ function OngletProfil({ onEnregistre }: { onEnregistre: () => Promise<void> | vo
         {busy ? "Enregistrement…" : "Enregistrer"}
       </button>
 
+      {/* ⚠ APRÈS le bouton d'enregistrement, et avec son propre bouton : ce
+          n'est pas un champ du profil, c'est un changement de statut qui part
+          par une autre voie que le formulaire. */}
+      <BlocMetierPro onChange={onEnregistre} />
+
       {/* ⚠ Le thème et les notifications restent sur /parametres : c'est la
-          seule porte joignable DÉCONNECTÉ, et la déplacer ici la fermerait. */}
+          seule porte joignable DÉCONNECTÉ, et la déplacer ici la fermerait.
+          ⚠ La confidentialité, elle, ne s'annonce plus ici : elle se règle sur
+            CET écran — publication par publication dans « Mes publications »,
+            et lieux visités juste au-dessus. L'annoncer ailleurs renverrait
+            vers un écran qui renvoie ici. */}
       <Link
         to="/parametres"
         className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-input text-sm font-medium"
       >
         <Settings className="h-4 w-4" aria-hidden="true" />
-        Thème, notifications et confidentialité
+        Thème et notifications
       </Link>
     </form>
+  );
+}
+
+/* ── Devenir professionnel, ou corriger son métier ───────────────────────── */
+
+/**
+ * 🔴 CE QUE ÇA DÉBLOQUE. Le choix voyageur / professionnel n'existait QUE sur
+ *    /bienvenue. Qui s'inscrit par Google, qui a cliqué « Plus tard », ou qui a
+ *    validé cet écran en voyageur n'avait plus aucun chemin vers le statut pro
+ *    — donc plus aucun moyen de revendiquer son établissement parmi les fiches
+ *    sans propriétaire. Le compte était un cul-de-sac, et toute la chaîne pro
+ *    s'arrêtait là.
+ *
+ * ⚠ ON N'ÉCRIT PAS `account_type` À LA MAIN. Le déclencheur posé en 0069 lève
+ *   « Utilisez devenir_pro() pour declarer un compte professionnel. » sur un
+ *   UPDATE direct : la RPC est le seul chemin, et elle exige un métier.
+ *
+ * ⚠ UN PRO NE SE VOIT PAS PROPOSER DE LE REDEVENIR — il lit son métier et peut
+ *   le corriger. Le même appel sert aux deux cas : repasser `pro` sur un compte
+ *   déjà pro ne touche que `metier_pro`.
+ */
+function BlocMetierPro({ onChange }: { onChange: () => Promise<void> | void }) {
+  const { profile } = useUserData();
+  const estPro = profile?.account_type === "pro";
+  const declare = profile?.metier_pro ?? null;
+  const [metier, setMetier] = useState<string>(METIERS_PRO[0].cle);
+  const [ouvert, setOuvert] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // ⚠ On part du métier DÉJÀ déclaré : proposer « Hôtellerie » à un guide qui
+  //   vient corriger sa déclaration l'aurait fait basculer sans le voir.
+  useEffect(() => {
+    if (declare) setMetier(declare);
+  }, [declare]);
+
+  async function envoyer() {
+    if (busy) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("devenir_pro", { p_metier: metier });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await onChange();
+    setOuvert(false);
+    toast.success(
+      estPro ? "Métier mis à jour." : "Votre compte est maintenant professionnel."
+    );
+  }
+
+  const choixMetier = (
+    <div>
+      <label htmlFor="metier-pro" className="mb-1 block text-sm font-medium">
+        {estPro ? "Corriger mon métier" : "Votre métier"}
+      </label>
+      <select
+        id="metier-pro"
+        value={metier}
+        onChange={(e) => setMetier(e.target.value)}
+        className="h-12 w-full rounded-xl border border-input bg-background px-4 text-base outline-none focus:ring-2 focus:ring-ring"
+      >
+        {METIERS_PRO.map((m) => (
+          <option key={m.cle} value={m.cle}>
+            {m.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-start gap-3">
+        <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">
+            {estPro ? "Compte professionnel" : "Vous tenez un hôtel, un restaurant, une agence ?"}
+          </p>
+          <p className="dk-secondaire mt-1 leading-relaxed">
+            {estPro ? (
+              <>
+                Métier déclaré&nbsp;:{" "}
+                <span className="font-medium text-foreground">{libelleMetier(declare)}</span>.
+                Se déclarer professionnel ne vérifie rien&nbsp;: le badge vient
+                d'une revendication acceptée, examinée à la main.
+              </>
+            ) : (
+              <>
+                Passez en compte professionnel pour revendiquer votre
+                établissement dans l'annuaire et répondre aux voyageurs. C'est
+                une déclaration, pas un badge.
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+
+      {/* ⚠ POUR UN VOYAGEUR, LE MÉTIER RESTE REPLIÉ : le lui demander avant
+          qu'il ait dit qu'il est pro serait du bruit sur l'écran de tout le
+          monde. Pour un pro, il est déplié — c'est l'information qu'il vient
+          lire. */}
+      {estPro ? (
+        <div className="mt-3 space-y-3">
+          {choixMetier}
+          <button
+            type="button"
+            onClick={() => void envoyer()}
+            disabled={busy || metier === declare}
+            className="inline-flex min-h-11 items-center rounded-full border border-input px-5 text-sm font-semibold disabled:opacity-60"
+          >
+            {busy ? "Enregistrement…" : "Mettre à jour mon métier"}
+          </button>
+        </div>
+      ) : ouvert ? (
+        <div className="mt-3 space-y-3">
+          {choixMetier}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void envoyer()}
+              disabled={busy}
+              className="inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {busy ? "Un instant…" : "Confirmer"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOuvert(false)}
+              className="inline-flex min-h-11 items-center rounded-full border border-input px-5 text-sm font-semibold"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOuvert(true)}
+          className="mt-3 inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground"
+        >
+          Devenir professionnel
+        </button>
+      )}
+    </div>
   );
 }
 

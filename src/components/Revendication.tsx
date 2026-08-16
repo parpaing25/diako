@@ -2,7 +2,15 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Lock } from "lucide-react";
 import { revendiquer } from "@/lib/etablissements";
-import { OU_TROUVER, formeNif, formeStat, televerserPiece } from "@/lib/justificatifs";
+import {
+  ACCEPT_FICHIER,
+  FORMATS_LISIBLES,
+  OU_TROUVER,
+  formeNif,
+  formeStat,
+  formeTel,
+  televerserPiece,
+} from "@/lib/justificatifs";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,6 +35,26 @@ import { cn } from "@/lib/utils";
  *   l'arrivée qu'il manque un chiffre, c'est tout perdre. Et on AVERTIT sans
  *   jamais bloquer — un contrôle de forme n'a pas à décider à la place de
  *   quelqu'un qui a le papier sous les yeux.
+ *
+ * 🔴 LA PHOTO DU LIEU ÉTAIT ANNONCÉE « FACULTATIF » — donc presque jamais
+ *    jointe, et le dossier se réduisait alors à des numéros qui se recopient
+ *    depuis n'importe quelle facture affichée au comptoir. C'est pourtant la
+ *    seule preuve qu'on ne peut pas produire sans se déplacer : elle devient
+ *    obligatoire, dans le libellé ET dans la condition d'envoi.
+ *
+ * ⚠ CET ÉCRAN DEMANDE EXACTEMENT CE QUE LA BASE EXIGERA, NI PLUS NI MOINS.
+ *   🔴 AU PRÉSENT, CETTE PHRASE ÉTAIT FAUSSE — et la croire ferait relâcher les
+ *      contrôles d'ici. La migration 0084 fera refuser à `revendiquer_page` un
+ *      dossier sans photo du lieu, sans numéro joignable et sans couple fiscal
+ *      ni pièce ; elle N'EST PAS ENCORE APPLIQUÉE (au 16/08/2026, la dernière
+ *      migration en base est 0082). La fonction qui tourne aujourd'hui est
+ *      celle de 0078 : elle accepte un dossier entièrement vide. Tant que 0084
+ *      n'est pas passée, les vérifications de ce fichier sont les SEULES.
+ *   Une fois 0084 appliquée, le miroir doit tenir dans les deux sens : toute
+ *   condition ajoutée en base se recopie ici, et rien ne se bloque ici qui
+ *   passerait là-bas. Sans ce miroir, on fait téléverser cinq minutes en 3G
+ *   pour rendre une erreur PostgreSQL brute, que personne ne sait traduire en
+ *   « il vous manque la photo ».
  */
 export function Revendication({
   ficheId,
@@ -49,9 +77,57 @@ export function Revendication({
   const refPiece = useRef<HTMLInputElement>(null);
   const refPhoto = useRef<HTMLInputElement>(null);
 
+  // 🔴 LE FORMULAIRE S'OUVRAIT EN ÉTAT D'ERREUR. Le manque se calculait sur des
+  //    champs encore vierges : « Il manque encore un numéro où vous rappeler,
+  //    la photo du lieu et de quoi prouver que… » s'affichait AVANT la première
+  //    frappe, et chaque aide de champ virait au reproche au premier caractère.
+  //    On accusait quelqu'un de n'avoir pas fait ce qu'on venait tout juste de
+  //    lui demander ; ça se lit « ce site ne veut pas de moi », et ça se ferme.
+  //
+  // ⚠ DEUX DÉCLENCHEURS, PAS UN, PARCE QU'ILS NE COUVRENT PAS LA MÊME CHOSE.
+  //   `touche` s'allume champ par champ au `blur` — l'erreur arrive quand on a
+  //   fini d'écrire, pas à la troisième lettre d'un numéro. `tente` s'allume à
+  //   la première pression sur Envoyer et montre TOUT, y compris les deux
+  //   pièces jointes, qu'aucun `blur` n'atteindra jamais.
+  const [touche, setTouche] = useState<Record<"tel" | "nif" | "stat", boolean>>({
+    tel: false,
+    nif: false,
+    stat: false,
+  });
+  const [tente, setTente] = useState(false);
+
   const vNif = formeNif(nif);
   const vStat = formeStat(stat);
-  const assez = (vNif.ok && vStat.ok) || Boolean(piece);
+  const vTel = formeTel(tel);
+
+  const aTel = aideChamp(
+    vTel,
+    tente || touche.tel,
+    "C'est le numéro que nous appelons pour vérifier. Il n'est jamais publié."
+  );
+  const aNif = aideChamp(vNif, tente || touche.nif, OU_TROUVER.nif);
+  const aStat = aideChamp(vStat, tente || touche.stat, OU_TROUVER.stat);
+
+  // ⚠ « LE COUPLE FISCAL OU UNE PIÈCE » RESTE UN CHOIX : une gargote n'a
+  //   souvent qu'un des deux papiers, et exiger les deux écarterait exactement
+  //   les établissements que personne d'autre ne référencera.
+  const documents = (vNif.ok && vStat.ok) || Boolean(piece);
+  const complet = documents && Boolean(photo) && vTel.ok;
+
+  // ⚠ ON NOMME CE QUI MANQUE, PIÈCE PAR PIÈCE. Un bouton muet — grisé, ou qui
+  //   ne répond rien — se lit « le site est cassé » : on recharge la page, et
+  //   toute la saisie, téléversements compris, repart à zéro.
+  // ⚠ CETTE LISTE NE S'AFFICHE QU'APRÈS `tente` (voir plus bas) : la calculer
+  //   ici sur des champs vierges ne coûte rien, la MONTRER coûtait la personne.
+  // ⚠ Le troisième point reste vague EXPRÈS : détailler « le NIF et le STAT, ou
+  //   un document » ici donnait « … et le NIF et le STAT, ou un document »,
+  //   illisible dès que les trois manquent. Le choix est expliqué juste en
+  //   dessous, où il a la place d'une phrase entière.
+  const manque = [
+    !vTel.ok && "un numéro où vous rappeler",
+    !photo && "la photo du lieu",
+    !documents && "de quoi prouver que cet établissement est le vôtre",
+  ].filter((x): x is string => typeof x === "string");
 
   async function joindre(e: React.ChangeEvent<HTMLInputElement>, quoi: "piece" | "photo_lieu") {
     const f = e.target.files?.[0];
@@ -71,6 +147,19 @@ export function Revendication({
 
   async function envoyer() {
     if (envoi) return;
+
+    // 🔴 LE BOUTON ÉTAIT GRISÉ TANT QUE LE DOSSIER ÉTAIT INCOMPLET — donc la
+    //    « première tentative d'envoi » n'existait pas, et le seul moment où
+    //    l'on pouvait légitimement dire ce qui manque n'arrivait jamais. Le
+    //    bouton reste cliquable : le clic RÉVÈLE les manques et ne part pas.
+    //    Aucun appel réseau, aucune erreur PostgreSQL brute — une phrase en
+    //    français, à l'endroit où la personne vient de regarder.
+    if (!complet) {
+      setTente(true);
+      setTouche({ tel: true, nif: true, stat: true });
+      return;
+    }
+
     setEnvoi(true);
     try {
       await revendiquer(ficheId, {
@@ -132,6 +221,8 @@ export function Revendication({
           <option value="autre">Autre</option>
         </select>
 
+        {/* ⚠ LA VÉRIFICATION SE TERMINE PAR UN APPEL — le dire ici, c'est la
+            différence entre un vrai numéro et un numéro de façade. */}
         <label className="mt-3 block text-sm font-medium" htmlFor="tel-rev">
           Votre numéro
         </label>
@@ -139,10 +230,16 @@ export function Revendication({
           id="tel-rev"
           value={tel}
           onChange={(e) => setTel(e.target.value)}
+          onBlur={() => setTouche((t) => ({ ...t, tel: true }))}
           inputMode="tel"
           placeholder="034 00 000 00"
+          aria-invalid={aTel.erreur || undefined}
+          aria-describedby="tel-rev-aide"
           className="mt-1 h-12 w-full rounded-xl border border-input bg-background px-3 text-base"
         />
+        <p id="tel-rev-aide" className={cn("mt-1 text-xs", aTel.classe)}>
+          {aTel.texte}
+        </p>
 
         {/* ⚠ OÙ LE TROUVER, SOUS CHAQUE CHAMP. Sans cette phrase, un gérant qui
             ne sait pas où chercher son STAT recopie son NIF dans les deux
@@ -155,11 +252,14 @@ export function Revendication({
           id="nif-rev"
           value={nif}
           onChange={(e) => setNif(e.target.value)}
+          onBlur={() => setTouche((t) => ({ ...t, nif: true }))}
           inputMode="numeric"
+          aria-invalid={aNif.erreur || undefined}
+          aria-describedby="nif-rev-aide"
           className="mt-1 h-12 w-full rounded-xl border border-input bg-background px-3 text-base tabular-nums"
         />
-        <p className={cn("mt-1 text-xs", vNif.ok ? "text-primary" : "text-muted-foreground")}>
-          {vNif.message || OU_TROUVER.nif}
+        <p id="nif-rev-aide" className={cn("mt-1 text-xs", aNif.classe)}>
+          {aNif.texte}
         </p>
 
         <label className="mt-3 block text-sm font-medium" htmlFor="stat-rev">
@@ -169,40 +269,60 @@ export function Revendication({
           id="stat-rev"
           value={stat}
           onChange={(e) => setStat(e.target.value)}
+          onBlur={() => setTouche((t) => ({ ...t, stat: true }))}
+          aria-invalid={aStat.erreur || undefined}
+          aria-describedby="stat-rev-aide"
           className="mt-1 h-12 w-full rounded-xl border border-input bg-background px-3 text-base tabular-nums"
         />
-        <p className={cn("mt-1 text-xs", vStat.ok ? "text-primary" : "text-muted-foreground")}>
-          {vStat.message || OU_TROUVER.stat}
+        <p id="stat-rev-aide" className={cn("mt-1 text-xs", aStat.classe)}>
+          {aStat.texte}
         </p>
 
         <Piece
           titre="Un document à votre nom"
+          exigence="à défaut du NIF et du STAT"
           aide={OU_TROUVER.piece}
+          formats={FORMATS_LISIBLES.piece}
           fichier={piece}
           occupe={enCours === "piece"}
           onChoisir={() => refPiece.current?.click()}
           onRetirer={() => setPiece(null)}
         />
+        {/* 🔴 `accept` NE S'ÉCRIT PLUS À LA MAIN. Il se déduit de la liste que
+            `televerserPiece` applique : c'est la seule façon que le sélecteur
+            ne propose jamais un format qu'on refusera trois minutes plus tard,
+            une fois la 3G consommée. */}
         <input
           ref={refPiece}
           type="file"
-          accept="image/*,application/pdf"
+          accept={ACCEPT_FICHIER.piece}
           className="hidden"
           onChange={(e) => void joindre(e, "piece")}
         />
 
+        {/* ⚠ L'AIDE DIT À QUOI SERT CETTE PHOTO, pas ce qu'elle doit contenir.
+            Une exigence de plus sans raison se lit comme une tracasserie et
+            fait fermer le formulaire ; « c'est ce qui montre que vous y êtes »
+            se comprend en une lecture, et se photographie en dix secondes. */}
         <Piece
-          titre="Une photo du lieu (facultatif)"
-          aide="La façade, l'enseigne, l'entrée. Elle ne sera publiée qu'après vérification."
+          titre="Une photo du lieu"
+          exigence="obligatoire"
+          aide={OU_TROUVER.photoLieu}
+          formats={FORMATS_LISIBLES.photo_lieu}
           fichier={photo}
           occupe={enCours === "photo_lieu"}
           onChoisir={() => refPhoto.current?.click()}
           onRetirer={() => setPhoto(null)}
         />
+        {/* 🔴 C'ÉTAIT `image/*` ICI, ET LE VALIDATEUR N'EN CONNAÎT QUE TROIS.
+            Un HEIC — le réglage d'usine de beaucoup d'iPhone et de Samsung —
+            passait donc le sélecteur pour se faire refuser après l'envoi.
+            ⚠ Et pas de PDF sur ce champ-là : on demande une photo prise sur
+              place, la seule preuve qui ne se recopie pas depuis une facture. */}
         <input
           ref={refPhoto}
           type="file"
-          accept="image/*"
+          accept={ACCEPT_FICHIER.photo_lieu}
           className="hidden"
           onChange={(e) => void joindre(e, "photo_lieu")}
         />
@@ -220,18 +340,38 @@ export function Revendication({
           className="mt-1 w-full rounded-xl border border-input bg-background p-3 text-base"
         />
 
-        {/* ⚠ ON DIT CE QUI MANQUE, on ne grise pas le bouton en silence. */}
-        {!assez && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Il nous faut soit le NIF <strong>et</strong> le STAT, soit un
-            document à votre nom. L'un ou l'autre suffit.
-          </p>
+        {/* ⚠ ON DIT CE QUI MANQUE, on ne grise pas le bouton en silence.
+            ⚠ `text-accent-strong` et jamais `text-accent` : le corail #F4633A
+              ne passe pas 4,5:1 et ce message est précisément celui qu'il ne
+              faut pas rater.
+            ⚠ `tente &&` EST LA CONDITION QUI EMPÊCHE L'ACCUSATION D'OUVERTURE.
+              Sans elle, ce bloc s'affichait sur un formulaire vierge.
+            ⚠ `role="alert"` parce qu'il apparaît en réponse à un clic : sans
+              lui, un lecteur d'écran annonce « Envoyer mon dossier » et rien
+              d'autre — le bouton semble ne rien faire. */}
+        {tente && manque.length > 0 && (
+          <div role="alert" className="mt-3 space-y-1">
+            <p className="text-xs font-medium leading-relaxed text-accent-strong">
+              Il manque encore {enumerer(manque)}.
+            </p>
+            {!documents && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Pour cette preuve, l'un ou l'autre suffit : le NIF{" "}
+                <strong>et</strong> le STAT, <strong>ou</strong> un document à
+                votre nom.
+              </p>
+            )}
+          </div>
         )}
 
         <div className="mt-4 flex gap-2">
+          {/* ⚠ CE BOUTON N'EST PLUS GRISÉ PAR L'INCOMPLÉTUDE : il répond en
+              nommant ce qui manque, et ne part pas. Il reste désactivé pendant
+              l'envoi et pendant un téléversement — là, cliquer déposerait
+              vraiment un dossier en double ou amputé d'une pièce en cours. */}
           <button
             onClick={() => void envoyer()}
-            disabled={envoi || !assez || enCours !== null}
+            disabled={envoi || enCours !== null}
             className="h-12 flex-1 rounded-xl bg-primary font-medium text-primary-foreground disabled:opacity-60"
           >
             {envoi ? "Envoi…" : "Envoyer mon dossier"}
@@ -245,16 +385,62 @@ export function Revendication({
   );
 }
 
+/** « a », « a et b », « a, b et c » — la liste écrite comme on la dirait. */
+function enumerer(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} et ${items[items.length - 1]}`;
+}
+
+/**
+ * L'AIDE SOUS UN CHAMP : neutre, réussie, ou fautive.
+ *
+ * 🔴 L'ERREUR ÉTAIT GRISE, DONC INVISIBLE. `vTel.ok ? "text-primary" :
+ *    "text-muted-foreground"` donnait à « 6 chiffres — il en faut au moins 9 »
+ *    exactement la couleur de la phrase d'aide neutre qu'elle remplaçait. Le
+ *    message existait, personne ne le distinguait, et on cherchait pourquoi le
+ *    dossier ne partait pas en relisant un texte qui avait l'air anodin.
+ *
+ * ⚠ `text-accent-strong` (#D0471C) et JAMAIS `text-accent` : index.css écrit à
+ *   la ligne du token que le corail #F4633A ne sert « dès qu'il y a du texte ».
+ *
+ * ⚠ ET JAMAIS FAUTIVE AVANT QUE LA PERSONNE AIT EU SA CHANCE : `montrer` vaut
+ *   le `blur` du champ ou la première tentative d'envoi. Un champ encore vide
+ *   rend `message` vide, donc reste neutre de toute façon — mais un champ à
+ *   moitié tapé, lui, serait rouge dès la deuxième lettre sans ce garde-fou.
+ */
+function aideChamp(
+  etat: { ok: boolean; message: string },
+  montrer: boolean,
+  defaut: string
+): { erreur: boolean; texte: string; classe: string } {
+  if (etat.ok) return { erreur: false, texte: etat.message, classe: "text-primary" };
+  if (montrer && etat.message !== "") {
+    return { erreur: true, texte: etat.message, classe: "text-accent-strong" };
+  }
+  return { erreur: false, texte: defaut, classe: "text-muted-foreground" };
+}
+
 function Piece({
   titre,
+  exigence,
   aide,
+  formats,
   fichier,
   occupe,
   onChoisir,
   onRetirer,
 }: {
   titre: string;
+  /** ⚠ « obligatoire » ou « à défaut du NIF et du STAT » : sans cette mention,
+   *  il faut cliquer sur Envoyer pour découvrir laquelle des deux pièces
+   *  bloque — et l'une des deux ne bloque justement pas. */
+  exigence?: string;
   aide: string;
+  /** ⚠ LES FORMATS ACCEPTÉS, ÉCRITS. L'attribut `accept` grise les fichiers
+   *  refusés sans jamais dire pourquoi : quelqu'un qui ne retrouve pas sa photo
+   *  dans la liste en conclut que le site est cassé, pas que son HEIC n'est pas
+   *  lisible. La phrase vient de `justificatifs.ts`, avec la règle. */
+  formats: string;
   fichier: { nom: string } | null;
   occupe: boolean;
   onChoisir: () => void;
@@ -262,7 +448,12 @@ function Piece({
 }) {
   return (
     <div className="mt-3">
-      <p className="text-sm font-medium">{titre}</p>
+      <p className="text-sm font-medium">
+        {titre}
+        {exigence && (
+          <span className="font-normal text-muted-foreground"> · {exigence}</span>
+        )}
+      </p>
       {fichier ? (
         <div className="mt-1 flex min-h-12 items-center gap-2 rounded-xl border border-primary/40 bg-secondary px-3 text-sm">
           <Lock className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -282,6 +473,7 @@ function Piece({
             {occupe ? "Envoi en cours…" : "Choisir un fichier"}
           </button>
           <p className="mt-1 text-xs text-muted-foreground">{aide}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{formats}</p>
         </>
       )}
     </div>

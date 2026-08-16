@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
@@ -446,19 +447,101 @@ export async function chargerEquipements(pour?: string) {
 
 /* ── Espace professionnel ──────────────────────────────────────────────── */
 
-/** Les établissements dont je suis propriétaire. */
-export async function mesEtablissements() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
-  const { data, error } = await supabase
-    .from("pages")
-    .select(
-      "id, slug, name, categories, cover_url, is_published, completeness, rating_avg, rating_count, views_count, price_min_ar, price_min_unit, place_id"
-    )
-    .eq("owner_id", user.id)
-    .order("created_at", { ascending: false });
+/** Les deux façons d'avoir la main sur une page. Ce sont les codes rendus par
+ *  la base — sans accent, ce ne sont pas des libellés d'écran. */
+export type RolePage = "proprietaire" | "gestionnaire";
+
+/** Une page de mon espace pro, et À QUEL TITRE je l'ai. */
+export interface MonEtablissement {
+  id: string;
+  slug: string;
+  name: string;
+  categories: string[];
+  cover_url: string | null;
+  is_published: boolean;
+  completeness: number;
+  rating_avg: number;
+  rating_count: number;
+  views_count: number;
+  price_min_ar: number | null;
+  price_min_unit: string | null;
+  /**
+   * ⚠ CE CHAMP N'EST PAS DÉCORATIF. Un gestionnaire tient les chambres, la
+   *   carte, les activités et les circuits — il ne peut NI céder la page, NI
+   *   nommer un autre gestionnaire : le déclencheur `pages_avant_ecriture` gèle
+   *   `owner_id`, et la policy `pg_proprietaire` réserve les invitations au
+   *   propriétaire. Un écran qui ne fait pas la différence promet des gestes
+   *   que la base refusera, et un refus de la base se lit comme une panne.
+   */
+  mon_role: RolePage;
+}
+
+/**
+ * ⚠ `mes_etablissements` N'EST PAS DANS `types.ts`. La fonction existe en base
+ *   depuis 0076 et change de signature en 0085, sans que les types soient
+ *   régénérés — `types.ts` reste hors du périmètre de ce chantier. On la
+ *   déclare donc ICI, une seule fois, avec sa vraie forme, plutôt que de semer
+ *   des `as any` de fichier en fichier, ce que l'entête de `types.ts` interdit
+ *   explicitement (« chaque contournement est un bug futur »). C'est le même
+ *   procédé que dans `Cogestion.tsx` pour `page_gestionnaires` ; le jour où les
+ *   types seront régénérés, ce bloc et `basePro` disparaissent sans qu'une
+ *   seule requête change.
+ */
+type SchemaEspacePro = {
+  public: {
+    Tables: Record<never, never>;
+    Views: Record<never, never>;
+    Functions: {
+      mes_etablissements: {
+        Args: { p_limite?: number };
+        Returns: MonEtablissement[];
+      };
+    };
+    Enums: Record<never, never>;
+    CompositeTypes: Record<never, never>;
+  };
+};
+
+const basePro = supabase as unknown as SupabaseClient<SchemaEspacePro>;
+
+/**
+ * Les établissements que je peux gérer : ceux que je POSSÈDE et ceux dont on
+ * m'a nommé gestionnaire.
+ *
+ * 🔴 CETTE LISTE NE MONTRAIT QUE `owner_id`, ET C'ÉTAIT UNE IMPASSE. C'est le
+ *    seul chargement de l'écran /pro, et le lien « Gérer » qu'il porte est l'un
+ *    des deux seuls du dépôt vers /pro/:slug. Un gestionnaire nommé en bonne et
+ *    due forme — à qui la base accorde déjà chambres, carte, activités,
+ *    circuits et réponses aux avis depuis 0076 — n'avait donc AUCUN geste pour
+ *    ouvrir la page qu'il gère. La co-gestion existait en base, en RLS et à
+ *    l'écran, mais restait inatteignable.
+ *
+ * ⚠ ON PASSE PAR UNE RPC, ET CE N'EST PAS UN CONFORT. La policy `pages_lecture`
+ *   dit `is_published or owner_id = auth.uid() or is_staff()` : le gestionnaire
+ *   n'y figure pas. Une requête sur `pages` depuis le navigateur, si habilement
+ *   filtrée soit-elle, ne rendrait JAMAIS la fiche non publiée qu'il gère — la
+ *   RLS la retire sans erreur, et la liste serait fausse EN SILENCE. C'est
+ *   exactement la fiche en cours de remplissage qu'on confie à un gestionnaire.
+ *   La fonction est `security definer` et énumère elle-même les deux titres
+ *   d'accès ; c'est la seule façon d'obtenir une liste complète sans ouvrir la
+ *   lecture de `pages` à tout le monde.
+ *
+ * ⚠ COLONNES ÉNUMÉRÉES : elles le sont dans la table de retour de la fonction,
+ *   côté base. Le client ne reçoit que celles-là.
+ *
+ * ⚠ ET UN PLAFOND, PARCE QUE POSTGREST COUPE À 1 000 LIGNES SANS RIEN DIRE.
+ *   La borne est portée par `p_limite` et bridée à 500 dans la fonction : une
+ *   limite qu'on écrit vaut mieux qu'une limite qu'on subit. Aucun gérant n'en
+ *   tient autant — mais c'est précisément ce qu'on disait des 87 destinations
+ *   devenues 524.
+ *
+ * ⚠ PAS DE `supabase.auth.getUser()` AVANT L'APPEL. Il coûtait un aller-retour
+ *   réseau pour une garde que l'écran fait déjà, et que la base fait mieux :
+ *   `mes_etablissements` est révoquée à `anon`, donc un appel sans session
+ *   échoue au lieu de rendre une liste rassurante et vide.
+ */
+export async function mesEtablissements(limite = 200): Promise<MonEtablissement[]> {
+  const { data, error } = await basePro.rpc("mes_etablissements", { p_limite: limite });
   if (error) throw error;
   return data ?? [];
 }

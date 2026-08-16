@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useRetour } from "@/hooks/useRetour";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronRight, Eye, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { ApercuMobile } from "@/components/ApercuMobile";
+import { Cogestion, jeGereCettePage } from "@/components/Cogestion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { compressImage } from "@/lib/imageCompression";
@@ -43,6 +44,10 @@ import {
 import { cn } from "@/lib/utils";
 
 type Onglet = "infos" | "chambres" | "carte" | "activites" | "circuits";
+
+/** Les deux façons d'avoir le droit d'être ici — elles ne donnent PAS la même
+ *  chose, et l'écran doit le dire. */
+type Role = "proprietaire" | "gestionnaire";
 
 const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
@@ -88,6 +93,7 @@ export default function ProConsole() {
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "refus" | "absente">("chargement");
+  const [role, setRole] = useState<Role | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("infos");
   /** Incrémenté après chaque enregistrement : l'aperçu se recharge alors seul. */
   const [versionApercu, setVersionApercu] = useState(0);
@@ -99,10 +105,23 @@ export default function ProConsole() {
     try {
       const f = await chargerFiche(slug);
       if (!f) return setEtat("absente");
-      // Garde de propriété : la RLS bloque déjà toute écriture, mais afficher
+      // Garde d'accès : la RLS bloque déjà toute écriture, mais afficher
       // un formulaire qu'on n'a pas le droit d'enregistrer est une promesse
       // qu'on ne tient pas.
-      if (!user || f.owner_id !== user.id) return setEtat("refus");
+      if (!user) return setEtat("refus");
+      // 🔴 LA GARDE COMPARAIT `owner_id`, ET RIEN D'AUTRE. La co-gestion
+      //    existait pourtant en base depuis 0076 : un gestionnaire nommé par le
+      //    propriétaire, à qui la RLS accorde déjà les chambres, la carte, les
+      //    activités et les demandes, était éconduit d'ici exactement comme un
+      //    inconnu. La table était donc sans effet — même remplie à la main.
+      //
+      // ⚠ LE COURT-CIRCUIT N'EST PAS COSMÉTIQUE : le propriétaire, qui est le
+      //   cas courant, ne paie aucun aller-retour de plus. Et cet appel vit
+      //   dans le CHARGEMENT, jamais dans le rendu — `recharger` rejoue après
+      //   chaque enregistrement, pas à chaque frappe.
+      const proprietaire = f.owner_id === user.id;
+      if (!proprietaire && !(await jeGereCettePage(f.id, user.id))) return setEtat("refus");
+      setRole(proprietaire ? "proprietaire" : "gestionnaire");
       setFiche(f);
       setEtat("ok");
     } catch {
@@ -137,11 +156,11 @@ export default function ProConsole() {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <h1 className="text-xl font-semibold">
-          {etat === "refus" ? "Cette fiche n'est pas la vôtre" : "Fiche introuvable"}
+          {etat === "refus" ? "Vous ne gérez pas cette fiche" : "Fiche introuvable"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {etat === "refus"
-            ? "Seul le propriétaire d'un établissement peut le modifier."
+            ? "Son propriétaire, ou une personne qu'il a nommée pour l'aider, peut la modifier."
             : "Le lien est peut-être périmé."}
         </p>
         <Link
@@ -173,6 +192,16 @@ export default function ProConsole() {
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </button>
         <h1 className="min-w-0 flex-1 truncate text-xl font-semibold">{fiche.name}</h1>
+        {/* À quel titre on est ici. Sur téléphone la place manque : c'est le
+            bandeau ci-dessous qui porte l'information, en toutes lettres. */}
+        <span
+          className={cn(
+            "hidden shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold sm:inline",
+            role === "proprietaire" ? "bg-primary/10 text-primary" : "bg-secondary"
+          )}
+        >
+          {role === "proprietaire" ? "Propriétaire" : "Gestionnaire"}
+        </span>
         <Link
           to={`/p/${fiche.slug}`}
           className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-input px-3 text-sm"
@@ -181,6 +210,23 @@ export default function ProConsole() {
           Voir
         </Link>
       </div>
+
+      {/* ⚠ UN GESTIONNAIRE DOIT SAVOIR CE QU'IL N'EST PAS. Il ouvre exactement
+          la même console que le propriétaire : sans ce bandeau, il croit tenir
+          la fiche entière et découvre le contraire au premier refus — ou pire,
+          promet à quelqu'un un transfert qu'il ne peut pas faire. */}
+      {role === "gestionnaire" && (
+        <p className="mt-3 flex gap-2 rounded-xl bg-secondary p-3 text-xs leading-relaxed">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <span>
+            <strong className="font-semibold">Vous gérez cette fiche</strong> sans en
+            être le propriétaire. Chambres, carte, activités, circuits, demandes des
+            voyageurs : tout cela est à vous. En revanche la page ne peut pas vous
+            être transférée depuis cet écran, et vous ne pouvez pas nommer d'autres
+            gestionnaires — cela reste au propriétaire.
+          </span>
+        </p>
+      )}
 
       <div
         role="tablist"
@@ -215,6 +261,24 @@ export default function ProConsole() {
           {onglet === "carte" && <OngletCarte fiche={fiche} onMaj={majEtApercu} />}
           {onglet === "activites" && <OngletActivites fiche={fiche} onMaj={majEtApercu} />}
           {onglet === "circuits" && <OngletCircuits fiche={fiche} onMaj={majEtApercu} />}
+
+          {/* ⚠ RÉSERVÉ AU PROPRIÉTAIRE, et pas seulement parce que la policy
+              `pg_proprietaire` le veut : `pg_lecture` ne montre à un
+              gestionnaire que SA propre ligne. Monté pour lui, ce panneau
+              afficherait une liste d'une seule personne — il en conclurait
+              qu'il gère seul, ce qui serait faux.
+
+              Il vit sous « Ma fiche » : c'est l'onglet de l'identité de
+              l'établissement, pas celui des tarifs. */}
+          {onglet === "infos" && role === "proprietaire" && (
+            <div className="mt-4">
+              <Cogestion
+                pageId={fiche.id}
+                proprietaireId={fiche.owner_id}
+                estProprietaire
+              />
+            </div>
+          )}
         </div>
 
         <ApercuMobile slug={fiche.slug} publiee={fiche.is_published} version={versionApercu} />

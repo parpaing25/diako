@@ -10,14 +10,45 @@
    =========================================================================== */
 /* eslint-disable no-restricted-globals */
 
-const VERSION = "dk-v1";
-const SHELL = `${VERSION}-shell`;
-const IMAGES = `${VERSION}-img`;
-const RUNTIME = `${VERSION}-rt`;
-
 const MANIFEST = (self.__WB_MANIFEST || []).map((e) =>
   typeof e === "string" ? e : e.url
 );
+
+/* 🔴 LA VERSION ÉTAIT UNE CONSTANTE — « dk-v1 » — ET C'EST CE QUI BLANCHISSAIT
+      L'ÉCRAN SUR TÉLÉPHONE.
+
+   L'enchaînement, mesuré : le déploiement SUPPRIME les anciens fichiers
+   (« 71 anciens assets supprimés » à chaque envoi). Le cache de coquille, lui,
+   gardait l'`index.html` d'un déploiement précédent, puisque `activate`
+   n'effaçait que les caches dont le nom ne commençait pas par une chaîne qui ne
+   changeait JAMAIS. Or la navigation est en réseau-d'abord AVEC REPLI SUR CE
+   CACHE : au premier `fetch` qui échoue — et en 3G malgache il échoue souvent —
+   le visiteur recevait un `index.html` périmé, qui réclame des fichiers JS que
+   le serveur ne sert plus. Page blanche. Rien ne se charge, et rien ne
+   l'explique : le HTML est bien arrivé, ce sont ses dépendances qui sont mortes.
+   Sur ordinateur le défaut ne se voit pas — le réseau y échoue rarement.
+
+   ⚠ LA VERSION SE DÉDUIT DONC DU BUILD. Les URL du manifeste portent le
+     condensé de Vite : elles changent à chaque déploiement, et cette empreinte
+     avec elles. `activate` efface alors réellement les coquilles périmées, et
+     une coquille servie hors ligne appelle TOUJOURS les fichiers de son propre
+     build. */
+const EMPREINTE = (function () {
+  var h = 5381;
+  var s = MANIFEST.join("|");
+  for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+})();
+
+const VERSION = "dk-" + EMPREINTE;
+const SHELL = `${VERSION}-shell`;
+const RUNTIME = `${VERSION}-rt`;
+
+/* ⚠ LES IMAGES NE SONT PAS VERSIONNÉES, ET C'EST VOULU. Leur nom de fichier est
+   déjà unique et elles ne changent jamais ; les jeter à chaque déploiement
+   ferait retélécharger jusqu'à 400 photos à des gens qui paient leur mégaoctet.
+   C'est le principal gain de données du service worker, on n'y touche pas. */
+const IMAGES = "dk-img";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -35,7 +66,12 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k))
+          keys
+            // ⚠ On garde la coquille et le cache d'exécution DE CE BUILD, plus
+            //   les images (non versionnées). Tout le reste est une coquille
+            //   périmée qui pointe vers des fichiers supprimés du serveur.
+            .filter((k) => k !== SHELL && k !== RUNTIME && k !== IMAGES)
+            .map((k) => caches.delete(k))
         )
       )
       .then(() => self.clients.claim())
@@ -102,8 +138,12 @@ self.addEventListener("fetch", (event) => {
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req).catch(() =>
+        // ⚠ ON NE CHERCHE QUE DANS LA COQUILLE DE CE BUILD. `caches.match()`
+        //   sans nom de cache fouille TOUS les caches : il pouvait donc rendre
+        //   l'`index.html` d'un déploiement mort même après le versionnage.
         caches
-          .match("/index.html")
+          .open(SHELL)
+          .then((c) => c.match("/index.html"))
           .then((hit) => hit || caches.match("/offline.html"))
           .then((hit) => hit || new Response("Hors ligne", { status: 503 }))
       )

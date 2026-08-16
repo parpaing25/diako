@@ -77,7 +77,11 @@ export default defineConfig(({ mode }) => ({
           "assets/index-*.js",
           "assets/react-vendor-*.js",
           "assets/supabase-vendor-*.js",
-          "assets/radix-vendor-*.js",
+          // ⚠ `radix-vendor-*.js` RETIRE : ce morceau n'existe plus depuis que
+          //   les composants shadcn ne sont plus importes. Le build le disait a
+          //   chaque fois (« One of the glob patterns doesn't match any files »)
+          //   et un motif mort dans un manifeste de precache est un mensonge de
+          //   plus a demeler le jour ou l'on cherche pourquoi le cache derape.
           // ⚠ `fonts/*.woff2` RETIRE : la police auto-hebergee a ete supprimee
           //   le 15/08/26 (polices systeme uniquement). On preachargeait 47 Ko
           //   d'un fichier que plus aucune regle CSS ne demande.

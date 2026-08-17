@@ -159,7 +159,43 @@ export type Database = {
           /** ⚠ Le choix de l'AUTEUR, distinct de `status` qui est la moderation. */
           visibilite?: string;
         };
-        Relationships: [];
+        Relationships: [
+          /* 🔴 CES TROIS RELATIONS MANQUAIENT, ET ÇA COÛTAIT UNE FONCTIONNALITÉ.
+                Sans elles, une jointure `places!posts_place_id_fkey(slug)` ne
+                type pas : supabase-js rend un `GenericStringError` et le build
+                casse. Faute de slug, la puce de lieu d'une publication du fil
+                renvoyait vers `/recherche?q=<nom>` — une recherche plein texte
+                qui redemande au serveur de retrouver un lieu qu'on désignait
+                déjà par son identifiant. Un écran d'écart, à chaque clic.
+
+             ⚠ ÉCRIT À LA MAIN, COMME LE RESTE DE CE FICHIER. La régénération
+               complète par la CLI marche, mais elle change `null` en
+               `undefined` sur une vingtaine de types du produit : c'est un
+               chantier à part, pas un geste de veille de lancement. Ces trois
+               lignes-là décrivent des clés étrangères RÉELLES, vérifiées dans
+               `pg_constraint` le 17/08/2026. */
+          {
+            foreignKeyName: "posts_place_id_fkey";
+            columns: ["place_id"];
+            isOneToOne: false;
+            referencedRelation: "places";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "posts_dish_id_fkey";
+            columns: ["dish_id"];
+            isOneToOne: false;
+            referencedRelation: "dishes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "posts_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       reactions: {
         Row: { id: string; post_id: string; user_id: string; type: string } & Horodate;

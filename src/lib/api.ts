@@ -34,15 +34,23 @@ export interface Post {
   body: string | null;
   media: Media[];
   place: string | null;
+  /* ⭐ LE SLUG DU LIEU — c'est lui qui rend la puce du fil VRAIMENT cliquable.
+   *  Le commentaire d'origine disait ici « pas de slug, et c'est assume pour
+   *  l'instant » : les puces retombaient sur `/recherche?q=<nom>`, une
+   *  recherche plein texte qui redemandait au serveur de retrouver par son nom
+   *  un lieu que la publication designait deja par son `place_id`. Un
+   *  aller-retour et un ecran d'ecart a chaque clic.
+   *
+   *  La cause n'etait pas la jointure mais la SOURCE : le fil ne vient pas d'un
+   *  `select` client, il vient de `get_feed` et `feed_filtre`, qui ne rendaient
+   *  pas le slug. Migration 0102 le leur fait rendre.
+   *
+   *  ⚠ NULL RESTE POSSIBLE : une publication dont le lieu a ete fusionne ou
+   *    supprime garde son texte sans ligne en base. L'ecran retombe alors sur
+   *    la recherche, comme avant — jamais sur un lien mort. */
+  place_slug: string | null;
   dish: string | null;
   page_name: string | null;
-  /* ⚠ PAS DE SLUG ICI, ET C'EST ASSUME POUR L'INSTANT. La jointure
-   *  `lieu:places(slug)` ne type pas : `posts` n'a pas ses relations declarees
-   *  dans le types.ts maintenu a la main, et Supabase rend alors un
-   *  GenericStringError. Les tags retombent donc sur `/recherche?q=<nom>` —
-   *  qui RESOUT le nom contre le referentiel et ouvre la bonne fiche. Le geste
-   *  boucle, avec un ecran d'ecart. A reprendre quand les relations seront
-   *  declarees. */
   created_at: string;
   reactions_count: number;
   comments_count: number;
@@ -135,7 +143,7 @@ export async function chargerPost(id: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from("posts")
     .select(
-      "id, kind, body, media, place, dish, page_name, created_at, author_id, reactions_count, comments_count, saves_count, status"
+      "id, kind, body, media, place, place_id, dish, page_name, created_at, author_id, reactions_count, comments_count, saves_count, status"
     )
     .eq("id", id)
     .maybeSingle();
@@ -147,6 +155,19 @@ export async function chargerPost(id: string): Promise<Post | null> {
     .select("id, display_name, avatar_url, verification, account_type")
     .eq("id", data.author_id)
     .maybeSingle();
+
+  /* ⚠ UNE REQUETE DE PLUS, ET SEULEMENT SI LE LIEU EXISTE. Cet ecran est celui
+   *  d'un lien partage : une lecture de plus y coute moins qu'une puce morte,
+   *  et elle ne part pas du tout quand la publication n'a pas de lieu. */
+  let lieuSlug: string | null = null;
+  if (data.place_id) {
+    const { data: lieu } = await supabase
+      .from("places")
+      .select("slug")
+      .eq("id", data.place_id)
+      .maybeSingle();
+    lieuSlug = lieu?.slug ?? null;
+  }
 
   const {
     data: { user },
@@ -169,6 +190,7 @@ export async function chargerPost(id: string): Promise<Post | null> {
     body: data.body,
     media: (data.media as unknown as Media[]) ?? [],
     place: data.place,
+    place_slug: lieuSlug,
     dish: data.dish,
     page_name: data.page_name,
     created_at: data.created_at,
@@ -315,7 +337,7 @@ export async function mesFavoris(): Promise<Post[]> {
   const { data } = await supabase
     .from("posts")
     .select(
-      "id,kind,body,media,place,dish,page_name,created_at,reactions_count,comments_count,saves_count,author_id,profiles!posts_author_id_fkey(id,display_name,avatar_url,verification,account_type)"
+      "id,kind,body,media,place,dish,page_name,created_at,reactions_count,comments_count,saves_count,author_id,places!posts_place_id_fkey(slug),profiles!posts_author_id_fkey(id,display_name,avatar_url,verification,account_type)"
     )
     .in("id", liste)
     .eq("status", "published");
@@ -325,6 +347,10 @@ export async function mesFavoris(): Promise<Post[]> {
     place: string | null; dish: string | null; page_name: string | null;
     created_at: string; reactions_count: number; comments_count: number;
     saves_count: number; author_id: string;
+    /* ⚠ Une jointure PostgREST rend un OBJET quand la relation est « plusieurs
+     *  vers un », mais supabase-js la type parfois en tableau : on accepte les
+     *  deux plutot que de forcer un cast qui masquerait un vrai changement. */
+    places: { slug: string } | { slug: string }[] | null;
     profiles: { id: string; display_name: string | null; avatar_url: string | null; verification: string; account_type: string } | null;
   };
 
@@ -334,6 +360,7 @@ export async function mesFavoris(): Promise<Post[]> {
     body: r.body,
     media: (r.media as Media[]) ?? [],
     place: r.place,
+    place_slug: Array.isArray(r.places) ? (r.places[0]?.slug ?? null) : (r.places?.slug ?? null),
     dish: r.dish,
     page_name: r.page_name,
     created_at: r.created_at,

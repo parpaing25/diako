@@ -128,7 +128,17 @@ create policy photo_propositions_lecture on public.photo_propositions
 --    `traite_par` et `traite_le` dans le corps de la requête. Le dépôt l'écrit
 --    en toutes lettres : « jamais d'identifiant utilisateur venant du corps
 --    d'une requête ». Même famille que `page_claims`, RPC seulement.
-revoke all on public.photo_propositions from public, anon;
+-- 🔴 `authenticated` EST NOMMÉ ICI, ET L'ASSERTION FINALE L'A EXIGÉ. La
+--    première écriture de cette migration révoquait `from public, anon` puis
+--    accordait `select` à `authenticated` — en supposant qu'il n'avait rien
+--    d'autre. Faux : `ALTER DEFAULT PRIVILEGES` lui avait déjà donné insert et
+--    update sur toute table neuve du schéma. Un membre connecté aurait donc pu
+--    insérer directement dans la file EN CHOISISSANT `statut = 'approuvee'`,
+--    `traite_par` et `traite_le` — c'est-à-dire publier une photo sur n'importe
+--    quelle fiche du référentiel sans passer par la modération, en une seule
+--    requête. C'est mot pour mot la leçon de 0083, et elle a resservi.
+--    On révoque TOUT aux trois rôles, puis on rend le seul droit voulu.
+revoke all on public.photo_propositions from public, anon, authenticated;
 grant select on public.photo_propositions to authenticated;
 
 comment on table public.photo_propositions is

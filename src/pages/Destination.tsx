@@ -263,7 +263,13 @@ export default function Destination() {
           <p className="mt-2 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
             La saisonnalité de cette destination n'est pas encore renseignée.
             Vous la connaissez ?{" "}
-            <Link to="/publier" className="font-medium text-primary">
+            <Link
+              /* ⭐ LE LIEU PART AVEC LE LIEN. Sans lui, on arrivait sur un
+                   formulaire vierge et il fallait retrouver dans une liste de
+                   508 la destination qu'on venait de quitter. */
+              to={`/publier?lieu=${encodeURIComponent(f.lieu.slug)}`}
+              className="font-medium text-primary"
+            >
               Racontez-y un voyage
             </Link>{" "}
             — c'est comme ça qu'on la construit.
@@ -442,8 +448,16 @@ export default function Destination() {
           Vous connaissez {f.lieu.name_fr} ? Un recit, un tarif releve, une
           route praticable : c'est ce qui construit la fiche.
         </p>
+        {/* ⭐ C'EST LE BOUTON QUE LE PROPRIETAIRE A POINTE. On arrive ici en
+               lisant la fiche d'un lieu : c'est de CE lieu qu'on va parler. Le
+               slug part donc avec le lien et le champ est deja rempli.
+            ⚠ L'ENJEU N'EST PAS LE CONFORT. Un recit publie sans `place_id`
+              n'est atteignable ni depuis la fiche du lieu, ni par la carte, ni
+              par « pres de moi » — les trois interrogent cette colonne. Le
+              formulaire vierge faisait donc perdre des recits ET empechait la
+              fiche de se remplir. */}
         <Link
-          to="/publier"
+          to={`/publier?lieu=${encodeURIComponent(f.lieu.slug)}`}
           className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-input text-sm font-semibold"
         >
           Publier un recit

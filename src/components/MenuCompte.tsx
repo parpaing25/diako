@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Bookmark, LogOut, Settings, Store, User, UtensilsCrossed } from "lucide-react";
+import { Bookmark, LogOut, Settings, Shield, Store, User, UtensilsCrossed } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
+import { jeSuisAdmin } from "@/lib/admin";
 
 /**
  * LE MENU DE L'AVATAR — comme sur Fonenako.
@@ -47,6 +48,36 @@ export function MenuCompte({ ouvert, onFermer }: { ouvert: boolean; onFermer: ()
     };
   }, [ouvert, onFermer]);
 
+  /**
+   * ⭐ « ADMINISTRATION » N'APPARAIT QUE POUR QUI Y A DROIT.
+   *
+   * ⚠ POURQUOI CE LIEN EXISTE MAINTENANT. La console vivait a `/admin` sans
+   *   qu'aucun lien n'y mene : il fallait connaitre l'adresse et la taper. Le
+   *   proprietaire a signale ne pas la trouver — c'etait exact.
+   *
+   * ⚠ ET POURQUOI IL NE VIOLE PAS LA REGLE DU DEPOT. « Pas d'entree de
+   *   navigation vers un ecran qui ne concerne pas le visiteur » : la reponse
+   *   de `is_admin()` decide, donc l'entree n'existe QUE pour la personne
+   *   qu'elle concerne. Elle est absente pour tous les autres, y compris dans
+   *   le HTML.
+   *
+   * ⚠ CE N'EST PAS UN CONTROLE D'ACCES, et il ne faut pas le lire comme tel :
+   *   cacher un lien ne ferme aucune porte. Le vrai verrou est le
+   *   `if not is_admin()` en premiere ligne de chacune des RPC (0097, 0098),
+   *   cote serveur. Ici on ne fait que ranger.
+   */
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    if (!ouvert) return;
+    let vivant = true;
+    void jeSuisAdmin().then((v) => {
+      if (vivant) setAdmin(v);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, [ouvert]);
+
   if (!ouvert) return null;
 
   const entrees = [
@@ -57,6 +88,7 @@ export function MenuCompte({ ouvert, onFermer }: { ouvert: boolean; onFermer: ()
       ? [{ to: "/pro", label: "Espace pro", icon: Store }]
       : []),
     { to: "/parametres", label: "Paramètres", icon: Settings },
+    ...(admin ? [{ to: "/admin", label: "Administration", icon: Shield }] : []),
   ];
 
   return (

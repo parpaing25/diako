@@ -95,7 +95,8 @@ export default function Profil() {
 
       type L = {
         id: string; kind: string; body: string | null; media: unknown;
-        place: string | null; dish: string | null; page_name?: string | null;
+        place: string | null; place_slug?: string | null;
+        dish: string | null; page_name?: string | null;
         created_at: string; reactions_count: number; comments_count: number;
         saves_count?: number;
       };
@@ -103,6 +104,11 @@ export default function Profil() {
         ((ps ?? []) as unknown as L[]).map((p) => ({
           page_name: null,
           saves_count: 0,
+          /* ⚠ `publications_publiques()` ne rend pas encore le slug du lieu :
+           *  la puce d'une publication vue depuis un profil retombe donc sur la
+           *  recherche, comme avant. C'est le repli prevu, pas un oubli — et il
+           *  vaut mieux que d'inventer un slug a partir du nom. */
+          place_slug: null,
           ...p,
           media: (p.media as Post["media"]) ?? [],
           author: {

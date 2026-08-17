@@ -221,8 +221,20 @@ export function PostCard({
             )}
           </p>
           {post.place && (
+            /* ⭐ LE LIEU MENE A SA FICHE, plus a une recherche plein texte. La
+                 fiche `/lieu/<slug>` porte deja la saisonnalite, les acces, les
+                 adresses autour ET les autres recits du meme endroit : c'est
+                 exactement ce qu'on cherche en touchant le nom d'un lieu sous
+                 un recit. Le detour par `/recherche?q=<nom>` renvoyait une
+                 liste de resultats a trier, pour un lieu deja identifie.
+              ⚠ Repli conserve : sans slug — lieu fusionne ou supprime — on
+                retombe sur la recherche plutot que sur un lien mort. */
             <Link
-              to={`/recherche?q=${encodeURIComponent(post.place)}`}
+              to={
+                post.place_slug
+                  ? `/lieu/${post.place_slug}`
+                  : `/recherche?q=${encodeURIComponent(post.place)}`
+              }
               className="flex items-center gap-0.5 text-xs text-muted-foreground hover:underline"
             >
               <MapPin className="h-3 w-3" aria-hidden="true" />
@@ -415,7 +427,7 @@ export function PostCard({
             encre l'etablissement, corail le plat. */}
         <TagRow
           className="mt-2.5"
-          lieu={post.place ? { nom: post.place } : null}
+          lieu={post.place ? { nom: post.place, slug: post.place_slug } : null}
           etablissement={post.page_name ? { nom: post.page_name } : null}
           plat={post.dish ? { nom: post.dish } : null}
         />

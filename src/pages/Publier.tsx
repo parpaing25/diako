@@ -14,6 +14,7 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useAuth } from "@/contexts/AuthContext";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
+import { supabase } from "@/integrations/supabase/client";
 import { publier, type Media } from "@/lib/api";
 import { ApercuRecit } from "@/components/ApercuRecit";
 import { chargerPlats, type Plat } from "@/lib/etablissements";
@@ -114,6 +115,53 @@ export default function Publier() {
       return () => window.clearTimeout(t);
     }
   }, [intention, user]);
+
+  /**
+   * ⭐ LE LIEU D'OU L'ON VIENT EST DEJA CHOISI — `?lieu=<slug>`.
+   *
+   * ⚠ POURQUOI CE N'EST PAS UN CONFORT. Depuis la fiche d'Ambatomikogno, le
+   *   bouton « Publier un recit » menait a un formulaire VIERGE : il fallait
+   *   retaper le nom d'un lieu qu'on venait de quitter, et le retrouver dans
+   *   une liste de 508. Un recit sur cinq repartait donc sans `place_id` — et
+   *   sans lui, la publication n'est atteignable ni depuis la fiche du lieu,
+   *   ni par la carte, ni par « pres de moi », qui interrogent tous cette
+   *   colonne. La fiche ne se remplit jamais, et la boucle du produit ne se
+   *   ferme pas.
+   *
+   * ⚠ ON RESOUT LE SLUG CONTRE LA BASE, on ne fabrique pas un nom a partir de
+   *   l'URL. Un slug inconnu laisse simplement le champ vide : mieux vaut un
+   *   formulaire a remplir qu'un lieu invente qui partirait sans `place_id`.
+   *
+   * ⚠ ET SEULEMENT SI LE CHAMP EST ENCORE VIDE : ce garde-fou empeche
+   *   d'ecraser un choix deja fait si l'effet rejouait.
+   */
+  const slugPrechoisi = intention.get("lieu");
+  /* ⚠ UN SLUG N'EST RESOLU QU'UNE FOIS. L'ecran se monte deux fois au premier
+     chargement — une fois avant que l'authentification soit tranchee, une fois
+     apres — et sans cette memoire la meme requete partait deux fois. Une `ref`
+     et non un `state` : la changer ne doit pas relancer un rendu. */
+  const slugResolu = useRef<string | null>(null);
+  useEffect(() => {
+    if (!slugPrechoisi || lieu || slugResolu.current === slugPrechoisi) return;
+    slugResolu.current = slugPrechoisi;
+    let vivant = true;
+    void supabase
+      .from("places")
+      .select("id, name_fr, region")
+      .eq("slug", slugPrechoisi)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (vivant && data) {
+          setLieu({ id: data.id, nom: data.name_fr, region: data.region });
+        }
+      });
+    return () => {
+      vivant = false;
+    };
+    // ⚠ `lieu` volontairement hors dependances : le relire ici relancerait
+    //   l'effet a chaque frappe dans le champ.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slugPrechoisi]);
 
   useEffect(() => {
     void chargerPlats(200).then(setPlats).catch(() => undefined);

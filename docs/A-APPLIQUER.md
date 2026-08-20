@@ -58,7 +58,7 @@ pour cette discipline d'assertions :
 | 5. Destinations empilées | ✅ cinq bandes repliées, 1 image au lieu de 23 |
 | 6. Photos des plats | ✅ 33 sur 95 — les 62 autres gardent une case vide, faute de photo sûre |
 | 7. Espace pro | ✅ suggestions à la frappe (anti-doublon) + aperçu public |
-| 8. Circuits modernisés | ⚠️ **0 circuit en base** : l'écran d'attente est correct, il n'y a rien à moderniser tant qu'aucune agence n'en publie |
+| 8. Circuits modernisés | ✅ traité autrement : il n'y a **aucun circuit ni agence** en base, et la pastille « Circuits » de l'accueil promettait le contraire — elle a été retirée, avec Agences, Guides et Bons plans |
 | 9. Photos cliquables + propositions | ✅ visionneuse plein écran + bouton sur destinations et plats |
 | 10. Page admin | ✅ `/admin`, entrée visible pour l'administrateur seul |
 | 11. Événements | ✅ 14 affiches, cartes dépliables, lieu cliquable — et les 28 sans photo disent pourquoi |
@@ -86,9 +86,27 @@ parce que `redeploy.sh` a déjà annoncé « terminé » après un envoi FTP exp
 laissant la production sur le build précédent — invisible, puisque le site
 continuait de fonctionner avec l'ancien.
 
-## Un chantier à part, à ne pas faire la veille d'un lancement
+## ✅ Le chantier reporté est fait
 
-`src/integrations/supabase/types.ts` est écrit **à la main**. La régénération par
-le connecteur fonctionne, mais elle change `null` en `undefined` sur une
-vingtaine de types du produit. Les relations de `posts` et la fonction 0106 y ont
-donc été ajoutées à la main, vérifiées dans `pg_constraint`. À reprendre à froid.
+`src/integrations/supabase/types.ts` est désormais **généré** par le connecteur.
+Les 35 erreurs de compilation qu'entraînait la régénération sont corrigées : le
+générateur déclare les arguments à défaut optionnels et non nullables, là où le
+code passait `null` explicitement. Corrigé en omettant l'argument — après avoir
+vérifié, un par un, que les **53** arguments concernés ont bien `DEFAULT NULL` en
+base. Aucun comportement ne change.
+
+La redéclaration locale du schéma dans `src/lib/admin.ts` a disparu avec, comme
+son auteur l'avait annoncé. Il ne reste **qu'un** resserrement de type dans tout
+le code, et il est documenté : `photo_propositions.cible_type` est contraint à
+quatre valeurs par un `check` que le générateur ne peut pas lire.
+
+**À refaire après toute migration** qui touche une table, une vue ou une
+fonction : connecteur → `generate_typescript_types`, puis `npm run build`.
+
+## Deux constats qui ne sont pas des bugs
+
+- **« Où manger du ravitoto »** — que le code décrit comme la promesse centrale
+  du produit — ne peut rien rendre aujourd'hui : il n'y a que **4 plats sur des
+  cartes de restaurant**, et aucun n'est rattaché au référentiel des plats.
+- **Aucune agence, aucun circuit, aucun guide** n'est publié. Les pastilles qui
+  les annonçaient ont été retirées de l'accueil.

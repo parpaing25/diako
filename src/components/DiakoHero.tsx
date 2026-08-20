@@ -77,11 +77,19 @@ export function DiakoHero({
           const Icon = cat.icon;
           const actif = categorie === cat.key;
           return (
+            /* ⭐ LA PASTILLE OUVRE VRAIMENT SA LISTE. Elle ne faisait que poser
+                  un état local, et l'accueil répondait « le filtrage
+                  fonctionnera dès que les établissements seront référencés » —
+                  alors qu'il y en a 3 254. Chaque catégorie porte désormais sa
+                  destination réelle (`categories.ts`) : /recherche pour un
+                  établissement, /sites pour un lieu à voir.
+               ⚠ « Tout » n'a pas de destination et garde l'ancien
+                 comportement : c'est le fil, on y est déjà. */
             <button
               key={cat.key}
               role="tab"
               aria-selected={actif}
-              onClick={() => onCategorie(cat.key)}
+              onClick={() => (cat.vers ? navigate(cat.vers) : onCategorie(cat.key))}
               className={`flex shrink-0 flex-col items-center gap-1.5 transition-all duration-200 ${
                 actif ? "scale-105" : "opacity-70 hover:opacity-100"
               }`}

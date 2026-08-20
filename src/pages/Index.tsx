@@ -49,9 +49,14 @@ export default function Index() {
           <div className="mb-4 rounded-xl border border-border bg-card p-4">
             <p className="text-sm font-semibold">{info.label}</p>
             <p className="mt-1 text-sm text-muted-foreground">{info.quoi}.</p>
+            {/* 🔴 CE MESSAGE DISAIT LE CONTRAIRE DE LA VÉRITÉ. Il annonçait
+                   « le filtrage par catégorie fonctionnera dès que les
+                   établissements seront référencés » — écrit quand l'annuaire
+                   était vide, jamais relu depuis l'import de 3 254 fiches. Les
+                   pastilles mènent maintenant à une vraie liste, et cet encart
+                   ne sert plus que de repli si l'on revient ici avec un état
+                   de catégorie posé. */}
             <p className="mt-2 text-sm text-muted-foreground">
-              Le filtrage par catégorie fonctionnera dès que les établissements
-              seront référencés.{" "}
               <button
                 onClick={() => setCat("all")}
                 className="font-medium text-primary underline underline-offset-4"

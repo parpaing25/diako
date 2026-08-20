@@ -347,6 +347,13 @@ export interface Evenement {
   description: string | null;
   summary: string | null;
   poster_url: string | null;
+  /* ⚠ L'ATTRIBUTION VOYAGE AVEC L'AFFICHE (migration 0104). Les 14 affiches
+   *  viennent de Wikimedia Commons, en CC BY, CC BY-SA, GFDL ou domaine
+   *  public : les deux premières EXIGENT de nommer l'auteur. Sans ces champs à
+   *  l'écran, la photo n'est pas gratuite, elle est en infraction. */
+  poster_credit: string | null;
+  poster_licence: string | null;
+  poster_source: string | null;
   price_ar: number | null;
   price_unit: string | null;
   organizer: string | null;
@@ -357,7 +364,7 @@ export async function chargerEvenements(limite = 24): Promise<Evenement[]> {
   const { data, error } = await supabase
     .from("events")
     .select(
-      "id, slug, title, kind, starts_on, ends_on, yearly, periode, mois, source, lieu_libre, description, summary, poster_url, price_ar, price_unit, organizer, place:places(slug, name_fr, region)"
+      "id, slug, title, kind, starts_on, ends_on, yearly, periode, mois, source, lieu_libre, description, summary, poster_url, poster_credit, poster_licence, poster_source, price_ar, price_unit, organizer, place:places(slug, name_fr, region)"
     )
     .eq("is_published", true)
     // ⚠ ON NE TRIE PLUS SUR `starts_on` : il est nul partout, donc le tri

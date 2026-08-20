@@ -6,6 +6,7 @@ import { useReveal } from "@/hooks/useReveal";
 import { EmptyState, EtatErreur } from "@/components/Etats";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { Prix } from "@/components/Prix";
+import { cn } from "@/lib/utils";
 import { chargerEvenements, type Evenement } from "@/lib/decouverte";
 
 /**
@@ -85,6 +86,27 @@ export default function Evenements() {
   });
 
   const [evts, setEvts] = useState<Evenement[]>([]);
+  /**
+   * ⭐ LES CARTES S'OUVRENT SUR PLACE, il n'y a pas de page par événement.
+   *
+   * 🔴 ET C'EST UN CHOIX MESURÉ, PAS UN RACCOURCI. `description` est nul sur
+   *    les 42 lignes : seule `summary` est renseignée. Une route
+   *    `/evenement/<slug>` afficherait donc un titre, une photo et le MÊME
+   *    résumé que la carte — un écran de plus pour rien, et un aller-retour
+   *    réseau sur une 3G. Le jour où les descriptions longues existeront, la
+   *    page se justifiera ; aujourd'hui elle serait creuse.
+   *
+   * ⚠ On mémorise les identifiants dépliés plutôt qu'un seul : refermer une
+   *   carte pour en ouvrir une autre ferait sauter la grille sous le doigt.
+   */
+  const [depliees, setDepliees] = useState<Set<string>>(new Set());
+  const basculer = (id: string) =>
+    setDepliees((v) => {
+      const n = new Set(v);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
   useReveal(evts);
@@ -146,11 +168,45 @@ export default function Evenements() {
           {evts.map((e) => (
             <li key={e.id}>
               <article className="dk-reveal dk-carte overflow-hidden rounded-2xl border border-border bg-card">
-                {e.poster_url && (
-                  <div className="dk-zoom aspect-[16/9] bg-secondary">
-                    <ImageProgressive src={e.poster_url} alt={e.title} ajustement="cover"
-              largeurAffichee={"(min-width:1280px) 30vw, (min-width:640px) 45vw, 92vw"}
-            />
+                {/* ⭐ L'AFFICHE, ET SON CRÉDIT PAR-DESSUS. Les 14 affiches
+                       viennent de Wikimedia Commons : CC BY et CC BY-SA
+                       EXIGENT de nommer l'auteur. Un bandeau discret sur
+                       l'image tient cette obligation là où la photo se voit,
+                       plutôt que dans une mention légale que personne n'ouvre. */}
+                {e.poster_url ? (
+                  <div className="dk-zoom relative aspect-[16/9] bg-secondary">
+                    <ImageProgressive
+                      src={e.poster_url}
+                      alt={e.title}
+                      ajustement="cover"
+                      largeurAffichee={"(min-width:1280px) 30vw, (min-width:640px) 45vw, 92vw"}
+                    />
+                    {e.poster_credit && (
+                      <span className="pointer-events-none absolute bottom-1 right-1 max-w-[92%] truncate rounded bg-black/55 px-1.5 py-0.5 text-[10px] text-white/85 backdrop-blur-sm">
+                        {e.poster_credit}
+                        {e.poster_licence ? ` · ${e.poster_licence}` : ""}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  /* 🔴 LES 28 SANS AFFICHE NE SONT PAS UN OUBLI, ET LA CARTE LE
+                        DIT AUTREMENT QU'EN RESTANT NUE. Vingt sont des fêtes
+                        génériques — Noël, Pâques, la Toussaint : une photo prise
+                        ailleurs dans le monde n'apprendrait rien et laisserait
+                        croire à une image malgache. Six ont été refusées à l'œil
+                        après que les filtres les eurent acceptées (un cirque de
+                        grès pour une cérémonie royale, un pigeon du zoo de
+                        Zurich pour des oiseaux endémiques sauvages).
+                     ⚠ Sans ce bandeau, une carte de texte au milieu de cartes
+                       illustrées se lit comme un chargement raté. Le mois en
+                       gros donne l'information principale, et la grille garde
+                       son rythme. */
+                  <div className="grid aspect-[16/9] place-items-center bg-secondary/60">
+                    <span className="dk-etiquette text-muted-foreground">
+                      {(e.mois ?? []).length
+                        ? MOIS[((e.mois ?? [])[0] ?? 1) - 1]
+                        : "toute l'année"}
+                    </span>
                   </div>
                 )}
                 <div className="p-4">
@@ -172,11 +228,42 @@ export default function Evenements() {
                   {(e.place || e.lieu_libre) && (
                     <p className="dk-secondaire mt-0.5">{e.place?.name_fr ?? e.lieu_libre}</p>
                   )}
-                  {(e.summary || e.description) && (
-                    <p className="dk-corps mt-2 line-clamp-3 text-muted-foreground">
-                      {e.summary ?? e.description}
-                    </p>
-                  )}
+                  {(() => {
+                    const texte = e.summary ?? e.description;
+                    if (!texte) return null;
+                    const ouverte = depliees.has(e.id);
+                    /* ⚠ LE SEUIL EST UNE APPROXIMATION ASSUMÉE. Savoir si un
+                       texte est VRAIMENT tronqué demande de mesurer le rendu
+                       — donc un effet de mise en page à chaque carte, à chaque
+                       redimensionnement. 170 caractères correspondent à peu
+                       près à trois lignes dans cette colonne : au pire on
+                       propose « Lire la suite » sur un texte qui tenait déjà,
+                       ce qui ne coûte qu'un clic sans effet. L'inverse — cacher
+                       la fin d'un texte sans le dire — serait un vrai défaut. */
+                    const long = texte.length > 170;
+                    return (
+                      <>
+                        <p
+                          className={cn(
+                            "dk-corps mt-2 text-muted-foreground",
+                            !ouverte && "line-clamp-3"
+                          )}
+                        >
+                          {texte}
+                        </p>
+                        {long && (
+                          <button
+                            type="button"
+                            onClick={() => basculer(e.id)}
+                            aria-expanded={ouverte}
+                            className="mt-1 min-h-9 text-sm font-semibold text-primary"
+                          >
+                            {ouverte ? "Réduire" : "Lire la suite"}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                   {e.price_ar != null && (
                     <Prix montant={e.price_ar} base={e.price_unit} taille="compacte" className="mt-3" />
                   )}

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageProgressive } from "@/components/ImageProgressive";
+import { Visionneuse } from "@/components/Visionneuse";
 import { cn } from "@/lib/utils";
 import type { Media } from "@/lib/api";
 
@@ -34,14 +35,28 @@ export function Carrousel({
    *   l'écran. Un appelant qui affiche plus petit DOIT le dire.
    */
   largeurAffichee = "100vw",
+  /**
+   * ⭐ CLIQUER OUVRE LA PHOTO EN GRAND. Vrai par défaut : sur un site de
+   *   voyage, toucher une image POUR LA VOIR est le geste le plus attendu, et
+   *   il ne faisait rien du tout jusqu'ici.
+   * ⚠ Un appelant peut le refuser — une vignette de 96 px dans une liste n'a
+   *   rien de plus à montrer en grand, et un clic qui ouvre un plein écran par
+   *   surprise se lit comme un bug.
+   */
+  agrandissable = true,
+  /** Le crédit de la photo, affiché en bas de la visionneuse. */
+  credit = null,
 }: {
   images: Media[];
   alt?: string;
   prioritaire?: boolean;
   ajustement?: "couvrir" | "contenir";
   largeurAffichee?: string;
+  agrandissable?: boolean;
+  credit?: string | null;
 }) {
   const [index, setIndex] = useState(0);
+  const [ouverte, setOuverte] = useState<number | null>(null);
   const piste = useRef<HTMLDivElement>(null);
 
   if (!images?.length) return null;
@@ -70,7 +85,31 @@ export function Carrousel({
         className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {images.map((m, i) => (
+          /* ⚠ UN VRAI `<button>`, PAS UN `<div onClick>`. Il apporte le focus
+             clavier, la touche Entrée et le rôle annoncé par un lecteur
+             d'écran — trois choses qu'un div ne donne jamais, et qu'on
+             réécrirait mal à la main.
+             ⚠ `type="button"` : ce carrousel peut vivre dans un formulaire
+             (l'aperçu de /publier), où un bouton sans type SOUMET la page. */
           <div key={m.url + i} className="h-full w-full shrink-0 snap-center">
+            {agrandissable ? (
+              <button
+                type="button"
+                onClick={() => setOuverte(i)}
+                aria-label="Voir la photo en grand"
+                className="block h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <ImageProgressive
+                  src={m.url}
+                  alt={i === 0 ? alt : ""}
+                  w={m.w}
+                  h={m.h}
+                  prioritaire={prioritaire && i === 0}
+                  ajustement={ajustement === "couvrir" ? "cover" : "contain"}
+                  largeurAffichee={largeurAffichee}
+                />
+              </button>
+            ) : (
             <ImageProgressive
               src={m.url}
               alt={i === 0 ? alt : ""}
@@ -80,9 +119,20 @@ export function Carrousel({
               ajustement={ajustement === "couvrir" ? "cover" : "contain"}
               largeurAffichee={largeurAffichee}
             />
+            )}
           </div>
         ))}
       </div>
+
+      {ouverte !== null && (
+        <Visionneuse
+          images={images}
+          depart={ouverte}
+          alt={alt}
+          credit={credit}
+          onFermer={() => setOuverte(null)}
+        />
+      )}
 
       {!unique && (
         <>

@@ -9,6 +9,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EmptyState, EtatErreur, Squelettes } from "@/components/Etats";
 import { ImageProgressive } from "@/components/ImageProgressive";
+import { ProposerPhoto } from "@/components/ProposerPhoto";
 import { Fourchette, Prix } from "@/components/Prix";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,9 @@ const PIMENT = ["", "peu épicé", "épicé", "très épicé"];
 
 interface Fiche {
   plat: {
+    /* ⚠ `fiche_plat` rend deja l'id ; il n'etait pas declare. C'est lui que
+       `dk_proposer_photo()` vise — un slug ne designe pas une ligne. */
+    id: string;
     slug: string; name_fr: string; name_mg: string | null; family: string | null;
     description: string | null; ingredients: string[] | null; photo_url: string | null;
     has_pork: boolean; has_beef: boolean; has_seafood: boolean; has_peanut: boolean;
@@ -362,6 +366,17 @@ export default function Plat() {
             Ouvrir mon carnet
           </Link>
         </div>
+
+        {/* ⭐ 62 plats sur 95 n'ont toujours pas de photo. Wikimedia Commons a
+             donne ce qu'il avait — 33 — et 17 propositions ont ete refusees a
+             l'oeil parce qu'elles montraient autre chose. Le reste ne viendra
+             que de gens qui ont l'assiette devant eux. */}
+        <ProposerPhoto
+          className="rounded-2xl border border-border bg-card p-4"
+          cibleType="plat"
+          cible={p.id}
+          nom={p.name_fr}
+        />
 
         <Link
           to="/plats"

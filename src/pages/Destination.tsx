@@ -7,6 +7,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EtatErreur, Squelettes } from "@/components/Etats";
 import { ariary, recitsDuLieu } from "@/lib/etablissements";
+import { ProposerPhoto } from "@/components/ProposerPhoto";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { jeuDeTailles } from "@/lib/imageThumb";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,10 @@ const ICONE_MODE: Record<string, typeof Bus> = {
 
 interface Fiche {
   lieu: {
+    /* ⚠ L'UUID, et pas seulement le slug : `dk_proposer_photo()` vise la ligne
+       par son identifiant. Il arrive deja de `fiche_destination`, qui rend
+       `to_jsonb(p) - 'norm'` — il n'etait simplement pas declare ici. */
+    id: string;
     slug: string; name_fr: string; name_mg: string | null; kind: string;
     region: string | null; summary: string | null; why_go: string[] | null;
     lat: number | null; lng: number | null;
@@ -462,6 +467,17 @@ export default function Destination() {
         >
           Publier un recit
         </Link>
+
+        {/* ⭐ LA PHOTO SE DEMANDE ICI, A COTE DU RECIT. 419 destinations sur
+             508 n'ont aucune couverture et l'archive personnelle est epuisee :
+             les gens qui y sont alles sont la seule source qui reste. La file
+             de moderation existe depuis 0098 ; il lui manquait cette porte. */}
+        <ProposerPhoto
+          className="mt-4 border-t border-border pt-4"
+          cibleType="destination"
+          cible={f.lieu.id}
+          nom={f.lieu.name_fr}
+        />
       </div>
       </aside>
     </div>

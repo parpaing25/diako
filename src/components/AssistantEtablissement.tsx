@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Lock, Search } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
 import {
   CATEGORIES,
   chargerDestinations,
+  chercherEtablissementsParNom,
   creerEtablissement,
   majEtablissement,
   type Categorie,
   type Lieu,
+  type SuggestionEtab,
 } from "@/lib/etablissements";
 import { afficherNumero, estMobileMalgache } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
@@ -71,7 +73,7 @@ const ETAPES = [
   { titre: "Comment vous joindre", aide: "C'est ce que les voyageurs cherchent en premier." },
   { titre: "En quelques mots", aide: "Ce qui donne envie, et ce qu'il faut savoir." },
   { titre: "Une photo", aide: "Une seule suffit pour commencer." },
-  { titre: "C'est prêt", aide: "Vérifiez, puis créez votre fiche." },
+  { titre: "C'est prêt", aide: "Voici ce que verront les voyageurs." },
 ];
 
 function lireBrouillon(): Brouillon {
@@ -93,9 +95,54 @@ export function AssistantEtablissement({ onAnnuler }: { onAnnuler?: () => void }
   const [envoi, setEnvoi] = useState(false);
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
 
+  /**
+   * ⭐ LES ÉTABLISSEMENTS QUI PORTENT DÉJÀ CE NOM — le défaut le plus coûteux
+   *   que cet assistant pouvait produire.
+   *
+   * 🔴 L'annuaire porte 3 254 fiches importées d'OpenStreetMap et de
+   *    Wikivoyage. Un gérant tape le nom de SON hôtel : il a de bonnes chances
+   *    qu'il y soit déjà, et il créait jusqu'ici une SECONDE fiche. À partir de
+   *    là, les avis se posent sur l'une, les tarifs sur l'autre, les deux
+   *    remontent dans la recherche — et plus personne ne peut les recoller sans
+   *    une migration écrite à la main (0060, puis 0087).
+   *
+   * ⚠ LA RECHERCHE EST DIFFÉRÉE DE 350 ms. Sans ce délai, une frappe de dix
+   *   lettres part en dix requêtes ; sur une 3G elles arrivent dans le
+   *   désordre, et la liste affiche le résultat de « Hôt » après celui de
+   *   « Hôtel Bao ». Le compteur de génération règle le second problème : une
+   *   réponse en retard ne peut plus écraser une réponse plus récente.
+   */
+  const [suggestions, setSuggestions] = useState<SuggestionEtab[]>([]);
+  const [ecarte, setEcarte] = useState(false);
+
   useEffect(() => {
     void chargerDestinations(200).then(setDestinations).catch(() => undefined);
   }, []);
+
+  const nomTape = b.nom;
+  useEffect(() => {
+    if (nomTape.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    let vivant = true;
+    const t = window.setTimeout(() => {
+      void chercherEtablissementsParNom(nomTape, 5)
+        .then((r) => {
+          if (vivant) setSuggestions(r);
+        })
+        .catch(() => {
+          // ⚠ Un échec ne bloque PAS la création : la suggestion est une aide,
+          //   pas un passage obligé. Rester muet vaut mieux qu'une erreur qui
+          //   ferait croire que le nom est refusé.
+          if (vivant) setSuggestions([]);
+        });
+    }, 350);
+    return () => {
+      vivant = false;
+      window.clearTimeout(t);
+    };
+  }, [nomTape]);
 
   // Écriture du brouillon à chaque changement : c'est ce qui permet de fermer
   // l'onglet sans rien perdre.
@@ -247,6 +294,67 @@ export function AssistantEtablissement({ onAnnuler }: { onAnnuler?: () => void }
                 autoFocus
               />
             </label>
+
+            {/* ⭐ « CETTE FICHE EXISTE PEUT-ÊTRE DÉJÀ ». On ne bloque pas la
+                   création — le nom d'un hôtel n'est pas unique, et deux
+                   « Chez Mariette » peuvent exister à 600 km l'un de l'autre.
+                   On MONTRE, et on laisse trancher : c'est la personne qui sait
+                   si c'est son établissement.
+                ⚠ Le lieu est affiché à côté de chaque nom, parce que c'est LUI
+                  qui permet de reconnaître le bon — pas le nom, qui est
+                  justement celui qu'on vient de taper. */}
+            {!ecarte && suggestions.length > 0 && (
+              <div className="rounded-xl border border-primary/30 bg-primary/[0.04] p-3">
+                <p className="flex items-center gap-1.5 text-sm font-semibold">
+                  <Search className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  Ces fiches existent déjà
+                </p>
+                <p className="dk-secondaire mt-0.5 text-muted-foreground">
+                  Si l'une est la vôtre, revendiquez-la plutôt que d'en créer une
+                  seconde : vous récupérez ses avis et sa place dans la recherche.
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {suggestions.map((x) => (
+                    <li
+                      key={x.slug}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-background p-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">{x.nom}</span>
+                        <span className="dk-secondaire block truncate text-muted-foreground">
+                          {[x.lieu_nom, x.repere].filter(Boolean).join(" · ") || "lieu non précisé"}
+                        </span>
+                      </span>
+                      {x.deja_revendique ? (
+                        /* ⚠ ON DIT « DÉJÀ GÉRÉE », PAS PAR QUI. Nommer le
+                           gérant permettrait de dresser la liste des membres
+                           qui tiennent un établissement en tapant des noms au
+                           hasard — l'énumération que 0073 a fermée. */
+                        <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                          <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                          déjà gérée
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/p/${x.slug}`)}
+                          className="shrink-0 rounded-full border border-input px-3 py-1.5 text-xs font-semibold"
+                        >
+                          C'est la mienne
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => setEcarte(true)}
+                  className="mt-2 text-sm font-medium text-muted-foreground underline underline-offset-4"
+                >
+                  Aucune — je crée une nouvelle fiche
+                </button>
+              </div>
+            )}
             <label className="block">
               <span className="text-sm font-medium">Où c'est</span>
               <select
@@ -341,6 +449,67 @@ export function AssistantEtablissement({ onAnnuler }: { onAnnuler?: () => void }
                 autoFocus
               />
             </label>
+
+            {/* ⭐ « CETTE FICHE EXISTE PEUT-ÊTRE DÉJÀ ». On ne bloque pas la
+                   création — le nom d'un hôtel n'est pas unique, et deux
+                   « Chez Mariette » peuvent exister à 600 km l'un de l'autre.
+                   On MONTRE, et on laisse trancher : c'est la personne qui sait
+                   si c'est son établissement.
+                ⚠ Le lieu est affiché à côté de chaque nom, parce que c'est LUI
+                  qui permet de reconnaître le bon — pas le nom, qui est
+                  justement celui qu'on vient de taper. */}
+            {!ecarte && suggestions.length > 0 && (
+              <div className="rounded-xl border border-primary/30 bg-primary/[0.04] p-3">
+                <p className="flex items-center gap-1.5 text-sm font-semibold">
+                  <Search className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  Ces fiches existent déjà
+                </p>
+                <p className="dk-secondaire mt-0.5 text-muted-foreground">
+                  Si l'une est la vôtre, revendiquez-la plutôt que d'en créer une
+                  seconde : vous récupérez ses avis et sa place dans la recherche.
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {suggestions.map((x) => (
+                    <li
+                      key={x.slug}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-background p-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">{x.nom}</span>
+                        <span className="dk-secondaire block truncate text-muted-foreground">
+                          {[x.lieu_nom, x.repere].filter(Boolean).join(" · ") || "lieu non précisé"}
+                        </span>
+                      </span>
+                      {x.deja_revendique ? (
+                        /* ⚠ ON DIT « DÉJÀ GÉRÉE », PAS PAR QUI. Nommer le
+                           gérant permettrait de dresser la liste des membres
+                           qui tiennent un établissement en tapant des noms au
+                           hasard — l'énumération que 0073 a fermée. */
+                        <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                          <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                          déjà gérée
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/p/${x.slug}`)}
+                          className="shrink-0 rounded-full border border-input px-3 py-1.5 text-xs font-semibold"
+                        >
+                          C'est la mienne
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => setEcarte(true)}
+                  className="mt-2 text-sm font-medium text-muted-foreground underline underline-offset-4"
+                >
+                  Aucune — je crée une nouvelle fiche
+                </button>
+              </div>
+            )}
             <label className="block">
               <span className="text-sm font-medium">Présentation</span>
               <textarea
@@ -378,23 +547,93 @@ export function AssistantEtablissement({ onAnnuler }: { onAnnuler?: () => void }
         )}
 
         {etape === 5 && (
-          <dl className="divide-y divide-border rounded-xl border border-border text-sm">
-            {[
-              ["Activité", b.categories.map((c) => CATEGORIES.find((x) => x.code === c)?.label).join(" · ")],
-              ["Nom", b.nom],
-              ["Destination", destinations.find((d) => d.id === b.place_id)?.name_fr ?? "—"],
-              ["Repère", b.landmark || "—"],
-              ["Téléphone", b.phone ? afficherNumero(b.phone) : "—"],
-              ["WhatsApp", b.whatsapp ? afficherNumero(b.whatsapp) : "—"],
-              ["Résumé", b.short_desc || "—"],
-              ["Photo", b.cover_url ? "ajoutée" : "—"],
-            ].map(([cle, valeur]) => (
-              <div key={cle} className="flex gap-3 px-3 py-2">
-                <dt className="w-28 shrink-0 text-muted-foreground">{cle}</dt>
-                <dd className="min-w-0 flex-1 break-words">{valeur || "—"}</dd>
+          <>
+            {/* ⭐ L'APERÇU PUBLIC — demandé en clair : « un preview public en fin
+                   de process ». L'écran montrait jusqu'ici un tableau
+                   « clé / valeur », c'est-à-dire le FORMULAIRE relu à
+                   l'envers : on y vérifiait qu'on avait bien rempli les cases,
+                   pas ce qu'un voyageur allait voir. Or c'est la seule question
+                   qui compte au moment d'appuyer sur « Créer ».
+
+                ⚠ CE N'EST PAS LA VRAIE PAGE, ET L'ÉCRAN LE DIT. Recopier
+                  `PagePro` ici la ferait diverger au premier changement, et un
+                  aperçu qui ment est pire que pas d'aperçu. On montre l'EN-TÊTE
+                  — photo, nom, activité, lieu, repère, contact, résumé —, c'est
+                  ce qui se voit en premier et ce que l'assistant renseigne. */}
+            <p className="dk-etiquette text-muted-foreground">Ce que verront les voyageurs</p>
+
+            <article className="overflow-hidden rounded-2xl border border-border bg-card">
+              {b.cover_url ? (
+                <div className="aspect-[16/9] bg-secondary">
+                  <img src={b.cover_url} alt="" className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                /* ⚠ On ne cache pas l'absence de photo : c'est le manque le plus
+                   visible sur une fiche, et le dire ICI est le seul moment où
+                   la personne peut encore y remédier en un clic. */
+                <div className="grid aspect-[16/9] place-items-center bg-secondary/60 px-4 text-center">
+                  <span className="dk-secondaire text-muted-foreground">
+                    Sans photo, votre fiche s'affichera comme ce rectangle gris.
+                  </span>
+                </div>
+              )}
+              <div className="p-4">
+                <p className="dk-etiquette">
+                  {b.categories
+                    .map((c) => CATEGORIES.find((x) => x.code === c)?.label)
+                    .filter(Boolean)
+                    .join(" · ") || "Activité non précisée"}
+                </p>
+                <h3 className="mt-1 text-[17px] font-bold leading-tight">
+                  {b.nom.trim() || "Nom de l'établissement"}
+                </h3>
+                {(destinations.find((d) => d.id === b.place_id)?.name_fr || b.landmark) && (
+                  <p className="dk-secondaire mt-0.5 text-muted-foreground">
+                    {[destinations.find((d) => d.id === b.place_id)?.name_fr, b.landmark]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+                {b.short_desc && (
+                  <p className="dk-corps mt-2 text-muted-foreground">{b.short_desc}</p>
+                )}
+                {(b.phone || b.whatsapp) && (
+                  <p className="mt-3 flex flex-wrap gap-2">
+                    {b.phone && (
+                      <span className="rounded-full border border-input px-3 py-1 text-xs font-semibold">
+                        Appeler {afficherNumero(b.phone)}
+                      </span>
+                    )}
+                    {b.whatsapp && (
+                      <span className="rounded-full border border-input px-3 py-1 text-xs font-semibold">
+                        WhatsApp {afficherNumero(b.whatsapp)}
+                      </span>
+                    )}
+                  </p>
+                )}
               </div>
-            ))}
-          </dl>
+            </article>
+
+            {/* ⚠ CE QUI MANQUE, NOMMÉ. Une fiche incomplète n'est pas refusée —
+                seuls le nom, l'activité et le lieu sont exigés — mais elle
+                remonte moins bien, et personne ne le devine. On le dit une fois,
+                au moment où c'est encore le sujet. */}
+            {(() => {
+              const manques = [
+                !b.cover_url && "une photo",
+                !b.phone && !b.whatsapp && "un numéro",
+                !b.short_desc && "quelques mots de présentation",
+                !b.landmark && "un repère",
+              ].filter(Boolean) as string[];
+              if (!manques.length) return null;
+              return (
+                <p className="dk-secondaire rounded-xl border border-dashed border-border p-3 text-muted-foreground">
+                  Il manque {manques.join(", ")}. Vous pourrez l'ajouter après —
+                  mais une fiche complète remonte plus haut dans la recherche.
+                </p>
+              );
+            })()}
+          </>
         )}
       </div>
 

@@ -1406,3 +1406,42 @@ export async function recitsDuLieu(
     reactions_count: r.reactions_count,
   }));
 }
+
+/* ── Reconnaître un établissement pendant qu'on tape son nom ─────────────── */
+
+export interface SuggestionEtab {
+  slug: string;
+  nom: string;
+  sous_categorie: string | null;
+  categories: string[] | null;
+  repere: string | null;
+  place_id: string | null;
+  lieu_nom: string | null;
+  deja_revendique: boolean;
+}
+
+/**
+ * 🔴 CE QUE ÇA ÉVITE : LE DOUBLON QU'ON NE PEUT PLUS DÉFAIRE. L'annuaire porte
+ *    3 254 établissements importés d'OpenStreetMap et de Wikivoyage. Un gérant
+ *    qui tape le nom de son hôtel dans l'assistant a de bonnes chances qu'il y
+ *    soit déjà — et créait jusqu'ici une SECONDE fiche. Les avis se posent
+ *    alors sur l'une, les tarifs sur l'autre, et les deux remontent dans la
+ *    recherche.
+ *
+ * ⚠ NE REND JAMAIS `owner_id` (migration 0106), seulement un booléen : rendre
+ *   l'identifiant permettrait de dresser, en tapant des noms au hasard, la
+ *   liste des membres qui tiennent un établissement.
+ */
+export async function chercherEtablissementsParNom(
+  terme: string,
+  limite = 6
+): Promise<SuggestionEtab[]> {
+  // ⚠ La garde est AUSSI côté serveur ; ici on évite juste l'aller-retour.
+  if (terme.trim().length < 3) return [];
+  const { data, error } = await supabase.rpc("chercher_etablissements_par_nom", {
+    p_terme: terme,
+    p_limite: limite,
+  });
+  if (error) throw error;
+  return (data as unknown as SuggestionEtab[]) ?? [];
+}

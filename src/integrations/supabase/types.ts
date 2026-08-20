@@ -1169,6 +1169,23 @@ export type Database = {
       ouvrir_conversation: { Args: { p_autre: string }; Returns: string };
 
       /* ── Référentiels et recherche (0004-0008) ─────────────────────────── */
+      /* ⚠ AJOUTÉE À LA MAIN, comme le reste de ce fichier. Migration 0106.
+           Ne rend PAS `owner_id`, seulement `deja_revendique` : rendre
+           l'identifiant du gérant permettrait de dresser la liste des membres
+           qui tiennent un établissement en tapant des noms au hasard. */
+      chercher_etablissements_par_nom: {
+        Args: { p_terme: string; p_limite?: number };
+        Returns: {
+          slug: string;
+          nom: string;
+          sous_categorie: string | null;
+          categories: string[] | null;
+          repere: string | null;
+          place_id: string | null;
+          lieu_nom: string | null;
+          deja_revendique: boolean;
+        }[];
+      };
       resoudre_lieu: {
         Args: { p_terme: string; p_limite?: number };
         Returns: {

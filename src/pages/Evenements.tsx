@@ -225,9 +225,25 @@ export default function Evenements() {
                     ) : null;
                   })()}
                   <h2 className="mt-1 text-[17px] font-bold leading-tight">{e.title}</h2>
-                  {(e.place || e.lieu_libre) && (
-                    <p className="dk-secondaire mt-0.5">{e.place?.name_fr ?? e.lieu_libre}</p>
-                  )}
+                  {/* ⭐ LE LIEU MENE A SA FICHE, quand on sait laquelle.
+                         Migration 0111 : 18 événements sur 42 sont désormais
+                         rattachés à une destination réelle.
+                      ⚠ ON AFFICHE `lieu_libre`, PAS LE NOM DE LA DESTINATION.
+                        Le texte libre porte la nuance que le nom seul perd :
+                        « Toamasina et côte est », « Sainte-Marie et baie
+                        d'Antongil ». Remplacer par « Toamasina » gagnerait un
+                        lien et perdrait la moitié de l'information. */}
+                  {(e.place || e.lieu_libre) &&
+                    (e.place ? (
+                      <Link
+                        to={`/lieu/${e.place.slug}`}
+                        className="dk-secondaire mt-0.5 block hover:underline"
+                      >
+                        {e.lieu_libre ?? e.place.name_fr}
+                      </Link>
+                    ) : (
+                      <p className="dk-secondaire mt-0.5">{e.lieu_libre}</p>
+                    ))}
                   {(() => {
                     const texte = e.summary ?? e.description;
                     if (!texte) return null;

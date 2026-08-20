@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Bus, Compass, MapPin, Plane, Ship, Utensils } from "lucide-react";
+import { ArrowLeft, Bus, Compass, MapPin, Plane, RefreshCw, Ship, Utensils } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRetour } from "@/hooks/useRetour";
 import { useSEO } from "@/hooks/useSEO";
@@ -61,6 +61,15 @@ interface Fiche {
     cover_url: string | null; cover_credit: string | null;
   };
   saisons: { mois: number; note: keyof typeof NOTE | null; raison: string | null }[];
+  /* ⭐ CE QUI SE PASSE ICI (migration 0112). Seules 5 destinations sur 508 ont
+     leur saisonnalite saisie ; les evenements en couvrent 11 de plus, avec une
+     matiere differente : pas « quel mois est agreable », mais « ce qui arrive
+     ce mois-la ». Sur une fiche presque vide, c'est le premier contenu reel. */
+  evenements: {
+    slug: string; titre: string; periode: string | null; mois: number[] | null;
+    annuel: boolean; resume: string | null; affiche: string | null;
+    credit: string | null; lieu_libre: string | null; source: string | null;
+  }[];
   acces: {
     depuis: string; mode: string; km: number | null; heures: number | null;
     etat_route: string | null; toute_annee: boolean | null; depart: string | null;
@@ -233,6 +242,65 @@ export default function Destination() {
             </span>
           ))}
       </div>
+
+      {/* ── Ce qui se passe ici ──────────────────────────────────────── */}
+      {/* ⭐ PLACE AVANT LA SAISONNALITE, ET C'EST VOULU. Cinq destinations sur
+             508 ont un calendrier mois par mois ; celles qui portent des
+             evenements en ont souvent MOINS, et c'est alors leur seule matiere
+             concrete. Sur la fiche de Sainte-Marie, « les baleines a bosse
+             remontent de juin a octobre » vaut plus que douze cases grises.
+          ⚠ Le credit de l'affiche est affiche : ces images viennent de Commons,
+            en CC BY ou CC BY-SA, qui exigent de nommer l'auteur. */}
+      {f.evenements.length > 0 && (
+        <section className="dk-reveal mt-6">
+          <h2 className="dk-etiquette">Ce qui s'y passe</h2>
+          <ul className="mt-2 space-y-3">
+            {f.evenements.map((ev) => (
+              <li
+                key={ev.slug}
+                className="overflow-hidden rounded-2xl border border-border bg-card sm:flex"
+              >
+                {ev.affiche && (
+                  <div className="relative aspect-[16/9] shrink-0 bg-secondary sm:aspect-square sm:w-36">
+                    <ImageProgressive
+                      src={ev.affiche}
+                      alt=""
+                      ajustement="cover"
+                      largeurAffichee="(min-width:640px) 144px, 92vw"
+                    />
+                    {ev.credit && (
+                      <span className="pointer-events-none absolute bottom-1 right-1 max-w-[92%] truncate rounded bg-black/55 px-1 py-0.5 text-[10px] text-white/85">
+                        {ev.credit}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="min-w-0 p-3">
+                  {/* ⚠ La periode telle que la source la donne — jamais une date
+                      recalculee. « Debut aout, jour variable selon la lune » est
+                      exact ; « 3 aout » serait inventé. */}
+                  {ev.periode && (
+                    <p className="dk-etiquette inline-flex items-center gap-1.5">
+                      {ev.annuel && <RefreshCw className="h-3 w-3" aria-hidden="true" />}
+                      {ev.periode}
+                    </p>
+                  )}
+                  <h3 className="mt-0.5 font-bold leading-tight">{ev.titre}</h3>
+                  {ev.resume && (
+                    <p className="dk-corps mt-1 line-clamp-3 text-muted-foreground">{ev.resume}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Link
+            to="/evenements"
+            className="dk-secondaire mt-2 inline-block font-medium text-primary hover:underline"
+          >
+            Tout le calendrier
+          </Link>
+        </section>
+      )}
 
       {/* ── Quand y aller ────────────────────────────────────────────── */}
       <section className="dk-reveal mt-6">

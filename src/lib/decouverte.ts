@@ -91,7 +91,16 @@ export async function statsAtlas(): Promise<{
 }> {
   const [plats, variantes, cartes, familles] = await Promise.all([
     supabase.from("dishes").select("id", { count: "exact", head: true }),
-    supabase.from("dish_aliases").select("id", { count: "exact", head: true }),
+    /* 🔴 `select("id")` RENVOYAIT 400, ET LE COMPTEUR AFFICHAIT 0 SANS RIEN
+          DIRE. `dish_aliases` n'a pas de colonne `id` : sa clé est le couple
+          (dish_id, alias). PostgREST refuse la requête entière, le `count`
+          revient nul, et « 254 orthographes » — l'argument qui explique
+          pourquoi « ravi-toto » trouve le ravitoto — devenait « 0 ». Aucune
+          erreur à l'écran : un compteur faux ne se signale jamais.
+       ⚠ On compte sur `dish_id`, qui existe. Avec `head: true` et
+         `count: exact`, aucune ligne n'est rapatriée — seul l'en-tête
+         Content-Range compte. */
+    supabase.from("dish_aliases").select("dish_id", { count: "exact", head: true }),
     supabase.from("menu_items").select("id", { count: "exact", head: true }),
     supabase.from("dishes").select("family"),
   ]);

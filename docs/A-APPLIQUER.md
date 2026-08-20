@@ -55,7 +55,7 @@ Deux d'entre elles ont refusé de passer, et avaient raison :
 | 6. Photos des plats | ✅ 33 posées sur 95 — les 62 autres gardent une case vide, faute de photo sûre |
 | 7. Espace pro plus attractif | ❌ **non fait** |
 | 8. Circuits modernisés | ❌ **non fait** (0 circuit en base aujourd'hui) |
-| 9. Photos cliquables + propositions | ⚠️ le serveur et la modération sont faits ; **le bouton « Proposer une photo » manque encore sur les fiches publiques**, et la visionneuse plein écran n'existe pas |
+| 9. Photos cliquables + propositions | ✅ visionneuse plein écran (portail vers `<body>`, clavier, Échap) + bouton « Proposer une photo » sur les fiches de destination et de plat |
 | 10. Page admin | ✅ `/admin`, entrée visible dans le menu du compte pour l'administrateur seul |
 | 11. Événements avec miniatures | ⚠️ les fausses dates sont corrigées ; **0 affiche sur 42 événements** |
 | 12. Y aller — planificateur | ✅ 1 642 paires sur 1 806 ; les 164 refusées passent toutes par Ankify ou Nosy Be |

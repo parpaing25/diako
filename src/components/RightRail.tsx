@@ -195,7 +195,12 @@ export function RightRail() {
     // Trois appels, une seule fois, en parallèle. Aucun canal temps réel : la
     // règle d'egress du projet le réserve au chat et aux notifications.
     void supabase
-      .rpc("saison_en_cours", { p_mois: null })
+      /* ⚠ AUCUN ARGUMENT : `saison_en_cours(p_mois smallint default null)`
+           prend le mois COURANT quand on ne lui en donne pas. Passer `null`
+           explicitement revenait au même, mais le contrat généré déclare
+           l'argument optionnel et non nullable — omettre est ce qu'il attend,
+           et ce que la fonction fait déjà de son côté. */
+      .rpc("saison_en_cours", {})
       .then(({ data }) => setSaison((data as unknown as Evenement[] | null) ?? []));
     // ⚠ LA POSITION VIENT DE LA VILLE DÉCLARÉE, jamais du GPS. Demander la
     //   géolocalisation pour classer un bloc de rail serait disproportionné —
@@ -204,7 +209,7 @@ export function RightRail() {
     //   Sans ville déclarée, le terme de proximité vaut zéro et le classement
     //   reste celui de l'attention : on ne devine pas une position.
     void supabase
-      .rpc("recits_en_vogue", { p_limite: 12, p_lat: ici?.lat ?? null, p_lng: ici?.lng ?? null })
+      .rpc("recits_en_vogue", { p_limite: 12, p_lat: ici?.lat ?? undefined, p_lng: ici?.lng ?? undefined })
       .then(({ data }) => {
       // Le tirage pondéré se fait CÔTÉ CLIENT : la base rend les meilleurs,
       // le rail en montre quatre différents à chaque visite.

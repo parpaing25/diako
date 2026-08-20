@@ -95,11 +95,11 @@ export async function chargerFilFiltre(opts: {
 }): Promise<PostSitue[]> {
   const { data, error } = await supabase.rpc("feed_filtre", {
     p_mode: opts.mode,
-    p_curseur: opts.curseur ?? null,
+    p_curseur: opts.curseur ?? undefined,
     p_limite: opts.limite ?? PAR_PALIER(),
-    p_lat: opts.lat ?? null,
-    p_lng: opts.lng ?? null,
-    p_apres_km: opts.apresKm ?? null,
+    p_lat: opts.lat ?? undefined,
+    p_lng: opts.lng ?? undefined,
+    p_apres_km: opts.apresKm ?? undefined,
   });
   if (error) throw error;
   return (data as unknown as PostSitue[]) ?? [];
@@ -121,7 +121,7 @@ export async function modesFilDisponibles(): Promise<{
 
 export async function chargerFeed(curseur?: string | null, limite = PAR_PALIER()): Promise<Post[]> {
   const { data, error } = await supabase.rpc("get_feed", {
-    p_curseur: curseur ?? null,
+    p_curseur: curseur ?? undefined,
     p_limite: limite,
   });
   if (error) throw error;
@@ -607,9 +607,9 @@ export async function mesPublications(opts: {
   kind?: string | null;
 } = {}): Promise<PublicationMienne[]> {
   const { data, error } = await supabase.rpc("mes_publications", {
-    p_curseur: opts.curseur ?? null,
+    p_curseur: opts.curseur ?? undefined,
     p_limite: opts.limite ?? 12,
-    p_kind: opts.kind ?? null,
+    p_kind: opts.kind ?? undefined,
   });
   if (error) throw error;
   return (data as unknown as PublicationMienne[]) ?? [];
@@ -681,7 +681,7 @@ export async function publicationsPubliques(
 ): Promise<PublicationMienne[]> {
   const { data, error } = await supabase.rpc("publications_publiques", {
     p_id: id,
-    p_curseur: curseur ?? null,
+    p_curseur: curseur ?? undefined,
     p_limite: limite,
   });
   if (error) throw error;

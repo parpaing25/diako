@@ -18,7 +18,6 @@
  *   pages.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 /* ── Les formes que la console manipule ─────────────────────────────────── */
@@ -129,125 +128,26 @@ export interface Curseur {
   id: string;
 }
 
-/* ── Le client typé localement ──────────────────────────────────────────── */
+/* ── Plus de client typé localement ─────────────────────────────────────── */
 
 /**
- * ⚠ POURQUOI CETTE DÉCLARATION LOCALE. `integrations/supabase/types.ts` est
- *   REGÉNÉRÉ depuis la base : les fonctions des migrations 0097 et 0098 n'y
- *   figureront qu'une fois ces migrations APPLIQUÉES, et `types.ts` est un
- *   fichier partagé qu'un chantier ne retouche pas à la main. On déclare donc
- *   ici, EN UN SEUL ENDROIT, la forme exacte de ce qu'on appelle — plutôt que
- *   de parsemer le code de `any`, précisément ce que l'entête de `types.ts`
- *   interdit (« chaque contournement est un bug futur ») et ce que le tsconfig
- *   de ce dépôt refuse.
+ * ⭐ CE BLOC A DISPARU, COMME PRÉVU. Il y avait ici une redéclaration locale du
+ *   schéma — `type SchemaAdmin`, puis
+ *   `const base = supabase as unknown as SupabaseClient<SchemaAdmin>` — parce
+ *   que `types.ts` était écrit à la main et ne connaissait pas les fonctions des
+ *   migrations 0097 et 0098.
  *
- * ⚠ LE JOUR OÙ LES TYPES SERONT RÉGÉNÉRÉS, ce bloc et `base` disparaissent
- *   sans qu'une seule requête change : les signatures sont identiques à celles
- *   des migrations, argument par argument.
+ *   Le commentaire qui l'accompagnait annonçait sa propre fin : « le jour où les
+ *   types seront régénérés, ce bloc et `base` disparaissent sans qu'une seule
+ *   requête change ». `types.ts` est généré depuis le 18/08/2026 ; les treize
+ *   appels passent maintenant par le client normal, et le compilateur vérifie
+ *   chaque nom d'argument contre la base au lieu de nous croire sur parole.
  *
- * ⚠ `is_admin` N'EST PAS DANS CE BLOC : elle est déjà dans `types.ts` depuis le
- *   socle, et s'appelle donc sur le client normal.
+ * ⚠ LA LEÇON VAUT POUR LA SUITE : une redéclaration locale est un CONTRAT
+ *   RECOPIÉ. Tant qu'elle vit, rien ne garantit qu'elle décrive encore la
+ *   fonction réelle — elle affirme, elle ne vérifie pas. Après toute migration
+ *   qui ajoute une fonction : régénérer, plutôt que redéclarer.
  */
-type SchemaAdmin = {
-  public: {
-    Tables: Record<never, never>;
-    Views: Record<never, never>;
-    Functions: {
-      dk_admin_statistiques: {
-        Args: Record<string, never>;
-        Returns: StatistiquesAdmin;
-      };
-      dk_admin_membres: {
-        Args: {
-          p_curseur_date?: string | null;
-          p_curseur_id?: string | null;
-          p_limite?: number;
-          p_recherche?: string | null;
-        };
-        Returns: MembreAdmin[];
-      };
-      dk_admin_publications: {
-        Args: {
-          p_statut?: string;
-          p_curseur_date?: string | null;
-          p_curseur_id?: string | null;
-          p_limite?: number;
-        };
-        Returns: PublicationAdmin[];
-      };
-      dk_admin_moderer_publication: {
-        Args: { p_post: string; p_action: string; p_motif?: string | null };
-        Returns: string;
-      };
-      dk_admin_role: {
-        Args: { p_membre: string; p_accorder: boolean };
-        Returns: boolean;
-      };
-      dk_admin_promos: {
-        Args: Record<string, never>;
-        Returns: CodePromo[];
-      };
-      dk_admin_promo_enregistrer: {
-        Args: {
-          p_id?: string | null;
-          p_code: string;
-          p_libelle: string;
-          p_detail?: string | null;
-          p_page?: string | null;
-          p_avantage?: string | null;
-          p_debut?: string | null;
-          p_fin?: string | null;
-          p_actif?: boolean;
-        };
-        Returns: string;
-      };
-      dk_admin_promo_supprimer: {
-        Args: { p_id: string };
-        Returns: boolean;
-      };
-      dk_admin_photos: {
-        Args: {
-          p_statut?: string;
-          p_curseur_date?: string | null;
-          p_curseur_id?: string | null;
-          p_limite?: number;
-        };
-        Returns: PhotoProposee[];
-      };
-      dk_admin_traiter_photo: {
-        Args: { p_proposition: string; p_action: string; p_motif?: string | null };
-        Returns: string;
-      };
-      dk_admin_poser_photo: {
-        Args: {
-          p_cible_type: string;
-          p_cible: string;
-          p_url: string;
-          p_largeur?: number | null;
-          p_hauteur?: number | null;
-          p_credit?: string | null;
-          p_legende?: string | null;
-        };
-        Returns: string;
-      };
-      dk_proposer_photo: {
-        Args: {
-          p_cible_type: string;
-          p_cible: string;
-          p_url: string;
-          p_largeur?: number | null;
-          p_hauteur?: number | null;
-          p_legende?: string | null;
-        };
-        Returns: string;
-      };
-    };
-    Enums: Record<never, never>;
-    CompositeTypes: Record<never, never>;
-  };
-};
-
-const base = supabase as unknown as SupabaseClient<SchemaAdmin>;
 
 /* ── Le garde d'affichage ───────────────────────────────────────────────── */
 
@@ -273,9 +173,9 @@ export async function jeSuisAdmin(): Promise<boolean> {
 /* ── Statistiques ───────────────────────────────────────────────────────── */
 
 export async function statistiquesAdmin(): Promise<StatistiquesAdmin> {
-  const { data, error } = await base.rpc("dk_admin_statistiques");
+  const { data, error } = await supabase.rpc("dk_admin_statistiques");
   if (error) throw error;
-  return data;
+  return data as unknown as StatistiquesAdmin;
 }
 
 /* ── Membres ────────────────────────────────────────────────────────────── */
@@ -285,11 +185,11 @@ export async function membresAdmin(
   recherche: string | null,
   limite = 40
 ): Promise<MembreAdmin[]> {
-  const { data, error } = await base.rpc("dk_admin_membres", {
-    p_curseur_date: curseur?.date ?? null,
-    p_curseur_id: curseur?.id ?? null,
+  const { data, error } = await supabase.rpc("dk_admin_membres", {
+    p_curseur_date: curseur?.date ?? undefined,
+    p_curseur_id: curseur?.id ?? undefined,
     p_limite: limite,
-    p_recherche: recherche,
+    p_recherche: recherche ?? undefined,
   });
   if (error) throw error;
   return data ?? [];
@@ -304,7 +204,7 @@ export async function membresAdmin(
  *    évincerait le propriétaire — une escalade en deux clics.
  */
 export async function basculerModerateur(membre: string, accorder: boolean): Promise<void> {
-  const { error } = await base.rpc("dk_admin_role", { p_membre: membre, p_accorder: accorder });
+  const { error } = await supabase.rpc("dk_admin_role", { p_membre: membre, p_accorder: accorder });
   if (error) throw error;
 }
 
@@ -318,10 +218,10 @@ export async function publicationsAdmin(
   curseur: Curseur | null,
   limite = 30
 ): Promise<PublicationAdmin[]> {
-  const { data, error } = await base.rpc("dk_admin_publications", {
+  const { data, error } = await supabase.rpc("dk_admin_publications", {
     p_statut: statut,
-    p_curseur_date: curseur?.date ?? null,
-    p_curseur_id: curseur?.id ?? null,
+    p_curseur_date: curseur?.date ?? undefined,
+    p_curseur_id: curseur?.id ?? undefined,
     p_limite: limite,
   });
   if (error) throw error;
@@ -333,10 +233,10 @@ export async function modererPublication(
   action: ActionPublication,
   motif?: string
 ): Promise<string> {
-  const { data, error } = await base.rpc("dk_admin_moderer_publication", {
+  const { data, error } = await supabase.rpc("dk_admin_moderer_publication", {
     p_post: post,
     p_action: action,
-    p_motif: motif ?? null,
+    p_motif: motif ?? undefined,
   });
   if (error) throw error;
   return data;
@@ -351,14 +251,24 @@ export async function photosAdmin(
   curseur: Curseur | null,
   limite = 30
 ): Promise<PhotoProposee[]> {
-  const { data, error } = await base.rpc("dk_admin_photos", {
+  const { data, error } = await supabase.rpc("dk_admin_photos", {
     p_statut: statut,
-    p_curseur_date: curseur?.date ?? null,
-    p_curseur_id: curseur?.id ?? null,
+    p_curseur_date: curseur?.date ?? undefined,
+    p_curseur_id: curseur?.id ?? undefined,
     p_limite: limite,
   });
   if (error) throw error;
-  return data ?? [];
+  /* ⚠ LE SEUL RESSERREMENT DE TYPE QUI RESTE, ET IL EST JUSTIFIÉ. La base
+     contraint `photo_propositions.cible_type` à quatre valeurs par un
+     `check (cible_type in ('destination','site','plat','etablissement'))`
+     (migration 0098) — mais une colonne `text` sous contrainte reste un `text`
+     pour le générateur, qui ne lit pas les CHECK. Le compilateur ne peut donc
+     pas savoir ce que PostgreSQL garantit déjà.
+     ⚠ On ne filtre PAS à l'exécution : une valeur inattendue disparaîtrait
+       silencieusement de la file de modération, ce qui est pire qu'une erreur.
+       Si la contrainte change un jour, c'est elle qu'il faut suivre — pas ce
+       cast, qui la nomme précisément pour qu'on le retrouve. */
+  return (data ?? []) as PhotoProposee[];
 }
 
 /**
@@ -373,10 +283,10 @@ export async function traiterPhoto(
   action: "approuver" | "refuser",
   motif?: string
 ): Promise<string> {
-  const { data, error } = await base.rpc("dk_admin_traiter_photo", {
+  const { data, error } = await supabase.rpc("dk_admin_traiter_photo", {
     p_proposition: proposition,
     p_action: action,
-    p_motif: motif ?? null,
+    p_motif: motif ?? undefined,
   });
   if (error) throw error;
   return data;
@@ -392,14 +302,14 @@ export async function poserPhotoAdmin(args: {
   credit?: string | null;
   legende?: string | null;
 }): Promise<string> {
-  const { data, error } = await base.rpc("dk_admin_poser_photo", {
+  const { data, error } = await supabase.rpc("dk_admin_poser_photo", {
     p_cible_type: args.cibleType,
     p_cible: args.cible,
     p_url: args.url,
-    p_largeur: args.largeur ?? null,
-    p_hauteur: args.hauteur ?? null,
-    p_credit: args.credit ?? null,
-    p_legende: args.legende ?? null,
+    p_largeur: args.largeur ?? undefined,
+    p_hauteur: args.hauteur ?? undefined,
+    p_credit: args.credit ?? undefined,
+    p_legende: args.legende ?? undefined,
   });
   if (error) throw error;
   return data;
@@ -422,13 +332,13 @@ export async function proposerPhoto(args: {
   hauteur?: number | null;
   legende?: string | null;
 }): Promise<string> {
-  const { data, error } = await base.rpc("dk_proposer_photo", {
+  const { data, error } = await supabase.rpc("dk_proposer_photo", {
     p_cible_type: args.cibleType,
     p_cible: args.cible,
     p_url: args.url,
-    p_largeur: args.largeur ?? null,
-    p_hauteur: args.hauteur ?? null,
-    p_legende: args.legende ?? null,
+    p_largeur: args.largeur ?? undefined,
+    p_hauteur: args.hauteur ?? undefined,
+    p_legende: args.legende ?? undefined,
   });
   if (error) throw error;
   return data;
@@ -437,7 +347,7 @@ export async function proposerPhoto(args: {
 /* ── Codes promo ────────────────────────────────────────────────────────── */
 
 export async function promosAdmin(): Promise<CodePromo[]> {
-  const { data, error } = await base.rpc("dk_admin_promos");
+  const { data, error } = await supabase.rpc("dk_admin_promos");
   if (error) throw error;
   return data ?? [];
 }
@@ -453,15 +363,15 @@ export async function enregistrerPromo(promo: {
   fin?: string | null;
   actif?: boolean;
 }): Promise<string> {
-  const { data, error } = await base.rpc("dk_admin_promo_enregistrer", {
-    p_id: promo.id ?? null,
+  const { data, error } = await supabase.rpc("dk_admin_promo_enregistrer", {
+    p_id: promo.id ?? undefined,
     p_code: promo.code,
     p_libelle: promo.libelle,
-    p_detail: promo.detail ?? null,
-    p_page: promo.page ?? null,
-    p_avantage: promo.avantage ?? null,
-    p_debut: promo.debut ?? null,
-    p_fin: promo.fin ?? null,
+    p_detail: promo.detail ?? undefined,
+    p_page: promo.page ?? undefined,
+    p_avantage: promo.avantage ?? undefined,
+    p_debut: promo.debut ?? undefined,
+    p_fin: promo.fin ?? undefined,
     p_actif: promo.actif ?? true,
   });
   if (error) throw error;
@@ -469,7 +379,7 @@ export async function enregistrerPromo(promo: {
 }
 
 export async function supprimerPromo(id: string): Promise<void> {
-  const { error } = await base.rpc("dk_admin_promo_supprimer", { p_id: id });
+  const { error } = await supabase.rpc("dk_admin_promo_supprimer", { p_id: id });
   if (error) throw error;
 }
 

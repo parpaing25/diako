@@ -289,14 +289,14 @@ export interface FiltresRecherche {
 
 export async function chercherPages(f: FiltresRecherche = {}): Promise<ResultatPage[]> {
   const { data, error } = await supabase.rpc("chercher_pages", {
-    p_lieu: f.lieu ?? null,
-    p_categorie: f.categorie ?? null,
-    p_prix_max: f.prixMax ?? null,
-    p_plat: f.plat ?? null,
-    p_curseur_score: f.curseur?.[0] ?? null,
-    p_curseur_id: f.curseur?.[1] ?? null,
+    p_lieu: f.lieu ?? undefined,
+    p_categorie: f.categorie ?? undefined,
+    p_prix_max: f.prixMax ?? undefined,
+    p_plat: f.plat ?? undefined,
+    p_curseur_score: f.curseur?.[0] ?? undefined,
+    p_curseur_id: f.curseur?.[1] ?? undefined,
     p_limite: f.limite ?? 12,
-    p_equipements: f.equipements ?? null,
+    p_equipements: f.equipements ?? undefined,
   });
   if (error) throw error;
   return (data as ResultatPage[]) ?? [];
@@ -309,7 +309,7 @@ export async function chercherPages(f: FiltresRecherche = {}): Promise<ResultatP
 export async function restaurantsParPlat(plat: string, lieu?: string | null, limite = 20) {
   const { data, error } = await supabase.rpc("restaurants_par_plat", {
     p_plat: plat,
-    p_lieu: lieu ?? null,
+    p_lieu: lieu ?? undefined,
     p_limite: limite,
   });
   if (error) throw error;
@@ -1131,13 +1131,13 @@ export async function revendiquer(
 ): Promise<string> {
   const { data, error } = await supabase.rpc("revendiquer_page", {
     p_page: pageId,
-    p_message: d.message || null,
-    p_tel: d.tel || null,
-    p_nif: d.nif ?? null,
-    p_stat: d.stat ?? null,
-    p_piece: d.piece ?? null,
-    p_photo_lieu: d.photoLieu ?? null,
-    p_role: d.role ?? null,
+    p_message: d.message || "",
+    p_tel: d.tel || "",
+    p_nif: d.nif ?? undefined,
+    p_stat: d.stat ?? undefined,
+    p_piece: d.piece ?? undefined,
+    p_photo_lieu: d.photoLieu ?? undefined,
+    p_role: d.role ?? undefined,
   });
   if (error) throw error;
   return data as string;
@@ -1170,14 +1170,14 @@ export interface FiltresAgent {
  */
 export async function agentChercher(f: FiltresAgent = {}): Promise<unknown[]> {
   const { data, error } = await supabase.rpc("agent_chercher", {
-    p_lieu: f.lieu ?? null,
-    p_categorie: f.categorie ?? null,
-    p_budget_max: f.budgetMax ?? null,
-    p_budget_min: f.budgetMin ?? null,
-    p_equipements: f.equipements ?? null,
-    p_cuisines: f.cuisines ?? null,
-    p_plat: f.plat ?? null,
-    p_personnes: f.personnes ?? null,
+    p_lieu: f.lieu ?? undefined,
+    p_categorie: f.categorie ?? undefined,
+    p_budget_max: f.budgetMax ?? undefined,
+    p_budget_min: f.budgetMin ?? undefined,
+    p_equipements: f.equipements ?? undefined,
+    p_cuisines: f.cuisines ?? undefined,
+    p_plat: f.plat ?? undefined,
+    p_personnes: f.personnes ?? undefined,
     p_limite: f.limite ?? 10,
   });
   if (error) throw error;

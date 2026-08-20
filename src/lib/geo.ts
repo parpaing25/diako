@@ -129,7 +129,7 @@ export async function autourDeMoi(
     p_lat: p.lat,
     p_lng: p.lng,
     p_rayon_km: options.rayonKm ?? 25,
-    p_categorie: options.categorie ?? null,
+    p_categorie: options.categorie ?? undefined,
     p_limite: options.limite ?? 20,
   });
   if (error) throw error;

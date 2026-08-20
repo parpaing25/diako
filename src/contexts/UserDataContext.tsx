@@ -1,6 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Profile } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+/* ⚠ L'ALIAS VIT ICI, PAS DANS `types.ts`. Ce dernier est désormais GÉNÉRÉ par
+   le connecteur : tout ce qu'on y ajoute à la main disparaît à la prochaine
+   régénération, en silence. `Tables<"profiles">` est l'utilitaire que le
+   générateur fournit précisément pour ça. */
+type Profile = Tables<"profiles">;
 import { useAuth } from "./AuthContext";
 
 // ⚠ ANTI-EGRESS : jamais de select('*'). On énumère les colonnes.

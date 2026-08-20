@@ -576,7 +576,7 @@ export async function changerStatutProjet(id: string, statut: string, motif?: st
   const { error } = await supabase.rpc("projet_statut", {
     p_id: id,
     p_statut: statut,
-    p_motif: motif ?? null,
+    p_motif: motif ?? undefined,
   });
   if (error) throw error;
 }

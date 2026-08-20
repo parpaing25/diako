@@ -55,9 +55,23 @@
 
     --accent: 13 89% 59%;           /* #F4633A — aplats, pastilles, promo */
     --accent-foreground: 0 0% 100%;
-    --accent-strong: 15 78% 46%;    /* #D0471C — dès qu'il y a du texte */
+    /* 🔴 46 % NE PASSAIT PAS SUR LE PAPIER. Mesuré : 4,27:1 sur `--background`
+          (#FBF7F1) contre 4,5 exigés — juste en dessous, donc jamais signalé à
+          l'œil, et pourtant hors norme partout où ce corail écrit sur le fond
+          de page plutôt que sur une carte blanche (où il tenait de justesse, à
+          4,53). 42 % rend 4,97 sur le papier, 5,27 sur carte et 4,63 sur sable :
+          les trois fonds du site passent, et la teinte reste le même corail. */
+    --accent-strong: 15 78% 42%;    /* #BF4118 — dès qu'il y a du texte */
 
-    --or: 41 59% 45%;
+    --or: 41 59% 45%;               /* #B68C2F — DÉCORATIF : 2,93:1, jamais de texte */
+    /* 🔴 L'OR ÉCRIVAIT À 2,93:1, sous le seuil même du GROS texte (3:1). Les
+          numéros de classement « en vogue » du rail droit — 1, 2, 3, 4 — étaient
+          donc illisibles pour qui ne voit pas parfaitement les contrastes.
+       ⚠ ON N'ASSOMBRIT PAS `--or` LUI-MÊME : il porte la bande tissée et les
+         jalons, où il n'écrit rien et où sa clarté fait tout son intérêt. On
+         ajoute un ton texte à côté, exactement comme `--accent-strong` existe à
+         côté de `--accent`. 4,78:1 sur le papier. */
+    --or-fort: 41 59% 34%;          /* #8A6924 — dès que l'or porte du texte */
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
@@ -125,6 +139,8 @@
     --muted-foreground: 35 12% 68%;
 
     --or: 41 62% 58%;
+    /* En sombre, l'or est déjà clair sur fond foncé : il écrit sans problème. */
+    --or-fort: 41 62% 58%;
 
     --accent-strong: 14 100% 70%;
     /* ⚠ IL MANQUAIT LE POINT-VIRGULE ICI. Sans lui, le navigateur lisait

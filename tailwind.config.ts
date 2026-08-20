@@ -20,6 +20,7 @@ export default {
       screens: { large: "1920px" },
       colors: {
         or: "hsl(var(--or))",
+        "or-fort": "hsl(var(--or-fort))",
         /* Jetons du DESIGN-HANDOFF §1, exposes a Tailwind. */
         "teal-soft": "hsl(var(--teal-soft))",
         "coral-soft": "hsl(var(--coral-soft))",

@@ -288,7 +288,10 @@ export function RightRail() {
                 <li key={v.id}>
                   <Link to={`/post/${v.id}`} className="dk-ligne-tendance group block">
                     <span className="flex items-baseline gap-2">
-                      <span className="dk-edito text-lg leading-none text-or">{i + 1}</span>
+                      {/* ⚠ `text-or-fort` ET NON `text-or` : l'or décoratif écrit à 2,93:1 sur
+                          le papier, sous le seuil même du gros texte. Ces numéros
+                          de classement SONT du texte. */}
+                      <span className="dk-edito text-lg leading-none text-or-fort">{i + 1}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold group-hover:text-primary">
                           {v.place ?? v.dish ?? v.auteur_nom ?? "Un récit"}

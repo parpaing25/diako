@@ -64,6 +64,11 @@ DEFAUTS = {
     "photos_max_par_trouvaille": 12,
     "largeur_photo_min": 500,               # px — sous ce seuil c'est un avatar
     "jours_max": 45,                        # ignore les publications plus vieilles
+    # ── Le web ouvert ───────────────────────────────────────────────────────
+    # Un site d'hôtel malgache tient en quelques pages ; au-delà on ramasse des
+    # archives de blog, pas des tarifs.
+    "pages_max_par_site": 8,
+    "moisson_osm": True,                    # chercher aussi les sites dans OpenStreetMap
     # ── Ce qu'on garde ──────────────────────────────────────────────────────
     # Un genre décoché n'est pas collecté du tout : inutile de faire trier des
     # publications qu'on ne publiera jamais.

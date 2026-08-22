@@ -46,7 +46,7 @@ from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 import requests
 from playwright.sync_api import sync_playwright
 
-from . import analyse_llm, base, diako, extraction, redaction
+from . import analyse_llm, base, diako, extraction, redaction, toile
 from . import score as notation
 from .config import DOSSIER_TROUVAILLES, PROFIL_NAVIGATEUR, charger
 
@@ -204,6 +204,19 @@ def _url_recherche(termes: str) -> str:
     return f"https://www.facebook.com/search/posts/?q={quote_plus(termes)}"
 
 
+def _propre_web(url: str) -> str:
+    """Retire le pistage d'une adresse de site (utm_*, fbclid…)."""
+    decoupe = urlsplit(url)
+    gardes = [
+        (c, v) for c, v in parse_qsl(decoupe.query)
+        if not c.lower().startswith(("utm_", "fbclid", "gclid", "mc_"))
+    ]
+    return urlunsplit(
+        (decoupe.scheme or "https", decoupe.netloc.lower(),
+         decoupe.path.rstrip("/") or "/", urlencode(gardes), "")
+    )
+
+
 def _url_fil_de_page(url: str) -> str:
     """Nettoie l'adresse d'une page pour tomber sur son fil de publications.
 
@@ -247,7 +260,20 @@ def analyser_source(entree: str) -> tuple[str, str]:
     decoupe = urlsplit(url)
     hote = decoupe.netloc.lower()
     if "facebook.com" not in hote and "fb.com" not in hote:
-        raise ValueError("Ce n'est pas une adresse Facebook.")
+        # ⭐ LE WEB OUVERT. Le site d'un hôtel publie ses tarifs de chambre là où
+        #   sa page Facebook ne les met jamais. On refuse en revanche les
+        #   agrégateurs de réservation et les réseaux : leurs conditions
+        #   interdisent la réutilisation, et le dépôt a déjà tranché (règle
+        #   « OSM Overpass + Nominatim, jamais Google Maps »).
+        if toile.HOTES_REFUSES.search(hote):
+            raise ValueError(
+                "Ce site n'est pas collectable : agrégateurs de réservation et "
+                "moteurs de recherche interdisent la réutilisation de leurs "
+                "données. Donnez l'adresse du site de l'établissement lui-même."
+            )
+        if "." not in hote:
+            raise ValueError("Adresse incomplète.")
+        return _propre_web(url), "site"
 
     parametres = dict(parse_qsl(decoupe.query))
     segments = [s for s in decoupe.path.split("/") if s]
@@ -614,52 +640,82 @@ class Collecteur:
             "info",
         )
 
-        with sync_playwright() as pw:
-            ctx = self._contexte(pw, visible=cfg["navigateur_visible"])
-            if not self._verifier_session(ctx):
-                ctx.close()
-                base.logguer(
-                    "Pas de session Facebook. Cliquez « Connecter mon compte Facebook ».",
-                    "erreur",
-                )
-                return {"erreur": "session_absente"}
+        # ⚠ LES SITES WEB N'ONT PAS BESOIN DU NAVIGATEUR NI DE FACEBOOK. Les
+        #   traiter d'abord, hors Chromium, permet de collecter des tarifs même
+        #   quand la session Facebook a expiré — c'est-à-dire le jour où le bot
+        #   serait autrement à l'arrêt complet.
+        web = [s for s in sources if (s.get("genre") or "") == "site"]
+        facebook = [s for s in sources if (s.get("genre") or "") != "site"]
 
-            page = ctx.pages[0] if ctx.pages else ctx.new_page()
-            for rang, source in enumerate(sources):
-                if self.stop.is_set():
-                    base.logguer("Collecte arrêtée à la demande.", "avert")
-                    break
-                self.etat["source"] = f"{source['nom']} ({rang + 1}/{len(sources)})"
-                try:
-                    trouvees = self._parcourir(ctx, page, source)
-                except Exception as e:  # une source qui casse ne tue pas la tournée
-                    base.logguer(f"« {source['nom']} » : {e}", "erreur")
-                    trouvees = 0
-                    # « Page crashed » : l'onglet est mort (souvent faute de
-                    # mémoire). Sans nouvel onglet, TOUTES les sources suivantes
-                    # échoueraient en cascade.
-                    if "crash" in str(e).lower() or page.is_closed():
-                        try:
-                            if not page.is_closed():
-                                page.close()
-                            page = ctx.new_page()
-                            base.logguer(
-                                "Onglet relancé après un plantage — la tournée continue. "
-                                "Si ça se répète, fermez des applications : Chromium "
-                                "manque de mémoire.",
-                                "avert",
-                            )
-                        except Exception:
-                            base.logguer("Navigateur perdu, collecte interrompue.", "erreur")
+        self._sites_js = []
+        for rang, source in enumerate(web):
+            if self.stop.is_set():
+                break
+            self.etat["source"] = f"{source['nom']} ({rang + 1}/{len(web)}, site web)"
+            try:
+                trouvees = self._parcourir_site(source)
+            except Exception as e:
+                base.logguer(f"« {source['nom']} » : {e}", "erreur")
+                trouvees = 0
+            base.modifier_source(
+                source["id"], derniere_collecte=base.maintenant(),
+                nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
+            )
+
+        if self._sites_js and not self.stop.is_set():
+            self._relire_avec_navigateur(cfg)
+
+        if facebook and not self.stop.is_set():
+            with sync_playwright() as pw:
+                ctx = self._contexte(pw, visible=cfg["navigateur_visible"])
+                if not self._verifier_session(ctx):
+                    ctx.close()
+                    base.logguer(
+                        "Pas de session Facebook : les "
+                        f"{len(facebook)} source(s) Facebook sont sautées. "
+                        "Cliquez « Connecter mon compte Facebook ».",
+                        "erreur" if not web else "avert",
+                    )
+                    facebook = []
+                else:
+                    page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                    for rang, source in enumerate(facebook):
+                        if self.stop.is_set():
+                            base.logguer("Collecte arrêtée à la demande.", "avert")
                             break
-                base.modifier_source(
-                    source["id"],
-                    derniere_collecte=base.maintenant(),
-                    nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
-                )
-                if rang < len(sources) - 1 and not self.stop.is_set():
-                    _pause(cfg["pause_entre_sources"])
-            ctx.close()
+                        self.etat["source"] = f"{source['nom']} ({rang + 1}/{len(facebook)})"
+                        try:
+                            trouvees = self._parcourir(ctx, page, source)
+                        except Exception as e:  # une source qui casse ne tue pas la tournée
+                            base.logguer(f"« {source['nom']} » : {e}", "erreur")
+                            trouvees = 0
+                            # « Page crashed » : l'onglet est mort (souvent faute
+                            # de mémoire). Sans nouvel onglet, TOUTES les sources
+                            # suivantes échoueraient en cascade.
+                            if "crash" in str(e).lower() or page.is_closed():
+                                try:
+                                    if not page.is_closed():
+                                        page.close()
+                                    page = ctx.new_page()
+                                    base.logguer(
+                                        "Onglet relancé après un plantage — la tournée "
+                                        "continue. Si ça se répète, fermez des "
+                                        "applications : Chromium manque de mémoire.",
+                                        "avert",
+                                    )
+                                except Exception:
+                                    base.logguer(
+                                        "Navigateur perdu, collecte interrompue.", "erreur"
+                                    )
+                                    break
+                        base.modifier_source(
+                            source["id"],
+                            derniere_collecte=base.maintenant(),
+                            nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
+                        )
+                        if rang < len(facebook) - 1 and not self.stop.is_set():
+                            _pause(cfg["pause_entre_sources"])
+                    ctx.close()
 
         restant = self.atelier.en_attente
         if restant:
@@ -758,6 +814,262 @@ class Collecteur:
         base.logguer(f"« {source['nom']} » : {retenues} publication(s) mise(s) en file.", "info")
         return retenues
 
+    # -- Le web ouvert : le site de l'établissement lui-même -----------------
+    def _relire_avec_navigateur(self, cfg: dict) -> None:
+        """Deuxième passage sur les sites qui ne rendent rien sans JavaScript.
+
+        ⚠ NAVIGATEUR NEUF, PAS CELUI DE FACEBOOK. Le profil `data/profil-fb/`
+          porte la session Facebook : s'en servir pour visiter des sites tiers
+          leur enverrait ces cookies. On ouvre un contexte vierge, jeté à la
+          fin.
+
+        ⚠ ET UN SEUL PASSAGE. Un site qui ne rend toujours rien avec le
+          navigateur est un site qu'on ne sait pas lire ; le réessayer à chaque
+          collecte coûterait une minute pour rien. Il reste dans les sources,
+          simplement il ne donne rien.
+        """
+        a_relire, self._sites_js = self._sites_js, []
+        base.logguer(
+            f"{len(a_relire)} site(s) sans texte lisible sans JavaScript — "
+            "relecture avec le navigateur.", "info",
+        )
+        with sync_playwright() as pw:
+            navigateur = pw.chromium.launch(headless=not cfg["navigateur_visible"])
+            contexte = navigateur.new_context(
+                user_agent=NAVIGATEUR_UA, locale="fr-FR",
+                viewport={"width": 1280, "height": 900},
+            )
+            page = contexte.new_page()
+
+            def rendu(url: str) -> str:
+                page.goto(url, wait_until="networkidle", timeout=45_000)
+                page.wait_for_timeout(1200)
+                return page.content()
+
+            for source in a_relire:
+                if self.stop.is_set():
+                    break
+                self.etat["source"] = f"{source['nom']} (rendu JavaScript)"
+                try:
+                    trouvees = self._parcourir_site(source, rendu=rendu)
+                except Exception as e:
+                    base.logguer(f"« {source['nom']} » (JavaScript) : {e}", "avert")
+                    trouvees = 0
+                base.modifier_source(
+                    source["id"], derniere_collecte=base.maintenant(),
+                    nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
+                )
+            try:
+                contexte.close()
+                navigateur.close()
+            except Exception:
+                pass
+
+    def _parcourir_site(self, source: dict, rendu=None) -> int:
+        """Lit le site d'un établissement et en fait une trouvaille.
+
+        ⚠ L'EMPREINTE PORTE SUR LE CONTENU, PAS SUR L'ADRESSE. Un site se
+          relit régulièrement — c'est même tout l'intérêt, les tarifs changent.
+          Mais relire un site inchangé ne doit pas produire une trouvaille de
+          plus à trier : si le texte est identique au dernier passage, il n'y a
+          rien de neuf, et on le dit.
+        """
+        cfg = self.config
+        base.logguer(f"Site « {source['nom']} » — lecture de {source['url']}.", "info")
+        lecture = toile.explorer(
+            source["url"], pages_max=int(cfg.get("pages_max_par_site", 8)), rendu=rendu
+        )
+
+        if lecture.get("js_probable") and rendu is None:
+            # Le HTML arrive, mais il est vide de texte : c'est du JavaScript.
+            # On le met de côté pour un passage au navigateur, à la fin.
+            self._sites_js.append(source)
+            base.logguer(
+                f"« {source['nom']} » : page construite en JavaScript — mise de côté "
+                "pour une relecture au navigateur.", "info",
+            )
+            return 0
+
+        if lecture.get("refuse") or not lecture["texte"]:
+            base.logguer(
+                f"« {source['nom']} » : {lecture.get('refuse') or 'aucun texte lisible'}.",
+                "avert",
+            )
+            return 0
+
+        cle = "site:" + hashlib.sha1(
+            (source["url"] + re.sub(r"\s+", " ", lecture["texte"])).encode()
+        ).hexdigest()
+        if base.existe(cle):
+            base.logguer(
+                f"« {source['nom']} » : inchangé depuis le dernier passage "
+                f"({len(lecture['pages'])} page(s) relues).", "info",
+            )
+            return 0
+
+        dossier = DOSSIER_TROUVAILLES / date.today().isoformat() / hashlib.sha1(
+            cle.encode()
+        ).hexdigest()[:8]
+        dossier.mkdir(parents=True, exist_ok=True)
+        (dossier / "site.txt").write_text(lecture["texte"], encoding="utf-8")
+        (dossier / "pages-visitees.json").write_text(
+            json.dumps({"pages": lecture["pages"], "pdf": lecture["pdf"]},
+                       ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        tid = base.creer({
+            "empreinte": cle,
+            "permalien": lecture["pages"][0] if lecture["pages"] else source["url"],
+            "source_id": source["id"],
+            "source_nom": source["nom"],
+            "source_genre": "site",
+            "auteur": lecture.get("titre") or source["nom"],
+            "date_post": date.today().isoformat(),
+            "texte": lecture["texte"][:60_000],
+            "dossier": str(dossier.relative_to(DOSSIER_TROUVAILLES.parent)),
+            "statut": "en_traitement",
+            "genre": "etablissement",
+            "site_web": source["url"],
+            "page_id": source.get("page_id"),
+            "page_nom": source.get("page_nom"),
+            "page_score": 1.0 if source.get("page_id") else None,
+            "manques": [],
+        })
+        if not tid:
+            return 0
+
+        self.etat["examines"] += 1
+        self.etat["trouvees"] += 1
+        self.atelier.soumettre({
+            "tid": tid, "dossier": dossier, "lecture": lecture,
+            "source": source, "config": dict(self.config), "web": True,
+        })
+        return 1
+
+    def _finir_site(self, travail: dict) -> None:
+        """Lecture, tarifs, photos et score d'un site. Tourne dans l'atelier."""
+        cfg = travail["config"]
+        lecture, source = travail["lecture"], travail["source"]
+        tid, dossier = travail["tid"], travail["dossier"]
+        texte = lecture["texte"]
+
+        champs = extraction.analyser_site(
+            texte, lecture.get("titre", ""), source.get("page_nom") or "",
+            self._noms_de_lieux,
+        )
+        if cfg.get("llm_actif"):
+            try:
+                champs = analyse_llm.fusionner_site(
+                    champs, analyse_llm.relire_site(texte, cfg)
+                )
+            except analyse_llm.LLMIndisponible as e:
+                base.logguer(f"Lecture du site par l'IA indisponible ({e}).", "avert")
+
+        # Les photos du site : c'est la réponse au « 0 photo sur 3 356 fiches ».
+        images = [
+            {"url": u, "largeur": 0, "hauteur": 0}
+            for u in (lecture.get("images") or [])
+            if toile.robots_autorise(u)
+        ]
+        gardees = _telecharger_photos(images, dossier, tid, cfg)
+
+        # La source connaît déjà sa fiche quand elle vient de l'annuaire ; sinon
+        # on rapproche, exactement comme pour Facebook.
+        if source.get("page_id"):
+            fiches = [f for f in base.referentiel("ref_pages")
+                      if f["id"] == source["page_id"]]
+            etat = fiches[0] if fiches else {}
+            rapprochement = {
+                "page_id": source["page_id"], "page_nom": source.get("page_nom"),
+                "page_score": 1.0, "page_candidats": [],
+                "lieu_id": etat.get("lieu_id"), "lieu_nom": etat.get("lieu_nom"),
+                "lieu_score": 1.0 if etat.get("lieu_id") else None,
+                "_etat_fiche": {
+                    "a_photo": bool(etat.get("cover_url")),
+                    "a_tel": bool(etat.get("telephone")),
+                    "nb_carte": etat.get("nb_carte") or 0,
+                    "nb_chambre": etat.get("nb_chambre") or 0,
+                },
+            }
+            if not rapprochement["lieu_id"]:
+                lieu = diako.rapprocher_lieu(champs.get("lieu_texte") or "")
+                if lieu:
+                    rapprochement.update({"lieu_id": lieu["id"], "lieu_nom": lieu["nom"],
+                                          "lieu_score": lieu["score"]})
+        else:
+            rapprochement = self._rapprocher(champs, cfg)
+
+        manques = self._manques(champs, rapprochement, gardees)
+        chambres = champs.get("lignes_chambre") or []
+        plats = champs.get("lignes_carte") or []
+        if not chambres and not plats and not champs.get("prix_ar"):
+            manques.append("aucun tarif trouvé")
+        bloquants = [m for m in manques if m in ("lieu", "établissement")]
+        statut = "incomplete" if bloquants else "a_trier"
+
+        base.modifier(tid, {
+            "statut": statut,
+            "manques": manques,
+            "genre": "etablissement",
+            "categories": champs.get("categories") or [],
+            "nom_etab": champs.get("nom_etab"),
+            "resume": champs.get("resume"),
+            "adresse": champs.get("adresse"),
+            "repere": champs.get("repere"),
+            "telephone": champs.get("telephone"),
+            "whatsapp": champs.get("whatsapp"),
+            "email": champs.get("email"),
+            "site_web": source["url"],
+            "page_facebook": champs.get("page_facebook"),
+            "horaires": champs.get("horaires"),
+            "equipements": champs.get("equipements") or [],
+            "prix_ar": champs.get("prix_ar"),
+            "prix_unite": champs.get("prix_unite"),
+            "prix_vu_le": date.today().isoformat(),
+            "lieu_texte": champs.get("lieu_texte"),
+            "lu_par_llm": int(bool(champs.get("lu_par_llm"))),
+            "llm_confiance": champs.get("llm_confiance"),
+            "llm_doute": champs.get("llm_doute"),
+            "note": ("PDF à ouvrir à la main : " + ", ".join(lecture["pdf"]))
+            if lecture.get("pdf") else None,
+            **rapprochement,
+        })
+
+        for rang, chambre in enumerate(chambres, start=1):
+            base.ajouter_ligne_chambre(tid, chambre, ordre=rang)
+        for rang, plat in enumerate(plats, start=1):
+            reference = diako.rapprocher_plat(plat["nom"])
+            base.ajouter_ligne_carte(tid, dict(
+                plat, plat_id=reference["id"] if reference else None,
+                plat_nom=reference["nom"] if reference else None), ordre=rang)
+
+        t = base.trouvaille(tid)
+        if not t:
+            return
+        t["_etat_fiche"] = rapprochement.get("_etat_fiche", {})
+        note = notation.calculer(t)
+        base.modifier(tid, {
+            "titre": redaction.titre(t),
+            "resume": t.get("resume") or redaction.resume_fiche(t),
+            "presentation": redaction.presentation(t),
+            "score": note["score"], "niveau": note["niveau"],
+        })
+        (dossier / "trouvaille.json").write_text(
+            json.dumps(
+                {k: v for k, v in (base.trouvaille(tid) or {}).items() if k != "texte"},
+                ensure_ascii=False, indent=2, default=str,
+            ),
+            encoding="utf-8",
+        )
+        base.logguer(
+            f"Site lu — score {note['score']}/100 : {champs.get('nom_etab') or source['nom']} — "
+            f"{len(chambres)} chambre(s), {len(plats)} plat(s), {gardees} photo(s)"
+            + (f", {len(lecture['pdf'])} PDF signalé(s)" if lecture.get("pdf") else "")
+            + ".",
+            "succes",
+        )
+
     # -- Passe 1 : inscription, dans le fil du navigateur -------------------
     def _inscrire(self, page, publication: dict, source: dict, cle: str) -> bool:
         """Enregistre une publication repérée et confie la suite à l'atelier.
@@ -807,6 +1119,8 @@ class Collecteur:
     # -- Passe 2 : atelier, hors du navigateur ------------------------------
     def _finir(self, travail: dict) -> None:
         """Photos + lecture + rapprochement + score. Tourne dans un fil de l'atelier."""
+        if travail.get("web"):
+            return self._finir_site(travail)
         cfg = travail["config"]
         publication, source = travail["publication"], travail["source"]
         tid, dossier = travail["tid"], travail["dossier"]

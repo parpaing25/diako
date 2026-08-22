@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from . import analyse_llm, base, diako
 from . import planificateur as plan
-from . import publication, redaction
+from . import publication, redaction, toile
 from . import score as notation
 from .collecteur import (
     analyser_source,
@@ -73,6 +73,15 @@ class LigneEntree(BaseModel):
     prix_ar: int | None = None
     description: str | None = None
     section: str | None = None
+
+
+class ChambreEntree(BaseModel):
+    nom: str = ""
+    prix_ar: int | None = None
+    unite: str = "chambre"
+    capacite: int | None = None
+    saison: str | None = None
+    description: str | None = None
 
 
 # ── Interface ───────────────────────────────────────────────────────────────
@@ -159,6 +168,35 @@ def maj_source(sid: int, entree: ChampsEntree):
 @app.delete("/api/sources/{sid}")
 def effacer_source(sid: int):
     base.supprimer_source(sid)
+    return {"ok": True}
+
+
+@app.post("/api/moisson-sites")
+def moisson_sites():
+    """Trouve les sites officiels des établissements et les inscrit en sources.
+
+    Trois canaux, tous légitimes : l'annuaire Diako lui-même, OpenStreetMap
+    (ODbL, comme le reste du projet), et les liens relevés dans les
+    publications déjà collectées. Aucun moteur de recherche, aucun agrégateur
+    de réservation — leurs conditions l'interdisent.
+    """
+    config = charger()
+
+    def travail():
+        def dire(message, niveau="info"):
+            tache["detail"] = message[:90]
+            base.logguer(message, niveau)
+
+        bilan = toile.moissonner(
+            avec_osm=bool(config.get("moisson_osm", True)), journal=dire
+        )
+        tache["message"] = (
+            f"{bilan['ajoutes']} site(s) ajouté(s), "
+            f"{bilan['rattaches']} rattaché(s) à une fiche."
+        )
+
+    if not _lancer("moisson", travail):
+        raise HTTPException(409, "Une tâche est déjà en cours.")
     return {"ok": True}
 
 
@@ -412,6 +450,26 @@ def maj_ligne(lid: int, entree: ChampsEntree):
 @app.delete("/api/lignes/{lid}")
 def effacer_ligne(lid: int):
     base.supprimer_ligne_carte(lid)
+    return {"ok": True}
+
+
+@app.post("/api/trouvailles/{tid}/chambres")
+def ajouter_chambre(tid: str, entree: ChambreEntree):
+    if not entree.nom.strip():
+        raise HTTPException(400, "Une chambre sans nom ne sert à rien.")
+    base.ajouter_ligne_chambre(tid, entree.model_dump(), ordre=999)
+    return detail(tid)
+
+
+@app.patch("/api/chambres/{lid}")
+def maj_chambre(lid: int, entree: ChampsEntree):
+    base.modifier_ligne_chambre(lid, **entree.champs)
+    return {"ok": True}
+
+
+@app.delete("/api/chambres/{lid}")
+def effacer_chambre(lid: int):
+    base.supprimer_ligne_chambre(lid)
     return {"ok": True}
 
 

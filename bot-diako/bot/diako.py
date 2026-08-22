@@ -68,6 +68,9 @@ GENERIQUES = {
     #    (scripts/photos_archives.py). Même famille : parc, lac, baie, mont.
     "nosy", "ile", "iles", "lac", "parc", "reserve", "baie", "plage", "mont",
     "montagne", "cap", "pointe", "vallee", "riviere", "national", "communautaire",
+    # Les titres de sites web ajoutent le pays : « Nature Lodge Madagascar ».
+    # Sans lui ici, deux établissements sans rapport partageraient un mot fort.
+    "madagascar", "mada", "madagasikara",
 }
 
 ARTICLES = {"de", "du", "des", "la", "le", "les", "l", "d", "et", "a", "au",
@@ -181,7 +184,9 @@ def rafraichir_referentiel(force: bool = False, heures: int = 12) -> dict:
     pages = _charger_par_tranches(
         "SELECT p.id::text, p.name, p.slug, p.categories::text AS categories, "
         "p.place_id::text AS lieu_id, l.name_fr AS lieu_nom, p.phone, p.cover_url, "
-        "(SELECT count(*) FROM public.menu_items m WHERE m.page_id = p.id) AS nb_carte "
+        "p.website, "
+        "(SELECT count(*) FROM public.menu_items m WHERE m.page_id = p.id) AS nb_carte, "
+        "(SELECT count(*) FROM public.room_types r WHERE r.page_id = p.id) AS nb_chambre "
         "FROM public.pages p LEFT JOIN public.places l ON l.id = p.place_id "
         "ORDER BY p.id LIMIT {limite} OFFSET {decalage}"
     )
@@ -191,7 +196,9 @@ def rafraichir_referentiel(force: bool = False, heures: int = 12) -> dict:
             "slug": p.get("slug"), "categories": p.get("categories"),
             "lieu_id": p.get("lieu_id"), "lieu_nom": p.get("lieu_nom"),
             "telephone": p.get("phone"), "cover_url": p.get("cover_url"),
+            "site_web": p.get("website"),
             "nb_carte": int(p.get("nb_carte") or 0),
+            "nb_chambre": int(p.get("nb_chambre") or 0),
         }
         for p in pages
     ])
@@ -269,6 +276,8 @@ def rapprocher_page(nom: str, lieu_id: str | None = None,
                 "a_photo": bool(fiche.get("cover_url")),
                 "a_tel": bool(fiche.get("telephone")),
                 "nb_carte": fiche.get("nb_carte") or 0,
+                "nb_chambre": fiche.get("nb_chambre") or 0,
+                "site_web": fiche.get("site_web"),
                 "meme_lieu": bool(lieu_id and fiche.get("lieu_id") == lieu_id),
             })
     candidats.sort(key=lambda c: c["score"], reverse=True)

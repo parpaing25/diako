@@ -77,6 +77,10 @@ def _apport(t: dict, plafond: int) -> tuple[int, str]:
     gains, motifs = 0, []
     nb_photos = len([p for p in (t.get("photos") or []) if p.get("garder", 1)])
     nb_plats = len([l for l in (t.get("lignes_carte") or []) if l.get("garder", 1)])
+    nb_chambres = len([
+        c for c in (t.get("lignes_chambre") or [])
+        if c.get("garder", 1) and c.get("prix_ar")
+    ])
 
     if t.get("page_id"):
         if not etat.get("a_photo") and nb_photos:
@@ -91,6 +95,15 @@ def _apport(t: dict, plafond: int) -> tuple[int, str]:
         elif nb_plats:
             gains += 15
             motifs.append(f"{nb_plats} plats de plus")
+        # ⭐ 1 442 hôtels de Diako n'ont AUCUN tarif. Un premier prix de chambre
+        #   vaut autant qu'une première carte : c'est ce qui rend la fiche
+        #   utilisable pour choisir où dormir.
+        if not etat.get("nb_chambre") and nb_chambres:
+            gains += 45
+            motifs.append(f"premiers tarifs de la fiche ({nb_chambres} chambres)")
+        elif nb_chambres:
+            gains += 20
+            motifs.append(f"{nb_chambres} tarifs de chambre à jour")
         if t.get("prix_ar"):
             gains += 10
             motifs.append("prix relevé")
@@ -103,8 +116,11 @@ def _apport(t: dict, plafond: int) -> tuple[int, str]:
             gains += 20
             motifs.append("avec contact")
         if nb_plats:
-            gains += 30
+            gains += 25
             motifs.append(f"avec sa carte ({nb_plats} plats)")
+        if nb_chambres:
+            gains += 25
+            motifs.append(f"avec ses tarifs ({nb_chambres} chambres)")
         if t.get("resume"):
             gains += 10
             motifs.append("avec une présentation")

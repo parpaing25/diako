@@ -1,11 +1,17 @@
 # Bot de collecte — Diako
 
 Automatise la partie répétitive de la prospection : parcourir Facebook (groupes,
-pages, votre fil, et des **recherches**), repérer ce qui parle de voyage, de
-goût et de sorties à Madagascar, en faire un dossier prêt à publier, et pousser
-le résultat sur diako.fonenako.mg depuis une interface web.
+pages, votre fil, des **recherches**) **et le site officiel des établissements**,
+repérer ce qui parle de voyage, de goût et de sorties à Madagascar, en faire un
+dossier prêt à publier, et pousser le résultat sur diako.fonenako.mg depuis une
+interface web.
 
 Le tri et la décision restent à vous. Le bot ne publie **rien** tout seul.
+
+**Les deux moitiés ne rapportent pas la même chose.** Facebook donne de la vie —
+des photos, des ouvertures, des récits, des événements. Il donne mal les
+**tarifs structurés** : un hôtel ne publie pas sa grille de chambres sur sa page,
+il la met sur son site. C'est pour ça que le bot lit aussi le web ouvert.
 
 ---
 
@@ -83,7 +89,9 @@ cherchez**.
 | `facebook.com/SakamangaHotel` | **Page** |
 | `facebook.com` ou `facebook.com/?sk=h_chr` | **Fil d'actualité** de votre compte |
 | `menu restaurant Nosy Be` | **Recherche** Facebook |
+| `www.campcatta.com` | **Site web** de l'établissement |
 | `facebook.com/share/g/AbCdEf/` | refusé : ouvrez-le, puis copiez la vraie adresse |
+| `booking.com/…`, `tripadvisor.…` | refusé : voir « Le web ouvert » plus bas |
 
 - Les **groupes** sont ouverts en tri **chronologique** ; sans ça Facebook sert
   « les plus pertinents », c'est-à-dire souvent des publications vues il y a
@@ -95,6 +103,11 @@ cherchez**.
 - La **recherche** est le seul moyen d'atteindre ce que vous ne suivez pas
   encore. C'est là que sont les niches : un restaurant qui vient d'ouvrir, une
   carte photographiée par un client, un festival de province.
+- Le **site web** est le seul endroit où l'on trouve une *grille de tarifs* :
+  types de chambre, saisons, carte complète. Une source « site » **sait de
+  quelle fiche elle parle**, donc ses prix ne sont jamais rattachés au jugé. Et
+  elle ne passe pas par Facebook : elle continue de fonctionner le jour où la
+  session a expiré.
 
 L'ordre de passage est **la source la plus anciennement visitée d'abord**. Sans
 ça, un tour interrompu ne toucherait jamais la fin de la liste — c'est ce qui
@@ -160,6 +173,77 @@ lieu et ce qui manque. Le panneau de détail donne, dans l'ordre :
 
 **Valider** (touche `V`), **Rejeter** (`R`), `Échap` pour fermer. Puis *Publier
 sur Diako*, ou *Publier les trouvailles validées* pour tout le lot.
+
+---
+
+## Le web ouvert — où sont les tarifs
+
+Bouton **Trouver les sites web** sur le tableau de bord. Il cherche les adresses,
+les inscrit comme sources, et les rattache à leur fiche quand c'est sûr.
+
+### D'où viennent les adresses, et pourquoi pas d'ailleurs
+
+Le dépôt a déjà tranché la question (`scripts/moisson_osm.py`) : **OSM Overpass
+et Nominatim, jamais Google Maps.** La licence ODbL autorise la réutilisation
+avec attribution ; Google Maps, TripAdvisor et Booking l'interdisent
+explicitement. Le bot ne scrute donc **aucun moteur de recherche** et **aucun
+agrégateur de réservation** — coller une adresse Booking est refusé avec un
+message qui le dit. Trois canaux :
+
+| Canal | Ce qu'il rend |
+|---|---|
+| **L'annuaire Diako** | 193 fiches portent déjà un `website` — rattachement déjà connu, zéro risque d'erreur |
+| **OpenStreetMap** | 142 hébergements malgaches y déclarent leur site, plus les restaurants (mesuré le 23/08/2026 via Overpass) |
+| **Les publications Facebook** déjà collectées | les liens que les établissements y ont mis eux-mêmes |
+
+Ce qu'on lit ensuite, c'est le site **de l'établissement lui-même**, qui y
+publie ses propres prix. C'est la différence entre reprendre une information que
+quelqu'un diffuse sur lui-même, et piller la base d'un concurrent.
+
+### Comment le bot lit un site
+
+- `robots.txt` respecté, **2 secondes** entre deux pages du même hôte, **8 pages
+  au maximum**, 2 Mo par page.
+- Les pages sont classées par intérêt : *tarifs* et *chambres* d'abord, puis
+  *carte* et *restaurant*, puis le reste. Une page « tarifs » qui en ouvre une
+  plus précise est suivie.
+- **Un site en JavaScript est relu avec le navigateur.** Quand le HTML arrive
+  mais qu'il n'en sort aucun texte, c'est un site construit côté client (Wix,
+  Squarespace…) : il est mis de côté et relu en fin de tournée dans un
+  **navigateur neuf**, jamais celui qui porte votre session Facebook.
+- Les **PDF** de carte ou de tarifs ne sont pas lus — le bot n'embarque pas de
+  lecteur PDF — mais ils sont **signalés** sur la trouvaille, avec leur adresse.
+
+### Deux pièges rencontrés en vrai, et corrigés
+
+- **« menu » ne veut pas dire carte.** Sur `campcatta.com`, le robot dépensait
+  quatre pages de son budget sur `sitemenu.htm`, `sitemenu-ita.htm`,
+  `sitemenu-eng.htm` et `sitemenu-all.htm` — le même menu de *navigation* en
+  quatre langues — sans lire une seule carte. Les cadres de navigation et les
+  versions étrangères d'une même page sont maintenant écartés ; le bot y lit
+  désormais `restaurant.html` et `hebergement.html`.
+- **Une grille de tarifs n'est pas une carte de restaurant.** Les deux lectures
+  tournent sur le même texte, et « Bungalow vue mer 180 000 Ar » satisfait aussi
+  bien le motif d'un plat que celui d'une chambre. Sans filtre, la page « nos
+  tarifs » d'un hôtel entrait dans `menu_items` — la table qu'on essaie
+  justement de remplir proprement. Au passage : « Nos tarifs **2026** » n'est
+  pas un plat à 2 026 Ar.
+
+### Ce que ça écrit
+
+`room_types`, et `season_rates` quand le site distingue les saisons. Deux lignes
+portant le même nom de chambre ne sont **pas** un doublon : ce sont deux
+saisons, et elles deviennent **un** type de chambre avec ses tarifs — les fondre
+en deux chambres ferait apparaître « Bungalow vue mer » deux fois sur la fiche.
+
+⚠ `room_types.base_price_ar` est `NOT NULL` : **une chambre sans prix ne
+s'insère pas**, elle est écartée plutôt que dotée d'un tarif inventé.
+
+⚠ Republier un site six mois plus tard **remplace** les types de chambre de même
+nom au lieu de les empiler — sinon la fiche accumulerait les grilles.
+
+⚠ Relire un site **inchangé** ne produit rien : l'empreinte porte sur le
+contenu, pas sur l'adresse. Le bot le dit au journal et passe au suivant.
 
 ---
 
@@ -292,6 +376,10 @@ Chaque trouvaille reçoit une note sur 100. Le barème **change selon le genre**
 ce qui compte pour un événement (sa date) n'a aucun sens pour une carte (ses
 plats).
 
+Le poste **apport** compte aussi les **tarifs de chambre** : apporter les
+premiers prix d'un hôtel qui n'en a aucun vaut autant que sa première carte —
+1 442 hôtels sont dans ce cas.
+
 | Poste | établissement | carte | événement | récit |
 |---|---|---|---|---|
 | lieu du référentiel | 15 | 10 | 15 | 25 |
@@ -374,9 +462,17 @@ séparément, le 23/08/2026 :
 - **Le rapprochement** a été mesuré contre les 3 356 fiches réelles (tableau
   ci-dessus), et le référentiel chargé en entier (10,5 s).
 
-Ce qui **n'a pas** été éprouvé, et qu'il faut faire au premier passage : la
-collecte contre le vrai Facebook. Faites-la sur **une seule source**, et
-publiez **une seule trouvaille** avant d'en lancer une série.
+- **La lecture du web** a été essayée sur deux vrais sites d'hôtels malgaches
+  (`campcatta.com`, `zomatel-madagascar.com`). C'est cet essai qui a trouvé le
+  piège du `sitemenu.htm` et la détection des sites en JavaScript.
+
+- **L'écriture des chambres** a été jouée contre la vraie base, transaction
+  annulée : quatre lignes en entrée → 2 `room_types` (les deux saisons du même
+  bungalow fondues) + 2 `season_rates`, la chambre sans prix écartée.
+  `room_types` avant et après : 35 et 35.
+
+Ce qui **n'a pas** été éprouvé : la publication réelle. Publiez **une seule
+trouvaille** avant d'en lancer une série.
 
 ---
 
@@ -423,7 +519,8 @@ bot-diako/
 │   ├── config.py         réglages + chemins des secrets
 │   ├── base.py           base SQLite locale (+ cache du référentiel)
 │   ├── diako.py          Supabase : référentiel, rapprochement, « ce qui manque »
-│   ├── extraction.py     texte d'une publication → champs
+│   ├── toile.py          le web ouvert : trouver les sites, les lire, robots.txt
+│   ├── extraction.py     texte d'une publication ou d'un site → champs
 │   ├── analyse_llm.py    relecture du texte + lecture des cartes en photo
 │   ├── redaction.py      textes publiés, fabriqués de façon déterministe
 │   ├── score.py          note sur 100, barème par genre

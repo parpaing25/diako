@@ -143,6 +143,7 @@ async function rafraichirEtat() {
     (k) => ($(`#n-${k}`).textContent = c[k])
   );
   $("#n-plats").textContent = c.plats;
+  $("#n-chambres").textContent = c.chambres ?? 0;
   $("#pastille-trier").textContent = c.a_trier;
 
   const occupe = e.tache.actif;
@@ -150,9 +151,12 @@ async function rafraichirEtat() {
 
   // Sans compte Facebook, la collecte ne peut rien faire : on l'empêche plutôt
   // que de la laisser échouer dans le journal.
-  $("#btn-collecte").disabled = occupe || !e.session_fb || !e.sources_actives;
+  // Un compte Facebook n'est plus indispensable : les sources « site web » se
+  // lisent sans lui. On ne bloque donc que s'il n'y a aucune source du tout.
+  $("#btn-collecte").disabled = occupe || !e.sources_actives;
   $("#btn-lot").disabled = occupe;
   $("#btn-referentiel").disabled = occupe;
+  $("#btn-moisson").disabled = occupe;
   $("#btn-arreter").disabled = !(occupe && e.tache.type === "collecte");
 
   const prog = $("#progression");
@@ -162,6 +166,7 @@ async function rafraichirEtat() {
       collecte: `Collecte${e.collecte.source ? " — " + e.collecte.source : ""} · ${e.collecte.trouvees} retenue(s)${c.en_traitement ? ` · ${c.en_traitement} en lecture` : ""}`,
       publication: `Publication en cours ${e.tache.detail || ""}`,
       referentiel: "Rechargement du référentiel Diako…",
+      moisson: e.tache.detail || "Recherche des sites web…",
       connexion: "Fenêtre Facebook ouverte — connectez-vous dedans.",
     };
     $("#texte-progression").textContent = libelles[e.tache.type] || "Travail en cours…";
@@ -325,6 +330,16 @@ $("#btn-referentiel").addEventListener("click", async () => {
   rafraichirEtat();
 });
 
+$("#btn-moisson").addEventListener("click", async () => {
+  try {
+    await api("/api/moisson-sites", { method: "POST" });
+    toast("Recherche des sites lancée — OpenStreetMap peut prendre deux minutes.");
+  } catch (e) {
+    toast(e.message, "erreur");
+  }
+  rafraichirEtat();
+});
+
 $("#btn-lot").addEventListener("click", async () => {
   if (!confirm("Publier toutes les trouvailles validées sur Diako ?")) return;
   try {
@@ -422,6 +437,8 @@ function carte(t) {
     t.page_id ? `<span class="badge etab">${echapper(t.page_nom || "fiche")}</span>` : "",
     t.lieu_nom ? `<span class="badge lieu">${echapper(t.lieu_nom)}</span>` : "",
     t.nb_plats ? `<span class="badge plat">${t.nb_plats} plats</span>` : "",
+    t.nb_chambres ? `<span class="badge etab">${t.nb_chambres} chambres</span>` : "",
+    t.source_genre === "site" ? `<span class="badge recherche">site web</span>` : "",
     t.statut === "publiee" ? `<span class="badge ok">publiée</span>` : "",
     t.statut === "doublon" ? `<span class="badge doublon">doublon</span>` : "",
   ]
@@ -544,6 +561,8 @@ function corpsPanneau(t) {
     </p>
 
     ${champsDuGenre(t, champ, zone, opt)}
+
+    ${(t.lignes_chambre || []).length || t.source_genre === "site" ? blocChambres(t) : ""}
 
     ${t.genre === "carte" || (t.lignes_carte || []).length ? blocCarte(t) : ""}
 
@@ -694,6 +713,47 @@ function champsDuGenre(t, champ, zone, opt) {
     }</p>`;
 }
 
+function blocChambres(t) {
+  const lignes = (t.lignes_chambre || [])
+    .map(
+      (c) => `<div class="plat-ligne ${c.garder ? "" : "ecarte"}" data-cid="${c.id}">
+        <input data-chambre="nom" value="${echapper(c.nom)}">
+        <input data-chambre="prix_ar" type="number" value="${c.prix_ar ?? ""}" placeholder="prix Ar">
+        <span class="rattache ${c.prix_ar ? "" : "non"}">${
+          c.prix_ar
+            ? echapper(
+                (c.unite === "personne" ? "par personne" : "la chambre") +
+                  (c.saison ? " · " + c.saison : "") +
+                  (c.capacite ? " · " + c.capacite + " pers." : "")
+              )
+            : "sans prix — non publiable"
+        }</span>
+        <button class="oter" data-oter-chambre="${c.id}" title="Retirer">×</button>
+      </div>`
+    )
+    .join("");
+
+  const chiffrees = (t.lignes_chambre || []).filter((c) => c.prix_ar).length;
+  return `<p class="bloc-titre">Tarifs de chambre — ${chiffrees} chiffré(s) sur ${
+    (t.lignes_chambre || []).length
+  }</p>
+    <div class="carte-plats">${
+      lignes || '<p class="aide" style="padding:10px">Aucun tarif lu sur ce site.</p>'
+    }</div>
+    <div class="ajout-plat">
+      <input id="chambre-nom" placeholder="Type de chambre">
+      <input id="chambre-prix" type="number" placeholder="Prix Ar" style="width:120px">
+      <button class="bouton" id="btn-ajouter-chambre">Ajouter</button>
+    </div>
+    <p class="aide" style="margin:8px 0 16px">
+      Une chambre <strong>sans prix ne peut pas être publiée</strong> :
+      <code>room_types.base_price_ar</code> est obligatoire, et on n'invente pas
+      de tarif. Deux lignes de même nom ne sont pas un doublon — ce sont deux
+      saisons, et elles deviennent un seul type de chambre avec ses
+      <code>season_rates</code>.
+    </p>`;
+}
+
 function blocCarte(t) {
   const lignes = (t.lignes_carte || [])
     .map(
@@ -815,6 +875,42 @@ function brancherPanneau() {
 
   brancherRapprochement(zone);
   brancherCarte(zone);
+  brancherChambres(zone);
+}
+
+function brancherChambres(zone) {
+  $$(".plat-ligne [data-chambre]", zone).forEach((el) =>
+    el.addEventListener("change", async () => {
+      const cid = el.closest(".plat-ligne").dataset.cid;
+      const cle = el.dataset.chambre;
+      const valeur = cle === "prix_ar" ? (el.value === "" ? null : Number(el.value)) : el.value;
+      await api(`/api/chambres/${cid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ champs: { [cle]: valeur } }),
+      });
+      ouvrir(ouverte.id);
+    })
+  );
+
+  $$("[data-oter-chambre]", zone).forEach((el) =>
+    el.addEventListener("click", async () => {
+      await api(`/api/chambres/${el.dataset.oterChambre}`, { method: "DELETE" });
+      ouvrir(ouverte.id);
+    })
+  );
+
+  const ajouter = $("#btn-ajouter-chambre", zone);
+  if (ajouter)
+    ajouter.addEventListener("click", async () => {
+      const nom = $("#chambre-nom", zone).value.trim();
+      if (!nom) return toast("Donnez au moins un type de chambre.", "erreur");
+      const prix = $("#chambre-prix", zone).value;
+      await api(`/api/trouvailles/${ouverte.id}/chambres`, {
+        method: "POST",
+        body: JSON.stringify({ nom, prix_ar: prix === "" ? null : Number(prix) }),
+      });
+      ouvrir(ouverte.id);
+    });
 }
 
 function brancherRapprochement(zone) {
@@ -1013,6 +1109,7 @@ const ETIQUETTE_SOURCE = {
   page: ["page", "Page"],
   fil: ["fil", "Fil"],
   recherche: ["recherche", "Recherche"],
+  site: ["etab", "Site web"],
 };
 
 async function chargerSources() {

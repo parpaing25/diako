@@ -72,6 +72,9 @@
       <div class="chiffre">
         <span class="valeur" id="n-plats">0</span><span class="etiquette">plats récoltés</span>
       </div>
+      <div class="chiffre">
+        <span class="valeur" id="n-chambres">0</span><span class="etiquette">tarifs de chambre</span>
+      </div>
     </div>
 
     <!-- ⭐ La carte qui donne le cap : ce qui manque VRAIMENT au site. -->
@@ -118,6 +121,28 @@
         </p>
         <button class="bouton" id="btn-referentiel">Recharger le référentiel</button>
       </div>
+    </div>
+
+    <div class="carte">
+      <h2>Sites web des établissements</h2>
+      <p class="aide">
+        Facebook donne de la vie ; il donne mal les <strong>tarifs</strong>. Un
+        hôtel met sa grille de chambres sur <em>son</em> site. La moisson va
+        chercher ces adresses à trois endroits — l'annuaire Diako lui-même,
+        <strong>OpenStreetMap</strong>, et les liens relevés dans les
+        publications déjà collectées — puis les inscrit comme sources,
+        rattachées à leur fiche quand c'est sûr.
+      </p>
+      <div class="actions-collecte">
+        <button class="bouton principal" id="btn-moisson">Trouver les sites web</button>
+      </div>
+      <p class="aide" style="margin:12px 0 0">
+        <strong>Aucun moteur de recherche, aucun agrégateur.</strong> Booking,
+        TripAdvisor et Google Maps interdisent la réutilisation de leurs
+        données ; OpenStreetMap l'autorise (ODbL, avec attribution) — c'est déjà
+        la règle du dépôt. Les sites sont lus lentement, <code>robots.txt</code>
+        respecté, huit pages au maximum.
+      </p>
     </div>
 
     <div class="carte">
@@ -203,7 +228,8 @@
         Groupe : <code>facebook.com/groups/tourisme.mada</code> ·
         Page : <code>facebook.com/SakamangaHotel</code> ·
         Fil : <code>facebook.com</code> ·
-        Recherche : <code>menu restaurant Nosy Be</code>
+        Recherche : <code>menu restaurant Nosy Be</code> ·
+        Site web : <code>www.campcatta.com</code>
       </p>
       <form class="ligne-form" id="form-source">
         <input id="source-nom" placeholder="Nom court (facultatif)">
@@ -217,7 +243,7 @@
     </div>
 
     <div class="carte">
-      <h2>Les quatre natures de source</h2>
+      <h2>Les cinq natures de source</h2>
       <ul class="notes">
         <li><strong>Groupe</strong> — il faut en être membre. Ouvert en tri
           <em>chronologique</em> : sans ça Facebook sert « les plus pertinents »,
@@ -230,6 +256,12 @@
         <li><strong>Recherche</strong> — la seule façon d'atteindre ce que vous ne
           suivez pas encore. C'est là que se trouvent les niches : un nouveau
           restaurant, une carte publiée par un client, un festival de province.</li>
+        <li><strong>Site web</strong> — le site de l'établissement lui-même.
+          C'est le seul endroit où l'on trouve une <em>grille de tarifs</em> :
+          types de chambre, saisons, cartes complètes. Une source « site » sait
+          de quelle fiche elle parle, donc ses prix ne sont jamais rattachés au
+          jugé. Elle ne passe pas par Facebook et fonctionne même si la session
+          a expiré.</li>
       </ul>
     </div>
 

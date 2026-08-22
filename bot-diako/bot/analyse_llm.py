@@ -124,6 +124,60 @@ RÈGLES :
   pas : mets null et dis-le dans "doute".
 - N'ajoute aucun plat qui ne figure pas sur l'image."""
 
+SYSTEME_SITE = """Tu lis le SITE OFFICIEL d'un établissement malgache (hôtel,
+lodge, restaurant, agence) : plusieurs pages de ce site t'ont été mises bout à
+bout, séparées par des lignes « === adresse === ». Tu en extrais ce que
+l'établissement dit de lui-même pour l'annuaire Diako.
+Tu réponds UNIQUEMENT par un objet JSON, sans texte autour.
+
+{
+  "nom": le nom de l'établissement, ou null,
+  "categories": liste parmi ["hotel","restaurant","agence_voyage","guide",
+     "transporteur","location_vehicule","site_attraction","organisateur_evenement"],
+  "lieu": la localité ("Nosy Be", "Ampefy"), ou null,
+  "adresse": ou null,  "repere": le repère pour trouver l'endroit, ou null,
+  "telephone": ou null, "whatsapp": ou null, "email": ou null,
+  "horaires": la phrase d'ouverture telle qu'écrite, ou null,
+  "resume": UNE phrase de 25 mots maximum, factuelle, sans superlatif, ou null,
+  "equipements": liste de mots-clés observés (wifi, piscine, eau chaude,
+     moustiquaire, restaurant sur place, navette aéroport...), ou [],
+
+  "chambres": [{
+     "nom": "Bungalow vue mer",
+     "prix_ar": entier en ariary ou null,
+     "unite": "chambre" | "personne",
+     "capacite": entier ou null,
+     "saison": libellé de saison si le site en distingue, sinon null,
+     "eau_chaude": booléen, "sdb_privee": booléen,
+     "vue": "mer"|"lac"|"montagne"|null,
+     "description": texte court ou null
+  }],
+
+  "plats": [{"nom", "prix_ar", "description", "section"}],
+
+  "devise": "Ar" | "EUR" | "USD" | "melange",
+  "confiance": 0 à 100,
+  "doute": phrase courte, ou ""
+}
+
+RÈGLES, ET ELLES COMPTENT :
+
+⚠ NE CONVERTIS AUCUNE DEVISE. Beaucoup de sites malgaches affichent en euros
+  pour les étrangers. Si un prix n'est pas en ariary, mets prix_ar à null,
+  indique la devise dans "devise" et dis-le dans "doute". Un taux de change
+  inventé est une donnée fausse qui se propage.
+
+⚠ NE MÉLANGE PAS LA NUIT ET LA PERSONNE. « 45 € par personne en demi-pension »
+  et « 180 000 Ar la chambre » ne se comparent pas. L'unité est obligatoire.
+
+⚠ N'INVENTE AUCUNE CHAMBRE. Si la page des tarifs n'a pas été lue, rends une
+  liste vide plutôt que des types plausibles.
+
+⚠ IGNORE LES PRIX BARRÉS, LES PROMOTIONS DATÉES ET LES « à partir de » sans
+  objet : on veut le tarif courant d'un type de chambre nommé.
+
+N'INVENTE RIEN. Tout champ que le site ne donne pas reste null."""
+
 CHAMPS_LLM = (
     "nom_etablissement", "categories", "lieu", "adresse", "repere", "telephone",
     "whatsapp", "email", "site_web", "horaires", "resume", "equipements",
@@ -217,6 +271,103 @@ def relire(texte: str, cfg: dict) -> dict:
     if not texte.strip():
         raise LLMIndisponible("texte vide")
     return _appeler(SYSTEME, texte, texte, cfg)
+
+
+# Un site entier ne tient pas dans une fenêtre utile, et les pages « à propos »
+# n'apportent rien : on garde les 24 000 premiers caractères, qui contiennent
+# l'accueil et les deux ou trois pages les mieux notées (tarifs, chambres, carte).
+TAILLE_SITE_MAX = 24_000
+
+
+def relire_site(texte: str, cfg: dict) -> dict:
+    """Fait lire le site d'un établissement. Rend chambres et plats structurés."""
+    if not texte.strip():
+        raise LLMIndisponible("site vide")
+    return _appeler(SYSTEME_SITE, texte[:TAILLE_SITE_MAX], texte[:TAILLE_SITE_MAX], cfg)
+
+
+def fusionner_site(regles: dict, llm: dict) -> dict:
+    """Combine la lecture d'un site par règles et par modèle.
+
+    ⚠ LE MODÈLE FAIT AUTORITÉ SUR LES CHAMBRES. Une grille de tarifs est un
+      tableau HTML mis à plat : les règles y lisent des lignes, le modèle y lit
+      une structure (saison, capacité, pension). Mais s'il rend une liste vide
+      alors que les règles ont trouvé des chambres, on garde celles des règles :
+      une lecture partielle vaut mieux qu'un trou.
+    """
+    fusion = dict(regles)
+
+    for cle_llm, cle_nous in (
+        ("nom", "nom_etab"), ("lieu", "lieu_texte"), ("adresse", "adresse"),
+        ("repere", "repere"), ("telephone", "telephone"), ("whatsapp", "whatsapp"),
+        ("email", "email"), ("horaires", "horaires"), ("resume", "resume"),
+    ):
+        valeur = llm.get(cle_llm)
+        if valeur not in (None, "", []):
+            fusion[cle_nous] = valeur
+
+    if llm.get("categories"):
+        valides = [c for c in llm["categories"] if c in (
+            "hotel", "restaurant", "agence_voyage", "guide", "transporteur",
+            "location_vehicule", "site_attraction", "organisateur_evenement")]
+        if valides:
+            fusion["categories"] = valides
+
+    devise = (llm.get("devise") or "Ar").strip()
+    chambres = []
+    for chambre in llm.get("chambres") or []:
+        nom = (chambre.get("nom") or "").strip()
+        prix = chambre.get("prix_ar")
+        if not nom:
+            continue
+        if not isinstance(prix, (int, float)) or not 5_000 <= prix <= 5_000_000:
+            prix = None
+        chambres.append({
+            "nom": nom[:120], "prix_ar": int(prix) if prix else None,
+            "unite": chambre.get("unite") if chambre.get("unite") in ("chambre", "personne")
+            else "chambre",
+            "capacite": chambre.get("capacite") if isinstance(chambre.get("capacite"), int)
+            else None,
+            "saison": (chambre.get("saison") or "").strip() or None,
+            "eau_chaude": bool(chambre.get("eau_chaude")),
+            "sdb_privee": bool(chambre.get("sdb_privee", True)),
+            "vue": chambre.get("vue") if chambre.get("vue") in ("mer", "lac", "montagne")
+            else None,
+            "description": (chambre.get("description") or "").strip()[:280] or None,
+        })
+    if chambres:
+        fusion["lignes_chambre"] = chambres
+
+    plats = []
+    for plat in llm.get("plats") or []:
+        nom = (plat.get("nom") or "").strip()
+        if not nom:
+            continue
+        prix = plat.get("prix_ar")
+        plats.append({
+            "nom": nom[:120],
+            "prix_ar": int(prix) if isinstance(prix, (int, float))
+            and 500 <= prix <= 500_000 else None,
+            "description": (plat.get("description") or "").strip()[:280] or None,
+            "unite": "portion",
+            "section": (plat.get("section") or "").strip() or None,
+        })
+    if plats:
+        fusion["lignes_carte"] = plats
+
+    # Le prix d'appel se recalcule sur ce que le modèle a rendu.
+    chiffrees = [c["prix_ar"] for c in fusion.get("lignes_chambre") or [] if c["prix_ar"]]
+    if chiffrees:
+        fusion["prix_ar"], fusion["prix_unite"] = min(chiffrees), "nuit"
+
+    fusion["devise_site"] = devise
+    fusion["llm_confiance"] = llm.get("confiance")
+    doute = (llm.get("doute") or "").strip()
+    if devise not in ("Ar", ""):
+        doute = (f"prix affichés en {devise} — non convertis. " + doute).strip()
+    fusion["llm_doute"] = doute
+    fusion["lu_par_llm"] = True
+    return fusion
 
 
 # ── Lecture d'une carte photographiée ───────────────────────────────────────

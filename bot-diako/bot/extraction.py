@@ -354,9 +354,12 @@ def nom_etablissement(texte: str, auteur_page: str | None = None) -> str | None:
     #   Mariette » porte une majuscule au C ; un motif entièrement sensible à la
     #   casse le rate, et un motif entièrement insensible attrape « chez nous »
     #   ou « hotel de la ville ». D'où le drapeau porté par le seul préfixe.
+    # ⚠ `[ \t]` ET NON `\s` : `\s` traverse les retours à la ligne, et
+    #   « Notre restaurant \n Ravitoto sy henakisoa » devenait un établissement
+    #   nommé « restaurant Ravitoto ». Un nom ne franchit jamais une ligne.
     motif = re.compile(
-        r"\b(?i:" + "|".join(re.escape(p) for p in PREFIXES_NOM) + r")\s+"
-        r"(?P<nom>[A-ZÀ-Ý][\w'’\-]*(?:\s+[A-ZÀ-Ý0-9][\w'’\-]*){0,3})",
+        r"\b(?i:" + "|".join(re.escape(p) for p in PREFIXES_NOM) + r")[ \t]+"
+        r"(?P<nom>[A-ZÀ-Ý][\w'’\-]*(?:[ \t]+[A-ZÀ-Ý0-9][\w'’\-]*){0,3})",
     )
     trouve = motif.search(texte)
     if trouve:
@@ -549,6 +552,15 @@ def lignes_de_carte(texte: str) -> list[dict]:
         prix = _nombre(trouve.group("prix"))
         if prix is None or prix < 500 or prix > 500_000:
             continue
+        # ⚠ « Nos tarifs 2026 » n'est pas un plat à 2 026 Ar. Un nombre à quatre
+        #   chiffres sans séparateur ET sans devise dans la ligne est une année,
+        #   pas un prix. Vu sur la page de tarifs d'un hôtel, où il créait un
+        #   plat fantôme à chaque passage.
+        brut = re.sub(r"\D", "", trouve.group("prix"))
+        if re.fullmatch(r"(19|20)\d{2}", brut) and not re.search(
+            r"\b(ar|ariary|mga)\b", n
+        ):
+            continue
         nom = trouve.group("nom").strip(" .:-–—•*")
         if len(nom) < 3 or not re.search(r"[a-zA-ZÀ-ÿ]{3}", nom):
             continue
@@ -557,6 +569,108 @@ def lignes_de_carte(texte: str) -> list[dict]:
             "section": section_courante,
         })
     return trouvees
+
+
+# ── Types de chambre ────────────────────────────────────────────────────────
+# Une grille de tarifs, sur un site d'hôtel, ressemble à une carte de
+# restaurant : un libellé, un prix. Ce qui change, c'est le vocabulaire et
+# l'ordre de grandeur.
+MOTS_CHAMBRE = (
+    "chambre", "bungalow", "suite", "villa", "studio", "appartement", "dortoir",
+    "tente", "case", "paillote", "room", "double", "twin", "single", "triple",
+    "familiale", "family", "deluxe", "supérieure", "superieure", "standard",
+    "junior", "duplex", "lodge",
+)
+MOTIF_LIGNE_CHAMBRE = re.compile(
+    r"^[\s\-•·*]*"
+    # ⚠ LE NOM PEUT CONTENIR DES CHIFFRES, contrairement à celui d'un plat :
+    #   « Dortoir 6 personnes — 35 000 Ar/pers » est une ligne courante, et
+    #   l'interdire faisait sauter tous les dortoirs et les « Chambre 2 lits ».
+    #   Le motif étant paresseux, c'est le DERNIER nombre de la ligne qui est
+    #   lu comme prix, ce qui est exactement la convention d'une grille.
+    r"(?P<nom>[^\n]{3,70}?)"
+    r"[\s:.…\-–—>»]*"
+    r"(?P<prix>\d[\d\s.,  ]{2,14})\s*"
+    r"(?:ar|ariary|mga)?\s*"
+    r"(?P<suite>/?\s*(?:nuit|nuitée|nuitee|la nuit|par nuit|pers|personne)?)\s*$",
+    re.I | re.M,
+)
+
+
+def types_de_chambre(texte: str) -> list[dict]:
+    """Les chambres chiffrées d'une grille de tarifs.
+
+    ⚠ LE SEUIL DE PRIX FAIT LE TRI. Une page de tarifs croise des nuitées
+      (30 000 à 2 000 000 Ar) et des lignes qui n'en sont pas : « 2 personnes »,
+      « chambre 12 », un numéro de téléphone, une année. Sous 5 000 Ar une nuit
+      n'existe pas à Madagascar, au-delà de 5 000 000 non plus.
+
+    ⚠ ET LE LIBELLÉ DOIT NOMMER UN COUCHAGE. Sans ce test, « Petit déjeuner
+      15 000 Ar » entrerait comme un type de chambre à 15 000 la nuit.
+    """
+    trouvees, saison = [], None
+    for ligne_brute in texte.split("\n"):
+        ligne = ligne_brute.strip()
+        if not ligne or len(ligne) > 160:
+            continue
+        n = sans_accent(ligne)
+
+        # Un intitulé de saison s'applique aux lignes qui suivent.
+        if len(ligne) <= 60 and not re.search(r"\d{4,}", ligne) and re.search(
+            r"haute saison|basse saison|moyenne saison|saison seche|saison des pluies"
+            r"|toute l'annee|high season|low season", n
+        ):
+            saison = ligne.strip(" :–—-")
+            continue
+
+        if not any(mot in n for mot in (sans_accent(m) for m in MOTS_CHAMBRE)):
+            continue
+        if MOTIF_TEL.search(ligne):
+            continue
+        trouve = MOTIF_LIGNE_CHAMBRE.match(ligne)
+        if not trouve:
+            continue
+        prix = _nombre(trouve.group("prix"))
+        if prix is None or prix < 5_000 or prix > 5_000_000:
+            continue
+        nom = trouve.group("nom").strip(" .:-–—•*")
+        if len(nom) < 3 or not re.search(r"[a-zA-ZÀ-ÿ]{3}", nom):
+            continue
+
+        suite = sans_accent(trouve.group("suite") or "")
+        unite = "personne" if ("pers" in suite or "personne" in suite) else "chambre"
+        capacite = None
+        chiffre = re.search(r"\b(\d)\s*(?:pers|personne|adulte|pax)", n)
+        if chiffre:
+            capacite = int(chiffre.group(1))
+        elif "double" in n or "twin" in n:
+            capacite = 2
+        elif "single" in n or "simple" in n:
+            capacite = 1
+        elif "triple" in n:
+            capacite = 3
+
+        trouvees.append({
+            "nom": nom[:120], "prix_ar": int(prix), "unite": unite,
+            "capacite": capacite, "saison": saison,
+            "eau_chaude": bool(re.search(r"eau chaude|hot water", n)),
+            "sdb_privee": not bool(re.search(r"sdb commune|salle de bain commune"
+                                             r"|shared bathroom", n)),
+            "vue": ("mer" if "vue mer" in n else
+                    "lac" if "vue lac" in n else
+                    "montagne" if "vue montagne" in n else None),
+        })
+
+    # Deux fois le même libellé = deux saisons, ou une répétition de mise en
+    # page. On garde la première occurrence de chaque couple (nom, prix).
+    vus, propres = set(), []
+    for chambre in trouvees:
+        cle = (chambre["nom"].lower(), chambre["prix_ar"])
+        if cle in vus:
+            continue
+        vus.add(cle)
+        propres.append(chambre)
+    return propres
 
 
 # ── Dates d'événement ───────────────────────────────────────────────────────
@@ -710,3 +824,130 @@ def analyser(texte: str, nb_photos: int = 0, auteur_page: str | None = None,
         "titre_evt": titre_evenement(texte) if genre == "evenement" else None,
         "post_genre": genre_de_post(texte),
     }
+
+
+def analyser_site(texte: str, titre_page: str = "", nom_connu: str = "",
+                  noms_de_lieux: list[str] | None = None) -> dict:
+    """Lecture d'un SITE d'établissement. Toujours un établissement, jamais un récit.
+
+    La différence avec Facebook n'est pas le vocabulaire, c'est la nature de
+    l'objet : un site officiel décrit **un** établissement, celui à qui il
+    appartient. On ne se demande donc pas si c'est un récit ou un événement —
+    on cherche ce que Diako n'a pas : les tarifs, la carte, le contact.
+
+    ⚠ Le nom vient de la fiche quand on la connaît déjà (source rattachée), pas
+      du `<title>` : « Accueil | Hôtel ★★★ Bienvenue » n'est pas un nom.
+    """
+    cats = categories(texte)
+    if not cats:
+        # Un site d'hôtel qui ne dit jamais « hôtel » reste un hôtel s'il vend
+        # des nuits. Le titre de la page tranche souvent.
+        cats = categories(titre_page)
+
+    chambres = types_de_chambre(texte)
+    plats = _plats_hors_chambres(lignes_de_carte(texte), chambres)
+    if chambres and "hotel" not in cats:
+        cats = cats + ["hotel"]
+    if plats and "restaurant" not in cats:
+        cats = cats + ["restaurant"]
+
+    tels = telephones(texte)
+    adresses = liens(texte)
+    prix = prix_principal(texte, cats)
+    # Sur un site, le prix d'appel le plus juste est la chambre la moins chère.
+    # ⚠ MAIS PAS N'IMPORTE LAQUELLE : un lit en dortoir à 35 000 Ar *par
+    #   personne* n'est pas « une nuit à partir de 35 000 ». On prend la moins
+    #   chère des chambres facturées à la chambre ; à défaut seulement, on
+    #   bascule sur le par-personne, et on le dit dans l'unité.
+    if chambres:
+        par_chambre = [c for c in chambres if c["unite"] == "chambre"]
+        moins_chere = min(par_chambre or chambres, key=lambda c: c["prix_ar"])
+        prix = {"montant": moins_chere["prix_ar"],
+                "unite": "nuit" if moins_chere["unite"] == "chambre" else "personne"}
+    elif plats and not prix:
+        chiffres = [p for p in plats if p.get("prix_ar")]
+        if chiffres:
+            prix = {"montant": min(p["prix_ar"] for p in chiffres), "unite": "plat"}
+
+    # Le titre d'un site nomme l'établissement plus sûrement que son corps de
+    # page, qui parle de tout — le contraire de Facebook.
+    nom = ((nom_connu or "").strip() or _nom_depuis_titre(titre_page)
+           or nom_etablissement(texte))
+
+    return {
+        "genre": "etablissement",
+        "categories": cats,
+        "nom_etab": nom,
+        "lieu_texte": lieu_dans_le_texte(texte, noms_de_lieux or []),
+        "adresse": adresse(texte),
+        "repere": repere(texte),
+        "telephone": tels[0] if tels else None,
+        "whatsapp": whatsapp(texte),
+        "email": email(texte),
+        "site_web": adresses["site_web"],
+        "page_facebook": adresses["page_facebook"],
+        "horaires": horaires(texte),
+        "equipements": equipements(texte),
+        "prix_ar": prix["montant"] if prix else None,
+        "prix_unite": prix["unite"] if prix else None,
+        "lignes_carte": plats,
+        "lignes_chambre": chambres,
+        "evt_debut": None, "evt_fin": None, "evt_recurrent": False,
+        "titre_evt": None, "post_genre": "photo",
+    }
+
+
+def _plats_hors_chambres(plats: list[dict], chambres: list[dict]) -> list[dict]:
+    """Une grille de tarifs n'est pas une carte de restaurant.
+
+    🔴 SANS CE FILTRE, LA PAGE « NOS TARIFS » D'UN HÔTEL ENTRE DANS `menu_items`.
+       Les deux lectures tournent sur le même texte : « Bungalow vue mer
+       180 000 Ar » satisfait aussi bien le motif d'un plat que celui d'une
+       chambre. Publier ça mettrait des bungalows dans la carte du restaurant —
+       et `menu_items` est justement la table qu'on essaie de remplir
+       proprement (4 lignes sur tout le site).
+    """
+    if not plats:
+        return []
+    deja = {(c["nom"].strip().lower(), c["prix_ar"]) for c in chambres}
+    mots = tuple(sans_accent(m) for m in MOTS_CHAMBRE)
+    gardes = []
+    for plat in plats:
+        if (plat["nom"].strip().lower(), plat.get("prix_ar")) in deja:
+            continue
+        if any(mot in sans_accent(plat["nom"]) for mot in mots):
+            continue
+        # Un « plat » à plus de 60 000 Ar sur un site d'hôtel est une nuitée mal
+        # lue neuf fois sur dix. Le doute profite à la fiche, pas à la carte.
+        if (plat.get("prix_ar") or 0) > 60_000:
+            continue
+        gardes.append(plat)
+    return gardes
+
+
+MOTS_SANS_VALEUR = re.compile(
+    r"^(accueil|home|bienvenue|welcome|index|site officiel|official site"
+    r"|page d'accueil)$", re.I
+)
+
+
+def _nom_depuis_titre(titre: str) -> str | None:
+    """Le nom de l'établissement dans le `<title>` d'un site.
+
+    ⚠ ON DÉCOUPE, ON NE ROGNE PAS. Les titres réels sont des phrases entières :
+      « Camp Catta Voyage Madagascar : voyage séjour ecotourisme circuit
+      découverte RN7 » ou « Hôtel Zomatel | Restaurant à Fianarantsoa —
+      Madagascar ». Un simple test de longueur les rejetait tous les deux, et le
+      bot retombait sur le corps de la page, où il lisait « Restaurant
+      Snack-Bar ». Le nom, c'est le premier segment.
+    """
+    if not titre:
+        return None
+    segments = [s.strip(" |·–—-,") for s in re.split(r"\s*[|·–—:]\s*|\s+[-–]\s+", titre)]
+    for segment in segments:
+        if not segment or MOTS_SANS_VALEUR.match(segment):
+            continue
+        # Un segment de dix mots est une phrase de référencement, pas un nom.
+        if 2 < len(segment) <= 60 and len(segment.split()) <= 6:
+            return segment
+    return None

@@ -402,6 +402,56 @@ def _insert_plat(ligne: dict, section_sql: str, ordre: int, releve_le: str) -> s
     )
 
 
+def _sql_chambres(page_id: str, lignes: list[dict], releve_le: str) -> str:
+    """Les types de chambre, et leurs tarifs de saison quand le site en donne.
+
+    🔴 `room_types.base_price_ar` EST `NOT NULL` : une chambre sans prix ne
+       s'insère pas. On l'écarte au lieu de lui inventer un tarif — c'est
+       exactement le cas que la règle « aucune donnée inventée » vise.
+
+    ⚠ UN HÔTEL N'A PAS *UN* PRIX (migration 0007). Deux lignes portant le même
+      nom de chambre ne sont pas un doublon : ce sont deux saisons. On crée
+      alors UN type de chambre, au prix le plus bas, et autant de
+      `season_rates` que de saisons nommées. Les fondre en deux chambres
+      distinctes ferait apparaître « Bungalow vue mer » deux fois sur la fiche.
+    """
+    chiffrees = [l for l in lignes if l.get("prix_ar")]
+    if not chiffrees:
+        return ""
+
+    groupes: dict[str, list[dict]] = {}
+    for ligne in chiffrees:
+        groupes.setdefault(ligne["nom"].strip().lower(), []).append(ligne)
+
+    corps = [f"  v_page uuid := {_txt(page_id)}::uuid;", "  v_chambre uuid;"]
+    instructions = []
+    for rang, (_, lot) in enumerate(groupes.items(), start=1):
+        reference = min(lot, key=lambda l: l["prix_ar"])
+        unite = "personne" if reference.get("unite") == "personne" else "chambre"
+        instructions.append(
+            f"  INSERT INTO public.room_types (page_id, name, description, max_adults,"
+            f" private_bath, hot_water, view, base_price_ar, price_unit, releve_le,"
+            f" sort_order) VALUES (v_page, {_txt(reference['nom'])},"
+            f" {_txt(reference.get('description'))}, {_num(reference.get('capacite'))},"
+            f" {_bool(reference.get('sdb_privee', True))},"
+            f" {_bool(reference.get('eau_chaude'))}, {_txt(reference.get('vue'))},"
+            f" {_num(reference['prix_ar'])}, {_txt(unite)}, {_txt(releve_le)}::date,"
+            f" {rang}) RETURNING id INTO v_chambre;"
+        )
+        saisons = [l for l in lot if (l.get("saison") or "").strip()]
+        for saison in saisons:
+            instructions.append(
+                f"  INSERT INTO public.season_rates (room_type_id, season_label,"
+                f" price_ar, price_unit, checked_at) VALUES (v_chambre,"
+                f" {_txt(saison['saison'][:120])}, {_num(saison['prix_ar'])},"
+                f" {_txt('personne' if saison.get('unite') == 'personne' else 'chambre')},"
+                f" {_txt(releve_le)}::timestamptz);"
+            )
+
+    return ("DO $$\nDECLARE\n" + "\n".join(corps) + "\nBEGIN\n"
+            + "\n".join(instructions) + "\nEND $$;")
+
+
 def _sql_photos_de_carte(page_id: str, medias: list[dict]) -> str:
     """La carte photographiée, gardée telle quelle.
 
@@ -604,12 +654,31 @@ def _publier_etablissement(t: dict, cfg: dict, rappel) -> dict:
             )
         lignes = [l for l in lignes if l["nom"] not in deja]
 
+    chambres = bdd.chambres_a_publier(t["id"])
+    if not nouvelle and chambres:
+        # Une grille de tarifs se remplace, elle ne s'empile pas : republier le
+        # site six mois plus tard doit corriger les prix, pas créer « Bungalow
+        # vue mer » une deuxième fois. On retire les types de même nom, et leurs
+        # tarifs de saison partent avec (ON DELETE CASCADE).
+        noms = [c["nom"] for c in chambres]
+        avant = diako.executer_sql(
+            f"DELETE FROM public.room_types WHERE page_id = {_txt(page_id)}::uuid "
+            f"AND lower(name) = ANY({_tableau([n.strip().lower() for n in noms])}) "
+            f"RETURNING id"
+        )
+        if avant:
+            bdd.logguer(
+                f"{len(avant)} type(s) de chambre de même nom remplacé(s) par les "
+                "tarifs relevés aujourd'hui.", "info",
+            )
+
     releve_le = t.get("prix_vu_le") or t.get("date_post") or date.today().isoformat()
     requetes = [
         _sql_creer_page(t, page_id, slug, medias) if nouvelle
         else _sql_completer_page(t, page_id, medias),
         _sql_equipements(page_id, t.get("equipements") or []),
         _sql_carte(page_id, lignes, releve_le),
+        _sql_chambres(page_id, chambres, releve_le),
         _sql_photos_de_carte(page_id, photos_carte),
     ]
     diako.executer_sql("\n".join(r for r in requetes if r))
@@ -625,11 +694,12 @@ def _publier_etablissement(t: dict, cfg: dict, rappel) -> dict:
 
     bdd.logguer(
         ("Fiche créée" if nouvelle else "Fiche complétée")
-        + f" : {len(medias)} photo(s), {len(lignes)} plat(s).",
+        + f" : {len(medias)} photo(s), {len(lignes)} plat(s), "
+        + f"{len([c for c in chambres if c.get('prix_ar')])} chambre(s) tarifée(s).",
         "succes",
     )
-    return {"table": "pages", "id": page_id, "lien": lien,
-            "photos": len(medias), "plats": len(lignes)}
+    return {"table": "pages", "id": page_id, "lien": lien, "photos": len(medias),
+            "plats": len(lignes), "chambres": len(chambres)}
 
 
 def _publier_evenement(t: dict, rappel) -> dict:

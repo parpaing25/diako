@@ -29,10 +29,18 @@ CREATE TABLE IF NOT EXISTS sources (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     nom               TEXT NOT NULL,
     url               TEXT NOT NULL UNIQUE,
-    genre             TEXT NOT NULL DEFAULT 'groupe',  -- groupe | page | fil | recherche
+    -- groupe | page | fil | recherche  (Facebook)  ·  site  (le web ouvert)
+    genre             TEXT NOT NULL DEFAULT 'groupe',
     actif             INTEGER NOT NULL DEFAULT 1,
     derniere_collecte TEXT,
-    nb_trouvees       INTEGER NOT NULL DEFAULT 0
+    nb_trouvees       INTEGER NOT NULL DEFAULT 0,
+    -- ⭐ Une source « site » sait DE QUELLE FICHE elle parle. C'est tout
+    --   l'intérêt du web par rapport à Facebook : le site officiel d'un hôtel
+    --   ne laisse aucun doute sur l'établissement, donc les tarifs qu'on y lit
+    --   n'ont pas à être rapprochés au jugé.
+    page_id           TEXT,
+    page_nom          TEXT,
+    origine           TEXT              -- 'annuaire' | 'osm' | 'facebook' | 'main'
 );
 
 CREATE TABLE IF NOT EXISTS trouvailles (
@@ -149,6 +157,25 @@ CREATE TABLE IF NOT EXISTS lignes_carte (
     FOREIGN KEY (trouvaille_id) REFERENCES trouvailles(id) ON DELETE CASCADE
 );
 
+-- Un type de chambre : « Bungalow vue mer, 180 000 Ar la nuit ». 1 442 hôtels
+-- de Diako n'ont AUCUN tarif ; c'est sur leur propre site qu'il se trouve.
+CREATE TABLE IF NOT EXISTS lignes_chambre (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    trouvaille_id TEXT NOT NULL,
+    nom           TEXT NOT NULL,
+    description   TEXT,
+    prix_ar       INTEGER,
+    unite         TEXT NOT NULL DEFAULT 'chambre',   -- chambre | personne
+    capacite      INTEGER,
+    sdb_privee    INTEGER NOT NULL DEFAULT 1,
+    eau_chaude    INTEGER NOT NULL DEFAULT 0,
+    vue           TEXT,
+    saison        TEXT,           -- libellé de saison quand le site en donne
+    garder        INTEGER NOT NULL DEFAULT 1,
+    ordre         INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (trouvaille_id) REFERENCES trouvailles(id) ON DELETE CASCADE
+);
+
 -- ── Cache du référentiel Diako ──────────────────────────────────────────
 -- Rechargé depuis Supabase, jamais écrit vers lui. Sert au rapprochement, au
 -- dédoublonnage et au tableau « ce qui manque ».
@@ -162,7 +189,9 @@ CREATE TABLE IF NOT EXISTS ref_pages (
     lieu_nom   TEXT,
     telephone  TEXT,
     cover_url  TEXT,
-    nb_carte   INTEGER NOT NULL DEFAULT 0
+    site_web   TEXT,
+    nb_carte   INTEGER NOT NULL DEFAULT 0,
+    nb_chambre INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS ref_lieux (
@@ -233,8 +262,33 @@ def connexion() -> sqlite3.Connection:
     return cx
 
 
+def _migrer(cx: sqlite3.Connection) -> None:
+    """Rattrape les bases créées avant l'ouverture du bot au web ouvert.
+
+    Doit tourner AVANT les `CREATE TABLE IF NOT EXISTS` : ceux-ci ne modifient
+    pas une table qui existe déjà, et un `ALTER` manquant ne se voit qu'au
+    premier accès à la colonne — c'est-à-dire trop tard.
+    """
+    tables = {
+        l["name"] for l in cx.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    }
+    ajouts = {
+        "sources": (("page_id", "TEXT"), ("page_nom", "TEXT"), ("origine", "TEXT")),
+        "ref_pages": (("site_web", "TEXT"),
+                      ("nb_chambre", "INTEGER NOT NULL DEFAULT 0")),
+    }
+    for table, colonnes in ajouts.items():
+        if table not in tables:
+            continue
+        presentes = {l["name"] for l in cx.execute(f"PRAGMA table_info({table})")}
+        for nom, declaration in colonnes:
+            if nom not in presentes:
+                cx.execute(f"ALTER TABLE {table} ADD COLUMN {nom} {declaration}")
+
+
 def initialiser() -> None:
     with _verrou, connexion() as cx:
+        _migrer(cx)
         cx.executescript(SCHEMA)
 
 
@@ -302,18 +356,28 @@ def sources(actives_seulement: bool = False, pour_collecte: bool = False) -> lis
         return [dict(l) for l in cx.execute(requete).fetchall()]
 
 
-def ajouter_source(nom: str, url: str, genre: str = "groupe") -> dict:
+def ajouter_source(nom: str, url: str, genre: str = "groupe", page_id: str = "",
+                   page_nom: str = "", origine: str = "main") -> dict:
     with _verrou, connexion() as cx:
         cx.execute(
-            "INSERT OR IGNORE INTO sources (nom, url, genre) VALUES (?, ?, ?)",
-            (nom, url, genre),
+            "INSERT OR IGNORE INTO sources (nom, url, genre, page_id, page_nom, origine)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (nom, url, genre, page_id or None, page_nom or None, origine),
         )
         ligne = cx.execute("SELECT * FROM sources WHERE url = ?", (url,)).fetchone()
     return dict(ligne)
 
 
+def source_connue(url: str) -> bool:
+    with _verrou, connexion() as cx:
+        return cx.execute(
+            "SELECT 1 FROM sources WHERE url = ?", (url,)
+        ).fetchone() is not None
+
+
 def modifier_source(sid: int, **champs) -> None:
-    permis = {"nom", "url", "genre", "actif", "derniere_collecte", "nb_trouvees"}
+    permis = {"nom", "url", "genre", "actif", "derniere_collecte", "nb_trouvees",
+              "page_id", "page_nom", "origine"}
     champs = {k: v for k, v in champs.items() if k in permis}
     if not champs:
         return
@@ -411,6 +475,12 @@ def trouvaille(tid: str) -> dict | None:
                 (tid,)
             ).fetchall()
         ]
+        t["lignes_chambre"] = [
+            dict(l) for l in cx.execute(
+                "SELECT * FROM lignes_chambre WHERE trouvaille_id = ? ORDER BY ordre, id",
+                (tid,)
+            ).fetchall()
+        ]
     return t
 
 
@@ -449,7 +519,9 @@ def lister(statut: str | None = None, genre: str | None = None,
                    (SELECT p.fichier FROM photos p WHERE p.trouvaille_id = t.id
                      ORDER BY p.couverture DESC, p.ordre LIMIT 1) AS vignette,
                    (SELECT COUNT(*) FROM lignes_carte c
-                     WHERE c.trouvaille_id = t.id AND c.garder = 1) AS nb_plats
+                     WHERE c.trouvaille_id = t.id AND c.garder = 1) AS nb_plats,
+                   (SELECT COUNT(*) FROM lignes_chambre h
+                     WHERE h.trouvaille_id = t.id AND h.garder = 1) AS nb_chambres
                 FROM trouvailles t {ou}
                 ORDER BY {TRIS.get(tri, TRIS['score'])} LIMIT ?""",
             (*params, limite),
@@ -474,6 +546,9 @@ def compteurs() -> dict:
         plats = cx.execute(
             "SELECT COUNT(*) n FROM lignes_carte WHERE garder = 1"
         ).fetchone()["n"]
+        chambres = cx.execute(
+            "SELECT COUNT(*) n FROM lignes_chambre WHERE garder = 1"
+        ).fetchone()["n"]
     return {
         "a_trier": par_statut.get("a_trier", 0),
         "validee": par_statut.get("validee", 0),
@@ -485,6 +560,7 @@ def compteurs() -> dict:
         "total": sum(par_statut.values()),
         "photos": photos,
         "plats": plats,
+        "chambres": chambres,
         "genres": par_genre,
     }
 
@@ -591,6 +667,50 @@ def lignes_a_publier(tid: str) -> list[dict]:
     with _verrou, connexion() as cx:
         lignes = cx.execute(
             "SELECT * FROM lignes_carte WHERE trouvaille_id = ? AND garder = 1 "
+            "ORDER BY ordre, id", (tid,)
+        ).fetchall()
+    return [dict(l) for l in lignes]
+
+
+# ── Types de chambre ────────────────────────────────────────────────────────
+def ajouter_ligne_chambre(tid: str, ligne: dict, ordre: int = 0) -> None:
+    with _verrou, connexion() as cx:
+        cx.execute(
+            "INSERT INTO lignes_chambre (trouvaille_id, nom, description, prix_ar,"
+            " unite, capacite, sdb_privee, eau_chaude, vue, saison, ordre)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                tid, ligne.get("nom", ""), ligne.get("description"),
+                ligne.get("prix_ar"), ligne.get("unite") or "chambre",
+                ligne.get("capacite"), int(bool(ligne.get("sdb_privee", True))),
+                int(bool(ligne.get("eau_chaude"))), ligne.get("vue"),
+                ligne.get("saison"), ordre,
+            ),
+        )
+
+
+def modifier_ligne_chambre(lid: int, **champs) -> None:
+    permis = {"nom", "description", "prix_ar", "unite", "capacite", "sdb_privee",
+              "eau_chaude", "vue", "saison", "garder", "ordre"}
+    champs = {k: v for k, v in champs.items() if k in permis}
+    if not champs:
+        return
+    set_sql = ", ".join(f"{k} = ?" for k in champs)
+    with _verrou, connexion() as cx:
+        cx.execute(
+            f"UPDATE lignes_chambre SET {set_sql} WHERE id = ?", (*champs.values(), lid)
+        )
+
+
+def supprimer_ligne_chambre(lid: int) -> None:
+    with _verrou, connexion() as cx:
+        cx.execute("DELETE FROM lignes_chambre WHERE id = ?", (lid,))
+
+
+def chambres_a_publier(tid: str) -> list[dict]:
+    with _verrou, connexion() as cx:
+        lignes = cx.execute(
+            "SELECT * FROM lignes_chambre WHERE trouvaille_id = ? AND garder = 1 "
             "ORDER BY ordre, id", (tid,)
         ).fetchall()
     return [dict(l) for l in lignes]

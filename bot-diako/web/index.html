@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bot de collecte — Diako</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="barre">
+  <div class="marque">
+    <span class="pastille">D</span>
+    <div>
+      <strong>Bot de collecte</strong>
+      <small>Facebook → Diako</small>
+    </div>
+  </div>
+  <nav class="onglets">
+    <button class="onglet actif" data-vue="bord">Tableau de bord</button>
+    <button class="onglet" data-vue="trouvailles">Trouvailles <span id="pastille-trier" class="compteur">0</span></button>
+    <button class="onglet" data-vue="sources">Sources</button>
+    <button class="onglet" data-vue="reglages">Réglages</button>
+  </nav>
+  <button class="etat-fb" id="etat-fb" title="Compte Facebook utilisé pour la collecte">
+    <i></i><span id="etat-fb-texte">Facebook</span>
+  </button>
+</header>
+
+<main>
+
+  <!-- ══════════ TABLEAU DE BORD ══════════ -->
+  <section class="vue active" id="vue-bord">
+
+    <!-- Barrage tant qu'aucun compte Facebook n'est branché -->
+    <div class="banniere" id="banniere-fb" hidden>
+      <div class="banniere-corps">
+        <span class="banniere-icone">!</span>
+        <div>
+          <strong class="banniere-titre">Connectez votre compte Facebook pour commencer</strong>
+          <p>
+            Le bot lit les groupes, les pages et votre fil avec <em>votre</em>
+            session, comme si vous les ouvriez vous-même — il n'y a ni mot de
+            passe à saisir ici, ni compte à créer. À faire <strong>une seule
+            fois</strong> : la session reste enregistrée sur ce PC.
+          </p>
+          <ol class="etapes">
+            <li>Cliquez le bouton : une fenêtre Facebook s'ouvre.</li>
+            <li>Connectez-vous normalement (identifiants, code de vérification…).</li>
+            <li>La fenêtre se ferme toute seule dès que c'est bon.</li>
+          </ol>
+        </div>
+      </div>
+      <button class="bouton principal grand" id="btn-connexion-banniere">
+        Connecter mon compte Facebook
+      </button>
+    </div>
+
+    <div class="chiffres">
+      <button class="chiffre lien-statut" data-statut="a_trier">
+        <span class="valeur" id="n-a_trier">0</span><span class="etiquette">à trier</span>
+      </button>
+      <button class="chiffre lien-statut" data-statut="validee">
+        <span class="valeur" id="n-validee">0</span><span class="etiquette">validées</span>
+      </button>
+      <button class="chiffre lien-statut" data-statut="publiee">
+        <span class="valeur ok" id="n-publiee">0</span><span class="etiquette">publiées</span>
+      </button>
+      <button class="chiffre lien-statut" data-statut="incomplete">
+        <span class="valeur alerte" id="n-incomplete">0</span><span class="etiquette">incomplètes</span>
+      </button>
+      <div class="chiffre">
+        <span class="valeur" id="n-plats">0</span><span class="etiquette">plats récoltés</span>
+      </div>
+    </div>
+
+    <!-- ⭐ La carte qui donne le cap : ce qui manque VRAIMENT au site. -->
+    <div class="carte">
+      <h2>Ce qui manque à Diako en ce moment</h2>
+      <p class="aide">
+        Mesuré sur la base, pas estimé. C'est ce tableau qui dit où porter
+        l'effort : <strong>le référentiel est plein, les fiches sont vides</strong>.
+      </p>
+      <div class="manques" id="manques"></div>
+      <div class="ligne-compte" id="etat-referentiel"></div>
+    </div>
+
+    <div class="grille-deux">
+      <div class="carte">
+        <h2>Collecte</h2>
+        <p class="aide" id="aide-collecte">
+          Le bot ouvre Facebook avec votre session, parcourt les sources actives
+          et garde ce qui apporte quelque chose au site : un établissement, une
+          carte, un événement daté, un récit illustré.
+        </p>
+        <div class="ligne-compte" id="ligne-compte"></div>
+        <div class="actions-collecte">
+          <button class="bouton principal" id="btn-collecte">Lancer la collecte</button>
+          <button class="bouton" id="btn-arreter" disabled>Arrêter</button>
+        </div>
+        <div class="progression" id="progression" hidden>
+          <div class="barre-progres"><i></i></div>
+          <span id="texte-progression"></span>
+        </div>
+      </div>
+
+      <div class="carte">
+        <h2>Publication</h2>
+        <p class="aide">
+          Les trouvailles marquées « validée » partent sur diako.fonenako.mg :
+          la fiche se complète <strong>sans jamais écraser</strong> ce qui y est
+          déjà, les photos vont sur o2switch (1600 px, envoi espacé de 3 s).
+        </p>
+        <button class="bouton principal" id="btn-lot">Publier les trouvailles validées</button>
+        <p class="aide" style="margin:12px 0 8px">
+          Le référentiel local sert au rapprochement. Rechargez-le après une
+          grosse publication, ou s'il date de plus d'une demi-journée.
+        </p>
+        <button class="bouton" id="btn-referentiel">Recharger le référentiel</button>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h2>Où chercher — suggestions déduites des trous</h2>
+      <p class="aide">
+        Chaque ligne vient d'un compte en base. Un clic ajoute la recherche aux
+        sources ; elle sera parcourue à la prochaine collecte.
+      </p>
+      <div class="suggestions" id="suggestions">
+        <p class="aide">Chargement…</p>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h2>Collectes automatiques</h2>
+      <div class="ligne-compte" id="etat-planning"></div>
+      <div class="grille-reglages">
+        <div class="reglage">
+          <label>Activer</label>
+          <label><input type="checkbox" data-cfg="collecte_auto"> collectes automatiques</label>
+        </div>
+        <div class="reglage">
+          <label>Heures (séparées par une virgule)</label>
+          <input type="text" id="heures-collecte" placeholder="11:00, 18:00">
+        </div>
+        <div class="reglage">
+          <label>Objectif par jour</label>
+          <input type="number" data-cfg="objectif_par_jour">
+        </div>
+      </div>
+      <button class="bouton principal" id="btn-planning">Enregistrer</button>
+      <p class="aide" style="margin:12px 0 0">
+        Le passage du soir va <strong>plus loin dans les fils</strong> si
+        l'objectif n'est pas atteint — mêmes pauses, plus de défilements.
+        Les collectes n'ont lieu que si <strong>cette fenêtre reste ouverte</strong>.
+      </p>
+    </div>
+
+    <div class="carte">
+      <h2>Journal</h2>
+      <ul class="journal" id="journal"></ul>
+    </div>
+  </section>
+
+  <!-- ══════════ TROUVAILLES ══════════ -->
+  <section class="vue" id="vue-trouvailles">
+    <div class="filtres">
+      <div class="puces" id="filtres-statut">
+        <button class="puce actif" data-statut="a_trier">À trier</button>
+        <button class="puce" data-statut="validee">Validées</button>
+        <button class="puce" data-statut="incomplete">Incomplètes</button>
+        <button class="puce" data-statut="en_traitement">En lecture</button>
+        <button class="puce" data-statut="doublon">Doublons</button>
+        <button class="puce" data-statut="publiee">Publiées</button>
+        <button class="puce" data-statut="rejetee">Rejetées</button>
+        <button class="puce" data-statut="tous">Toutes</button>
+      </div>
+      <select id="filtre-genre">
+        <option value="">Tous les genres</option>
+        <option value="etablissement">Établissements</option>
+        <option value="carte">Cartes / menus</option>
+        <option value="evenement">Événements</option>
+        <option value="recit">Récits</option>
+      </select>
+      <select id="filtre-source"><option value="0">Toutes les sources</option></select>
+      <select id="tri">
+        <option value="score">Meilleur score d'abord</option>
+        <option value="recent">Plus récentes d'abord</option>
+      </select>
+      <input type="search" id="recherche" placeholder="Rechercher (nom, lieu, texte, téléphone)…">
+    </div>
+    <div class="grille-annonces" id="grille"></div>
+    <p class="vide" id="vide" hidden>Rien ici pour l'instant.</p>
+  </section>
+
+  <!-- ══════════ SOURCES ══════════ -->
+  <section class="vue" id="vue-sources">
+    <div class="carte">
+      <h2>Sources surveillées</h2>
+      <p class="aide">
+        Collez une adresse Facebook, ou <strong>tapez simplement ce que vous
+        cherchez</strong> — le bot en fait une recherche.<br>
+        Groupe : <code>facebook.com/groups/tourisme.mada</code> ·
+        Page : <code>facebook.com/SakamangaHotel</code> ·
+        Fil : <code>facebook.com</code> ·
+        Recherche : <code>menu restaurant Nosy Be</code>
+      </p>
+      <form class="ligne-form" id="form-source">
+        <input id="source-nom" placeholder="Nom court (facultatif)">
+        <input id="source-url" placeholder="Adresse Facebook, ou mots à chercher…" required>
+        <button class="bouton principal" type="submit">Ajouter</button>
+      </form>
+      <table class="tableau" id="table-sources">
+        <thead><tr><th>Actif</th><th>Type</th><th>Nom</th><th>Adresse</th><th>Dernier passage</th><th>Trouvées</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="carte">
+      <h2>Les quatre natures de source</h2>
+      <ul class="notes">
+        <li><strong>Groupe</strong> — il faut en être membre. Ouvert en tri
+          <em>chronologique</em> : sans ça Facebook sert « les plus pertinents »,
+          c'est-à-dire des publications déjà vues.</li>
+        <li><strong>Page</strong> — le fil d'un établissement ou d'un office du
+          tourisme. Sur une page, <em>l'auteur est l'établissement</em> : c'est le
+          nom le plus sûr dont dispose le rapprochement.</li>
+        <li><strong>Fil d'actualité</strong> — ce que votre compte voit déjà.
+          Utile pour ne pas déclarer une à une les dizaines de pages suivies.</li>
+        <li><strong>Recherche</strong> — la seule façon d'atteindre ce que vous ne
+          suivez pas encore. C'est là que se trouvent les niches : un nouveau
+          restaurant, une carte publiée par un client, un festival de province.</li>
+      </ul>
+    </div>
+
+    <div class="carte">
+      <h2>Ce que le bot écrit sur Diako</h2>
+      <ul class="notes">
+        <li><strong>Il ne remplace jamais rien.</strong> Sur une fiche existante,
+          seules les colonnes <em>vides</em> sont remplies. Une description écrite
+          par l'office du tourisme reste telle quelle.</li>
+        <li><strong>Le prix ne voyage jamais seul</strong> : montant, unité et
+          <em>date de relevé</em> partent ensemble. Un tarif sans date ment dès
+          qu'il vieillit.</li>
+        <li><strong>La provenance est écrite dans la base</strong> (colonne
+          <code>source</code>) et sous chaque récit : le nom de l'auteur d'origine
+          et le lien vers sa publication.</li>
+        <li><strong>Aucune donnée inventée.</strong> Un champ que la publication ne
+          dit pas reste vide, et se voit ici en badge <span class="badge manque">manque</span>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══════════ RÉGLAGES ══════════ -->
+  <section class="vue" id="vue-reglages">
+
+    <div class="carte">
+      <h2>Relecture et lecture des cartes par l'IA</h2>
+      <p class="aide">
+        Les règles lisent bien le mécanique (numéros, montants, dates). Le modèle
+        sert à deux choses qu'elles ne savent pas faire : comprendre un texte
+        libre (« la crevette au coco valait ses 18 000 »), et
+        <strong>transcrire une carte photographiée</strong> — à Madagascar une
+        carte se publie en photo, presque jamais tapée.
+      </p>
+      <div class="grille-reglages">
+        <div class="reglage">
+          <label>Activer la relecture</label>
+          <label><input type="checkbox" data-cfg="llm_actif"> activée</label>
+        </div>
+        <div class="reglage">
+          <label>Lire les cartes en photo</label>
+          <label><input type="checkbox" data-cfg="llm_vision"> activée</label>
+        </div>
+        <div class="reglage">
+          <label>Chemin utilisé</label>
+          <select data-cfg="llm_transport">
+            <option value="passerelle">Passerelle locale (gratuit)</option>
+            <option value="anthropic">API Claude — Sonnet (payant)</option>
+          </select>
+        </div>
+        <div class="reglage">
+          <label>Adresse de la passerelle</label>
+          <input type="text" data-cfg="llm_passerelle">
+        </div>
+        <div class="reglage">
+          <label>Modèle (vide = par défaut)</label>
+          <input type="text" data-cfg="llm_modele" placeholder="claude-abo / claude-sonnet-5">
+        </div>
+        <div class="reglage">
+          <label>Si la passerelle tombe</label>
+          <label><input type="checkbox" data-cfg="llm_repli_anthropic"> basculer sur l'API payante</label>
+        </div>
+      </div>
+      <div class="ligne-compte" id="etat-llm">
+        <span>Testez le chemin choisi avant de lancer une collecte.</span>
+        <button class="lien-discret" id="btn-test-llm">Tester la relecture</button>
+      </div>
+      <p class="aide" style="margin:0">
+        La lecture d'image ne part pas à chaque publication : seulement quand le
+        texte parle de carte ou de menu, ou quand l'établissement est un
+        restaurant — et seulement si les règles n'ont pas déjà trouvé les plats.
+      </p>
+    </div>
+
+    <div class="carte">
+      <h2>Rapprochement avec l'annuaire</h2>
+      <p class="aide">
+        Le bot compare le nom trouvé aux fiches existantes. Au-dessus du seuil de
+        rattachement <em>et</em> sur un lieu concordant, il rattache seul ;
+        en dessous, il propose et <strong>vous tranchez</strong>.
+      </p>
+      <div class="grille-reglages">
+        <div class="reglage">
+          <label>Seuil de proposition (0-1)</label>
+          <input type="number" step="0.01" data-cfg="seuil_rapprochement">
+        </div>
+        <div class="reglage">
+          <label>Seuil de rattachement automatique</label>
+          <input type="number" step="0.01" data-cfg="seuil_rattachement_auto">
+        </div>
+        <div class="reglage">
+          <label>Recharger le référentiel toutes les (h)</label>
+          <input type="number" data-cfg="referentiel_heures">
+        </div>
+      </div>
+      <p class="aide" style="margin:0">
+        Poser une carte sur le mauvais restaurant ne se rattrape pas : personne
+        ne vient corriger. Monter le seuil automatique au-dessus de 0,85 rend le
+        bot plus prudent, et vous donne plus à trancher.
+      </p>
+    </div>
+
+    <div class="carte">
+      <h2>Réglages</h2>
+      <div class="grille-reglages" id="grille-reglages"></div>
+      <button class="bouton principal" id="btn-reglages">Enregistrer</button>
+    </div>
+
+    <div class="carte">
+      <h2>Bon à savoir</h2>
+      <ul class="notes">
+        <li><strong>Allure lente volontaire.</strong> Les pauses imitent une lecture
+          humaine. Les raccourcir augmente le risque de blocage du compte Facebook.</li>
+        <li><strong>Rien n'est publié tout seul.</strong> Une trouvaille ne part sur
+          Diako que si vous la validez puis cliquez Publier.</li>
+        <li><strong>Ces contenus viennent de tiers.</strong> On les reprend avec
+          attribution ; si un auteur demande le retrait, on retire.</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════ PANNEAU DE DÉTAIL ══════════ -->
+<aside class="panneau" id="panneau" hidden>
+  <div class="panneau-fond" data-fermer></div>
+  <div class="panneau-corps">
+    <header class="panneau-tete">
+      <div>
+        <h2 id="p-titre">Trouvaille</h2>
+        <small id="p-source"></small>
+      </div>
+      <button class="fermer" data-fermer aria-label="Fermer">×</button>
+    </header>
+
+    <div class="panneau-contenu" id="panneau-contenu"></div>
+
+    <footer class="panneau-pied">
+      <button class="bouton danger" id="p-rejeter">Rejeter</button>
+      <button class="bouton" id="p-valider">Valider</button>
+      <button class="bouton principal" id="p-publier">Publier sur Diako</button>
+    </footer>
+  </div>
+</aside>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

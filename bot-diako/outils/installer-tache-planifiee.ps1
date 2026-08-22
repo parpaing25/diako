@@ -12,7 +12,10 @@ $lanceur = Join-Path $racine "DEMARRER.bat"
 
 if (-not (Test-Path $lanceur)) { throw "Introuvable : $lanceur" }
 
-$action    = New-ScheduledTaskAction -Execute $lanceur -WorkingDirectory $racine
+# -sans-navigateur : sinon un onglet s'ouvre a CHAQUE ouverture de session.
+# Le bot tourne quand meme, et http://127.0.0.1:8757 reste joignable.
+$action    = New-ScheduledTaskAction -Execute $lanceur -Argument "--sans-navigateur" `
+                -WorkingDirectory $racine
 $demarrage = New-ScheduledTaskTrigger -AtLogOn
 # Les reglages par defaut arretent une tache au bout de 3 jours et la coupent
 # sur batterie : ni l'un ni l'autre ne convient a un bot qui doit rester la.
@@ -26,3 +29,4 @@ Register-ScheduledTask -TaskName "Bot de collecte Diako" -Action $action `
 
 Write-Host "Tache enregistree. Le bot demarrera a chaque ouverture de session."
 Write-Host "Pour le lancer maintenant : Start-ScheduledTask -TaskName 'Bot de collecte Diako'"
+Write-Host "Interface : http://127.0.0.1:8757"

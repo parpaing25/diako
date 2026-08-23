@@ -656,6 +656,13 @@ def publier(tid: str, rappel=None) -> dict:
     #   une agence devenait une fiche et son circuit se perdait. Les mêmes
     #   photos, déjà envoyées, servent maintenant aussi la destination, le site
     #   et le plat — sans jamais écraser ce qui existe.
+    # ⭐ LA SOURCE QUI A DONNÉ CETTE TROUVAILLE VIENT DE FAIRE SES PREUVES.
+    #   Une publication en ligne vaut mieux que n'importe quel pronostic sur le
+    #   nombre de membres d'un groupe : c'est ce compteur qui fait remonter les
+    #   bonnes sources dans « Nouvelles sources ».
+    if t.get("origine_cle"):
+        bdd.compter_publication_source(t["origine_cle"])
+
     resultat["apports"] = enrichissement.appliquer(
         t, resultat.get("medias") or []
     )

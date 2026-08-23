@@ -220,6 +220,13 @@
       </select>
       <input type="search" id="recherche" placeholder="Rechercher (nom, lieu, texte, téléphone)…">
     </div>
+    <div class="barre-choix" id="barre-choix" hidden>
+      <span class="discret" id="choix-compte">0 sélectionnée(s)</span>
+      <a href="#" id="choix-tout">Tout cocher</a>
+      <a href="#" id="choix-rien">Tout décocher</a>
+      <button class="bouton" id="choix-rejeter">Rejeter la sélection</button>
+      <button class="bouton principal" id="choix-valider">Valider la sélection</button>
+    </div>
     <div class="grille-annonces" id="grille"></div>
     <p class="vide" id="vide" hidden>Rien ici pour l'instant.</p>
   </section>
@@ -534,6 +541,11 @@
           <button class="bouton" id="btn-cand-ecarter">Écarter la sélection</button>
           <button class="bouton principal" id="btn-cand-adopter">Adopter la sélection</button>
         </div>
+      </div>
+      <div class="filtres-candidats">
+        <button class="puce actif" data-origine="">Tous</button>
+        <button class="puce" data-origine="fil">Repérés sur le fil</button>
+        <button class="puce" data-origine="recherche">Trouvés par recherche</button>
       </div>
       <div id="liste-candidats" class="liste-candidats"></div>
       <p class="aide" id="candidats-vide" hidden>

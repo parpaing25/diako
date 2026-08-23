@@ -102,6 +102,48 @@ def test_le_hors_sujet_tombe_bas():
     assert note["note"] < 30, note
 
 
+# -- Sources repérées sur le fil : la note vient de ce qu'elles ont donné ---
+def test_le_rendement_observe_prime_sur_la_taille():
+    """Un petit groupe qui donne beaucoup bat un gros qui ne donne rien."""
+    utile = sp.noter(_c(nom="X", effectif=800, vues=12, retenues=9, publiees=3), [])
+    sterile = sp.noter(_c(nom="X", effectif=120_000, vues=14, retenues=1), [])
+    assert utile["note"] > sterile["note"] + 40, (utile["note"], sterile["note"])
+    assert utile.get("observee") and sterile.get("observee")
+
+
+def test_une_source_sterile_est_signalee():
+    n = sp.noter(_c(nom="Groupe bavard", vues=9, retenues=0), [])
+    assert n["note"] == 0
+    assert any("perdre du temps" in a for a in n["alertes"]), n["alertes"]
+
+
+def test_les_publiees_pesent_le_plus_lourd():
+    """Une annonce arrivée en ligne est la seule preuve solide."""
+    sans = sp.noter(_c(nom="X", vues=10, retenues=6, publiees=0), [])
+    avec = sp.noter(_c(nom="X", vues=10, retenues=6, publiees=3), [])
+    assert avec["note"] > sans["note"] + 15, (sans["note"], avec["note"])
+
+
+def test_trop_peu_d_observations_ne_donne_pas_zero():
+    """Un 0/100 se lirait « mauvaise » alors qu'on ne sait rien d'elle."""
+    n = sp.noter(_c(nom="Groupe croisé une fois", origine="fil",
+                    vues=1, retenues=1), [])
+    assert n["note"] is None, n
+    assert n["niveau"] == "observation"
+    assert any("3" in a for a in n["alertes"])
+
+
+def test_le_rendement_ne_compte_pas_deux_fois_une_retenue():
+    """La vue est comptée avant le tri, la retenue après.
+
+    Compter la vue une seconde fois au moment de la retenue ferait tomber le
+    rendement d'un groupe parfait à 50 %.
+    """
+    parfait = sp.noter(_c(nom="X", vues=5, retenues=5), [])
+    assert parfait["details"][0]["motif"].startswith("5 retenue(s) sur 5 vue(s)")
+    assert parfait["details"][0]["points"] == 45
+
+
 if __name__ == "__main__":
     rates = 0
     for nom, fonction in sorted(globals().items()):

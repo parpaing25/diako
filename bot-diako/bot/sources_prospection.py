@@ -146,6 +146,101 @@ def est_prive(bloc: str) -> bool:
     return bool(re.search(r"(?<![a-z])(prive|private)(?![a-z])", _sans_accents(bloc)))
 
 
+# Sous ce nombre de publications croisées, le rendement observé ne veut rien
+# dire : une source vue une fois et qui a donné une bonne annonce afficherait
+# 100 % de réussite.
+OBSERVATIONS_MIN = 3
+
+
+# -- Note d'une source vue à l'œuvre ---------------------------------------
+def en_observation(candidat: dict) -> dict:
+    """Une source du fil croisée une ou deux fois : trop tôt pour la juger.
+
+    Lui donner 0/100 la ferait passer pour mauvaise alors qu'on ne sait
+    simplement rien d'elle ; lui donner une bonne note serait pire. On dit ce
+    qu'il en est, et elle ne compte pas dans le seuil de sélection.
+    """
+    vues = candidat.get("vues") or 0
+    retenues = candidat.get("retenues") or 0
+    return {
+        "note": None,
+        "note_brute": -1,
+        "niveau": "observation",
+        "observee": True,
+        "details": [{"cle": "Observations", "points": vues, "sur": OBSERVATIONS_MIN,
+                     "motif": f"{retenues} utile(s) sur {vues} vue(s)"}],
+        "alertes": [
+            f"Croisée {vues} fois seulement : il en faut {OBSERVATIONS_MIN} "
+            "pour que le rendement veuille dire quelque chose."
+        ],
+    }
+
+
+def noter_observee(candidat: dict) -> dict:
+    """Note fondée sur ce que la source a RÉELLEMENT donné.
+
+    Deux chiffres, et ils ne disent pas la même chose :
+
+    * **le rendement** (retenues / vues) — la source parle-t-elle de notre
+      métier ? Un groupe où une publication sur dix nous concerne fera perdre
+      neuf lectures à chaque collecte.
+    * **le volume** (retenues) — un rendement de 100 % sur trois publications
+      n'a pas la valeur d'un rendement de 60 % sur quarante.
+
+    Les publiées comptent double : c'est la seule preuve qu'une annonce est
+    allée jusqu'au bout.
+    """
+    vues = candidat.get("vues") or 0
+    retenues = candidat.get("retenues") or 0
+    publiees = candidat.get("publiees") or 0
+    rendement = retenues / vues if vues else 0
+
+    details, alertes = [], []
+
+    # Rendement (45).
+    p = round(45 * min(1.0, rendement / 0.6))     # 60 % de retenues = le plein
+    details.append({"cle": "Rendement", "points": p, "sur": 45,
+                    "motif": f"{retenues} retenue(s) sur {vues} vue(s)"
+                             f" — {rendement * 100:.0f} %"})
+    points = p
+    if vues >= 6 and rendement < 0.15:
+        alertes.append(
+            f"Vue {vues} fois, seulement {retenues} publication(s) utile(s) : "
+            "cette source ferait perdre du temps à chaque collecte."
+        )
+
+    # Volume (25) — échelle continue, sinon trois retenues valent quarante.
+    import math
+
+    p = 0 if not retenues else max(4, min(25, round(9 * math.log10(retenues + 1) * 2)))
+    details.append({"cle": "Volume", "points": p, "sur": 25,
+                    "motif": f"{retenues} annonce(s) utile(s) croisée(s)"})
+    points += p
+
+    # Publiées (30) — la preuve, pas la promesse.
+    if publiees:
+        p = max(8, min(30, 10 + 5 * publiees))
+        motif = f"{publiees} déjà publiée(s) sur le site"
+    else:
+        p, motif = 0, "aucune publiée pour l'instant"
+    details.append({"cle": "Publiées", "points": p, "sur": 30, "motif": motif})
+    points += p
+
+    if candidat.get("prive"):
+        points -= 12
+        alertes.append(
+            "Groupe privé : le bot ne pourra le parcourir qu'une fois que vous "
+            "y aurez été admis. Le bot n'adhère à rien de lui-même."
+        )
+
+    brut = points
+    points = max(0, min(100, points))
+    niveau = ("excellent" if points >= 78 else "bon" if points >= 60
+              else "moyen" if points >= 40 else "faible")
+    return {"note": points, "note_brute": brut, "niveau": niveau,
+            "details": details, "alertes": alertes, "observee": True}
+
+
 # -- Note ------------------------------------------------------------------
 def noter(candidat: dict, requetes: list[str], mots_metier=MOTS_METIER,
           repoussoirs=MOTS_REPOUSSOIRS) -> dict:
@@ -155,6 +250,16 @@ def noter(candidat: dict, requetes: list[str], mots_metier=MOTS_METIER,
     déjà en place, ce sont les groupes très actifs — pas les plus gros — qui
     remplissent la récolte.
     """
+    # Une source vue à l'œuvre se juge sur ce qu'elle a donné, pas sur ce
+    # qu'elle promet. Ce chemin l'emporte dès qu'on a assez d'observations —
+    # et la règle vit ICI, pas chez l'appelant : sinon la note affichée dans
+    # l'interface et celle calculée ailleurs se contredisent.
+    vues = candidat.get("vues") or 0
+    if vues >= OBSERVATIONS_MIN:
+        return noter_observee(candidat)
+    if vues and candidat.get("origine") == "fil":
+        return en_observation(candidat)
+
     nom = _sans_accents(candidat.get("nom") or "")
     details, alertes = [], []
     points = 0

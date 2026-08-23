@@ -102,9 +102,55 @@ JS_EXTRAIRE_FIL = """
     const heure = el.querySelector(
       'a[href*="/posts/"] span, a[href*="permalink"] span, abbr')?.innerText || '';
 
+    // D'OÙ vient cette publication ? Dans le fil, un post de groupe porte DEUX
+    // liens : /groups/{id}/ dont le texte est le NOM DU GROUPE, et
+    // /groups/{id}/user/{uid}/ dont le texte est le nom de LA PERSONNE.
+    let origine = null, auteurDuGroupe = '';
+    for (const a of el.querySelectorAll('a[href]')) {
+      const href = a.getAttribute('href') || '';
+      const nom = (a.innerText || '').trim().split('\\n')[0];
+      if (!nom || nom.length < 3) continue;
+      if (!origine) {
+        const g = href.match(/^\\/groups\\/([0-9A-Za-z._-]+)\\/?(\\?|$)/);
+        if (g) { origine = {genre: 'groupe', cle: g[1], nom}; continue; }
+      }
+      if (!auteurDuGroupe) {
+        const u = href.match(/^\\/groups\\/[0-9A-Za-z._-]+\\/user\\/\\d+\\/?/);
+        if (u) auteurDuGroupe = nom;
+      }
+      if (origine && auteurDuGroupe) break;
+    }
+
     // Nom de l'auteur : il devient l'attribution de la trouvaille.
+    // Dans le fil, l'en-tête d'un post de groupe commence par le NOM DU
+    // GROUPE. S'en contenter attribuait la trouvaille au groupe et non à la
+    // personne ; le lien /user/ est la seule source fiable pour celle-ci.
     const enTete = el.querySelector('h2 a, h3 a, h4 a, strong a, h2 span, h3 span');
-    const auteur = (enTete?.innerText || '').split('\\n')[0].trim();
+    const auteur = auteurDuGroupe
+      || (enTete?.innerText || '').split('\\n')[0].trim();
+
+    if (!origine) {
+      for (const a of el.querySelectorAll('h2 a, h3 a, h4 a, strong a')) {
+        const href = a.getAttribute('href') || '';
+        const nom = (a.innerText || '').trim().split('\\n')[0];
+        if (!nom || nom.length < 3) continue;
+        const p = href.match(/^\\/([A-Za-z0-9.\\-]{5,60})\\/?(\\?|$)/);
+        if (p && !['profile.php','watch','marketplace','groups','events','reel',
+                   'stories','photo','pages','permalink','posts'].includes(p[1])) {
+          origine = {genre: 'page', cle: p[1], nom}; break;
+        }
+      }
+    }
+
+    // Les sites cités dans la publication : le site officiel d'un hôtel est
+    // une source à part entière, et souvent la meilleure — il n'a aucun
+    // algorithme entre lui et nous.
+    const sites = [...new Set([...el.querySelectorAll('a[href]')]
+      .map(a => a.getAttribute('href') || '')
+      .map(h => { const m = h.match(/^https?:\\/\\/([^/?#]+)/); return m ? m[1] : ''; })
+      .filter(d => d && !/facebook\\.com|fbcdn|fb\\.me|messenger\\.com|instagram\\.com/.test(d))
+      .map(d => d.replace(/^www\\./, '').toLowerCase()))]
+      .slice(0, 4);
 
     return {
       texte,
@@ -113,6 +159,8 @@ JS_EXTRAIRE_FIL = """
       nb_images: images.length,
       heure,
       auteur,
+      origine,
+      sites,
       posinset: el.getAttribute('aria-posinset') || '',
     };
   }).filter(p => p.texte.length > 10 || p.nb_images > 0);
@@ -147,6 +195,36 @@ CHEMINS_REFUSES = {
     "help", "settings", "messages", "notifications", "bookmarks",
     "sharer.php", "hashtag", "stories",
 }
+
+
+def _noter_origine(post: dict, source: dict, retenue: bool = False,
+                   deja_vue: bool = False) -> None:
+    """Retient d'OÙ vient une publication croisée sur le fil.
+
+    C'est ainsi que le bot se constitue tout seul une liste de sources : le
+    fil d'actualité remonte des groupes et des pages dont on n'est pas
+    forcément membre, et chacun se juge ensuite sur ce qu'il a donné.
+
+    Ne concerne que le fil : sur un groupe ou une page qu'on parcourt déjà,
+    l'origine est connue et le rendement est mesuré par `rendement_sources()`.
+    """
+    if source.get("genre") != "fil":
+        return
+
+    origine = post.get("origine") or {}
+    cle, nom = origine.get("cle"), (origine.get("nom") or "").strip()
+    if cle and nom:
+        url = (f"https://www.facebook.com/groups/{cle}"
+               if origine.get("genre") == "groupe"
+               else f"https://www.facebook.com/{cle}")
+        base.observer_source(cle, origine.get("genre", "page"), nom, url,
+                             retenue=retenue, deja_vue=deja_vue)
+
+    # Le site d'une agence cité dans une publication est une source à part
+    # entière — et souvent la meilleure : aucun algorithme entre lui et nous.
+    for domaine in (post.get("sites") or []):
+        base.observer_source(domaine, "site", domaine, f"https://{domaine}",
+                             retenue=retenue, deja_vue=deja_vue)
 
 
 def _pause(bornes) -> None:
@@ -851,6 +929,11 @@ class Collecteur:
                 if cle in vus:
                     continue
                 vus.add(cle)
+                # La vue se compte ICI, avant tout filtre : c'est le
+                # dénominateur du rendement. La compter plus bas, après le tri,
+                # donnerait 100 % à toutes les sources — le chiffre ne
+                # voudrait plus rien dire.
+                _noter_origine(publication, source, retenue=False)
                 if not extraction.parle_de_tourisme(
                     publication["texte"], publication["nb_images"]
                 ):
@@ -866,6 +949,8 @@ class Collecteur:
                 if self._inscrire(page, publication, source, cle):
                     retenues += 1
                     self.etat["trouvees"] += 1
+                    _noter_origine(publication, source, retenue=True,
+                                   deja_vue=True)
 
             # Défilement adaptatif : inutile de dérouler 25 fois une source qui
             # ne donne plus rien, inutile de s'arrêter à 25 si elle donne encore.
@@ -1221,6 +1306,11 @@ class Collecteur:
             "source_nom": source["nom"],
             "source_genre": source.get("genre") or "groupe",
             "auteur": (publication.get("auteur") or "").strip(),
+            # ⭐ DE QUEL GROUPE OU PAGE ELLE VIENT. Sans cette clé, une
+            #   trouvaille publiée ne pouvait créditer personne : le compteur
+            #   `publiees` des candidats — « la meilleure preuve » selon son
+            #   propre commentaire — restait à zéro pour tout le monde.
+            "origine_cle": ((publication.get("origine") or {}).get("cle") or None),
             "publie_le": publication.get("heure", ""),
             "date_post": date_de_publication(publication.get("heure", "")),
             "texte": publication["texte"],

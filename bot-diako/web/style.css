@@ -664,3 +664,38 @@ textarea { resize: vertical; font-family: inherit; line-height: 1.5; }
 .repli textarea { width: 100%; font-family: inherit; font-size: .88rem;
                   padding: 8px; border: 1px solid var(--trait);
                   border-radius: 8px; margin: 6px 0; color: var(--encre); }
+/* -- Sélection multiple sur les cartes d'annonces ------------------------- */
+.annonce-enveloppe { position: relative; }
+.annonce-enveloppe.cochee .annonce {
+  outline: 2px solid var(--teal);
+  outline-offset: -1px;
+}
+.annonce-choix {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  width: 26px; height: 26px; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .92); border-radius: 7px;
+  box-shadow: 0 1px 3px rgba(22, 36, 44, .25); cursor: pointer;
+}
+/* La case occupe le coin du score : on décale le score plutôt que de le
+   couvrir. La vignette est en `aspect-ratio`, sa hauteur varie — viser un
+   coin bas en pixels aurait dérivé selon la largeur de la fenêtre. */
+.annonce-enveloppe .vignette .note { left: 42px; }
+.annonce-choix input { width: 16px; height: 16px; cursor: pointer; margin: 0; }
+
+/* Barre d'action : collée en haut, elle reste sous la main quand on descend
+   dans une longue liste. */
+.barre-choix {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; margin-bottom: 12px;
+  background: var(--teal-pale); border: 1px solid var(--teal);
+  border-radius: var(--rayon);
+}
+.barre-choix a { font-size: .86rem; }
+.barre-choix button { margin-left: auto; }
+.barre-choix button + button { margin-left: 0; }
+
+.badge.site   { background: #e8f6ef; color: #1f6b4d; }
+.badge.fil    { background: var(--teal-pale); color: var(--teal-fonce); }
+.filtres-candidats { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+

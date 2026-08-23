@@ -149,14 +149,38 @@ def etat():
 # ── Sources ─────────────────────────────────────────────────────────────────
 # -- Prospection de sources -------------------------------------------------
 @app.get("/api/candidats")
-def lister_candidats(statut: str = "nouveau"):
+def lister_candidats(statut: str = "nouveau", origine: str = ""):
     """Les groupes et pages repérés, avec leur note et leurs chiffres."""
     cfg = charger()
     seuil = int(cfg.get("prospection_note_min", 60))
     tous = base.candidats(statut)
+
+    # Une source repérée sur le fil se note sur ce qu'elle a donné, et ses
+    # compteurs bougent à chaque collecte : sa note doit suivre, sinon elle
+    # reste figée sur la première publication croisée.
+    for c in tous:
+        if c.get("origine") == "fil":
+            n = prospection.noter(c, [])
+            c.update(note=n["note"], niveau=n["niveau"],
+                     alertes=n["alertes"], details=n["details"])
+
+    # Les sources encore en observation passent en tête : ce sont celles dont
+    # la prochaine collecte dira quelque chose.
+    tous.sort(key=lambda c: (c.get("note") is not None,
+                             -(c.get("note") or 0), -(c.get("effectif") or 0)))
+
+    if origine:
+        tous = [c for c in tous if c.get("origine") == origine]
     return {
-        "candidats": [c for c in tous if statut != "nouveau" or c["note"] >= seuil],
-        "sous_le_seuil": sum(1 for c in tous if c["note"] < seuil) if statut == "nouveau" else 0,
+        # `note is None` = encore en observation : elle n'est pas « sous le
+        # seuil », on ne sait simplement pas encore. La masquer la ferait
+        # disparaître avant d'avoir pu faire ses preuves.
+        "candidats": [c for c in tous
+                      if statut != "nouveau"
+                      or c["note"] is None or c["note"] >= seuil],
+        "sous_le_seuil": sum(1 for c in tous
+                             if c["note"] is not None and c["note"] < seuil)
+                         if statut == "nouveau" else 0,
         "seuil": seuil,
         "compteurs": base.compter_candidats(),
         "requetes": cfg.get("prospection_requetes") or prospection.REQUETES_DEFAUT,
@@ -293,6 +317,53 @@ def liste(statut: str = "a_trier", genre: str = "", source_id: int = 0,
         statut=statut or None, genre=genre or None, source_id=source_id or None,
         recherche=recherche or None, tri=tri, apport=apport or None,
     )
+
+
+class ChoixTriEntree(BaseModel):
+    ids: list[str]
+    action: str
+
+
+@app.post("/api/trouvailles/lot-choisi")
+def trier_la_selection(entree: ChoixTriEntree):
+    """Valide ou rejette les trouvailles cochées à l'écran.
+
+    Le tri par seuil de score existe déjà et reste le plus rapide, mais il ne
+    sait pas juger au cas par cas. Cocher quelques cartes évite d'ouvrir un
+    panneau par trouvaille quand on veut trier à la main sans règle générale.
+    """
+    if entree.action not in ("valider", "rejeter"):
+        raise HTTPException(400, "Action inconnue.")
+    nouveau = "validee" if entree.action == "valider" else "rejetee"
+
+    faits, refuses = 0, []
+    for aid in entree.ids:
+        a = base.trouvaille(aid)
+        # Une trouvaille déjà en ligne ne se re-trie pas : la remettre « à
+        # valider » ferait croire qu'elle attend, alors qu'elle est publiée.
+        if not a or a.get("lien_diako"):
+            continue
+        # ⚠ ON NE VALIDE PAS CE QUI NE PEUT PAS PARTIR. Une trouvaille à qui il
+        #   manque son lieu ou sa fiche resterait bloquée au moment de publier ;
+        #   la passer en « validée » donnerait l'illusion qu'elle est prête, et
+        #   elle dormirait dans la file sans que personne sache pourquoi. On la
+        #   laisse où elle est, et on dit ce qui lui manque.
+        if nouveau == "validee":
+            manques = publication.manque_pour_publier(a)
+            if manques:
+                refuses.append({"id": aid, "titre": a.get("titre") or "",
+                                "manques": manques})
+                continue
+        base.modifier(aid, {"statut": nouveau})
+        faits += 1
+
+    base.logguer(
+        f"Tri de la sélection : {faits} trouvaille(s) → {nouveau}"
+        + (f", {len(refuses)} laissée(s) faute d'être publiable(s)" if refuses else "")
+        + ".",
+        "succes" if faits else "info",
+    )
+    return {"nombre": faits, "refuses": refuses}
 
 
 @app.get("/api/trouvailles/{tid}")

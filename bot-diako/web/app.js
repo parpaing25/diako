@@ -526,7 +526,82 @@ async function chargerListe() {
   $$(".annonce", grille).forEach((el) =>
     el.addEventListener("click", () => ouvrir(el.dataset.id))
   );
+  $$("[data-choix-annonce]", grille).forEach((c) =>
+    c.addEventListener("change", () => {
+      const id = c.dataset.choixAnnonce;
+      c.checked ? cochesTrouvailles.add(id) : cochesTrouvailles.delete(id);
+      c.closest(".annonce-enveloppe").classList.toggle("cochee", c.checked);
+      majChoixTrouvailles();
+    })
+  );
+  // Une trouvaille cochée puis filtrée hors de la vue serait triée sans qu'on
+  // la voie : on ne garde que ce qui est à l'écran.
+  const visibles = new Set(liste.map((x) => x.id));
+  [...cochesTrouvailles].forEach((id) => visibles.has(id) || cochesTrouvailles.delete(id));
+  majChoixTrouvailles();
 }
+
+/* ── Tri groupé : cocher les cartes plutôt qu'ouvrir cinquante panneaux ── */
+function majChoixTrouvailles() {
+  const n = cochesTrouvailles.size;
+  $("#choix-compte").textContent = `${n} sélectionnée(s)`;
+  $("#barre-choix").hidden = n === 0;
+}
+
+async function trierChoisies(action) {
+  const n = cochesTrouvailles.size;
+  if (!n) return;
+  const mot = action === "valider" ? "Valider" : "Rejeter";
+  if (!confirm(`${mot} ${n} trouvaille(s) ?`)) return;
+  try {
+    const r = await api("/api/trouvailles/lot-choisi", {
+      method: "POST",
+      body: JSON.stringify({ ids: [...cochesTrouvailles], action }),
+    });
+    cochesTrouvailles.clear();
+    // ⚠ Une trouvaille laissée de côté sans explication passe pour un bug. On
+    //   nomme les premières et ce qui leur manque.
+    const refuses = r.refuses || [];
+    if (refuses.length) {
+      const detail = refuses
+        .slice(0, 3)
+        .map((x) => `« ${x.titre || "sans titre"} » : ${x.manques.join(", ")}`)
+        .join(" · ");
+      toast(
+        `${r.nombre} faite(s). ${refuses.length} laissée(s) — ${detail}` +
+          (refuses.length > 3 ? "…" : ""),
+        "erreur"
+      );
+    } else {
+      toast(`${r.nombre} trouvaille(s) ${action === "valider" ? "validée(s)" : "rejetée(s)"}.`);
+    }
+  } catch (e) {
+    toast(e.message, "erreur");
+  }
+  chargerListe();
+  rafraichirEtat();
+}
+
+$("#choix-valider").addEventListener("click", () => trierChoisies("valider"));
+$("#choix-rejeter").addEventListener("click", () => trierChoisies("rejeter"));
+$("#choix-tout").addEventListener("click", (e) => {
+  e.preventDefault();
+  $$("[data-choix-annonce]").forEach((c) => {
+    c.checked = true;
+    cochesTrouvailles.add(c.dataset.choixAnnonce);
+    c.closest(".annonce-enveloppe").classList.add("cochee");
+  });
+  majChoixTrouvailles();
+});
+$("#choix-rien").addEventListener("click", (e) => {
+  e.preventDefault();
+  $$("[data-choix-annonce]").forEach((c) => {
+    c.checked = false;
+    c.closest(".annonce-enveloppe").classList.remove("cochee");
+  });
+  cochesTrouvailles.clear();
+  majChoixTrouvailles();
+});
 
 function carte(t) {
   const image = t.vignette
@@ -546,7 +621,15 @@ function carte(t) {
     .filter(Boolean)
     .join("");
 
-  return `<button class="annonce" data-id="${t.id}">
+  // La case vit HORS du bouton : imbriquer un contrôle cliquable dans un
+  // <button> est invalide, et le clic ouvrirait le panneau au lieu de cocher.
+  return `<div class="annonce-enveloppe${cochesTrouvailles.has(t.id) ? " cochee" : ""}">
+    <label class="annonce-choix" title="Sélectionner pour un tri groupé">
+      <input type="checkbox" data-choix-annonce="${t.id}" ${
+        cochesTrouvailles.has(t.id) ? "checked" : ""
+      }>
+    </label>
+    <button class="annonce" data-id="${t.id}">
     <div class="vignette" ${image}>${t.vignette ? "" : '<span class="sans">sans photo</span>'}
       <span class="note ${t.niveau || "faible"}" title="Score de tri sur 100">${t.score ?? 0}</span>
       ${t.lu_par_llm ? `<span class="puce-ia" title="Relue par l'IA">IA</span>` : ""}
@@ -562,7 +645,8 @@ function carte(t) {
       </div>
       <div class="badges">${badges}</div>
     </div>
-  </button>`;
+    </button>
+  </div>`;
 }
 
 /* ── Panneau de détail ───────────────────────────────────────────── */
@@ -1588,12 +1672,14 @@ chargerSuggestions();
 /* ------------------------------------------------------------------------ *
  *  Nouvelles sources : le bot cherche, vous tranchez.
  * ------------------------------------------------------------------------ */
+const cochesTrouvailles = new Set();
 const cochesCandidats = new Set();
+let origineCandidats = "";
 
 async function chargerCandidats() {
   let d;
   try {
-    d = await api("/api/candidats");
+    d = await api(`/api/candidats?origine=${origineCandidats}`);
   } catch (e) {
     toast(e.message, "erreur");
     return;
@@ -1616,8 +1702,15 @@ async function chargerCandidats() {
     .map((c) => {
       const eff = c.effectif
         ? `${c.effectif.toLocaleString("fr-FR")} ${c.genre === "page" ? "abonnés" : "membres"}`
+        : c.origine === "fil"
+        ? ""
         : "effectif inconnu";
       const ryt = c.rythme ? `${c.rythme} pub./jour` : "";
+      // Une source repérée sur le fil se juge sur ce qu'elle a DONNÉ.
+      const vu = c.vues
+        ? `<strong>${c.retenues}/${c.vues}</strong> utiles` +
+          (c.publiees ? ` · <strong>${c.publiees}</strong> publiée(s)` : "")
+        : "";
       const alertes = (c.alertes || [])
         .map((a) => `<li>${echapper(a)}</li>`)
         .join("");
@@ -1638,17 +1731,25 @@ async function chargerCandidats() {
         <div class="candidat-corps">
           <h3>${echapper(c.nom)}
             <span class="badge ${c.genre}">${c.genre}</span>
+            ${c.origine === "fil" ? '<span class="badge fil">vu sur le fil</span>' : ""}
             ${c.prive ? '<span class="badge manque">privé</span>' : ""}
           </h3>
           <p class="candidat-chiffres">
-            <strong>${eff}</strong>${ryt ? " · " + ryt : ""}
+            ${vu ? vu + (eff || ryt ? " · " : "") : ""}
+            ${eff ? `<strong>${eff}</strong>` : ""}${ryt ? " · " + ryt : ""}
             ${c.categorie ? " · " + echapper(c.categorie) : ""}
             ${c.lieu ? " · " + echapper(c.lieu) : ""}
           </p>
           <div class="candidat-barres">${barres}</div>
           ${alertes ? `<ul class="candidat-alertes">${alertes}</ul>` : ""}
-          <p class="discret">Trouvé par « ${echapper(c.requete || "")} » —
-            <a href="${c.url}" target="_blank" rel="noopener">voir sur Facebook</a></p>
+          <p class="discret">${
+            c.origine === "fil"
+              ? "Repéré sur votre fil d'actualité"
+              : `Trouvé par « ${echapper(c.requete || "")} »`
+          } —
+            <a href="${c.url}" target="_blank" rel="noopener">${
+              c.genre === "site" ? "voir le site" : "voir sur Facebook"
+            }</a></p>
         </div>
         <div class="candidat-actions">
           <button class="bouton" data-decider="ecarte" data-cle="${c.cle}">Écarter</button>
@@ -1706,6 +1807,16 @@ async function trancherLot(decision) {
   }
   chargerCandidats();
 }
+
+$$(".filtres-candidats .puce").forEach((b) =>
+  b.addEventListener("click", () => {
+    origineCandidats = b.dataset.origine;
+    $$(".filtres-candidats .puce").forEach((p) =>
+      p.classList.toggle("actif", p === b)
+    );
+    chargerCandidats();
+  })
+);
 
 $("#btn-cand-adopter").addEventListener("click", () => trancherLot("adopte"));
 $("#btn-cand-ecarter").addEventListener("click", () => trancherLot("ecarte"));

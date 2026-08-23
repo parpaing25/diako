@@ -684,6 +684,7 @@ class Collecteur:
         web = [s for s in sources if (s.get("genre") or "") == "site"]
         facebook = [s for s in sources if (s.get("genre") or "") != "site"]
 
+        web = self._ordonner_sites(web, cfg)
         self._sites_js = []
         for rang, source in enumerate(web):
             if self.stop.is_set():
@@ -882,6 +883,59 @@ class Collecteur:
         return retenues
 
     # -- Le web ouvert : le site de l'établissement lui-même -----------------
+    def _ordonner_sites(self, web: list[dict], cfg: dict) -> list[dict]:
+        """Quels sites visiter en premier, et combien.
+
+        ⭐ ON COMMENCE PAR LES FICHES LES PLUS VIDES. 167 sites à lire feraient
+           plusieurs heures ; en visiter 25 au hasard ne comblerait presque
+           rien. Un site rattaché à une fiche sans photo, sans numéro et sans
+           carte vaut beaucoup plus qu'un site rattaché à une fiche déjà
+           complète — c'est exactement le classement que le poste `apport` du
+           score applique, appliqué ici à l'ordre de visite.
+
+        ⚠ Les sites jamais visités passent devant : sans ça, les vingt-cinq
+          premiers monopoliseraient toutes les collectes et les cent quarante
+          autres ne seraient jamais lus.
+        """
+        if not web:
+            return web
+        fiches = {f["id"]: f for f in base.referentiel("ref_pages")}
+
+        def manque(source: dict) -> int:
+            fiche = fiches.get(source.get("page_id") or "")
+            if not fiche:
+                # Site non rattaché : il créera peut-être une fiche neuve.
+                # Utile, mais moins que combler un trou connu.
+                return 2
+            points = 0
+            if not fiche.get("cover_url"):
+                points += 4
+            if not fiche.get("telephone"):
+                points += 3
+            if not fiche.get("nb_carte"):
+                points += 2
+            if not fiche.get("nb_chambre"):
+                points += 2
+            return points
+
+        classes = sorted(
+            web,
+            key=lambda s: (
+                s.get("derniere_collecte") is not None,   # jamais vus d'abord
+                -manque(s),                               # puis les plus vides
+                s.get("derniere_collecte") or "",         # puis les plus anciens
+            ),
+        )
+        plafond = int(cfg.get("sites_max_par_collecte", 25))
+        retenus = classes[:plafond] if plafond > 0 else classes
+        if len(classes) > len(retenus):
+            base.logguer(
+                f"{len(retenus)} site(s) web sur {len(classes)} ce tour — les fiches "
+                "les plus vides d'abord. Les autres passeront à la collecte "
+                "suivante.", "info",
+            )
+        return retenus
+
     def _relire_avec_navigateur(self, cfg: dict) -> None:
         """Deuxième passage sur les sites qui ne rendent rien sans JavaScript.
 

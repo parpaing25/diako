@@ -68,6 +68,11 @@ DEFAUTS = {
     # Un site d'hôtel malgache tient en quelques pages ; au-delà on ramasse des
     # archives de blog, pas des tarifs.
     "pages_max_par_site": 8,
+    # ⭐ COMBIEN DE SITES PAR PASSAGE. 167 sites à lire d'affilée feraient
+    #   plusieurs heures et bloqueraient la collecte Facebook derrière eux. On
+    #   en prend une poignée par tour, en commençant par les fiches les plus
+    #   vides ; le reste passe au tour suivant. 0 = tous.
+    "sites_max_par_collecte": 25,
     "moisson_osm": True,                    # chercher aussi les sites dans OpenStreetMap
     # 🔴 EN DESSOUS DE CE SEUIL, ON NE LANCE PAS CHROMIUM. Le 23/08/2026, la
     #   machine est descendue à 189 Mo de mémoire engageable et Windows a tué

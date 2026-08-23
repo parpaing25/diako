@@ -212,10 +212,10 @@ def suggestions():
 # ── Trouvailles ─────────────────────────────────────────────────────────────
 @app.get("/api/trouvailles")
 def liste(statut: str = "a_trier", genre: str = "", source_id: int = 0,
-          recherche: str = "", tri: str = "score"):
+          recherche: str = "", tri: str = "score", apport: str = ""):
     return base.lister(
         statut=statut or None, genre=genre or None, source_id=source_id or None,
-        recherche=recherche or None, tri=tri,
+        recherche=recherche or None, tri=tri, apport=apport or None,
     )
 
 
@@ -496,10 +496,20 @@ def _demarrer_collecte(reglages: dict | None = None) -> bool:
 
 
 @app.post("/api/collecte/lancer")
-def lancer_collecte():
-    if not _demarrer_collecte():
+def lancer_collecte(ia: str = ""):
+    """`ia=0` collecte sans le modèle, `ia=1` avec, vide = comme réglé.
+
+    ⚠ LA SURCHARGE NE DURE QUE LE TEMPS DU PASSAGE. On ne touche pas à
+      `config.json` : partir sans le modèle une fois parce que la passerelle est
+      tombée ne doit pas éteindre la relecture pour les collectes automatiques
+      de 11 h et 18 h.
+    """
+    reglages = None
+    if ia in ("0", "1"):
+        reglages = {"llm_actif": ia == "1", "llm_vision": ia == "1"}
+    if not _demarrer_collecte(reglages):
         raise HTTPException(409, "Une collecte est déjà en cours.")
-    return {"ok": True}
+    return {"ok": True, "avec_ia": None if reglages is None else (ia == "1")}
 
 
 @app.post("/api/collecte/arreter")

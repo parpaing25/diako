@@ -341,6 +341,18 @@ quelqu'un diffuse sur lui-même, et piller la base d'un concurrent.
   justement de remplir proprement. Au passage : « Nos tarifs **2026** » n'est
   pas un plat à 2 026 Ar.
 
+### Combien de sites par passage, et lesquels
+
+167 sites à lire d'affilée feraient plusieurs heures et bloqueraient la collecte
+Facebook derrière eux. Le bot en prend **25 par tour** (réglable, 0 = tous), et
+**commence par les fiches les plus vides** : un site rattaché à une fiche sans
+photo, sans numéro, sans carte et sans tarif passe avant un site dont la fiche
+est déjà complète.
+
+⚠ Les sites **jamais visités** passent devant les autres. Sans ça, les
+vingt-cinq premiers monopoliseraient toutes les collectes et les cent quarante
+autres ne seraient jamais lus.
+
 ### Ce que ça écrit
 
 `room_types`, et `season_rates` quand le site distingue les saisons. Deux lignes
@@ -510,6 +522,36 @@ sur une fiche déjà complète.
 Malus : une carte sans fiche est plafonnée à 30 (elle n'a nulle part où aller) ;
 un établissement sans lieu perd 10 points (il n'apparaîtrait dans aucune
 recherche) ; un rapprochement sous 70 % est signalé en toutes lettres.
+
+---
+
+## Avec l'IA, sans l'IA — et ce qui n'en dépend jamais
+
+Deux boutons côte à côte sur le tableau de bord : **Lancer la collecte** et
+**Sans l'IA**. Le second fait exactement la même tournée, en lecture par règles
+seulement. La surcharge ne dure que ce passage : partir sans le modèle parce que
+la passerelle est tombée n'éteint pas la relecture des collectes de 11 h et 18 h.
+
+| | Avec l'IA | Sans l'IA |
+|---|---|---|
+| Numéros, montants, dates, mots-clés | ✓ | ✓ |
+| Rapprochement avec l'annuaire | ✓ | ✓ |
+| Score, doublons, photos | ✓ | ✓ |
+| Texte libre (« la crevette valait ses 18 000 ») | ✓ | — |
+| Grilles de tarifs structurées | ✓ | partiel |
+| **Cartes photographiées** | ✓ | **—** |
+
+Ce qu'on perd sans le modèle, c'est surtout **les cartes en photo** — et c'est
+le trou le plus large de Diako. Mais la collecte tourne, et rien n'est bloqué.
+
+### 🔴 Publier ne dépend PAS de l'IA
+
+Les textes sont écrits **au moment de la collecte** ; la publication ne fait
+qu'envoyer les photos sur o2switch et exécuter du SQL. **Vérifié** en rendant
+`analyse_llm` incapable de répondre (toute fonction lève) : titre, résumé,
+présentation, corps de récit et SQL sont sortis normalement sur une trouvaille
+réelle. La passerelle peut être éteinte, l'abonnement épuisé, le réseau coupé —
+la publication marche.
 
 ---
 

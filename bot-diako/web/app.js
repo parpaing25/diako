@@ -58,6 +58,8 @@ const REGLAGES = {
   posts_max_fil: "Publications max — fil d'actualité",
   scrolls_max_fil: "Défilements max — fil d'actualité",
   pages_max_par_site: "Pages max par site web",
+  sites_max_par_collecte: "Sites web par collecte (0 = tous)",
+  memoire_mini_mo: "Mémoire mini pour ouvrir Chromium (Mo)",
   photos_max_par_trouvaille: "Photos max par trouvaille",
   largeur_photo_min: "Largeur mini d'une photo (px)",
   cote_photo_min: "Côté long mini pour une couverture (px)",
@@ -70,7 +72,9 @@ const REGLAGES = {
   garder_les_incompletes: "Garder les trouvailles incomplètes",
 };
 
-let etatFiltres = { statut: "a_trier", genre: "", source_id: 0, recherche: "", tri: "score" };
+let etatFiltres = {
+  statut: "a_trier", genre: "", source_id: 0, recherche: "", tri: "score", apport: "",
+};
 let ouverte = null;
 let config = {};
 
@@ -133,8 +137,26 @@ $$("[data-vers-auto]").forEach((b) =>
 $$(".lien-statut").forEach((b) =>
   b.addEventListener("click", () => {
     etatFiltres.statut = b.dataset.statut;
+    etatFiltres.apport = "";
+    $("#filtre-apport").value = "";
     $$("#filtres-statut .puce").forEach((p) =>
       p.classList.toggle("actif", p.dataset.statut === b.dataset.statut)
+    );
+    montrerVue("trouvailles");
+  })
+);
+
+/* Les compteurs « plats récoltés » et « tarifs de chambre » sont les deux plus
+   précieux du bandeau — et ils n'étaient que des nombres qu'on ne pouvait pas
+   ouvrir. Un clic montre maintenant ce qu'ils comptent, TOUS statuts confondus :
+   la question posée est « qu'ai-je récolté », pas « qu'ai-je à trier ». */
+$$(".lien-apport").forEach((b) =>
+  b.addEventListener("click", () => {
+    etatFiltres.apport = b.dataset.apport;
+    etatFiltres.statut = "tous";
+    $("#filtre-apport").value = b.dataset.apport;
+    $$("#filtres-statut .puce").forEach((p) =>
+      p.classList.toggle("actif", p.dataset.statut === "tous")
     );
     montrerVue("trouvailles");
   })
@@ -164,6 +186,8 @@ async function rafraichirEtat() {
   // Un compte Facebook n'est plus indispensable : les sources « site web » se
   // lisent sans lui. On ne bloque donc que s'il n'y a aucune source du tout.
   $("#btn-collecte").disabled = occupe || !e.sources_actives;
+  $("#btn-collecte-sans-ia").disabled = occupe || !e.sources_actives;
+  majAideIA();
   $("#btn-lot").disabled = occupe;
   $("#btn-referentiel").disabled = occupe;
   $("#btn-moisson").disabled = occupe;
@@ -229,6 +253,31 @@ function majManques(m, referentiel) {
 /* Le plan de la journée : ce qui se passera sans vous, dans l'ordre.
    Il est rendu à deux endroits — tableau de bord et onglet Automatisation —
    pour qu'on n'ait jamais à deviner l'état des réglages. */
+/* Dire, à l'endroit où l'on clique, ce que le modèle apporte et ce qu'il ne
+   décide pas. La question « est-ce que ça marche sans Claude ? » doit trouver
+   sa réponse sur le bouton, pas dans un fichier. */
+function majAideIA() {
+  const zone = $("#aide-ia");
+  if (!zone) return;
+  const actif = Boolean(config.llm_actif);
+  const chemin =
+    config.llm_transport === "anthropic"
+      ? "API Claude (payante)"
+      : "passerelle locale — abonnement, coût nul";
+  zone.innerHTML = actif
+    ? `<strong>Avec l'IA</strong> (${echapper(chemin)}) : elle comprend le texte
+       libre, structure les grilles de tarifs et <strong>transcrit les cartes
+       photographiées</strong>. <em>Sans l'IA</em>, la collecte tourne quand même —
+       lecture par règles : numéros, montants, dates, mots-clés. Ce qu'on perd,
+       ce sont surtout les cartes en photo.`
+    : `<strong>IA éteinte</strong> — lecture par règles seulement. Le bouton
+       principal collecte donc déjà sans elle. Pour l'allumer :
+       <button class="lien-discret" data-vers-auto>Automatisation</button>.`;
+  $$("[data-vers-auto]", zone).forEach((b) =>
+    b.addEventListener("click", () => montrerVue("auto"))
+  );
+}
+
 function majPlan(auto) {
   if (!auto) return;
   const html = (auto.lignes || [])
@@ -338,15 +387,23 @@ $("#etat-fb").addEventListener("click", () => {
 });
 
 /* ── Boutons du tableau de bord ──────────────────────────────────── */
-$("#btn-collecte").addEventListener("click", async () => {
+/* Deux boutons, un seul chemin. `ia` ne surcharge que CE passage : partir sans
+   le modèle parce que la passerelle est tombée ne doit pas éteindre la
+   relecture pour les collectes de 11 h et 18 h. */
+async function lancerCollecte(ia) {
   try {
-    await api("/api/collecte/lancer", { method: "POST" });
-    toast("Collecte lancée.");
+    await api(`/api/collecte/lancer${ia === undefined ? "" : "?ia=" + ia}`, {
+      method: "POST",
+    });
+    toast(ia === "0" ? "Collecte lancée — sans l'IA." : "Collecte lancée.");
   } catch (e) {
     toast(e.message, "erreur");
   }
   rafraichirEtat();
-});
+}
+
+$("#btn-collecte").addEventListener("click", () => lancerCollecte());
+$("#btn-collecte-sans-ia").addEventListener("click", () => lancerCollecte("0"));
 
 $("#btn-arreter").addEventListener("click", async () => {
   await api("/api/collecte/arreter", { method: "POST" });
@@ -431,6 +488,10 @@ $$("#filtres-statut .puce").forEach((p) =>
 );
 $("#filtre-genre").addEventListener("change", (e) => {
   etatFiltres.genre = e.target.value;
+  chargerListe();
+});
+$("#filtre-apport").addEventListener("change", (e) => {
+  etatFiltres.apport = e.target.value;
   chargerListe();
 });
 $("#filtre-source").addEventListener("change", (e) => {

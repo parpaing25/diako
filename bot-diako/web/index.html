@@ -70,12 +70,12 @@
       <button class="chiffre lien-statut" data-statut="incomplete">
         <span class="valeur alerte" id="n-incomplete">0</span><span class="etiquette">incomplètes</span>
       </button>
-      <div class="chiffre">
+      <button class="chiffre lien-apport" data-apport="plats" title="Voir les trouvailles qui portent des plats">
         <span class="valeur" id="n-plats">0</span><span class="etiquette">plats récoltés</span>
-      </div>
-      <div class="chiffre">
+      </button>
+      <button class="chiffre lien-apport" data-apport="chambres" title="Voir les trouvailles qui portent des tarifs de chambre">
         <span class="valeur" id="n-chambres">0</span><span class="etiquette">tarifs de chambre</span>
-      </div>
+      </button>
     </div>
 
     <!-- ⭐ La carte qui donne le cap : ce qui manque VRAIMENT au site. -->
@@ -100,8 +100,11 @@
         <div class="ligne-compte" id="ligne-compte"></div>
         <div class="actions-collecte">
           <button class="bouton principal" id="btn-collecte">Lancer la collecte</button>
+          <button class="bouton" id="btn-collecte-sans-ia"
+                  title="Même collecte, lecture par règles uniquement">Sans l'IA</button>
           <button class="bouton" id="btn-arreter" disabled>Arrêter</button>
         </div>
+        <p class="aide" id="aide-ia" style="margin:12px 0 0"></p>
         <div class="progression" id="progression" hidden>
           <div class="barre-progres"><i></i></div>
           <span id="texte-progression"></span>
@@ -116,6 +119,11 @@
           déjà, les photos vont sur o2switch (1600 px, envoi espacé de 3 s).
         </p>
         <button class="bouton principal" id="btn-lot">Publier les trouvailles validées</button>
+        <p class="aide" style="margin:12px 0 8px">
+          <strong>Publier ne dépend pas de l'IA.</strong> Les textes sont déjà
+          écrits au moment de la collecte, la fiche part en SQL et les photos sur
+          o2switch : la passerelle peut être éteinte, la publication marche.
+        </p>
         <p class="aide" style="margin:12px 0 8px">
           Le référentiel local sert au rapprochement. Rechargez-le après une
           grosse publication, ou s'il date de plus d'une demi-journée.
@@ -192,6 +200,16 @@
         <option value="carte">Cartes / menus</option>
         <option value="evenement">Événements</option>
         <option value="recit">Récits</option>
+      </select>
+      <select id="filtre-apport">
+        <option value="">Tout ce qui a été collecté</option>
+        <option value="chambres">Porte des tarifs de chambre</option>
+        <option value="plats">Porte des plats</option>
+        <option value="photos">Porte des photos</option>
+        <option value="prix">Porte un prix</option>
+        <option value="site">Vient d'un site web</option>
+        <option value="rattachees">Rattachée à une fiche existante</option>
+        <option value="a_creer">Créerait une fiche neuve</option>
       </select>
       <select id="filtre-source"><option value="0">Toutes les sources</option></select>
       <select id="tri">

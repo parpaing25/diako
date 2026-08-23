@@ -491,9 +491,29 @@ TRIS = {
 }
 
 
+# Ce qu'une trouvaille APPORTE, indépendamment de son genre et de son statut.
+# ⚠ C'est la question que pose vraiment le tableau de bord : « montre-moi les
+#   tarifs que j'ai récoltés », pas « montre-moi les établissements à trier ».
+#   Sans ces filtres, les deux compteurs les plus précieux du bandeau — plats et
+#   chambres — n'étaient que des nombres qu'on ne pouvait pas ouvrir.
+APPORTS = {
+    "plats": "EXISTS (SELECT 1 FROM lignes_carte c "
+             "WHERE c.trouvaille_id = t.id AND c.garder = 1)",
+    "chambres": "EXISTS (SELECT 1 FROM lignes_chambre h "
+                "WHERE h.trouvaille_id = t.id AND h.garder = 1 AND h.prix_ar IS NOT NULL)",
+    "photos": "EXISTS (SELECT 1 FROM photos p "
+              "WHERE p.trouvaille_id = t.id AND p.garder = 1)",
+    "prix": "t.prix_ar IS NOT NULL",
+    "site": "t.source_genre = 'site'",
+    "rattachees": "t.page_id IS NOT NULL",
+    "a_creer": "t.page_id IS NULL AND t.genre IN ('etablissement','carte')",
+}
+
+
 def lister(statut: str | None = None, genre: str | None = None,
            source_id: int | None = None, recherche: str | None = None,
-           tri: str = "score", limite: int = 300) -> list[dict]:
+           tri: str = "score", limite: int = 300,
+           apport: str | None = None) -> list[dict]:
     conditions, params = [], []
     if statut and statut != "tous":
         conditions.append("t.statut = ?")
@@ -501,6 +521,8 @@ def lister(statut: str | None = None, genre: str | None = None,
     if genre and genre != "tous":
         conditions.append("t.genre = ?")
         params.append(genre)
+    if apport and apport in APPORTS:
+        conditions.append(APPORTS[apport])
     if source_id:
         conditions.append("t.source_id = ?")
         params.append(source_id)

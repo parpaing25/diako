@@ -198,6 +198,31 @@ def _jsonb(valeur) -> str:
     return "'" + json.dumps(valeur, ensure_ascii=False).replace("'", "''") + "'::jsonb"
 
 
+def _url(valeur) -> str:
+    """Une adresse web, ou NULL. Jamais autre chose.
+
+    🔴 `pages.website` ET `pages.facebook` PORTENT UNE CONTRAINTE : elles
+       doivent commencer par `http://` ou `https://`. Le modèle rend volontiers
+       « www.excursion-djema-forest.com » tout court, et l'INSERT ENTIER
+       échouait alors sur `pages_website_http` — la fiche, ses photos et sa
+       carte partaient avec. Vu trois fois en production le 23/08/2026.
+
+    ⚠ Une valeur qui n'est pas une adresse (une adresse e-mail, un numéro, un
+      nom de page) est écartée plutôt que préfixée : « https://Chez Mariette »
+      passerait la contrainte tout en étant faux.
+    """
+    texte = (str(valeur or "")).strip()
+    if not texte:
+        return "NULL"
+    if texte.startswith(("http://", "https://")):
+        propre = texte
+    elif re.match(r"^[\w.-]+\.[a-z]{2,}(/|$)", texte, re.I):
+        propre = "https://" + texte
+    else:
+        return "NULL"
+    return _txt(propre[:400])
+
+
 # 🔴 LES TROIS TABLES N'ACCEPTENT PAS LES MÊMES UNITÉS, et la contrainte ne
 #    pardonne pas : `posts.price_unit` refuse « plat » (il veut « portion »),
 #    `menu_items.price_unit` refuse « personne ». Découvert en jouant les
@@ -254,8 +279,8 @@ def _sql_creer_page(t: dict, page_id: str, slug: str, medias: list[dict]) -> str
         "phone": _txt(t.get("telephone")),
         "whatsapp": _txt(t.get("whatsapp")),
         "email": _txt(t.get("email")),
-        "website": _txt(t.get("site_web")),
-        "facebook": _txt(t.get("page_facebook")),
+        "website": _url(t.get("site_web")),
+        "facebook": _url(t.get("page_facebook")),
         "cover_url": _txt(couverture),
         "gallery": _jsonb(galerie),
         "source": _txt(redaction.source_pour_base(t)),
@@ -284,17 +309,23 @@ def _sql_completer_page(t: dict, page_id: str, medias: list[dict]) -> str:
     #    EFFACERAIT une description de quinze caractères posée à la main. Le
     #    « on n'écrase pas » se joue ici, pas dans le commentaire.
     morceaux = []
-    for colonne, valeur in (
-        ("phone", t.get("telephone")),
-        ("whatsapp", t.get("whatsapp")),
-        ("email", t.get("email")),
-        ("website", t.get("site_web")),
-        ("facebook", t.get("page_facebook")),
-        ("address", t.get("adresse")),
-        ("landmark", t.get("repere")),
+    for colonne, valeur, formate in (
+        ("phone", t.get("telephone"), _txt),
+        ("whatsapp", t.get("whatsapp"), _txt),
+        ("email", t.get("email"), _txt),
+        # ⚠ `website` et `facebook` passent par `_url` : la base refuse une
+        #   adresse sans `http://`, et l'UPDATE entier échouerait avec elle.
+        ("website", t.get("site_web"), _url),
+        ("facebook", t.get("page_facebook"), _url),
+        ("address", t.get("adresse"), _txt),
+        ("landmark", t.get("repere"), _txt),
     ):
-        if valeur:
-            morceaux.append(f"{colonne} = coalesce({colonne}, {_txt(valeur)})")
+        if not valeur:
+            continue
+        pose = formate(valeur)
+        if pose == "NULL":
+            continue
+        morceaux.append(f"{colonne} = coalesce({colonne}, {pose})")
 
     if t.get("lieu_id"):
         morceaux.append(f"place_id = coalesce(place_id, {_txt(t['lieu_id'])}::uuid)")

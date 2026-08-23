@@ -434,14 +434,22 @@ MIROIRS_OSM = (
 
 # ⚠ `["ISO3166-1"="MG"]` et non `["name"="Madagascar"]` : le nom peut être
 #   écrit « Madagasikara » selon la langue de l'objet, le code pays non.
+#
+# 🔴 UNE FAMILLE À LA FOIS, ET C'EST APPRIS À LA DURE. La version qui unissait
+#    hébergements et restaurants dans une seule requête a rendu **HTTP 500**
+#    deux fois de suite le 23/08/2026, et la moisson est repartie sans aucun
+#    site OSM — sans que rien d'autre ne le signale. Découpée, chaque requête
+#    passe, et l'échec de l'une ne coûte plus les autres.
 GABARIT_OSM = """[out:json][timeout:180];
 area["ISO3166-1"="MG"][admin_level=2]->.a;
-(
-  nwr(area.a)["tourism"~"^(hotel|guest_house|hostel|chalet|motel|resort|apartment)$"]["%(cle)s"];
-  nwr(area.a)["amenity"~"^(restaurant|cafe|bar|fast_food)$"]["%(cle)s"];
-);
-out center 3000;
+nwr(area.a)["%(famille)s"~"^(%(valeurs)s)$"]["%(cle)s"];
+out center 2000;
 """
+
+FAMILLES_OSM = (
+    ("tourism", "hotel|guest_house|hostel|chalet|motel|resort|apartment"),
+    ("amenity", "restaurant|cafe|bar|fast_food"),
+)
 
 
 def sites_osm() -> list[dict]:
@@ -451,8 +459,36 @@ def sites_osm() -> list[dict]:
     et ne désignent pas les mêmes objets. N'en lire qu'une en perd la moitié.
     """
     trouves: dict[str, dict] = {}
-    for cle in ("website", "contact:website"):
-        elements = _interroger_osm(GABARIT_OSM % {"cle": cle})
+    passes = [
+        (famille, valeurs, cle)
+        for famille, valeurs in FAMILLES_OSM
+        for cle in ("website", "contact:website")
+    ]
+    # ⚠ ON RENONCE VITE QUAND OVERPASS EST DEBOUT SUR UN PIED. Chaque passe
+    #   réessaie quatre fois avec des pauses croissantes ; quatre passes qui
+    #   échouent toutes prennent plus de dix minutes, pendant lesquelles la
+    #   moisson a l'air bloquée. Deux échecs d'affilée suffisent à conclure que
+    #   le service est indisponible — les sites de l'annuaire, eux, sont déjà
+    #   pris et ne dépendent pas de lui.
+    echecs = 0
+    for famille, valeurs, cle in passes:
+        if echecs >= 2:
+            base.logguer(
+                "OpenStreetMap indisponible — les passes restantes sont sautées. "
+                "La prochaine moisson réessaiera.", "avert",
+            )
+            break
+        elements = _interroger_osm(
+            GABARIT_OSM % {"famille": famille, "valeurs": valeurs, "cle": cle}
+        )
+        if elements:
+            echecs = 0
+            base.logguer(
+                f"OpenStreetMap : {len(elements)} objet(s) « {famille} » avec « {cle} ».",
+                "info",
+            )
+        else:
+            echecs += 1
         for element in elements:
             etiquettes = element.get("tags") or {}
             nom = (etiquettes.get("name") or "").strip()
@@ -477,15 +513,24 @@ def _interroger_osm(requete: str) -> list:
       une file d'attente. On change de miroir, puis on patiente. Sans ça, la
       deuxième requête de la moisson revient vide et on croit qu'OSM ne connaît
       aucun restaurant.
+
+    ⚠ Un **500** veut dire « requête trop lourde ou serveur fatigué », pas
+      « rien à rendre ». Il se réessaie, sur l'autre miroir et après une pause
+      plus longue — c'est ce qui manquait le 23/08/2026, où deux 500 d'affilée
+      ont fait repartir la moisson sans aucun site OSM.
     """
     dernier = ""
     for essai, url in enumerate((*MIROIRS_OSM, *MIROIRS_OSM)):
         try:
             r = requests.post(url, data=requete.encode("utf-8"),
                               headers={"User-Agent": AGENT}, timeout=240)
-            if r.status_code == 429:
-                dernier = "429 (file d'attente Overpass)"
-                time.sleep(20 + 20 * essai)
+            if r.status_code in (429, 500, 502, 503, 504):
+                # Pauses courtes et croissantes : 10, 20, 30 s. Le but est de
+                # laisser passer une bourrasque, pas d'attendre un redémarrage
+                # de serveur — quatre passes à une minute chacune suffisent
+                # déjà à donner l'impression que la moisson est bloquée.
+                dernier = f"HTTP {r.status_code} (Overpass surchargé)"
+                time.sleep(10 + 10 * essai)
                 continue
             if not r.ok:
                 dernier = f"HTTP {r.status_code}"
@@ -494,7 +539,10 @@ def _interroger_osm(requete: str) -> list:
         except Exception as e:
             dernier = str(e)[:120]
         time.sleep(5)
-    base.logguer(f"Overpass injoignable ({dernier}).", "avert")
+    base.logguer(
+        f"Overpass injoignable ({dernier}) — les sites déjà connus de l'annuaire "
+        "ont quand même été pris.", "avert",
+    )
     return []
 
 
@@ -536,8 +584,23 @@ def sites_des_trouvailles() -> list[dict]:
 
 
 HOTES_REFUSES = re.compile(
+    # Réseaux sociaux : ils se collectent déjà autrement.
     r"(facebook|instagram|tiktok|youtube|twitter|x\.com|linkedin|wa\.me|whatsapp"
-    r"|booking\.com|tripadvisor|expedia|airbnb|agoda|hotels\.com|google\.)",
+    r"|messenger|telegram|snapchat|pinterest"
+    # Agrégateurs de réservation : leurs conditions interdisent la réutilisation.
+    r"|booking\.com|tripadvisor|expedia|airbnb|agoda|hotels\.com|trivago|kayak"
+    r"|hostelworld|makemytrip|viator|getyourguide"
+    # Moteurs de recherche et cartes.
+    r"|google\.|bing\.com|yandex\.|duckduckgo|qwant"
+    # 🔴 MESSAGERIES : `https://gmail.com` s'est retrouvé inscrit comme site
+    #    d'un restaurant, parce que l'adresse e-mail du gérant traînait dans sa
+    #    publication et que le domaine ressemble à une adresse de site. Lire
+    #    gmail.com ne rend évidemment aucun tarif — juste une page de connexion.
+    r"|gmail\.|yahoo\.|hotmail\.|outlook\.|live\.com|icloud\.|orange\.mg|moov\."
+    # Raccourcisseurs : on ne sait pas où ils mènent.
+    r"|bit\.ly|tinyurl|linktr\.ee|t\.co/|goo\.gl"
+    # Plateformes qui ne sont pas un site d'établissement.
+    r"|wikipedia\.|wikivoyage\.|paypal\.|gofundme)",
     re.I,
 )
 

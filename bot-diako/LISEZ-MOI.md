@@ -194,13 +194,81 @@ Un créneau raté reste rattrapable pendant 30 minutes. Deux collectes ne se
 chevauchent jamais.
 
 > ⚠️ **Les collectes n'ont lieu que si le bot tourne.** L'horloge est dans le
-> bot, pas dans Windows.
->
-> ```powershell
-> powershell -ExecutionPolicy Bypass -File outils\installer-tache-planifiee.ps1
-> ```
-> (à lancer une fois ; retour arrière :
-> `Unregister-ScheduledTask -TaskName "Bot de collecte Diako" -Confirm:$false`)
+> bot, pas dans Windows. Voir « Garder les trois bots en vie » ci-dessous.
+
+---
+
+## Garder les trois bots en vie
+
+Cette machine fait tourner **trois bots** :
+
+| Bot | Adresse | Dossier |
+|---|---|---|
+| Annonces Fonenako | <http://127.0.0.1:8756> | `Fonenako preprod\…\bot-annonces` |
+| Collecte Diako | <http://127.0.0.1:8757> | `Diako\bot-diako` |
+| Fournisseurs AKORA | <http://127.0.0.1:8758> | `AKORA\akora\bot-fournisseurs` |
+
+Une seule commande les met tous les trois sous surveillance :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File outils\installer-les-bots.ps1
+```
+
+(retour arrière : la même commande avec `-Retirer`)
+
+### Pourquoi un gardien, et pas seulement « au démarrage de session »
+
+**Le 23/08/2026, les trois bots se sont éteints ensemble.** Ce n'était pas une
+panne logicielle : la machine n'avait plus que **189 Mo de mémoire virtuelle
+libre sur 29,3 Go**, et Windows tue les processus dans cet état. Une tâche qui
+ne se déclenche qu'à l'ouverture de session ne rattrape pas ça — la session,
+elle, ne s'est jamais fermée.
+
+Le gardien repasse donc **toutes les dix minutes**. S'il trouve le port muet, il
+relance ; sinon il ne fait rien et sort. Chaque relance est notée dans
+`data/gardien.log`, **avec la mémoire libre au moment des faits** — pour qu'on
+puisse relier « le bot est tombé » à « la machine était pleine ».
+
+Trois détails qui ont coûté du temps :
+
+- **`schtasks` et non `Register-ScheduledTask`.** Le cmdlet PowerShell rend
+  « Accès refusé » depuis un processus restreint, l'outil natif enregistre la
+  même tâche sans broncher.
+- **`/TR` est limité à 261 caractères.** Passer le chemin du bot en argument
+  débordait à cause de `Fonenako preprod\29031\Fonenako FinAL GITHUB`. Le
+  gardien prend donc un mot-clé (`-Bot diako`) et garde la table lui-même.
+- **`/RI` n'est pas accepté avec `/SC ONLOGON`** sur ce Windows. D'où
+  `/SC MINUTE /MO 10`.
+
+### Le gardien n'appelle pas `DEMARRER.bat`
+
+Le `.bat` se termine par `pause` : lancé par le planificateur, il laisse un
+`cmd.exe` **et** un `conhost.exe` orphelins à chaque mort du bot. Il y en avait
+**dix** le 23/08, pour 728 Mo de mémoire virtuelle. Le gardien lance `python`
+directement ; le `.bat` reste pour le double-clic.
+
+### Quand la machine est pleine
+
+Le bot **refuse maintenant d'ouvrir Chromium** sous 900 Mo de mémoire
+engageable : il saute la partie Facebook en le disant au journal, et fait quand
+même les sources « site web » — qui n'ont besoin d'aucun navigateur. Mieux vaut
+une collecte amputée qu'un bot tué au milieu.
+
+Si le message revient souvent, la cause est en dehors du bot. Sur cette machine
+au 23/08 : `vmmemWSL` (Docker) 2 Go, 32 processus Chrome, 15 Firefox, 18 VS Code
+— et surtout des **fichiers d'échange à taille fixe** (C: 4 → 8 Go, D: 4 Go
+figés), donc une limite d'engagement atteinte bien avant que la RAM ne se
+remplisse. Les repasser en « géré par le système » demande les droits
+administrateur et un redémarrage :
+
+```
+Panneau de configuration → Système → Paramètres système avancés
+   → Performances / Paramètres → Avancé → Mémoire virtuelle → Modifier
+   → cocher « Gestion automatique du fichier d'échange »
+```
+
+⚠️ Le bot ne peut pas faire ça pour vous : c'est un réglage système, il demande
+une élévation et un redémarrage.
 
 ### 4. Trier et publier
 
@@ -574,7 +642,7 @@ bot-diako/
 │   ├── planificateur.py  collectes de 11 h et 18 h
 │   └── serveur.py        API + interface
 ├── web/                  interface (HTML/CSS/JS, sans dépendance)
-├── outils/               diagnostic Facebook, tâche planifiée
+├── outils/               gardien des 3 bots, diagnostic Facebook
 └── data/                 ignoré par git
     ├── bot.db            base + cache du référentiel
     ├── config.json       réglages

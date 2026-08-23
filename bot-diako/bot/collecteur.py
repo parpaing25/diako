@@ -153,6 +153,43 @@ def _pause(bornes) -> None:
     time.sleep(random.uniform(float(bornes[0]), float(bornes[1])))
 
 
+def memoire_libre_mo() -> int | None:
+    """Mémoire virtuelle disponible, en mégaoctets. None si on ne sait pas.
+
+    🔴 CE CONTRÔLE EXISTE PARCE QUE LA MACHINE A TUÉ LES TROIS BOTS. Le
+       23/08/2026, il ne restait que **189 Mo de mémoire virtuelle libre** sur
+       29,3 Go : Windows tue les processus dans cet état, et c'est ce qui a
+       éteint Fonenako, Diako et AKORA le même jour. Chromium en réclame près
+       d'un gigaoctet à lui seul.
+
+    ⚠ On mesure la mémoire ENGAGEABLE (`ullAvailPageFile`), pas la RAM libre.
+      C'est elle qui plafonne : les fichiers d'échange de cette machine sont à
+      taille fixe, donc la limite d'engagement est atteinte bien avant que la
+      RAM ne se remplisse.
+    """
+    try:
+        import ctypes
+
+        class _Etat(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        etat = _Etat()
+        etat.dwLength = ctypes.sizeof(_Etat)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(etat)):
+            return None
+        return int(min(etat.ullAvailPageFile, etat.ullAvailPhys) // (1024 * 1024))
+    except Exception:
+        return None   # pas Windows, ou API indisponible : on ne bloque rien
+
+
 def empreinte(texte: str, permalien: str) -> str:
     """Identifie une publication. Le permalien prime ; sinon le texte normalisé."""
     if permalien:
@@ -664,6 +701,22 @@ class Collecteur:
 
         if self._sites_js and not self.stop.is_set():
             self._relire_avec_navigateur(cfg)
+
+        # ⚠ ON NE LANCE PAS CHROMIUM SUR UNE MACHINE PLEINE. Mieux vaut sauter
+        #   la partie Facebook en le disant que se faire tuer au milieu — et
+        #   emporter le bot avec. Les sources « site », elles, ont déjà tourné :
+        #   la collecte n'est donc pas perdue, seulement amputée.
+        libre = memoire_libre_mo()
+        seuil = int(cfg.get("memoire_mini_mo", 900))
+        if facebook and libre is not None and libre < seuil:
+            base.logguer(
+                f"Partie Facebook sautée : il ne reste que {libre} Mo de mémoire "
+                f"disponible (il en faut {seuil} pour Chromium). Fermez des "
+                "applications, ou agrandissez le fichier d'échange — voir "
+                "LISEZ-MOI, § « Quand la machine est pleine ».",
+                "erreur",
+            )
+            facebook = []
 
         if facebook and not self.stop.is_set():
             with sync_playwright() as pw:

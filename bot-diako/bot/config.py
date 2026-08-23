@@ -69,6 +69,11 @@ DEFAUTS = {
     # archives de blog, pas des tarifs.
     "pages_max_par_site": 8,
     "moisson_osm": True,                    # chercher aussi les sites dans OpenStreetMap
+    # 🔴 EN DESSOUS DE CE SEUIL, ON NE LANCE PAS CHROMIUM. Le 23/08/2026, la
+    #   machine est descendue à 189 Mo de mémoire engageable et Windows a tué
+    #   les trois bots. Sauter la partie Facebook en le disant vaut mieux que se
+    #   faire tuer au milieu.
+    "memoire_mini_mo": 900,
     # ── Ce qu'on garde ──────────────────────────────────────────────────────
     # Un genre décoché n'est pas collecté du tout : inutile de faire trier des
     # publications qu'on ne publiera jamais.

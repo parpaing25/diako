@@ -99,6 +99,27 @@ DEFAUTS = {
     "collecte_auto": True,
     "heures_collecte": ["11:00", "18:00"],
     "objectif_par_jour": 40,
+    # ⭐ LE FIL D'ACTUALITÉ MÉRITE D'ÊTRE DÉROULÉ PLUS LOIN QUE LE RESTE.
+    #   Un groupe finit par se répéter au bout de vingt défilements ; le fil,
+    #   lui, est trié par l'algorithme de Facebook et continue de servir des
+    #   choses neuves — c'est la source la moins coûteuse en pages chargées par
+    #   trouvaille.
+    "scrolls_max_fil": 45,
+    "posts_max_fil": 80,
+
+    # ── Ce qui se fait tout seul ────────────────────────────────────────────
+    # Chaque option est éteinte par défaut : rien ne part en ligne sans qu'on
+    # l'ait décidé une fois, explicitement.
+    "auto_valider": False,
+    "auto_valider_score": 80,
+    "auto_valider_sans_manque": True,     # jamais une trouvaille incomplète
+    "auto_rejeter": False,
+    "auto_rejeter_score": 20,
+    "auto_publier": False,                # ⚠ écrit en ligne sans relecture
+    "auto_publier_max_par_jour": 10,
+    "auto_purger_jours": 30,              # 0 = ne rien purger
+    "moisson_auto_jours": 7,              # 0 = jamais
+    "auto_relire_incompletes": False,     # repasser les incomplètes au modèle
     # ── Publication ─────────────────────────────────────────────────────────
     "pause_entre_envois_photos": 3.0,       # o2switch part en 500 si on enchaîne
     "publier_directement": True,            # False = fiches et événements en attente

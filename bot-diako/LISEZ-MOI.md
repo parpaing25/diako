@@ -99,7 +99,13 @@ cherchez**.
 - Sur une **page**, l'auteur de la publication *est* l'établissement : c'est le
   nom le plus sûr dont dispose le rapprochement.
 - Le **fil d'actualité** évite de déclarer une à une les dizaines de pages que
-  vous suivez déjà.
+  vous suivez déjà — et l'algorithme de Facebook y met en avant ce qui vous
+  intéresse. C'est la source la **moins chère en pages chargées par
+  trouvaille**, donc celle qu'on déroule le plus loin : **45 défilements**
+  contre 25 ailleurs, et **quatre** tours stériles tolérés au lieu de deux (le
+  fil alterne des blocs utiles et des blocs sans intérêt — souvenirs,
+  suggestions, publicités — et s'arrêter au premier creux le couperait au
+  mauvais endroit). Un bouton dédié l'active en haut de l'onglet Sources.
 - La **recherche** est le seul moyen d'atteindre ce que vous ne suivez pas
   encore. C'est là que sont les niches : un restaurant qui vient d'ouvrir, une
   carte photographiée par un client, un festival de province.
@@ -138,7 +144,45 @@ dans un hôtel.
 Un genre décoché dans les réglages n'est pas collecté du tout : inutile de faire
 trier des publications qu'on ne publiera jamais.
 
-### 3 bis. Collectes automatiques
+### 3 bis. L'onglet Automatisation
+
+Tout ce qui peut tourner seul est regroupé là, une règle par carte, avec un
+interrupteur et la phrase qui dit ce qu'elle fait. Le tableau de bord en affiche
+le résumé — **« ce qui se passera sans vous »** — pour qu'on n'ait jamais à
+deviner l'état des réglages.
+
+| Règle | Ce qu'elle fait | Par défaut |
+|---|---|---|
+| **Collecter aux heures dites** | passe sur toutes les sources actives ; le dernier passage creuse plus loin si l'objectif n'est pas atteint | **actif** — 11 h et 18 h, objectif 40 |
+| **Chercher les sites web** | annuaire + OpenStreetMap + liens des publications → nouvelles sources | **actif** — tous les 7 jours |
+| **Faire relire par l'IA** | texte libre, grilles de tarifs, cartes photographiées | **actif** |
+| **Valider seule** | passe en « validée » au-dessus d'un score, si rien ne manque | éteint — 80/100 |
+| **Écarter seule** | passe en « rejetée » sous un score ; rien n'est supprimé | éteint — 20/100 |
+| **Publier seule** | met les validées en ligne, avec un plafond quotidien | **éteint** — voir ci-dessous |
+| **Faire le ménage** | efface rejetées et doublons passé un âge, photos comprises | **actif** — 30 jours |
+| **Rattacher seule** | au-dessus du seuil *et* sur un lieu concordant | toujours — 0,78 |
+
+Le bouton **Essayer maintenant** applique le tri tout de suite sur la vraie
+file : on voit ce que les seuils donnent avant de les laisser tourner une
+semaine. Mesuré sur une file réelle de 11 trouvailles, avec les seuils 55 et
+25 : 8 validées, 3 écartées, 3 laissées au milieu.
+
+> 🔴 **La publication automatique est la seule règle qui ne se rattrape pas.**
+> Valider ou rejeter tout seul se défait d'un clic — rien n'est parti en ligne.
+> Publier écrit la fiche sur diako.fonenako.mg, où les visiteurs la voient ;
+> revenir en arrière est un retrait à la main. Le plafond quotidien existe pour
+> qu'une lecture qui part de travers se voie sur dix fiches, pas sur deux cents.
+
+**Ce que l'automatisation ne fait jamais :**
+
+- elle ne touche pas **au milieu** — entre les deux seuils, rien ne bouge ;
+- elle ne **défait pas** vos décisions : une trouvaille validée ou publiée n'est
+  jamais rejetée automatiquement, même si son score baisse ensuite ;
+- elle ne publie **rien d'incomplet** : les mêmes contrôles qu'au clic
+  s'appliquent ;
+- elle **ne tourne que si le bot tourne**.
+
+### 3 ter. Collectes automatiques
 
 Deux passages par jour par défaut : **11 h** et **18 h**, objectif **40
 trouvailles/jour**. Si l'objectif n'est pas atteint à l'heure du dernier
@@ -524,6 +568,7 @@ bot-diako/
 │   ├── analyse_llm.py    relecture du texte + lecture des cartes en photo
 │   ├── redaction.py      textes publiés, fabriqués de façon déterministe
 │   ├── score.py          note sur 100, barème par genre
+│   ├── automate.py       ce qui se fait tout seul : tri, ménage, plafonds
 │   ├── collecteur.py     pilotage du navigateur
 │   ├── publication.py    o2switch + écritures SQL
 │   ├── planificateur.py  collectes de 11 h et 18 h

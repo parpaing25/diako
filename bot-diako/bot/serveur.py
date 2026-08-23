@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import analyse_llm, base, diako
+from . import analyse_llm, automate, base, diako
 from . import planificateur as plan
 from . import publication, redaction, toile
 from . import score as notation
@@ -577,6 +577,31 @@ def ecrire_config(entree: ConfigEntree):
     return config
 
 
+@app.post("/api/automatisation/essai")
+def essai_automatisation():
+    """Applique tri et ménage tout de suite, sans attendre le prochain tour.
+
+    Sert à voir CE QUE les réglages feraient, sur la vraie file, avant de les
+    laisser tourner seuls pendant une semaine.
+    """
+    config = charger()
+    bilan = automate.entretien(config)
+    automate.noter_entretien()
+    return {
+        **bilan,
+        "message": (
+            f"{bilan['validees']} validée(s), {bilan['rejetees']} rejetée(s), "
+            f"{bilan['purgees']} effacée(s)."
+        ) if any(bilan.values()) else
+        "Rien à faire : aucune trouvaille ne franchit les seuils réglés.",
+    }
+
+
+@app.get("/api/automatisation")
+def lire_automatisation():
+    return automate.resume(charger())
+
+
 @app.post("/api/llm/test")
 def tester_llm():
     try:
@@ -598,7 +623,7 @@ def demarrer(port: int = 8757, ouvrir: bool = True) -> None:
     config = charger()
     # Le planificateur vit tant que le serveur vit : garder cette fenêtre
     # ouverte, c'est ce qui fait tourner les collectes de 11 h et 18 h.
-    plan.Planificateur(_demarrer_collecte, lambda: tache["actif"])
+    plan.Planificateur(_demarrer_collecte, lambda: tache["actif"], _lancer)
     if config.get("collecte_auto"):
         base.logguer(
             "Collectes automatiques : " + ", ".join(plan._heures(config))

@@ -49,9 +49,15 @@ const TROUS = [
   { cle: "evenements_a_venir", quoi: "événements à venir", inverse: true },
 ];
 
+/* ⚠ `publier_directement` N'EST PAS ICI : il vit dans l'onglet Automatisation,
+   à côté de la publication. Deux champs pour un même réglage finissent par
+   s'écraser l'un l'autre, et c'est celui qui décide si une fiche part en ligne. */
 const REGLAGES = {
   posts_max_par_source: "Publications max par source",
   scrolls_max_par_source: "Défilements max par source",
+  posts_max_fil: "Publications max — fil d'actualité",
+  scrolls_max_fil: "Défilements max — fil d'actualité",
+  pages_max_par_site: "Pages max par site web",
   photos_max_par_trouvaille: "Photos max par trouvaille",
   largeur_photo_min: "Largeur mini d'une photo (px)",
   cote_photo_min: "Côté long mini pour une couverture (px)",
@@ -62,7 +68,6 @@ const REGLAGES = {
   navigateur_visible: "Afficher le navigateur",
   travailleurs: "Traitements en parallèle (hors Facebook)",
   garder_les_incompletes: "Garder les trouvailles incomplètes",
-  publier_directement: "Publier en ligne (sinon en attente)",
 };
 
 let etatFiltres = { statut: "a_trier", genre: "", source_id: 0, recherche: "", tri: "score" };
@@ -117,8 +122,13 @@ function montrerVue(nom) {
   $$(".vue").forEach((v) => v.classList.toggle("active", v.id === `vue-${nom}`));
   if (nom === "trouvailles") chargerListe();
   if (nom === "sources") chargerSources();
+  if (nom === "auto") chargerReglages().then(majRegles);
   if (nom === "reglages") chargerReglages();
 }
+
+$$("[data-vers-auto]").forEach((b) =>
+  b.addEventListener("click", () => montrerVue("auto"))
+);
 
 $$(".lien-statut").forEach((b) =>
   b.addEventListener("click", () => {
@@ -216,8 +226,31 @@ function majManques(m, referentiel) {
     }</span>`;
 }
 
+/* Le plan de la journée : ce qui se passera sans vous, dans l'ordre.
+   Il est rendu à deux endroits — tableau de bord et onglet Automatisation —
+   pour qu'on n'ait jamais à deviner l'état des réglages. */
+function majPlan(auto) {
+  if (!auto) return;
+  const html = (auto.lignes || [])
+    .map(
+      (l) => `<div class="plan-ligne ${l.actif ? "" : "eteint"} ${
+        l.danger ? "danger" : ""
+      }">
+        <span class="plan-quoi">${echapper(l.quoi)}</span>
+        <span class="plan-quand">${echapper(l.quand)}</span>
+        <span class="plan-detail">${echapper(l.detail)}</span>
+      </div>`
+    )
+    .join("");
+  ["#plan-auto", "#plan-auto-2"].forEach((sel) => {
+    const zone = $(sel);
+    if (zone) zone.innerHTML = html;
+  });
+}
+
 function majPlanning(p) {
   if (!p) return;
+  majPlan(p.automatisation);
   const zone = $("#etat-planning");
   const reste = Math.max(0, (p.objectif || 0) - p.collectees);
   if (!p.actif) {
@@ -1112,8 +1145,53 @@ const ETIQUETTE_SOURCE = {
   site: ["etab", "Site web"],
 };
 
+/* Le fil d'actualité, mis en avant : c'est la source la plus rentable et la
+   plus facile à activer, et elle passait inaperçue au milieu des adresses. */
+function majFilVedette(sources) {
+  const carte = $("#fil-vedette");
+  if (!carte) return;
+  const fil = sources.find((s) => s.genre === "fil");
+  const bouton = $("#btn-fil");
+  carte.classList.toggle("on", Boolean(fil && fil.actif));
+  if (fil && fil.actif) {
+    bouton.textContent = "Mettre de côté";
+    bouton.className = "bouton";
+    $("#fil-texte").innerHTML =
+      `Actif — <strong>${fil.nb_trouvees}</strong> trouvaille(s) en sont venues. ` +
+      `Le fil est déroulé plus loin que les autres sources : l'algorithme de ` +
+      `Facebook continue d'y servir du neuf là où un groupe se répète.`;
+  } else {
+    bouton.textContent = fil ? "Réactiver mon fil" : "Activer mon fil";
+    bouton.className = "bouton principal";
+  }
+  bouton.onclick = async () => {
+    bouton.disabled = true;
+    try {
+      if (fil) {
+        await api(`/api/sources/${fil.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ champs: { actif: fil.actif ? 0 : 1 } }),
+        });
+        toast(fil.actif ? "Fil mis de côté." : "Fil réactivé.", "succes");
+      } else {
+        await api("/api/sources", {
+          method: "POST",
+          body: JSON.stringify({ nom: "", url: "facebook.com" }),
+        });
+        toast("Fil d'actualité ajouté aux sources.", "succes");
+      }
+      chargerSources();
+      rafraichirEtat();
+    } catch (e) {
+      toast(e.message, "erreur");
+    }
+    bouton.disabled = false;
+  };
+}
+
 async function chargerSources() {
   const sources = await api("/api/sources");
+  majFilVedette(sources);
   $("#table-sources tbody").innerHTML = sources
     .map((s) => {
       const [classe, libelle] = ETIQUETTE_SOURCE[s.genre] || ["", s.genre];
@@ -1179,6 +1257,116 @@ $("#form-source").addEventListener("submit", async (e) => {
   }
 });
 
+/* ── Automatisation ──────────────────────────────────────────────── */
+/* Les règles « tous les N jours » n'ont pas d'interrupteur en base : c'est le
+   nombre lui-même qui les éteint (0 = jamais). L'interrupteur de l'interface
+   est donc un miroir du nombre, pas un réglage de plus — deux réglages pour
+   une seule idée finissent toujours par se contredire. */
+const BASCULES_NUMERIQUES = { moisson_auto_jours: 7, auto_purger_jours: 30 };
+
+function majRegles() {
+  Object.entries(BASCULES_NUMERIQUES).forEach(([cle, defaut]) => {
+    const bascule = $(`[data-bascule="${cle}"]`);
+    if (bascule) bascule.checked = Number(config[cle] || 0) > 0;
+    const champ = $(`[data-cfg="${cle}"]`);
+    if (champ && !Number(champ.value)) champ.value = defaut;
+  });
+
+  const etats = {
+    "regle-collecte": "collecte_auto",
+    "regle-moisson": "moisson_auto_jours",
+    "regle-ia": "llm_actif",
+    "regle-valider": "auto_valider",
+    "regle-rejeter": "auto_rejeter",
+    "regle-publier": "auto_publier",
+    "regle-purger": "auto_purger_jours",
+  };
+  Object.entries(etats).forEach(([id, cle]) => {
+    const bloc = $(`#${id}`);
+    if (!bloc) return;
+    const actif = Boolean(
+      typeof config[cle] === "number" ? Number(config[cle]) > 0 : config[cle]
+    );
+    bloc.classList.toggle("active", actif);
+    const marque = $(".marque-etat", bloc);
+    if (marque) marque.textContent = actif ? "actif" : "éteint";
+  });
+}
+
+async function enregistrerConfig() {
+  const nouveau = {};
+  $$("[data-cfg]").forEach((el) => {
+    if (el.type === "checkbox") nouveau[el.dataset.cfg] = el.checked;
+    else if (el.type === "number") nouveau[el.dataset.cfg] = Number(el.value);
+    else nouveau[el.dataset.cfg] = el.value;
+  });
+  // Un interrupteur éteint met le nombre à zéro ; allumé, il rend au champ sa
+  // valeur (ou celle par défaut si le champ est vide).
+  Object.entries(BASCULES_NUMERIQUES).forEach(([cle, defaut]) => {
+    const bascule = $(`[data-bascule="${cle}"]`);
+    if (!bascule) return;
+    nouveau[cle] = bascule.checked ? Number(nouveau[cle]) || defaut : 0;
+  });
+  const champHeures = $("#heures-collecte");
+  if (champHeures) {
+    const heures = champHeures.value
+      .split(",")
+      .map((h) => h.trim())
+      .filter((h) => /^\d{1,2}:\d{2}$/.test(h));
+    if (heures.length) nouveau.heures_collecte = heures;
+  }
+  config = await api("/api/config", {
+    method: "PUT",
+    body: JSON.stringify({ config: nouveau }),
+  });
+  majRegles();
+  rafraichirEtat();
+  toast("Automatisation enregistrée.", "succes");
+}
+
+["#btn-auto-enregistrer", "#btn-auto-enregistrer-2"].forEach((sel) => {
+  const bouton = $(sel);
+  if (bouton) bouton.addEventListener("click", enregistrerConfig);
+});
+
+$$("[data-cfg], [data-bascule]").forEach((el) =>
+  el.addEventListener("change", () => {
+    // ⚠ UN MÊME RÉGLAGE PEUT APPARAÎTRE DANS DEUX ONGLETS. Sans cette recopie,
+    //   changer `llm_actif` dans Automatisation puis enregistrer reprendrait la
+    //   valeur PÉRIMÉE restée dans Réglages — l'enregistrement parcourt le
+    //   document dans l'ordre, et le dernier trouvé gagne.
+    if (el.dataset.cfg) {
+      $$(`[data-cfg="${el.dataset.cfg}"]`).forEach((jumeau) => {
+        if (jumeau === el) return;
+        if (jumeau.type === "checkbox") jumeau.checked = el.checked;
+        else jumeau.value = el.value;
+      });
+    }
+    // Le plan se met à jour à la volée : on voit l'effet du réglage avant de
+    // l'enregistrer, pas après.
+    if (el.type === "checkbox") majRegles();
+  })
+);
+
+$("#btn-auto-essai").addEventListener("click", async () => {
+  const bouton = $("#btn-auto-essai");
+  const zone = $("#etat-essai");
+  bouton.disabled = true;
+  await enregistrerConfig();
+  try {
+    const r = await api("/api/automatisation/essai", { method: "POST" });
+    zone.hidden = false;
+    zone.innerHTML =
+      `<span class="pastille-etat ok">Essai fait</span> <span>${echapper(r.message)}</span>`;
+    chargerListe();
+  } catch (e) {
+    zone.hidden = false;
+    zone.innerHTML = `<span class="pastille-etat ko">Échec</span> <span>${echapper(e.message)}</span>`;
+  }
+  bouton.disabled = false;
+  rafraichirEtat();
+});
+
 /* ── Réglages ────────────────────────────────────────────────────── */
 async function chargerReglages() {
   config = await api("/api/config");
@@ -1188,6 +1376,7 @@ async function chargerReglages() {
     if (el.type === "checkbox") el.checked = Boolean(valeur);
     else el.value = valeur;
   });
+  majRegles();
   $("#grille-reglages").innerHTML = Object.entries(REGLAGES)
     .map(([cle, label]) => {
       const v = config[cle];
@@ -1200,36 +1389,9 @@ async function chargerReglages() {
     .join("");
 }
 
-$("#btn-reglages").addEventListener("click", async () => {
-  const nouveau = {};
-  $$("[data-cfg]").forEach((el) => {
-    if (el.type === "checkbox") nouveau[el.dataset.cfg] = el.checked;
-    else if (el.type === "number") nouveau[el.dataset.cfg] = Number(el.value);
-    else nouveau[el.dataset.cfg] = el.value;
-  });
-  await api("/api/config", { method: "PUT", body: JSON.stringify({ config: nouveau }) });
-  toast("Réglages enregistrés.", "succes");
-});
-
-$("#btn-planning").addEventListener("click", async () => {
-  const heures = $("#heures-collecte")
-    .value.split(",")
-    .map((h) => h.trim())
-    .filter((h) => /^\d{1,2}:\d{2}$/.test(h));
-  if (!heures.length) return toast("Indiquez au moins une heure, ex. 11:00", "erreur");
-  await api("/api/config", {
-    method: "PUT",
-    body: JSON.stringify({
-      config: {
-        collecte_auto: $('[data-cfg="collecte_auto"]').checked,
-        objectif_par_jour: Number($('[data-cfg="objectif_par_jour"]').value),
-        heures_collecte: heures,
-      },
-    }),
-  });
-  toast("Collectes automatiques enregistrées.", "succes");
-  rafraichirEtat();
-});
+// Un seul chemin d'enregistrement pour toute la configuration : deux boutons
+// qui écrivent différemment finissent par écrire des choses différentes.
+$("#btn-reglages").addEventListener("click", enregistrerConfig);
 
 $("#btn-test-llm").addEventListener("click", async () => {
   const zone = $("#etat-llm");

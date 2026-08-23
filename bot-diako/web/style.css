@@ -520,3 +520,96 @@ select:focus, input:focus, textarea:focus {
 }
 
 textarea { resize: vertical; font-family: inherit; line-height: 1.5; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Automatisation — interrupteurs, plan de la journée, source « fil »
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Un interrupteur se lit d'un coup d'œil ; une case à cocher demande de lire
+   son étiquette. Sur un écran qui en aligne huit, la différence compte. */
+.bascule { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.bascule input { position: absolute; opacity: 0; width: 0; height: 0; }
+.bascule i {
+  position: relative; flex: none;
+  width: 42px; height: 24px; border-radius: 12px;
+  background: var(--trait); transition: background .18s ease;
+}
+.bascule i::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(16,38,43,.3);
+  transition: transform .18s ease;
+}
+.bascule input:checked + i { background: var(--teal); }
+.bascule input:checked + i::after { transform: translateX(18px); }
+.bascule input:focus-visible + i { outline: 2px solid var(--teal); outline-offset: 2px; }
+.bascule.danger input:checked + i { background: var(--corail); }
+.bascule .libelle { font-size: 14px; font-weight: 600; }
+
+/* Une règle d'automatisation : son interrupteur, sa phrase, ses réglages. */
+.regles { display: flex; flex-direction: column; gap: 12px; }
+.regle {
+  border: 1px solid var(--trait); border-radius: var(--rayon);
+  padding: 14px 16px; background: var(--blanc);
+  border-left: 4px solid var(--trait); transition: border-color .18s ease;
+}
+.regle.active { border-left-color: var(--teal); background: var(--teal-pale); }
+.regle.active.danger { border-left-color: var(--corail); background: #FDF0EB; }
+.regle-tete { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.regle-tete .titre-regle { font-size: 15px; font-weight: 700; }
+.regle-tete .marque-etat {
+  margin-left: auto; font-size: 12px; font-weight: 700;
+  padding: 2px 10px; border-radius: 10px;
+  background: var(--trait); color: var(--gris);
+}
+.regle.active .marque-etat { background: var(--teal); color: #fff; }
+.regle.active.danger .marque-etat { background: var(--corail); color: #fff; }
+.regle p { margin: 8px 0 0; font-size: 13.5px; color: var(--gris); }
+.regle .reglages-regle {
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;
+  margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--trait);
+}
+.regle .reglages-regle .champ { min-width: 120px; }
+.regle .reglages-regle input { width: 100%; }
+.regle[hidden] { display: none; }
+
+/* Le plan de la journée : ce qui se passera sans vous, dans l'ordre. */
+.plan { display: flex; flex-direction: column; gap: 0; }
+.plan-ligne {
+  display: grid; grid-template-columns: 128px 118px 1fr;
+  gap: 12px; align-items: baseline;
+  padding: 10px 0; border-bottom: 1px solid var(--fond);
+}
+.plan-ligne:last-child { border-bottom: 0; }
+.plan-ligne .plan-quoi { font-weight: 700; font-size: 13.5px; }
+.plan-ligne .plan-quand {
+  font-size: 12.5px; font-weight: 600; color: var(--teal-fonce);
+}
+.plan-ligne.eteint .plan-quoi,
+.plan-ligne.eteint .plan-quand { color: var(--gris); font-weight: 400; }
+.plan-ligne .plan-detail { color: var(--gris); font-size: 13px; }
+.plan-ligne.danger .plan-quand { color: var(--corail); }
+
+/* La carte du fil d'actualité, mise en avant : c'est la source la plus
+   rentable et la plus facile à activer. */
+.fil-vedette {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  border: 1px solid var(--teal); border-radius: var(--rayon);
+  background: linear-gradient(135deg, var(--teal-pale), #F3FAFA);
+  padding: 16px 18px; margin-bottom: 18px;
+}
+.fil-vedette .icone-fil {
+  display: grid; place-items: center; flex: none;
+  width: 42px; height: 42px; border-radius: 12px;
+  background: var(--teal); color: #fff; font-size: 20px;
+}
+.fil-vedette .corps-fil { flex: 1; min-width: 260px; }
+.fil-vedette strong { display: block; font-size: 15px; margin-bottom: 3px; }
+.fil-vedette p { margin: 0; font-size: 13.5px; color: var(--gris); }
+.fil-vedette.on { border-color: var(--vert); background: #F0F9F4; }
+.fil-vedette.on .icone-fil { background: var(--vert); }
+
+@media (max-width: 700px) {
+  .plan-ligne { grid-template-columns: 1fr; gap: 2px; }
+  .plan-ligne .plan-quand { color: var(--teal-fonce); }
+}

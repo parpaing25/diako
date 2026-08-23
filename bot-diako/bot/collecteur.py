@@ -760,10 +760,21 @@ class Collecteur:
 
         vus: set[str] = set()
         retenues = 0
-        plafond = int(cfg["posts_max_par_source"])
+        # ⭐ LE FIL SE DÉROULE PLUS LOIN QUE LE RESTE, et c'est justifié : un
+        #   groupe finit par se répéter au bout d'une vingtaine de défilements,
+        #   alors que le fil est trié par l'algorithme de Facebook et continue
+        #   de servir des publications neuves. C'est la source la moins chère en
+        #   pages chargées par trouvaille — et celle qui ramène ce qu'on
+        #   n'aurait pas pensé à chercher.
+        if genre == "fil":
+            plafond = int(cfg.get("posts_max_fil", 80))
+            defilements = int(cfg.get("scrolls_max_fil", 45))
+        else:
+            plafond = int(cfg["posts_max_par_source"])
+            defilements = int(cfg["scrolls_max_par_source"])
         steriles = 0  # défilements consécutifs sans rien de neuf
 
-        for _ in range(int(cfg["scrolls_max_par_source"])):
+        for _ in range(defilements):
             if self.stop.is_set():
                 break
 
@@ -805,7 +816,10 @@ class Collecteur:
             # Défilement adaptatif : inutile de dérouler 25 fois une source qui
             # ne donne plus rien, inutile de s'arrêter à 25 si elle donne encore.
             steriles = steriles + 1 if neufs == 0 else 0
-            if steriles >= 2 or retenues >= plafond:
+            # Le fil mérite deux tours stériles de plus : il alterne des blocs
+            # sans intérêt (souvenirs, suggestions, publicités) et des blocs
+            # utiles. S'arrêter au premier creux le couperait au mauvais endroit.
+            if steriles >= (4 if genre == "fil" else 2) or retenues >= plafond:
                 break
 
             page.mouse.wheel(0, random.randint(700, 1400))

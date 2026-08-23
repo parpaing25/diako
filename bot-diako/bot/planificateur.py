@@ -13,7 +13,7 @@ from __future__ import annotations
 import threading
 from datetime import date, datetime, timedelta, timezone
 
-from . import base
+from . import automate, base
 from .config import charger
 
 CLE_DERNIER = "planificateur_dernier_creneau"
@@ -69,11 +69,29 @@ def prochain_passage(config: dict) -> str:
 
 
 class Planificateur:
-    """Surveille l'horloge et déclenche les collectes. Un seul fil, discret."""
+    """Surveille l'horloge et déclenche tout ce qui tourne seul.
 
-    def __init__(self, lancer_collecte, est_occupe) -> None:
+    Un seul fil, discret, qui regarde l'heure toutes les trente secondes et
+    décide, dans cet ordre :
+
+      1. **l'entretien** — validation, rejet et ménage : ça ne touche à rien
+         d'extérieur et ça ne bloque personne, donc ça passe en premier ;
+      2. **la publication automatique**, si elle est armée et que rien d'autre
+         ne tourne ;
+      3. **la recherche de sites web**, quand elle est due ;
+      4. **la collecte** à ses heures.
+
+    ⚠ L'ORDRE COMPTE. Une seule tâche lourde tourne à la fois (`est_occupe`) :
+      si la collecte passait avant, la publication automatique n'aurait jamais
+      sa fenêtre les jours de grosse récolte.
+    """
+
+    def __init__(self, lancer_collecte, est_occupe, lancer_tache=None) -> None:
         self.lancer_collecte = lancer_collecte
         self.est_occupe = est_occupe
+        # `lancer_tache(type, fonction)` est fourni par le serveur : c'est lui
+        # qui détient le verrou « une seule tâche à la fois ».
+        self.lancer_tache = lancer_tache
         self.arret = threading.Event()
         self.fil = threading.Thread(target=self._boucle, daemon=True)
         self.fil.start()
@@ -81,9 +99,71 @@ class Planificateur:
     def _boucle(self) -> None:
         while not self.arret.wait(VERIFICATION):
             try:
+                config = charger()
+                self._entretenir(config)
+                if not self.est_occupe():
+                    if self._publier_auto(config):
+                        continue
+                    if self._moissonner(config):
+                        continue
                 self._verifier()
             except Exception as e:
                 base.logguer(f"Planificateur : {e}", "erreur")
+
+    # -- Ce qui ne touche à rien d'extérieur --------------------------------
+    def _entretenir(self, config: dict) -> None:
+        if not automate.est_du(config):
+            return
+        automate.noter_entretien()
+        automate.entretien(config)
+
+    # -- Publication automatique --------------------------------------------
+    def _publier_auto(self, config: dict) -> bool:
+        """Publie les validées, dans la limite du plafond du jour."""
+        if not self.lancer_tache or not config.get("auto_publier"):
+            return False
+        a_faire = automate.publiables(config)
+        if not a_faire:
+            return False
+
+        from . import publication
+
+        def travail():
+            reussies = 0
+            for tid in a_faire:
+                try:
+                    publication.publier(tid)
+                    automate.noter_publication_auto()
+                    reussies += 1
+                except Exception as e:
+                    base.logguer(
+                        f"Publication automatique refusée pour {tid[:8]} : {e}",
+                        "erreur",
+                    )
+            base.logguer(
+                f"Publication automatique : {reussies}/{len(a_faire)} trouvaille(s) "
+                "mise(s) en ligne.", "succes" if reussies else "avert",
+            )
+
+        base.logguer(
+            f"Publication automatique — {len(a_faire)} trouvaille(s) validée(s) "
+            "partent en ligne.", "info",
+        )
+        return bool(self.lancer_tache("publication", travail))
+
+    # -- Recherche de sites web ---------------------------------------------
+    def _moissonner(self, config: dict) -> bool:
+        if not self.lancer_tache or not automate.moisson_due(config):
+            return False
+
+        from . import toile
+
+        def travail():
+            toile.moissonner(avec_osm=bool(config.get("moisson_osm", True)))
+            automate.noter_moisson()
+
+        base.logguer("Recherche automatique des sites web des établissements.", "info")
+        return bool(self.lancer_tache("moisson", travail))
 
     def _verifier(self) -> None:
         config = charger()
@@ -152,4 +232,5 @@ def bilan_du_jour(config: dict) -> dict:
         "collectees": fait,
         "objectif": objectif,
         "atteint": bool(objectif and fait >= objectif),
+        "automatisation": automate.resume(config),
     }

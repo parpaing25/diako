@@ -20,6 +20,7 @@
     <button class="onglet actif" data-vue="bord">Tableau de bord</button>
     <button class="onglet" data-vue="trouvailles">Trouvailles <span id="pastille-trier" class="compteur">0</span></button>
     <button class="onglet" data-vue="sources">Sources</button>
+    <button class="onglet" data-vue="auto">Automatisation</button>
     <button class="onglet" data-vue="reglages">Réglages</button>
   </nav>
   <button class="etat-fb" id="etat-fb" title="Compte Facebook utilisé pour la collecte">
@@ -157,28 +158,13 @@
     </div>
 
     <div class="carte">
-      <h2>Collectes automatiques</h2>
-      <div class="ligne-compte" id="etat-planning"></div>
-      <div class="grille-reglages">
-        <div class="reglage">
-          <label>Activer</label>
-          <label><input type="checkbox" data-cfg="collecte_auto"> collectes automatiques</label>
-        </div>
-        <div class="reglage">
-          <label>Heures (séparées par une virgule)</label>
-          <input type="text" id="heures-collecte" placeholder="11:00, 18:00">
-        </div>
-        <div class="reglage">
-          <label>Objectif par jour</label>
-          <input type="number" data-cfg="objectif_par_jour">
-        </div>
-      </div>
-      <button class="bouton principal" id="btn-planning">Enregistrer</button>
-      <p class="aide" style="margin:12px 0 0">
-        Le passage du soir va <strong>plus loin dans les fils</strong> si
-        l'objectif n'est pas atteint — mêmes pauses, plus de défilements.
-        Les collectes n'ont lieu que si <strong>cette fenêtre reste ouverte</strong>.
+      <h2>Ce qui se passera sans vous</h2>
+      <p class="aide">
+        Le plan de la journée, tel qu'il est réglé en ce moment.
+        <button class="lien-discret" data-vers-auto>Modifier dans Automatisation</button>
       </p>
+      <div class="plan" id="plan-auto"></div>
+      <div class="ligne-compte" id="etat-planning" style="margin-top:14px"></div>
     </div>
 
     <div class="carte">
@@ -218,8 +204,288 @@
     <p class="vide" id="vide" hidden>Rien ici pour l'instant.</p>
   </section>
 
+  <!-- ══════════ AUTOMATISATION ══════════ -->
+  <section class="vue" id="vue-auto">
+
+    <div class="carte">
+      <h2>Ce qui se passera sans vous</h2>
+      <p class="aide">
+        Rien ici n'est irréversible sauf la dernière règle. Réglez, puis
+        <strong>essayez</strong> : le bouton applique le tri tout de suite sur la
+        file réelle, pour que vous voyiez ce que ça donne avant de le laisser
+        tourner une semaine.
+      </p>
+      <div class="plan" id="plan-auto-2"></div>
+      <div class="actions-collecte" style="margin-top:16px">
+        <button class="bouton principal" id="btn-auto-enregistrer">Enregistrer</button>
+        <button class="bouton" id="btn-auto-essai">Essayer maintenant</button>
+      </div>
+      <div class="ligne-compte" id="etat-essai" hidden></div>
+    </div>
+
+    <div class="carte">
+      <h2>Les règles</h2>
+      <div class="regles">
+
+        <!-- ① Collecte -->
+        <div class="regle" id="regle-collecte">
+          <div class="regle-tete">
+            <label class="bascule">
+              <input type="checkbox" data-cfg="collecte_auto"><i></i>
+            </label>
+            <span class="titre-regle">Collecter aux heures dites</span>
+            <span class="marque-etat">éteint</span>
+          </div>
+          <p>
+            Passe sur toutes les sources actives. Le <strong>dernier passage de
+            la journée creuse plus loin</strong> dans les mêmes fils si
+            l'objectif n'est pas atteint — mêmes pauses, plus de défilements :
+            c'est la profondeur qui augmente, pas le rythme.
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>Heures (séparées par une virgule)</label>
+              <input type="text" id="heures-collecte" placeholder="11:00, 18:00">
+            </div>
+            <div class="champ">
+              <label>Objectif par jour</label>
+              <input type="number" data-cfg="objectif_par_jour">
+            </div>
+          </div>
+        </div>
+
+        <!-- ② Sites web -->
+        <div class="regle" id="regle-moisson">
+          <div class="regle-tete">
+            <label class="bascule">
+              <input type="checkbox" data-bascule="moisson_auto_jours"><i></i>
+            </label>
+            <span class="titre-regle">Chercher les sites web des établissements</span>
+            <span class="marque-etat">éteint</span>
+          </div>
+          <p>
+            Interroge l'annuaire Diako, <strong>OpenStreetMap</strong> et les liens
+            relevés dans les publications, puis inscrit les sites trouvés comme
+            sources — rattachés à leur fiche quand c'est sûr. C'est de là que
+            viennent les <strong>tarifs de chambre</strong>.
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>Tous les combien (jours)</label>
+              <input type="number" data-cfg="moisson_auto_jours" min="0">
+            </div>
+            <div class="champ">
+              <label>Interroger OpenStreetMap</label>
+              <label class="bascule"><input type="checkbox" data-cfg="moisson_osm"><i></i>
+                <span class="libelle">oui</span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ③ Relecture par l'IA -->
+        <div class="regle" id="regle-ia">
+          <div class="regle-tete">
+            <label class="bascule">
+              <input type="checkbox" data-cfg="llm_actif"><i></i>
+            </label>
+            <span class="titre-regle">Faire relire chaque trouvaille par l'IA</span>
+            <span class="marque-etat">éteint</span>
+          </div>
+          <p>
+            Comprend le texte libre, structure les grilles de tarifs, et
+            <strong>transcrit les cartes photographiées</strong> — sans quoi les
+            1 858 restaurants sans carte le resteraient. Une panne du modèle ne
+            casse jamais la collecte : la trouvaille est marquée « non relue ».
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>Lire les cartes en photo</label>
+              <label class="bascule"><input type="checkbox" data-cfg="llm_vision"><i></i>
+                <span class="libelle">oui</span></label>
+            </div>
+            <div class="champ">
+              <label>Repasser les incomplètes au modèle</label>
+              <label class="bascule">
+                <input type="checkbox" data-cfg="auto_relire_incompletes"><i></i>
+                <span class="libelle">oui</span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ④ Validation -->
+        <div class="regle" id="regle-valider">
+          <div class="regle-tete">
+            <label class="bascule">
+              <input type="checkbox" data-cfg="auto_valider"><i></i>
+            </label>
+            <span class="titre-regle">Valider seule ce qui est manifestement bon</span>
+            <span class="marque-etat">éteint</span>
+          </div>
+          <p>
+            Passe en « validée » ce qui dépasse le score choisi <em>et</em> à qui
+            il ne manque rien pour publier. <strong>Rien ne part en ligne</strong> :
+            la publication reste un geste à part.
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>À partir de (score /100)</label>
+              <input type="number" data-cfg="auto_valider_score" min="0" max="100">
+            </div>
+            <div class="champ">
+              <label>Exiger aucun manque</label>
+              <label class="bascule">
+                <input type="checkbox" data-cfg="auto_valider_sans_manque"><i></i>
+                <span class="libelle">oui</span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑤ Rejet -->
+        <div class="regle" id="regle-rejeter">
+          <div class="regle-tete">
+            <label class="bascule">
+              <input type="checkbox" data-cfg="auto_rejeter"><i></i>
+            </label>
+            <span class="titre-regle">Écarter seule ce qui n'a aucune chance</span>
+            <span class="marque-etat">éteint</span>
+          </div>
+          <p>
+            Passe en « rejetée » ce qui reste sous le score choisi. <strong>Rien
+            n'est supprimé</strong> : le statut se rechange d'un clic, et l'onglet
+            Rejetées reste consultable.
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>En dessous de (score /100)</label>
+              <input type="number" data-cfg="auto_rejeter_score" min="0" max="100">
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑥ Publication — la seule irréversible -->
+        <div class="regle danger" id="regle-publier">
+          <div class="regle-tete">
+            <label class="bascule danger">
+              <input type="checkbox" data-cfg="auto_publier"><i></i>
+            </label>
+            <span class="titre-regle">Publier seule les trouvailles validées</span>
+            <span class="marque-etat">éteint</span>
+          </div>
+          <p>
+            ⚠ <strong>C'est la seule règle qui ne se rattrape pas.</strong> La
+            fiche est écrite sur diako.fonenako.mg et vue par les visiteurs ;
+            revenir en arrière est un retrait à la main. Le plafond quotidien
+            existe pour qu'une lecture qui part de travers se voie sur dix fiches,
+            pas sur deux cents. À laisser éteint tant que vous n'avez pas vu une
+            dizaine de publications partir correctement.
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>Au maximum par jour</label>
+              <input type="number" data-cfg="auto_publier_max_par_jour" min="1">
+            </div>
+            <div class="champ">
+              <label>Publier en ligne (sinon en attente)</label>
+              <label class="bascule">
+                <input type="checkbox" data-cfg="publier_directement"><i></i>
+                <span class="libelle">en ligne</span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑦ Ménage -->
+        <div class="regle" id="regle-purger">
+          <div class="regle-tete">
+            <label class="bascule">
+              <input type="checkbox" data-bascule="auto_purger_jours"><i></i>
+            </label>
+            <span class="titre-regle">Faire le ménage dans la base locale</span>
+            <span class="marque-etat">éteint</span>
+          </div>
+          <p>
+            Efface les trouvailles <strong>rejetées et les doublons</strong> passé
+            un certain âge, <strong>photos comprises</strong>. Sans ça,
+            <code>data/trouvailles/</code> gonfle indéfiniment : chaque trouvaille
+            garde ses photos en pleine taille.
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>Au-delà de (jours)</label>
+              <input type="number" data-cfg="auto_purger_jours" min="0">
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑧ Rattachement -->
+        <div class="regle active" id="regle-rattacher">
+          <div class="regle-tete">
+            <span class="titre-regle">Rattacher seule à une fiche existante</span>
+            <span class="marque-etat">toujours</span>
+          </div>
+          <p>
+            Au-dessus du seuil <em>et</em> sur un lieu concordant, la trouvaille
+            est rattachée sans rien demander. En dessous, les candidats sont
+            proposés et <strong>vous tranchez</strong> : poser une carte sur le
+            mauvais restaurant ne se rattrape pas.
+          </p>
+          <div class="reglages-regle">
+            <div class="champ">
+              <label>Proposer à partir de (0-1)</label>
+              <input type="number" step="0.01" data-cfg="seuil_rapprochement">
+            </div>
+            <div class="champ">
+              <label>Rattacher seule à partir de (0-1)</label>
+              <input type="number" step="0.01" data-cfg="seuil_rattachement_auto">
+            </div>
+            <div class="champ">
+              <label>Recharger le référentiel toutes les (h)</label>
+              <input type="number" data-cfg="referentiel_heures">
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="actions-collecte" style="margin-top:16px">
+        <button class="bouton principal" id="btn-auto-enregistrer-2">Enregistrer</button>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h2>Ce que l'automatisation ne fera jamais</h2>
+      <ul class="notes">
+        <li><strong>Elle ne touche pas au milieu.</strong> Entre le seuil de rejet
+          et celui de validation, rien ne bouge : c'est la zone où l'automate n'a
+          pas d'avis, et prétendre le contraire ferait perdre de bonnes
+          trouvailles sans que personne ne s'en aperçoive.</li>
+        <li><strong>Elle ne défait pas vos décisions.</strong> Une trouvaille que
+          vous avez validée ou publiée n'est jamais rejetée automatiquement, même
+          si son score baisse après une correction.</li>
+        <li><strong>Elle ne publie rien d'incomplet.</strong> Les mêmes contrôles
+          qu'au clic s'appliquent : lieu, fiche, date, plats selon le genre.</li>
+        <li><strong>Elle ne tourne que si le bot tourne.</strong> L'horloge est
+          dans le bot, pas dans Windows — voir la tâche planifiée dans le
+          LISEZ-MOI.</li>
+      </ul>
+    </div>
+  </section>
+
   <!-- ══════════ SOURCES ══════════ -->
   <section class="vue" id="vue-sources">
+
+    <div class="fil-vedette" id="fil-vedette">
+      <span class="icone-fil">📰</span>
+      <div class="corps-fil">
+        <strong>Votre fil d'actualité comme source</strong>
+        <p id="fil-texte">
+          L'algorithme de Facebook vous sert déjà ce qui vous intéresse : les
+          publications des groupes et des pages que vous suivez, triées. Le fil
+          est déroulé <strong>plus loin</strong> que les autres sources — c'est
+          celle qui coûte le moins de pages chargées par trouvaille.
+        </p>
+      </div>
+      <button class="bouton principal" id="btn-fil">Activer mon fil</button>
+    </div>
+
     <div class="carte">
       <h2>Sources surveillées</h2>
       <p class="aide">
@@ -295,15 +561,12 @@
         <strong>transcrire une carte photographiée</strong> — à Madagascar une
         carte se publie en photo, presque jamais tapée.
       </p>
+      <p class="aide" style="margin:-8px 0 14px">
+        L'interrupteur de la relecture et celui des cartes en photo sont dans
+        <button class="lien-discret" data-vers-auto>Automatisation</button>.
+        Ici, seulement <em>par où</em> elle passe.
+      </p>
       <div class="grille-reglages">
-        <div class="reglage">
-          <label>Activer la relecture</label>
-          <label><input type="checkbox" data-cfg="llm_actif"> activée</label>
-        </div>
-        <div class="reglage">
-          <label>Lire les cartes en photo</label>
-          <label><input type="checkbox" data-cfg="llm_vision"> activée</label>
-        </div>
         <div class="reglage">
           <label>Chemin utilisé</label>
           <select data-cfg="llm_transport">
@@ -332,34 +595,6 @@
         La lecture d'image ne part pas à chaque publication : seulement quand le
         texte parle de carte ou de menu, ou quand l'établissement est un
         restaurant — et seulement si les règles n'ont pas déjà trouvé les plats.
-      </p>
-    </div>
-
-    <div class="carte">
-      <h2>Rapprochement avec l'annuaire</h2>
-      <p class="aide">
-        Le bot compare le nom trouvé aux fiches existantes. Au-dessus du seuil de
-        rattachement <em>et</em> sur un lieu concordant, il rattache seul ;
-        en dessous, il propose et <strong>vous tranchez</strong>.
-      </p>
-      <div class="grille-reglages">
-        <div class="reglage">
-          <label>Seuil de proposition (0-1)</label>
-          <input type="number" step="0.01" data-cfg="seuil_rapprochement">
-        </div>
-        <div class="reglage">
-          <label>Seuil de rattachement automatique</label>
-          <input type="number" step="0.01" data-cfg="seuil_rattachement_auto">
-        </div>
-        <div class="reglage">
-          <label>Recharger le référentiel toutes les (h)</label>
-          <input type="number" data-cfg="referentiel_heures">
-        </div>
-      </div>
-      <p class="aide" style="margin:0">
-        Poser une carte sur le mauvais restaurant ne se rattrape pas : personne
-        ne vient corriger. Monter le seuil automatique au-dessus de 0,85 rend le
-        bot plus prudent, et vous donne plus à trancher.
       </p>
     </div>
 

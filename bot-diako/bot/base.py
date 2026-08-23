@@ -11,6 +11,7 @@ réseau** au milieu de la collecte, dans les fils de l'atelier.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import threading
 import uuid
@@ -218,6 +219,29 @@ CREATE TABLE IF NOT EXISTS journal (
     message TEXT NOT NULL
 );
 
+-- Groupes et pages repérés par la prospection, en attente de votre verdict.
+-- `ecarte` est une mémoire volontaire : sans elle, chaque prospection
+-- reproposerait les mêmes trente groupes déjà refusés.
+CREATE TABLE IF NOT EXISTS candidats_sources (
+    cle        TEXT PRIMARY KEY,          -- identifiant Facebook du groupe/page
+    genre      TEXT NOT NULL,             -- 'groupe' | 'page'
+    nom        TEXT NOT NULL,
+    url        TEXT NOT NULL,
+    effectif   INTEGER,                   -- membres (groupe) ou abonnés (page)
+    rythme     INTEGER,                   -- publications par jour, si affiché
+    prive      INTEGER NOT NULL DEFAULT 0,
+    lieu       TEXT,
+    categorie  TEXT,
+    requete    TEXT,                      -- la recherche qui l'a fait sortir
+    note       INTEGER NOT NULL DEFAULT 0,
+    niveau     TEXT,
+    alertes    TEXT,                      -- JSON
+    details    TEXT,                      -- JSON, pour montrer le pourquoi
+    vu_le      TEXT NOT NULL,
+    statut     TEXT NOT NULL DEFAULT 'nouveau',   -- nouveau | adopte | ecarte
+    decide_le  TEXT
+);
+
 CREATE TABLE IF NOT EXISTS etat (
     cle    TEXT PRIMARY KEY,
     valeur TEXT
@@ -366,6 +390,108 @@ def ajouter_source(nom: str, url: str, genre: str = "groupe", page_id: str = "",
         )
         ligne = cx.execute("SELECT * FROM sources WHERE url = ?", (url,)).fetchone()
     return dict(ligne)
+
+
+# -- Candidats repérés par la prospection de sources -------------------------
+def urls_sources() -> set[str]:
+    """Les adresses déjà surveillées, pour ne pas les reproposer."""
+    with _verrou, connexion() as cx:
+        lignes = cx.execute("SELECT url FROM sources").fetchall()
+    # Facebook écrit la même source de dix façons : on compare sur l'essentiel.
+    return {_cle_url(l["url"]) for l in lignes} | {l["url"] for l in lignes}
+
+
+def _cle_url(url: str) -> str:
+    u = (url or "").strip().lower().rstrip("/")
+    u = re.sub(r"^https?://(www\.|m\.|web\.)?facebook\.com", "", u)
+    return re.sub(r"\?.*$", "", u)
+
+
+def candidats_ecartes() -> set[str]:
+    with _verrou, connexion() as cx:
+        return {
+            l["cle"] for l in cx.execute(
+                "SELECT cle FROM candidats_sources WHERE statut IN ('ecarte', 'adopte')"
+            ).fetchall()
+        }
+
+
+def ajouter_candidat(c: dict) -> bool:
+    """Range un candidat. Renvoie True s'il est nouveau.
+
+    Un candidat déjà jugé n'est pas réveillé : on rafraîchit seulement ses
+    chiffres, parce qu'un groupe grossit et que sa note doit suivre.
+    """
+    with _verrou, connexion() as cx:
+        existe = cx.execute(
+            "SELECT statut FROM candidats_sources WHERE cle = ?", (c["cle"],)
+        ).fetchone()
+        if existe:
+            cx.execute(
+                "UPDATE candidats_sources SET effectif = ?, rythme = ?, note = ?, "
+                "niveau = ?, alertes = ?, details = ?, vu_le = ? WHERE cle = ?",
+                (c.get("effectif"), c.get("rythme_par_jour"), c.get("note", 0),
+                 c.get("niveau"), json.dumps(c.get("alertes") or [], ensure_ascii=False),
+                 json.dumps(c.get("details") or [], ensure_ascii=False),
+                 maintenant(), c["cle"]),
+            )
+            return False
+        cx.execute(
+            "INSERT INTO candidats_sources (cle, genre, nom, url, effectif, rythme, "
+            "prive, lieu, categorie, requete, note, niveau, alertes, details, vu_le) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (c["cle"], c["genre"], c["nom"], c["url"], c.get("effectif"),
+             c.get("rythme_par_jour"), int(bool(c.get("prive"))), c.get("lieu"),
+             c.get("categorie"), c.get("requete"), c.get("note", 0), c.get("niveau"),
+             json.dumps(c.get("alertes") or [], ensure_ascii=False),
+             json.dumps(c.get("details") or [], ensure_ascii=False), maintenant()),
+        )
+        return True
+
+
+def candidats(statut: str = "nouveau", limite: int = 300) -> list[dict]:
+    with _verrou, connexion() as cx:
+        lignes = cx.execute(
+            "SELECT * FROM candidats_sources WHERE statut = ? "
+            "ORDER BY note DESC, effectif DESC LIMIT ?",
+            (statut, limite),
+        ).fetchall()
+    sortie = []
+    for l in lignes:
+        d = dict(l)
+        for cle in ("alertes", "details"):
+            try:
+                d[cle] = json.loads(d[cle] or "[]")
+            except (json.JSONDecodeError, TypeError):
+                d[cle] = []
+        sortie.append(d)
+    return sortie
+
+
+def decider_candidat(cle: str, statut: str) -> dict | None:
+    """« adopte » ou « ecarte ». Adopter crée la source du même coup."""
+    with _verrou, connexion() as cx:
+        c = cx.execute(
+            "SELECT * FROM candidats_sources WHERE cle = ?", (cle,)
+        ).fetchone()
+        if not c:
+            return None
+        cx.execute(
+            "UPDATE candidats_sources SET statut = ?, decide_le = ? WHERE cle = ?",
+            (statut, maintenant(), cle),
+        )
+        c = dict(c)
+    if statut == "adopte":
+        ajouter_source(c["nom"], c["url"], c["genre"], origine="prospection")
+    return c
+
+
+def compter_candidats() -> dict:
+    with _verrou, connexion() as cx:
+        lignes = cx.execute(
+            "SELECT statut, COUNT(*) n FROM candidats_sources GROUP BY statut"
+        ).fetchall()
+    return {l["statut"]: l["n"] for l in lignes}
 
 
 def source_connue(url: str) -> bool:

@@ -126,6 +126,7 @@ function montrerVue(nom) {
   $$(".vue").forEach((v) => v.classList.toggle("active", v.id === `vue-${nom}`));
   if (nom === "trouvailles") chargerListe();
   if (nom === "sources") chargerSources();
+  if (nom === "candidats") chargerCandidats();
   if (nom === "auto") chargerReglages().then(majRegles);
   if (nom === "reglages") chargerReglages();
 }
@@ -177,6 +178,11 @@ async function rafraichirEtat() {
   $("#n-plats").textContent = c.plats;
   $("#n-chambres").textContent = c.chambres ?? 0;
   $("#pastille-trier").textContent = c.a_trier;
+  if (e.candidats !== undefined) {
+    const pastille = $("#pastille-candidats");
+    pastille.textContent = e.candidats;
+    pastille.classList.toggle("vif", e.candidats > 0);
+  }
 
   const occupe = e.tache.actif;
   majCompteFacebook(e.session_fb, occupe && e.tache.type === "connexion", e.sources_actives);
@@ -1482,3 +1488,169 @@ setInterval(rafraichirEtat, 2000);
 chargerSources();
 chargerReglages();
 chargerSuggestions();
+
+/* ------------------------------------------------------------------------ *
+ *  Nouvelles sources : le bot cherche, vous tranchez.
+ * ------------------------------------------------------------------------ */
+const cochesCandidats = new Set();
+
+async function chargerCandidats() {
+  let d;
+  try {
+    d = await api("/api/candidats");
+  } catch (e) {
+    toast(e.message, "erreur");
+    return;
+  }
+  const liste = $("#liste-candidats");
+  const vide = $("#candidats-vide");
+  $("#nb-requetes").textContent = (d.requetes || []).length;
+  if (!$("#requetes-prospection").value) {
+    $("#requetes-prospection").value = (d.requetes || []).join("\n");
+  }
+
+  const sous = d.sous_le_seuil
+    ? ` · ${d.sous_le_seuil} écarté(s) sous ${d.seuil}/100`
+    : "";
+  $("#etat-candidats").textContent =
+    `${d.candidats.length} en attente${sous} · ${d.compteurs.adopte || 0} adoptée(s)`;
+
+  vide.hidden = d.candidats.length > 0;
+  liste.innerHTML = d.candidats
+    .map((c) => {
+      const eff = c.effectif
+        ? `${c.effectif.toLocaleString("fr-FR")} ${c.genre === "page" ? "abonnés" : "membres"}`
+        : "effectif inconnu";
+      const ryt = c.rythme ? `${c.rythme} pub./jour` : "";
+      const alertes = (c.alertes || [])
+        .map((a) => `<li>${echapper(a)}</li>`)
+        .join("");
+      const barres = (c.details || [])
+        .map(
+          (x) => `<span class="mini-brique" title="${echapper(x.motif)}">
+              ${echapper(x.cle)} <i style="width:${(x.points / x.sur) * 100}%"></i>
+            </span>`
+        )
+        .join("");
+      return `<article class="candidat ${c.niveau}">
+        <label class="candidat-choix">
+          <input type="checkbox" data-cand="${c.cle}" ${
+            cochesCandidats.has(c.cle) ? "checked" : ""
+          }>
+          <span class="note-mini ${c.note >= 78 ? "bon" : ""}">${c.note}</span>
+        </label>
+        <div class="candidat-corps">
+          <h3>${echapper(c.nom)}
+            <span class="badge ${c.genre}">${c.genre}</span>
+            ${c.prive ? '<span class="badge manque">privé</span>' : ""}
+          </h3>
+          <p class="candidat-chiffres">
+            <strong>${eff}</strong>${ryt ? " · " + ryt : ""}
+            ${c.categorie ? " · " + echapper(c.categorie) : ""}
+            ${c.lieu ? " · " + echapper(c.lieu) : ""}
+          </p>
+          <div class="candidat-barres">${barres}</div>
+          ${alertes ? `<ul class="candidat-alertes">${alertes}</ul>` : ""}
+          <p class="discret">Trouvé par « ${echapper(c.requete || "")} » —
+            <a href="${c.url}" target="_blank" rel="noopener">voir sur Facebook</a></p>
+        </div>
+        <div class="candidat-actions">
+          <button class="bouton" data-decider="ecarte" data-cle="${c.cle}">Écarter</button>
+          <button class="bouton principal" data-decider="adopte" data-cle="${c.cle}">Adopter</button>
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  liste.querySelectorAll("[data-cand]").forEach((c) =>
+    c.addEventListener("change", () => {
+      c.checked ? cochesCandidats.add(c.dataset.cand) : cochesCandidats.delete(c.dataset.cand);
+      majChoixCandidats();
+    })
+  );
+  liste.querySelectorAll("[data-decider]").forEach((b) =>
+    b.addEventListener("click", () => trancher(b.dataset.cle, b.dataset.decider))
+  );
+  majChoixCandidats();
+}
+
+function majChoixCandidats() {
+  $("#cand-compte").textContent = `${cochesCandidats.size} sélectionné(s)`;
+}
+
+async function trancher(cle, decision) {
+  try {
+    await api(`/api/candidats/${encodeURIComponent(cle)}/${decision}`, { method: "POST" });
+    cochesCandidats.delete(cle);
+    toast(decision === "adopte" ? "Source ajoutée." : "Candidat écarté.");
+  } catch (e) {
+    toast(e.message, "erreur");
+  }
+  chargerCandidats();
+  rafraichirEtat();
+}
+
+async function trancherLot(decision) {
+  if (!cochesCandidats.size) return toast("Rien de coché.", "erreur");
+  const n = cochesCandidats.size;
+  if (
+    decision === "adopte" &&
+    !confirm(`Ajouter ${n} source(s) ? Chaque source ajoute du temps à chaque collecte.`)
+  )
+    return;
+  try {
+    await api(`/api/candidats/lot/${decision}`, {
+      method: "POST",
+      body: JSON.stringify({ ids: [...cochesCandidats] }),
+    });
+    cochesCandidats.clear();
+    toast(`${n} source(s) ${decision === "adopte" ? "adoptée(s)" : "écartée(s)"}.`);
+  } catch (e) {
+    toast(e.message, "erreur");
+  }
+  chargerCandidats();
+}
+
+$("#btn-cand-adopter").addEventListener("click", () => trancherLot("adopte"));
+$("#btn-cand-ecarter").addEventListener("click", () => trancherLot("ecarte"));
+$("#cand-tout").addEventListener("click", (e) => {
+  e.preventDefault();
+  $$("#liste-candidats [data-cand]").forEach((c) => {
+    c.checked = true;
+    cochesCandidats.add(c.dataset.cand);
+  });
+  majChoixCandidats();
+});
+$("#cand-rien").addEventListener("click", (e) => {
+  e.preventDefault();
+  $$("#liste-candidats [data-cand]").forEach((c) => (c.checked = false));
+  cochesCandidats.clear();
+  majChoixCandidats();
+});
+
+$("#btn-prospecter-sources").addEventListener("click", async () => {
+  try {
+    await api("/api/candidats/prospecter", { method: "POST" });
+    toast("Recherche lancée — elle prend quelques minutes, suivez le journal.");
+  } catch (e) {
+    toast(e.message, "erreur");
+  }
+  rafraichirEtat();
+});
+
+$("#btn-requetes").addEventListener("click", async () => {
+  const requetes = $("#requetes-prospection")
+    .value.split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  try {
+    await api("/api/config", {
+      method: "POST",
+      body: JSON.stringify({ prospection_requetes: requetes }),
+    });
+    $("#nb-requetes").textContent = requetes.length;
+    toast(`${requetes.length} recherche(s) enregistrée(s).`);
+  } catch (e) {
+    toast(e.message, "erreur");
+  }
+});

@@ -106,6 +106,15 @@ DEFAUTS = {
     #   vision, le bot ne comblera jamais les 1 862 restaurants sans carte.
     "llm_vision": True,
     # ── Collectes automatiques ──────────────────────────────────────────────
+    # Prospection de sources : le bot cherche lui-même de nouveaux groupes et
+    # pages. Les requêtes décrivent le métier — c'est ce qui l'adapte.
+    "prospection_requetes": [],
+    "prospection_mots_metier": [],
+    "prospection_repoussoirs": [],
+    "prospection_note_min": 60,
+    "prospection_auto_jours": 0,        # 0 = jamais tout seul ; 7 = une fois par semaine
+    "prospection_auto_adopter": False,
+    "prospection_auto_seuil": 90,
     "collecte_auto": True,
     "heures_collecte": ["11:00", "18:00"],
     "objectif_par_jour": 40,

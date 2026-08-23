@@ -1508,5 +1508,39 @@ class Collecteur:
             manques.append("prix")
         return manques
 
+    # -- Prospection de sources ---------------------------------------------
+    def prospecter_sources(self, requetes: list[str] | None = None,
+                           rappel=None) -> dict:
+        """Cherche de nouveaux groupes et pages, et range les candidats.
+
+        Passe par le même navigateur et la même session que la collecte : c'est
+        le compte d'Andry qui cherche, avec les mêmes pauses. Rien n'est
+        rejoint ni suivi — seulement lu.
+        """
+        from . import sources_prospection as prospection
+
+        cfg = charger()
+        if self.etat["actif"]:
+            raise RuntimeError("Une collecte est déjà en cours.")
+        self.etat.update(actif=True, source="prospection de sources", trouvees=0)
+        try:
+            with sync_playwright() as pw:
+                ctx = self._contexte(pw, visible=cfg["navigateur_visible"])
+                page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                try:
+                    candidats = prospection.prospecter(
+                        page, requetes=requetes, rappel=rappel, config=cfg
+                    )
+                finally:
+                    ctx.close()
+            neufs = prospection.enregistrer(candidats)
+            base.logguer(
+                f"Prospection de sources : {len(candidats)} candidat(s) examiné(s), "
+                f"{neufs} nouveau(x) à trancher.",
+                "succes" if neufs else "info",
+            )
+            return {"examines": len(candidats), "nouveaux": neufs}
+        finally:
+            self.etat.update(actif=False, source=None)
 
 collecteur = Collecteur()

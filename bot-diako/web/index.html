@@ -20,6 +20,7 @@
     <button class="onglet actif" data-vue="bord">Tableau de bord</button>
     <button class="onglet" data-vue="trouvailles">Trouvailles <span id="pastille-trier" class="compteur">0</span></button>
     <button class="onglet" data-vue="sources">Sources</button>
+    <button class="onglet" data-vue="candidats">Nouvelles sources <span id="pastille-candidats" class="compteur">0</span></button>
     <button class="onglet" data-vue="auto">Automatisation</button>
     <button class="onglet" data-vue="reglages">Réglages</button>
   </nav>
@@ -488,6 +489,58 @@
   </section>
 
   <!-- ══════════ SOURCES ══════════ -->
+  <section class="vue" id="vue-candidats">
+    <div class="carte">
+      <h2>Trouver de nouvelles sources</h2>
+      <p class="aide">
+        Le bot cherche lui-même des <strong>groupes</strong> et des
+        <strong>pages</strong> qui parlent de voyage, d'hébergement et de sorties à Madagascar, relève leur
+        <strong>nombre de membres ou d'abonnés</strong> et leur rythme de
+        publication, puis les note. <strong>Vous décidez</strong> : rien n'est
+        ajouté sans votre accord, et un candidat écarté ne revient plus.
+      </p>
+      <p class="aide">
+        Le bot <strong>ne rejoint aucun groupe et ne suit aucune page</strong> —
+        ce sont des actes visibles depuis votre compte. Pour un groupe privé,
+        ouvrez son lien et demandez l'adhésion vous-même ; le bot ne saura le
+        lire qu'une fois que vous y serez admis.
+      </p>
+      <div class="ligne-form">
+        <button class="bouton principal" id="btn-prospecter-sources">
+          Chercher de nouvelles sources
+        </button>
+        <span class="discret" id="etat-candidats"></span>
+      </div>
+      <details class="repli">
+        <summary>Ce que le bot recherche (<span id="nb-requetes">0</span> recherches)</summary>
+        <p class="aide">
+          Une recherche par ligne. C'est ce qui adapte le bot à votre métier —
+          ajoutez les mots que les voyageurs et les établissements emploient vraiment.
+        </p>
+        <textarea id="requetes-prospection" rows="8"
+                  placeholder="hôtel Nosy Be&#10;bons plans sortie Antananarivo"></textarea>
+        <button class="bouton" id="btn-requetes">Enregistrer les recherches</button>
+      </details>
+    </div>
+
+    <div class="carte">
+      <div class="entete-carte">
+        <h2>Candidats à trancher</h2>
+        <div class="actions-carte">
+          <a href="#" id="cand-tout">Tout cocher</a>
+          <a href="#" id="cand-rien">Tout décocher</a>
+          <span class="discret" id="cand-compte">0 sélectionné(s)</span>
+          <button class="bouton" id="btn-cand-ecarter">Écarter la sélection</button>
+          <button class="bouton principal" id="btn-cand-adopter">Adopter la sélection</button>
+        </div>
+      </div>
+      <div id="liste-candidats" class="liste-candidats"></div>
+      <p class="aide" id="candidats-vide" hidden>
+        Aucun candidat en attente. Lancez une recherche pour en trouver.
+      </p>
+    </div>
+  </section>
+
   <section class="vue" id="vue-sources">
 
     <div class="fil-vedette" id="fil-vedette">

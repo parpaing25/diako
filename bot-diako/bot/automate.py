@@ -27,6 +27,7 @@ from .config import DOSSIER_TROUVAILLES
 
 CLE_PUBLIEES_AUTO = "auto_publiees_le"
 CLE_MOISSON = "derniere_moisson_sites"
+CLE_PROSPECTION = "derniere_prospection_sources"
 CLE_DERNIER_ENTRETIEN = "dernier_entretien"
 
 # L'entretien tourne au plus toutes les cinq minutes : il lit la base entière,
@@ -193,6 +194,29 @@ def moisson_due(cfg: dict) -> bool:
         return date.fromisoformat(derniere) <= date.today() - timedelta(days=jours)
     except ValueError:
         return True
+
+
+def prospection_sources_due(cfg: dict) -> bool:
+    """La recherche de nouvelles sources est-elle due ?
+
+    Espacée en jours, pas en heures : les groupes Facebook ne naissent pas
+    toutes les nuits, et enchaîner des recherches attirerait l'attention sur
+    le compte pour rien.
+    """
+    jours = int(cfg.get("prospection_auto_jours", 0) or 0)
+    if jours <= 0:
+        return False
+    derniere = base.lire_etat(CLE_PROSPECTION, "")
+    if not derniere:
+        return True
+    try:
+        return date.fromisoformat(derniere) <= date.today() - timedelta(days=jours)
+    except ValueError:
+        return True
+
+
+def noter_prospection_sources() -> None:
+    base.ecrire_etat(CLE_PROSPECTION, _aujourdhui())
 
 
 def noter_moisson() -> None:

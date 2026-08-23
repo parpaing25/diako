@@ -106,6 +106,8 @@ class Planificateur:
                         continue
                     if self._moissonner(config):
                         continue
+                    if self._prospecter_sources(config):
+                        continue
                 self._verifier()
             except Exception as e:
                 base.logguer(f"Planificateur : {e}", "erreur")
@@ -164,6 +166,25 @@ class Planificateur:
 
         base.logguer("Recherche automatique des sites web des établissements.", "info")
         return bool(self.lancer_tache("moisson", travail))
+
+    def _prospecter_sources(self, config: dict) -> bool:
+        """Cherche de nouveaux groupes et pages, sans rien adopter d'office.
+
+        Les candidats attendent dans l'onglet « Nouvelles sources » : ajouter
+        une source toute seule allonge chaque collecte, et une source muette
+        coûte le même temps qu'une bonne.
+        """
+        if not self.lancer_tache or not automate.prospection_sources_due(config):
+            return False
+
+        from . import collecteur as col
+
+        def travail():
+            col.collecteur.prospecter_sources()
+            automate.noter_prospection_sources()
+
+        base.logguer("Recherche automatique de nouvelles sources Facebook.", "info")
+        return bool(self.lancer_tache("prospection_sources", travail))
 
     def _verifier(self) -> None:
         config = charger()

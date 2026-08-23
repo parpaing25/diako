@@ -613,3 +613,54 @@ textarea { resize: vertical; font-family: inherit; line-height: 1.5; }
   .plan-ligne { grid-template-columns: 1fr; gap: 2px; }
   .plan-ligne .plan-quand { color: var(--teal-fonce); }
 }
+/* La pastille de note, devant chaque candidat. */
+.note-mini {
+  flex: none; min-width: 30px; text-align: center;
+  padding: 1px 6px; border-radius: 10px; font-size: 11.5px; font-weight: 700;
+  background: var(--trait); color: var(--gris);
+}
+.note-mini.bon { background: var(--vert); color: #fff; }
+
+/* -- Nouvelles sources : candidats repérés par la prospection ------------- */
+.liste-candidats { display: flex; flex-direction: column; gap: 10px; }
+
+.candidat {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--trait);
+  border-left: 4px solid var(--trait);
+  border-radius: 10px;
+  background: var(--blanc);
+}
+.candidat.excellent { border-left-color: var(--vert); }
+.candidat.bon       { border-left-color: var(--teal); }
+.candidat.moyen     { border-left-color: var(--orange); }
+.candidat.faible    { border-left-color: var(--rouge); }
+
+.candidat-choix { display: flex; align-items: center; gap: 8px; }
+.candidat-corps h3 { margin: 0 0 4px; font-size: 1rem; display: flex;
+                     flex-wrap: wrap; gap: 6px; align-items: center; }
+.candidat-chiffres { margin: 0 0 6px; font-size: .88rem; }
+.candidat-barres { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+
+.mini-brique { font-size: .72rem; color: var(--gris); min-width: 62px; }
+.mini-brique i {
+  display: block; height: 4px; background: var(--teal);
+  border-radius: 2px; min-width: 2px; margin-top: 3px;
+}
+/* La piste grise derrière la jauge : sans elle on ne voit pas ce qui manque. */
+.mini-brique { background: linear-gradient(var(--trait), var(--trait))
+               no-repeat left bottom / 100% 4px; padding-bottom: 0; }
+.candidat-alertes { margin: 4px 0 6px 16px; font-size: .82rem; color: var(--rouge); }
+.candidat-actions { display: flex; flex-direction: column; gap: 6px; }
+
+.badge.groupe { background: var(--teal-pale); color: var(--teal-fonce); }
+.badge.page   { background: #efe6f6; color: #6b3f8c; }
+
+.repli { margin-top: 12px; }
+.repli textarea { width: 100%; font-family: inherit; font-size: .88rem;
+                  padding: 8px; border: 1px solid var(--trait);
+                  border-radius: 8px; margin: 6px 0; color: var(--encre); }

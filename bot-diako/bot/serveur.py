@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from . import analyse_llm, automate, base, diako
 from . import planificateur as plan
 from . import publication, redaction, toile
+from . import sources_prospection as prospection
 from . import score as notation
 from .collecteur import (
     analyser_source,
@@ -55,6 +56,14 @@ def _lancer(type_tache: str, fonction) -> bool:
 
 
 # ── Modèles d'entrée ────────────────────────────────────────────────────────
+class RequetesEntree(BaseModel):
+    requetes: list[str] | None = None
+
+
+class ChoixEntree(BaseModel):
+    ids: list[str]
+
+
 class SourceEntree(BaseModel):
     nom: str = ""
     url: str
@@ -127,6 +136,7 @@ def etat():
         "journal": base.lire_journal(60),
         "session_fb": session_enregistree(),
         "sources_actives": len(base.sources(actives_seulement=True)),
+        "candidats": base.compter_candidats().get("nouveau", 0),
         "planning": plan.bilan_du_jour(config),
         "manques": trous,
         "referentiel": {
@@ -137,6 +147,72 @@ def etat():
 
 
 # ── Sources ─────────────────────────────────────────────────────────────────
+# -- Prospection de sources -------------------------------------------------
+@app.get("/api/candidats")
+def lister_candidats(statut: str = "nouveau"):
+    """Les groupes et pages repérés, avec leur note et leurs chiffres."""
+    cfg = charger()
+    seuil = int(cfg.get("prospection_note_min", 60))
+    tous = base.candidats(statut)
+    return {
+        "candidats": [c for c in tous if statut != "nouveau" or c["note"] >= seuil],
+        "sous_le_seuil": sum(1 for c in tous if c["note"] < seuil) if statut == "nouveau" else 0,
+        "seuil": seuil,
+        "compteurs": base.compter_candidats(),
+        "requetes": cfg.get("prospection_requetes") or prospection.REQUETES_DEFAUT,
+    }
+
+
+@app.post("/api/candidats/prospecter")
+def lancer_prospection_sources(entree: RequetesEntree | None = None):
+    """Va chercher de nouveaux groupes et pages sur Facebook."""
+    requetes = (entree.requetes if entree and entree.requetes else None)
+
+    def travail():
+        def progression(fait, total, requete):
+            tache["detail"] = f"{fait}/{total} · {requete}"
+        r = collecteur.collecteur.prospecter_sources(requetes, rappel=progression)
+        tache["message"] = (
+            f"{r['examines']} candidat(s) examiné(s), {r['nouveaux']} nouveau(x) "
+            "à trancher." if r["nouveaux"] else
+            f"{r['examines']} candidat(s) examiné(s), rien de nouveau."
+        )
+
+    if not _lancer("prospection_sources", travail):
+        raise HTTPException(409, "Une tâche est déjà en cours.")
+    return {"ok": True}
+
+
+@app.post("/api/candidats/lot/{decision}")
+def trancher_candidats_en_lot(decision: str, entree: ChoixEntree):
+    """Adopte ou écarte plusieurs candidats cochés d'un coup."""
+    if decision not in ("adopte", "ecarte"):
+        raise HTTPException(400, "Décision inconnue.")
+    faits = [c for cle in entree.ids if (c := base.decider_candidat(cle, decision))]
+    base.logguer(
+        f"{len(faits)} source(s) "
+        + ("adoptée(s)." if decision == "adopte" else "écartée(s)."), "info"
+    )
+    return {"ok": True, "nombre": len(faits)}
+
+
+@app.post("/api/candidats/{cle}/{decision}")
+def trancher_candidat(cle: str, decision: str):
+    """« adopte » ajoute la source, « ecarte » la retire pour de bon."""
+    if decision not in ("adopte", "ecarte"):
+        raise HTTPException(400, "Décision inconnue.")
+    c = base.decider_candidat(cle, decision)
+    if not c:
+        raise HTTPException(404, "Candidat inconnu.")
+    base.logguer(
+        f"Source « {c['nom'][:44]} » "
+        + ("adoptée — elle sera parcourue à la prochaine collecte."
+           if decision == "adopte" else "écartée : elle ne sera plus proposée."),
+        "succes" if decision == "adopte" else "info",
+    )
+    return {"ok": True, "candidat": c}
+
+
 @app.get("/api/sources")
 def liste_sources():
     return base.sources()

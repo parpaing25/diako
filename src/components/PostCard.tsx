@@ -409,12 +409,25 @@ export function PostCard({
             </Link>{" "}
             {visible}
             {long && !deplie && (
-              <button
-                onClick={() => setDeplie(true)}
-                className="ml-1 text-muted-foreground hover:underline"
-              >
-                plus
-              </button>
+              <>
+                <button
+                  onClick={() => setDeplie(true)}
+                  className="ml-1 text-muted-foreground hover:underline"
+                >
+                  plus
+                </button>
+                {/* ⚠ DEUX SORTIES, PAS UNE. « plus » déplie sur place — on ne
+                    perd pas sa position dans le fil pour lire trois lignes de
+                    plus. « Ouvrir » mène à la publication entière, avec tous
+                    ses commentaires et le champ pour en écrire un. Les deux
+                    gestes ne servent pas la même intention. */}
+                <Link
+                  to={`/post/${post.id}`}
+                  className="ml-2 text-xs font-medium text-primary hover:underline"
+                >
+                  Ouvrir
+                </Link>
+              </>
             )}
           </p>
         )}
@@ -432,6 +445,10 @@ export function PostCard({
           plat={post.dish ? { nom: post.dish } : null}
         />
 
+        {/* ⚠ ON GARDE L'OUVERTURE EN PLACE. Sur une carte du fil, dérouler deux
+            réponses sous les yeux vaut mieux qu'un changement d'écran : c'est
+            le geste le plus fréquent, il doit rester le moins cher. La
+            publication entière reste à un clic, par l'horodatage. */}
         {nbCommentaires > 0 && !ouvert && (
           <button
             onClick={ouvrirCommentaires}
@@ -441,9 +458,21 @@ export function PostCard({
           </button>
         )}
 
-        <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+        {/* ⭐ L'HORODATAGE OUVRE LA PUBLICATION. C'est le geste standard —
+               Instagram, Facebook, Twitter font tous ça — et il ne coûte aucun
+               élément cliquable à la carte, contrairement à un lien qui
+               envelopperait tout et avalerait la visionneuse, les réactions,
+               le lien d'auteur et la puce de lieu.
+            ⚠ La route `/post/:id` existait déjà, mais RIEN dans le fil n'y
+              menait : elle ne servait qu'aux liens partagés et aux
+              notifications. On y arrivait donc uniquement par un lien reçu
+              d'ailleurs, jamais depuis le site lui-même. */}
+        <Link
+          to={`/post/${post.id}`}
+          className="mt-1 block text-[11px] uppercase tracking-wide text-muted-foreground hover:underline"
+        >
           {ilYA(post.created_at)}
-        </p>
+        </Link>
       </div>
 
       {/* ── Commentaires ────────────────────────────────────────────────── */}

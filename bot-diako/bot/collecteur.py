@@ -1283,6 +1283,14 @@ class Collecteur:
         # -- Rapprochement avec le référentiel Diako
         rapprochement = self._rapprocher(champs, cfg)
 
+        # ⭐ ET LE SITE OU LE PARC DONT PARLE LE TEXTE. 2 521 fiches de sites,
+        #   226 illustrées : un récit sur les Tsingy doit pouvoir donner sa
+        #   photo à la fiche du parc, pas seulement passer sur le fil.
+        site = diako.rapprocher_site(texte, rapprochement.get("lieu_id"))
+        if site:
+            rapprochement["site_id"] = site["id"]
+            rapprochement["site_nom"] = site["nom"]
+
         # -- Ce qui manque pour publier
         manques = self._manques(champs, rapprochement, gardees)
         bloquants = [m for m in manques if m in ("lieu", "établissement", "date", "photo")]
@@ -1324,6 +1332,14 @@ class Collecteur:
             "llm_doute": champs.get("llm_doute"),
             **rapprochement,
         })
+
+        # -- Les circuits d'agence : `tours` est vide sur Diako alors que les
+        #    agences n'ecrivent que ca.
+        for rang, circuit in enumerate(champs.get("lignes_circuit") or [], start=1):
+            for cote, cle in (("depart", "depart_id"), ("arrivee", "arrivee_id")):
+                lieu = diako.rapprocher_lieu(circuit.get(cote) or "")
+                circuit[cle] = lieu["id"] if lieu else None
+            base.ajouter_ligne_circuit(tid, circuit, ordre=rang)
 
         # -- Lignes de carte
         for rang, ligne in enumerate(champs.get("lignes_carte") or [], start=1):

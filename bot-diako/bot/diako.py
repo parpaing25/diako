@@ -71,6 +71,13 @@ GENERIQUES = {
     # Les titres de sites web ajoutent le pays : « Nature Lodge Madagascar ».
     # Sans lui ici, deux établissements sans rapport partageraient un mot fort.
     "madagascar", "mada", "madagasikara",
+    # ⚠ MOTS FRANÇAIS TROP COURANTS POUR DÉSIGNER QUOI QUE CE SOIT. Ils entrent
+    #   dans des noms de sites (« Parc de l'Est », « Grande Cascade ») et
+    #   déclenchaient sur n'importe quelle phrase qui les contient.
+    "est", "ouest", "nord", "sud", "grand", "grande", "petit", "petite",
+    "beau", "belle", "vieux", "vieille", "nouveau", "nouvelle", "haut", "haute",
+    "bas", "basse", "vue", "point", "site", "centre", "village", "ville",
+    "passe", "route", "pont", "port", "eau", "sable", "sacre", "sacree",
 }
 
 ARTICLES = {"de", "du", "des", "la", "le", "les", "l", "d", "et", "a", "au",
@@ -217,6 +224,21 @@ def rafraichir_referentiel(force: bool = False, heures: int = 12) -> dict:
         for l in lieux
     ])
 
+    # Les sites et parcs : 2 521 fiches, 226 illustrées. Un récit sur les Tsingy
+    # doit pouvoir donner sa photo à la fiche du parc.
+    sites = _charger_par_tranches(
+        "SELECT id::text, name, slug, kind, place_id::text AS lieu_id, cover_url "
+        "FROM public.attractions ORDER BY id LIMIT {limite} OFFSET {decalage}"
+    )
+    base.remplacer_referentiel("ref_sites", [
+        {
+            "id": s["id"], "nom": s["name"] or "", "jeu": jeu(s["name"] or ""),
+            "slug": s.get("slug"), "genre": s.get("kind"),
+            "lieu_id": s.get("lieu_id"), "cover_url": s.get("cover_url"),
+        }
+        for s in sites
+    ])
+
     # Les plats portent des orthographes multiples (254 variantes) : chacune
     # doit pouvoir rapprocher, sinon « ravitoto sy henakisoa » ne trouve rien.
     plats = executer_sql(
@@ -306,6 +328,125 @@ def rapprocher_lieu(texte: str, seuil: float = 0.62) -> dict | None:
     _, lieu, note = meilleur
     return {"id": lieu["id"], "nom": lieu["nom"], "slug": lieu.get("slug"),
             "score": round(note, 3)}
+
+
+_cache_rarete: dict = {"taille": 0, "table": {}}
+_cache_mots_lieux: dict = {"taille": 0, "mots": set()}
+
+
+def _mots_de_lieux() -> set:
+    """Tous les mots qui composent un nom de lieu du référentiel.
+
+    Sert à distinguer un NOM PROPRE d'un mot de thème : « andasibe » est un
+    toponyme, « lémuriens » n'en est pas un — et c'est cette différence, pas la
+    rareté, qui dit si un mot désigne un endroit.
+    """
+    lieux = base.referentiel("ref_lieux")
+    if _cache_mots_lieux["taille"] == len(lieux) and _cache_mots_lieux["mots"]:
+        return _cache_mots_lieux["mots"]
+    mots = set()
+    for lieu in lieux:
+        mots.update(_forts(set(jetons(lieu["nom"]))))
+    _cache_mots_lieux.update({"taille": len(lieux), "mots": mots})
+    return mots
+
+
+def _rarete_des_sites(sites: list[dict]) -> dict:
+    """Combien de sites portent chaque mot distinctif. Calculé une fois.
+
+    ⚠ Recalculé seulement quand le cache change de taille : le rapprochement
+      tourne pour CHAQUE trouvaille, et refaire 2 521 découpages à chaque appel
+      coûterait plus cher que tout le reste de l'atelier.
+    """
+    if _cache_rarete["taille"] == len(sites) and _cache_rarete["table"]:
+        return _cache_rarete["table"]
+    table: dict = {}
+    for site in sites:
+        for mot in _forts(set(jetons(site["nom"]))):
+            table[mot] = table.get(mot, 0) + 1
+    _cache_rarete.update({"taille": len(sites), "table": table})
+    return table
+
+
+def rapprocher_site(texte: str, lieu_id: str | None = None,
+                    seuil: float = 0.62) -> dict | None:
+    """Le site ou parc dont parle ce texte — Tsingy, Andasibe, Nosy Komba…
+
+    ⚠ ON CHERCHE DANS LE TEXTE ENTIER, pas dans un nom déjà extrait. Un récit ne
+      dit pas « établissement : parc d'Andasibe » ; il raconte une journée à
+      Andasibe. Le nom du site est noyé dans la prose, et c'est justement pour
+      ça que la fiche du parc n'a jamais de photo.
+
+    ⚠ Le lieu, quand on le connaît, départage les homonymes — mais ne filtre
+      pas : beaucoup de sites n'ont pas de `place_id` en base.
+    """
+    if not texte or not texte.strip():
+        return None
+    jetons_texte = set(jetons(texte))
+    if not jetons_texte:
+        return None
+
+    sites = base.referentiel("ref_sites")
+    rarete = _rarete_des_sites(sites)
+
+    meilleur, note_max = None, 0.0
+    for site in sites:
+        forts = _forts(set(jetons(site["nom"])))
+        communs = forts & jetons_texte
+        if not forts or not communs:
+            continue          # aucun mot distinctif du site dans le texte
+
+        # ⚠ LA COUVERTURE SEULE NE SUFFIT PAS, DANS LES DEUX SENS.
+        #   « Parc national d'Andasibe-Mantadia » ne partage qu'« andasibe »
+        #   avec un récit qui parle d'Andasibe : la couverture tombe à 0,5 et le
+        #   parc était raté. À l'inverse, un site nommé « Tsingy » tout court
+        #   atteint 1,0 sur n'importe quel texte qui dit « tsingy », alors que
+        #   plusieurs sites portent ce mot.
+        #   Ce qui départage, c'est la RARETÉ du mot commun : « andasibe »
+        #   n'apparaît que dans deux noms de site, « tsingy » dans beaucoup.
+        # 🔴 DEUX GARDE-FOUS DE LONGUEUR, ET ILS SONT INDISPENSABLES. Sans eux,
+        #    mesuré sur les 2 521 sites réels :
+        #      · « Superbe séjour à Ampefy, le lac **est** beau » désignait le
+        #        site « Parc de l'**Est** » à 1,0 — son seul mot distinctif fait
+        #        trois lettres ;
+        #      · « on a **passé** la journée au parc d'Andasibe » désignait
+        #        « **Passe** d'Orangéa ».
+        #    Un nom dont tous les mots distinctifs sont courts ne désigne
+        #    personne, et une correspondance PARTIELLE exige un mot long.
+        if max(len(mot) for mot in forts) < 4:
+            continue
+        couverture = len(communs) / len(forts)
+        if couverture < 1:
+            # 🔴 UNE CORRESPONDANCE PARTIELLE DOIT PORTER SUR UN NOM DE LIEU.
+            #    « Réserve communautaire d'**Anja** » désignait « La Réserve de
+            #    **Lémuriens** Nosy Komba », parce que « lémuriens » n'apparaît
+            #    que dans un seul nom de site et passait donc pour distinctif.
+            #    La rareté parmi les sites ne dit pas si un mot est un NOM
+            #    PROPRE : « lémuriens » est un mot de thème, « andasibe » un
+            #    lieu. Les 18 334 toponymes du référentiel tranchent.
+            candidats_partiels = {
+                mot for mot in communs
+                if len(mot) >= 6 and mot in _mots_de_lieux()
+            }
+            if not candidats_partiels:
+                continue
+        distinctif = min(rarete.get(mot, 99) for mot in communs)
+        note = couverture
+        if distinctif <= 3:
+            # Mot rare : la moitié du nom suffit à désigner le bon site.
+            note = max(note, 0.5 + 0.25 * couverture)
+        elif distinctif >= 8:
+            # Mot partagé par huit sites ou plus : il ne désigne personne.
+            note *= 0.6
+        if lieu_id and site.get("lieu_id") == lieu_id:
+            note = min(1.0, note + 0.1)
+        if note > note_max:
+            meilleur, note_max = site, note
+
+    if not meilleur or note_max < seuil:
+        return None
+    return {"id": meilleur["id"], "nom": meilleur["nom"], "slug": meilleur.get("slug"),
+            "a_photo": bool(meilleur.get("cover_url")), "score": round(note_max, 3)}
 
 
 def rapprocher_plat(nom: str, seuil: float = 0.6) -> dict | None:

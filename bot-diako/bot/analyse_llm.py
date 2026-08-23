@@ -88,6 +88,17 @@ Champs attendus :
   ou null. ⚠ Ne devine JAMAIS une année : si le texte ne la donne pas et que le
   contexte ne la donne pas, mets la date à null et écris la période dans "doute".
 
+- circuits : liste de {"titre", "resume", "jours", "nuits", "prix_ar",
+  "prix_unite", "base_personnes", "depart", "arrivee", "transports", "inclus"}
+  pour chaque voyage organisé décrit — « Ampefy 2 jours 350 000 Ar/personne »,
+  « circuit RN7 8 jours ». [] si la publication n'en décrit aucun.
+  ⚠ `jours` est un ENTIER. Un circuit dont la durée n'est pas dite reste sans
+    durée (null) : ne la déduis pas d'un itinéraire.
+  ⚠ `prix_unite` vaut "personne", "groupe" ou "vehicule". Un tarif « à partir de
+    350 000 Ar » sans base de personnes garde base_personnes à null.
+  ⚠ N'invente PAS un circuit à partir d'une simple photo de paysage : il faut
+    qu'un déroulé, une durée ou un tarif soit décrit.
+
 - recit : {"corps"} — un texte de 3 à 6 phrases en français, à la première
   personne du pluriel ("on"), qui raconte ce que la publication apprend d'utile
   à un voyageur : ce qu'on y mange, ce qu'on y voit, ce que ça coûte, comment
@@ -516,6 +527,36 @@ def fusionner(regles: dict, llm: dict) -> dict:
                 fusion["prix_unite"] = "personne"
             except (TypeError, ValueError):
                 pass
+
+    # ⭐ LES CIRCUITS D'AGENCE. `tours` est vide sur Diako alors que les agences
+    #   ne racontent que ça. Un circuit sans durée n'entre pas : `duration_days`
+    #   est l'entier sur lequel on filtre, et un « 8 jours » approximatif ferait
+    #   ressortir le circuit dans les mauvaises recherches.
+    circuits = []
+    for circuit in llm.get("circuits") or []:
+        titre = (circuit.get("titre") or "").strip()
+        jours = circuit.get("jours")
+        if not titre or not isinstance(jours, int) or not 1 <= jours <= 60:
+            continue
+        prix = circuit.get("prix_ar")
+        unite = circuit.get("prix_unite")
+        circuits.append({
+            "titre": titre[:160],
+            "resume": (circuit.get("resume") or "").strip()[:600] or None,
+            "jours": jours,
+            "nuits": circuit.get("nuits") if isinstance(circuit.get("nuits"), int) else None,
+            "prix_ar": int(prix) if isinstance(prix, (int, float))
+            and 10_000 <= prix <= 50_000_000 else None,
+            "prix_unite": unite if unite in ("personne", "groupe", "vehicule") else "personne",
+            "base_personnes": circuit.get("base_personnes")
+            if isinstance(circuit.get("base_personnes"), int) else None,
+            "depart": (circuit.get("depart") or "").strip() or None,
+            "arrivee": (circuit.get("arrivee") or "").strip() or None,
+            "transports": [t for t in (circuit.get("transports") or []) if isinstance(t, str)][:6],
+            "inclus": [i for i in (circuit.get("inclus") or []) if isinstance(i, str)][:12],
+        })
+    if circuits:
+        fusion["lignes_circuit"] = circuits
 
     recit = llm.get("recit")
     if isinstance(recit, dict) and (recit.get("corps") or "").strip():

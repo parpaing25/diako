@@ -371,6 +371,61 @@ contenu, pas sur l'adresse. Le bot le dit au journal et passe au suivant.
 
 ---
 
+## On ne publie pas une fois — on range partout où ça manque
+
+Une publication ne sert pas un seul écran. **La même photo de Nosy Komba
+illustre le récit *et* la destination.** Jusqu'au 23/08/2026 le bot ne faisait
+que la première moitié : un récit partait sur le fil et laissait la destination
+sans photo, une agence devenait une fiche et son circuit se perdait.
+
+Mesuré ce jour-là, l'écart était énorme :
+
+| Table | Fiches | Avec une photo |
+|---|---|---|
+| destinations (`places`) | 18 334 | **91** |
+| sites et parcs (`attractions`) | 2 521 | **226** |
+| plats (`dishes`) | 95 | **33** |
+| circuits (`tours`) | **0** | — |
+
+Chaque publication remplit donc maintenant, **au passage** :
+
+- la **photo de la destination** quand elle n'en a pas ;
+- la **photo du site ou du parc** dont parle le texte ;
+- la **photo du plat**, quand la trouvaille en désigne un seul ;
+- les **circuits** de l'agence → `tours` + `tour_prices`.
+
+Le panneau montre ce bloc **avant** le clic — on voit ce qu'on gagne, pas
+seulement ce qu'on publie.
+
+⚠ **Rien n'est écrasé.** Chaque écriture porte `WHERE … IS NULL` : une
+destination déjà illustrée garde sa photo.
+
+⚠ **L'attribution part avec l'image.** `places`, `attractions` et `dishes`
+portent chacune un triplet crédit / licence / source ; une photo posée sans lui
+n'est pas une image gratuite. Les migrations 0049, 0082, 0096 et 0104 ont déjà
+tranché ce point pour Commons — la même règle vaut pour Facebook.
+
+⚠ **Un échec ici ne défait pas la publication.** La fiche est déjà en ligne ; si
+la photo de la destination ne passe pas, on le dit au journal et on continue.
+
+### Reconnaître le site dont parle un texte
+
+Un récit ne dit pas « établissement : parc d'Andasibe » — il raconte une
+journée à Andasibe. Trouver le site dans la prose a demandé trois garde-fous,
+et chacun corrige un faux positif **mesuré sur les 2 521 sites réels** :
+
+| Sans le garde-fou | Ce qui arrivait |
+|---|---|
+| longueur minimale du nom | « le lac **est** beau » désignait « Parc de l'**Est** » à 1,0 |
+| mot long pour une correspondance partielle | « on a **passé** la journée » désignait « **Passe** d'Orangéa » |
+| **le mot partiel doit être un toponyme** | « Réserve d'**Anja** » désignait « Réserve de **Lémuriens** Nosy Komba » — « lémuriens » n'apparaît que dans un nom de site, il passait donc pour distinctif alors que c'est un mot de thème |
+
+Le dernier point est le plus intéressant : la **rareté ne dit pas si un mot est
+un nom propre**. Ce sont les 18 334 toponymes du référentiel qui tranchent.
+Résultat mesuré : **9 cas sur 9**, faux positifs compris.
+
+---
+
 ## Le rapprochement — le point où une erreur ne se rattrape pas
 
 Poser une photo, un numéro ou une carte sur la **mauvaise fiche** est pire que

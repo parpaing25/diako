@@ -177,6 +177,30 @@ CREATE TABLE IF NOT EXISTS lignes_chambre (
     FOREIGN KEY (trouvaille_id) REFERENCES trouvailles(id) ON DELETE CASCADE
 );
 
+-- Un circuit raconté par une agence : « Ampefy 2 jours, 180 km, 350 000 Ar ».
+-- `tours` est VIDE sur Diako (0 ligne) alors que les agences en racontent dans
+-- chaque publication : c'est le contenu le plus décrit et le moins exploité.
+CREATE TABLE IF NOT EXISTS lignes_circuit (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    trouvaille_id TEXT NOT NULL,
+    titre         TEXT NOT NULL,
+    resume        TEXT,
+    jours         INTEGER,
+    nuits         INTEGER,
+    prix_ar       INTEGER,
+    prix_unite    TEXT NOT NULL DEFAULT 'personne',
+    base_personnes INTEGER,
+    depart        TEXT,           -- lieu de départ, tel qu'écrit
+    depart_id     TEXT,           -- rattaché au référentiel
+    arrivee       TEXT,
+    arrivee_id    TEXT,
+    transports    TEXT NOT NULL DEFAULT '[]',
+    inclus        TEXT NOT NULL DEFAULT '[]',
+    garder        INTEGER NOT NULL DEFAULT 1,
+    ordre         INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (trouvaille_id) REFERENCES trouvailles(id) ON DELETE CASCADE
+);
+
 -- ── Cache du référentiel Diako ──────────────────────────────────────────
 -- Rechargé depuis Supabase, jamais écrit vers lui. Sert au rapprochement, au
 -- dédoublonnage et au tableau « ce qui manque ».
@@ -193,6 +217,19 @@ CREATE TABLE IF NOT EXISTS ref_pages (
     site_web   TEXT,
     nb_carte   INTEGER NOT NULL DEFAULT 0,
     nb_chambre INTEGER NOT NULL DEFAULT 0
+);
+
+-- Les sites et parcs (`attractions`) : 2 521 fiches, 226 illustrées. Un récit
+-- sur les Tsingy de Bemaraha doit pouvoir donner sa photo à la fiche du parc,
+-- pas seulement passer sur le fil.
+CREATE TABLE IF NOT EXISTS ref_sites (
+    id        TEXT PRIMARY KEY,
+    nom       TEXT NOT NULL,
+    jeu       TEXT NOT NULL,
+    slug      TEXT,
+    genre     TEXT,
+    lieu_id   TEXT,
+    cover_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS ref_lieux (
@@ -265,7 +302,8 @@ CHAMPS_EDITABLES = {
     "niveau_prix", "prix_ar", "prix_unite", "prix_vu_le", "evt_debut", "evt_fin",
     "evt_recurrent", "evt_genre", "organisateur", "corps", "post_genre",
     "page_id", "page_nom", "page_score", "page_candidats", "lieu_id", "lieu_nom",
-    "lieu_score", "lieu_texte", "plat_id", "plat_nom", "score", "niveau",
+    "lieu_score", "lieu_texte", "plat_id", "plat_nom", "site_id", "site_nom",
+    "score", "niveau",
     "lu_par_llm", "llm_confiance", "llm_doute", "doublon_de", "manques",
     "dossier", "cible_table", "cible_id", "lien_diako", "publie_a", "date_post",
 }
@@ -300,6 +338,7 @@ def _migrer(cx: sqlite3.Connection) -> None:
         "sources": (("page_id", "TEXT"), ("page_nom", "TEXT"), ("origine", "TEXT")),
         "ref_pages": (("site_web", "TEXT"),
                       ("nb_chambre", "INTEGER NOT NULL DEFAULT 0")),
+        "trouvailles": (("site_id", "TEXT"), ("site_nom", "TEXT")),
     }
     for table, colonnes in ajouts.items():
         if table not in tables:
@@ -607,6 +646,12 @@ def trouvaille(tid: str) -> dict | None:
                 (tid,)
             ).fetchall()
         ]
+        t["lignes_circuit"] = [
+            _habiller_circuit(l) for l in cx.execute(
+                "SELECT * FROM lignes_circuit WHERE trouvaille_id = ? ORDER BY ordre, id",
+                (tid,)
+            ).fetchall()
+        ]
     return t
 
 
@@ -629,6 +674,8 @@ APPORTS = {
                 "WHERE h.trouvaille_id = t.id AND h.garder = 1 AND h.prix_ar IS NOT NULL)",
     "photos": "EXISTS (SELECT 1 FROM photos p "
               "WHERE p.trouvaille_id = t.id AND p.garder = 1)",
+    "circuits": "EXISTS (SELECT 1 FROM lignes_circuit r "
+                "WHERE r.trouvaille_id = t.id AND r.garder = 1)",
     "prix": "t.prix_ar IS NOT NULL",
     "site": "t.source_genre = 'site'",
     "rattachees": "t.page_id IS NOT NULL",
@@ -669,7 +716,9 @@ def lister(statut: str | None = None, genre: str | None = None,
                    (SELECT COUNT(*) FROM lignes_carte c
                      WHERE c.trouvaille_id = t.id AND c.garder = 1) AS nb_plats,
                    (SELECT COUNT(*) FROM lignes_chambre h
-                     WHERE h.trouvaille_id = t.id AND h.garder = 1) AS nb_chambres
+                     WHERE h.trouvaille_id = t.id AND h.garder = 1) AS nb_chambres,
+                   (SELECT COUNT(*) FROM lignes_circuit r
+                     WHERE r.trouvaille_id = t.id AND r.garder = 1) AS nb_circuits
                 FROM trouvailles t {ou}
                 ORDER BY {TRIS.get(tri, TRIS['score'])} LIMIT ?""",
             (*params, limite),
@@ -697,6 +746,9 @@ def compteurs() -> dict:
         chambres = cx.execute(
             "SELECT COUNT(*) n FROM lignes_chambre WHERE garder = 1"
         ).fetchone()["n"]
+        circuits = cx.execute(
+            "SELECT COUNT(*) n FROM lignes_circuit WHERE garder = 1"
+        ).fetchone()["n"]
     return {
         "a_trier": par_statut.get("a_trier", 0),
         "validee": par_statut.get("validee", 0),
@@ -709,6 +761,7 @@ def compteurs() -> dict:
         "photos": photos,
         "plats": plats,
         "chambres": chambres,
+        "circuits": circuits,
         "genres": par_genre,
     }
 
@@ -864,6 +917,65 @@ def chambres_a_publier(tid: str) -> list[dict]:
     return [dict(l) for l in lignes]
 
 
+# ── Circuits ────────────────────────────────────────────────────────────────
+CHAMPS_CIRCUIT = {"titre", "resume", "jours", "nuits", "prix_ar", "prix_unite",
+                  "base_personnes", "depart", "depart_id", "arrivee", "arrivee_id",
+                  "transports", "inclus", "garder", "ordre"}
+
+
+def ajouter_ligne_circuit(tid: str, ligne: dict, ordre: int = 0) -> None:
+    ligne = dict(ligne, ordre=ordre)
+    for cle in ("transports", "inclus"):
+        if isinstance(ligne.get(cle), (list, dict)):
+            ligne[cle] = json.dumps(ligne[cle], ensure_ascii=False)
+    colonnes = [c for c in ligne if c in CHAMPS_CIRCUIT]
+    trous = ", ".join("?" for _ in colonnes)
+    with _verrou, connexion() as cx:
+        cx.execute(
+            f"INSERT INTO lignes_circuit (trouvaille_id, {', '.join(colonnes)}) "
+            f"VALUES (?, {trous})",
+            (tid, *(ligne[c] for c in colonnes)),
+        )
+
+
+def modifier_ligne_circuit(lid: int, **champs) -> None:
+    champs = {k: v for k, v in champs.items() if k in CHAMPS_CIRCUIT}
+    for cle in ("transports", "inclus"):
+        if isinstance(champs.get(cle), (list, dict)):
+            champs[cle] = json.dumps(champs[cle], ensure_ascii=False)
+    if not champs:
+        return
+    set_sql = ", ".join(f"{k} = ?" for k in champs)
+    with _verrou, connexion() as cx:
+        cx.execute(
+            f"UPDATE lignes_circuit SET {set_sql} WHERE id = ?", (*champs.values(), lid)
+        )
+
+
+def supprimer_ligne_circuit(lid: int) -> None:
+    with _verrou, connexion() as cx:
+        cx.execute("DELETE FROM lignes_circuit WHERE id = ?", (lid,))
+
+
+def _habiller_circuit(ligne) -> dict:
+    c = dict(ligne)
+    for cle in ("transports", "inclus"):
+        try:
+            c[cle] = json.loads(c.get(cle) or "[]")
+        except (json.JSONDecodeError, TypeError):
+            c[cle] = []
+    return c
+
+
+def circuits_a_publier(tid: str) -> list[dict]:
+    with _verrou, connexion() as cx:
+        lignes = cx.execute(
+            "SELECT * FROM lignes_circuit WHERE trouvaille_id = ? AND garder = 1 "
+            "ORDER BY ordre, id", (tid,)
+        ).fetchall()
+    return [_habiller_circuit(l) for l in lignes]
+
+
 # ── Cache du référentiel ────────────────────────────────────────────────────
 def remplacer_referentiel(table: str, lignes: list[dict]) -> None:
     """Remplace un cache d'un bloc. Transaction : jamais de cache à moitié vide.
@@ -872,7 +984,7 @@ def remplacer_referentiel(table: str, lignes: list[dict]) -> None:
       n'existe pas, et le bot en crée un doublon (leçon des 1000 lignes rendues
       en silence par PostgREST, cf. scripts/photos_archives.py).
     """
-    if table not in ("ref_pages", "ref_lieux", "ref_plats"):
+    if table not in ("ref_pages", "ref_lieux", "ref_plats", "ref_sites"):
         raise ValueError(table)
     if not lignes:
         return

@@ -34,7 +34,7 @@ from pathlib import Path
 from PIL import Image, ImageOps
 
 from . import base as bdd
-from . import diako, redaction
+from . import diako, enrichissement, redaction
 from .config import (
     API_UPLOAD,
     AUTEUR_DIAKO,
@@ -650,6 +650,15 @@ def publier(tid: str, rappel=None) -> dict:
         "lien_diako": resultat["lien"],
         "publie_a": bdd.maintenant(),
     })
+
+    # ⭐ ON NE PUBLIE PAS UNE FOIS, ON RANGE PARTOUT OÙ ÇA MANQUE. Un récit sur
+    #   Nosy Komba partait sur le fil et laissait la destination sans photo ;
+    #   une agence devenait une fiche et son circuit se perdait. Les mêmes
+    #   photos, déjà envoyées, servent maintenant aussi la destination, le site
+    #   et le plat — sans jamais écraser ce qui existe.
+    resultat["apports"] = enrichissement.appliquer(
+        t, resultat.get("medias") or []
+    )
     diako.oublier_cache()
     bdd.logguer(f"Publiée sur Diako : {resultat['lien']}", "succes")
     return resultat
@@ -730,7 +739,7 @@ def _publier_etablissement(t: dict, cfg: dict, rappel) -> dict:
         "succes",
     )
     return {"table": "pages", "id": page_id, "lien": lien, "photos": len(medias),
-            "plats": len(lignes), "chambres": len(chambres)}
+            "plats": len(lignes), "chambres": len(chambres), "medias": medias}
 
 
 def _publier_evenement(t: dict, rappel) -> dict:
@@ -739,7 +748,7 @@ def _publier_evenement(t: dict, rappel) -> dict:
     medias = envoyer_photos(t, "pages", f"evenements/{_slug(slug)}", rappel)
     diako.executer_sql(_sql_evenement(t, evt_id, slug, medias))
     return {"table": "events", "id": evt_id, "lien": f"{SITE}/evenements",
-            "photos": len(medias)}
+            "photos": len(medias), "medias": medias}
 
 
 def _publier_recit(t: dict, rappel) -> dict:
@@ -750,7 +759,7 @@ def _publier_recit(t: dict, rappel) -> dict:
         raise ErreurPublication("Aucune photo n'a pu être envoyée — récit non publié.")
     diako.executer_sql(_sql_recit(t, post_id, medias))
     return {"table": "posts", "id": post_id, "lien": f"{SITE}/post/{post_id}",
-            "photos": len(medias)}
+            "photos": len(medias), "medias": medias}
 
 
 # ── Vérification ────────────────────────────────────────────────────────────

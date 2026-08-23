@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from . import analyse_llm, automate, base, diako
 from . import planificateur as plan
-from . import publication, redaction, toile
+from . import enrichissement, publication, redaction, toile
 from . import sources_prospection as prospection
 from . import score as notation
 from .collecteur import (
@@ -301,6 +301,13 @@ def detail(tid: str):
     if not t:
         raise HTTPException(404, "Trouvaille inconnue")
     t["bloquants"] = publication.manque_pour_publier(t)
+    # ⭐ Ce que la publication remplira AILLEURS : la destination, le site, le
+    #   plat, les circuits. Le panneau le montre AVANT le clic — on voit ce
+    #   qu'on gagne, pas seulement ce qu'on publie.
+    try:
+        t["apports"] = enrichissement.apports(t)
+    except Exception:
+        t["apports"] = []
     return t
 
 
@@ -526,6 +533,18 @@ def maj_ligne(lid: int, entree: ChampsEntree):
 @app.delete("/api/lignes/{lid}")
 def effacer_ligne(lid: int):
     base.supprimer_ligne_carte(lid)
+    return {"ok": True}
+
+
+@app.patch("/api/circuits/{lid}")
+def maj_circuit(lid: int, entree: ChampsEntree):
+    base.modifier_ligne_circuit(lid, **entree.champs)
+    return {"ok": True}
+
+
+@app.delete("/api/circuits/{lid}")
+def effacer_circuit(lid: int):
+    base.supprimer_ligne_circuit(lid)
     return {"ok": True}
 
 

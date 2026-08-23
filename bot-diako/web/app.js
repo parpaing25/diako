@@ -538,6 +538,7 @@ function carte(t) {
     t.lieu_nom ? `<span class="badge lieu">${echapper(t.lieu_nom)}</span>` : "",
     t.nb_plats ? `<span class="badge plat">${t.nb_plats} plats</span>` : "",
     t.nb_chambres ? `<span class="badge etab">${t.nb_chambres} chambres</span>` : "",
+    t.nb_circuits ? `<span class="badge lieu">${t.nb_circuits} circuits</span>` : "",
     t.source_genre === "site" ? `<span class="badge recherche">site web</span>` : "",
     t.statut === "publiee" ? `<span class="badge ok">publiée</span>` : "",
     t.statut === "doublon" ? `<span class="badge doublon">doublon</span>` : "",
@@ -641,6 +642,8 @@ function corpsPanneau(t) {
       : `<p class="note-ia discret">Lecture par règles seulement.
          <button class="lien-discret" id="btn-relire">Faire relire par l'IA</button></p>`}
 
+    ${blocApports(t)}
+
     ${blocRapprochement(t)}
 
     <p class="bloc-titre">Genre et lieu</p>
@@ -661,6 +664,8 @@ function corpsPanneau(t) {
     </p>
 
     ${champsDuGenre(t, champ, zone, opt)}
+
+    ${(t.lignes_circuit || []).length ? blocCircuits(t) : ""}
 
     ${(t.lignes_chambre || []).length || t.source_genre === "site" ? blocChambres(t) : ""}
 
@@ -692,6 +697,75 @@ function galerie(t) {
 }
 
 /* Le rapprochement : le point où une erreur ne se rattrape pas. */
+/* ⭐ CE QUE LA PUBLICATION REMPLIRA AILLEURS. Une trouvaille ne sert pas un
+   seul écran : la même photo de Nosy Komba illustre le récit ET la destination.
+   Diako compte 18 334 destinations pour 91 photos, 2 521 sites pour 226 : ce
+   bloc dit, avant le clic, ce qu'on va combler au passage. */
+const CIBLES = {
+  places: ["lieu", "Destination"],
+  attractions: ["lieu", "Site ou parc"],
+  dishes: ["plat", "Plat du référentiel"],
+  tours: ["etab", "Circuits de l'agence"],
+};
+
+function blocApports(t) {
+  const apports = t.apports || [];
+  if (!apports.length) return "";
+  const lignes = apports
+    .map((a) => {
+      const [classe, libelle] = CIBLES[a.cible] || ["", a.cible];
+      return `<div class="candidat ${a.pret ? "choisi" : ""}">
+        <span class="badge ${classe}">${libelle}</span>
+        <span class="nom-candidat">${echapper(a.nom || "—")}</span>
+        <span class="detail-candidat">${echapper(a.quoi)}${
+          a.pret ? "" : " — il manque la fiche d'établissement"
+        }</span>
+      </div>`;
+    })
+    .join("");
+  return `<div class="rapprochement">
+    <h4>En publiant, on remplit aussi</h4>
+    ${lignes}
+    <p class="aide" style="margin:8px 0 0">
+      Rien n'est écrasé : une destination déjà illustrée garde sa photo. Chaque
+      image posée emporte son crédit, sa licence et son lien d'origine.
+    </p>
+  </div>`;
+}
+
+function blocCircuits(t) {
+  const lignes = (t.lignes_circuit || [])
+    .map(
+      (c) => `<div class="plat-ligne ${c.garder ? "" : "ecarte"}" data-rid="${c.id}">
+        <input data-circuit="titre" value="${echapper(c.titre)}">
+        <input data-circuit="prix_ar" type="number" value="${c.prix_ar ?? ""}" placeholder="prix Ar">
+        <span class="rattache ${c.jours ? "" : "non"}">${
+          c.jours
+            ? echapper(
+                c.jours + " j" + (c.nuits ? " / " + c.nuits + " n" : "") +
+                  (c.prix_ar ? " · " + (c.prix_unite || "personne") : "") +
+                  (c.depart_id ? " · départ rattaché" : "")
+              )
+            : "sans durée — non publiable"
+        }</span>
+        <button class="oter" data-oter-circuit="${c.id}" title="Retirer">×</button>
+      </div>`
+    )
+    .join("");
+  const publiables = (t.lignes_circuit || []).filter((c) => c.jours).length;
+  return `<p class="bloc-titre">Circuits — ${publiables} publiable(s) sur ${
+    (t.lignes_circuit || []).length
+  }</p>
+    <div class="carte-plats">${lignes}</div>
+    <p class="aide" style="margin:8px 0 16px">
+      <code>tours</code> est <strong>vide</strong> sur Diako, alors que les agences
+      ne racontent que ça. Un circuit <strong>sans durée n'entre pas</strong> :
+      <code>duration_days</code> est l'entier sur lequel on filtre, et une durée
+      approximative ferait ressortir le circuit dans les mauvaises recherches.
+      Il faut aussi une fiche d'agence — sans elle, le circuit n'a nulle part où aller.
+    </p>`;
+}
+
 function blocRapprochement(t) {
   if (t.genre === "recit" && !t.nom_etab && !t.page_id) return "";
   const candidats = t.page_candidats || [];
@@ -976,6 +1050,28 @@ function brancherPanneau() {
   brancherRapprochement(zone);
   brancherCarte(zone);
   brancherChambres(zone);
+  brancherCircuits(zone);
+}
+
+function brancherCircuits(zone) {
+  $$(".plat-ligne [data-circuit]", zone).forEach((el) =>
+    el.addEventListener("change", async () => {
+      const rid = el.closest(".plat-ligne").dataset.rid;
+      const cle = el.dataset.circuit;
+      const valeur = cle === "prix_ar" ? (el.value === "" ? null : Number(el.value)) : el.value;
+      await api(`/api/circuits/${rid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ champs: { [cle]: valeur } }),
+      });
+      ouvrir(ouverte.id);
+    })
+  );
+  $$("[data-oter-circuit]", zone).forEach((el) =>
+    el.addEventListener("click", async () => {
+      await api(`/api/circuits/${el.dataset.oterCircuit}`, { method: "DELETE" });
+      ouvrir(ouverte.id);
+    })
+  );
 }
 
 function brancherChambres(zone) {

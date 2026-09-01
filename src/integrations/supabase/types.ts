@@ -2984,6 +2984,7 @@ export type Database = {
         Args: {
           p_categorie?: string
           p_est: number
+          p_familles?: string[]
           p_nord: number
           p_ouest: number
           p_pas: number
@@ -2991,6 +2992,8 @@ export type Database = {
         }
         Returns: {
           exemple: string
+          familles: Json
+          familles_zone: Json
           lat: number
           lng: number
           n: number
@@ -3002,6 +3005,7 @@ export type Database = {
         Args: {
           p_categorie?: string
           p_est: number
+          p_familles?: string[]
           p_limite?: number
           p_nord: number
           p_ouest: number
@@ -3011,6 +3015,8 @@ export type Database = {
         Returns: {
           categories: string[]
           cover_url: string
+          famille: string
+          familles_zone: Json
           genre: string
           id: string
           lat: number
@@ -3223,6 +3229,10 @@ export type Database = {
         Returns: string
       }
       dk_compte_proprietaire: { Args: never; Returns: boolean }
+      dk_famille_carte: {
+        Args: { p_categories: string[]; p_genre: string; p_kind: string }
+        Returns: string
+      }
       dk_grande_region: { Args: { p_region: string }; Returns: string }
       dk_kinds_envie: { Args: { p_envie: string }; Returns: string[] }
       dk_libelle_type: { Args: { p_kind: string }; Returns: string }

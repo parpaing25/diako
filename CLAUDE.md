@@ -55,7 +55,18 @@ La spécification de mise en œuvre est dans `DESIGN-HANDOFF.md`.
   page blanche sous Firefox) et `skipWaiting()` + `clientsClaim()` dans le service worker.
   Ne précacher que la coquille.
 
-## Chiffres réels au 15/08/2026 — à ne pas embellir
+## ⚠️ Chiffres PÉRIMÉS — à recompter avant tout usage
+
+**Le bloc ci-dessous date du 15/08/2026 et n'est plus vrai.** Vérifié le 30/08 : les migrations
+sont allées jusqu'à `0114`, et `0113` parle d'« un import de 3 254 fiches » quand ce bloc annonce
+54 établissements « tous à Ampefy ». `0108` signale en plus que le compteur « 2 469 sites »
+annonce plus que ce qui existe.
+
+**Je ne mets pas de chiffre à la place : aucun de ceux-là n'est un décompte vérifié.** Toute
+question de volumétrie se recompte dans la base avant de dimensionner un écran. La règle « à ne
+pas embellir » reste entière — elle s'applique maintenant à ces chiffres-ci.
+
+## ~~Chiffres réels au 15/08/2026~~ (conservés pour mémoire, NE PLUS UTILISER)
 
 178 destinations · 5 avec saisonnalité · 41 avec accès · 95 plats + 254 variantes ·
 54 établissements publiés, tous à Ampefy · 9 avec GPS propre · 1 chambre saisie ·
@@ -77,3 +88,14 @@ aujourd'hui, et pourquoi.
   où elle existera ; d'ici là, ne pas afficher de ligne inventée.
 - **Secrets :** le dépôt `parpaing25/diako` est PUBLIC. Aucune clé ni mot de passe dans l'arbre.
   Ils vivent dans `~/.diako-secrets` et `~/.fonenako-secrets`.
+
+## Le détail
+
+**18 règles** de plus, remontées des fiches mémoire, dans `REGLES-DETAIL.md` (même dossier). Elles ne sont pas chargées automatiquement : les ouvrir quand le sujet les concerne — le routeur les signale.
+
+## Ajouts en cours de route — à ranger
+
+*Écrites au fil des sessions. À replier dans les sections thématiques lors de la prochaine consolidation.*
+
+- 🔴 **Toute RPC appelee par le site doit etre chronometree SOUS LE ROLE anon, qui porte statement_timeout=3s (authenticated: 8s). Un controle de migration execute par le connecteur tourne avec un role privilegie et ne prouve RIEN sur le delai : mettre set local role anon + set local statement_timeout dans le bloc de controle** *(01/09/2026)*
+  *01/09/2026, migration 0115 du fil par theme : les 4 controles sont passes, feed_filtre rendait les bonnes 45 publications, les compteurs etaient justes. Mais le vrai appel REST avec la cle anon rendait 57014 canceling statement due to statement timeout, soit HTTP 500 pour tout visiteur non connecte. La fonctionnalite etait morte en production tout en etant verifiee. Cause : le predicat partait des 1428 fiches d hotel et les balayait pour chacune des 417 publications, 4842 ms par page de fil. Corrige en 0116 en partant des liens de la publication : 22 ms*

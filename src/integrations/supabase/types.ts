@@ -2831,6 +2831,78 @@ export type Database = {
         }
         Relationships: []
       }
+      /* ⚠ AJOUTÉ À LA MAIN après la migration 0114 (grille tarifaire des
+         loueurs) : le connecteur n'a pas pu régénérer le fichier la veille du
+         lancement. La prochaine régénération produira la même entrée — la
+         structure recopie ce que le générateur écrit pour room_types. */
+      vehicle_offers: {
+        Row: {
+          created_at: string
+          deposit_ar: number | null
+          fuel_included: boolean | null
+          id: string
+          km_included_per_day: number | null
+          model: string | null
+          page_id: string
+          photos: string[]
+          price_day_ar: number | null
+          price_note: string | null
+          price_on: string | null
+          seats: number | null
+          sort_order: number
+          source: string | null
+          status: string
+          vehicle_type: string
+          with_driver: boolean
+        }
+        Insert: {
+          created_at?: string
+          deposit_ar?: number | null
+          fuel_included?: boolean | null
+          id?: string
+          km_included_per_day?: number | null
+          model?: string | null
+          page_id: string
+          photos?: string[]
+          price_day_ar?: number | null
+          price_note?: string | null
+          price_on?: string | null
+          seats?: number | null
+          sort_order?: number
+          source?: string | null
+          status?: string
+          vehicle_type: string
+          with_driver?: boolean
+        }
+        Update: {
+          created_at?: string
+          deposit_ar?: number | null
+          fuel_included?: boolean | null
+          id?: string
+          km_included_per_day?: number | null
+          model?: string | null
+          page_id?: string
+          photos?: string[]
+          price_day_ar?: number | null
+          price_note?: string | null
+          price_on?: string | null
+          seats?: number | null
+          sort_order?: number
+          source?: string | null
+          status?: string
+          vehicle_type?: string
+          with_driver?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_offers_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       sites_localises: {
@@ -3208,6 +3280,13 @@ export type Database = {
       fiche_destination: { Args: { p_slug: string }; Returns: Json }
       fiche_plat: { Args: { p_slug: string }; Returns: Json }
       fil_modes_disponibles: { Args: never; Returns: Json }
+      // ⚠ AJOUTÉE À LA MAIN pendant que 0115 n'était pas encore appliquée (ce
+      //   fichier est GÉNÉRÉ depuis la base : sans la ligne, `tsc` refuse
+      //   l'appel avec TS2345). 0115 et 0116 SONT posées depuis le 01/09/2026 :
+      //   la prochaine régénération produira exactement cette ligne et fera
+      //   disparaître ce commentaire — avec celui de `vehicle_offers`, ajouté
+      //   de la même façon pour 0114.
+      fil_themes_comptes: { Args: never; Returns: Json }
       get_feed: {
         Args: { p_curseur?: string; p_limite?: number }
         Returns: Json

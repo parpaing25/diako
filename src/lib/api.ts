@@ -1,5 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+/* ⚠ IMPORT DE TYPE SEUL. `themesFil` charge `etablissements` et `decouverte`,
+ *  qui reviendraient ici : un import de valeur créerait un cycle. `import type`
+ *  est effacé à la compilation, donc aucun cycle à l'exécution. */
+import type { CleTheme } from "@/lib/themesFil";
 
 /**
  * Couche d'accès aux données — LE seul endroit qui parle à la base.
@@ -69,8 +73,11 @@ export interface Post {
 export const PAR_PALIER = () =>
   typeof window !== "undefined" && window.innerWidth >= 1024 ? 12 : 8;
 
-/** Les quatre entrées du fil de la maquette D1. */
-export type ModeFil = "tout" | "abonnements" | "pres_de_moi" | "assiettes";
+/** Les quatre entrées du fil de la maquette D1… */
+export type ModeClassique = "tout" | "abonnements" | "pres_de_moi" | "assiettes";
+
+/** …et les six thèmes ouverts par la migration 0115 (`src/lib/themesFil.ts`). */
+export type ModeFil = ModeClassique | CleTheme;
 
 export interface PostSitue extends Post {
   /** Renseignée seulement en mode « près de moi » : c'est le CURSEUR. */
@@ -117,6 +124,58 @@ export async function modesFilDisponibles(): Promise<{
     abonnements: false,
     assiettes: false,
   };
+}
+
+/* ── Les six onglets thématiques (migration 0115) ──────────────────────── */
+
+export interface CompteTheme {
+  /** Fiches du référentiel : hôtels, plats, destinations… */
+  fiches: number;
+  /** Publications rattachées au thème par un lien RÉEL, jamais par le texte. */
+  recits: number;
+}
+
+export type ComptesThemes = Record<CleTheme, CompteTheme>;
+
+/**
+ * Combien il y a derrière chaque onglet — et le VERROU qui les autorise.
+ *
+ * 🔴 CET APPEL N'EST PAS DÉCORATIF, IL PROTÈGE D'UN MENSONGE. Tant que la
+ *    migration 0115 n'est pas passée, `feed_filtre` ignore les modes `th_*` et
+ *    se termine par `else true` : demander « th_hotels » lui fait servir le fil
+ *    ENTIER — 417 publications — sous l'étiquette « Hôtels ». Rien ne planterait,
+ *    rien ne serait vide, et l'écran afficherait des récits de Tuléar comme des
+ *    récits d'hôtel.
+ *
+ *    D'où la règle : les onglets thématiques n'apparaissent QUE si cette
+ *    fonction répond. Elle n'existe que dans 0115, donc son existence prouve
+ *    que le fil sait filtrer. `null` = on n'affiche pas les thèmes, et le fil
+ *    reste exactement ce qu'il était.
+ *
+ * ⚠ MÉMORISÉ AU NIVEAU DU MODULE, comme `useStats` : `Feed` se remonte à chaque
+ *   changement d'onglet, et sans cache l'appel repartait à chaque clic.
+ */
+let comptesEnVol: Promise<ComptesThemes | null> | null = null;
+
+export function comptesThemes(): Promise<ComptesThemes | null> {
+  if (comptesEnVol) return comptesEnVol;
+  // ⚠ `Promise.resolve` : le constructeur de requête supabase-js est un simple
+  //   *thenable*, il n'expose pas `.catch` et ne se met pas en cache tel quel.
+  const p: Promise<ComptesThemes | null> = Promise.resolve(
+    supabase.rpc("fil_themes_comptes")
+  )
+    .then(({ data, error }) => {
+      if (error) throw error;
+      return (data as unknown as ComptesThemes | null) ?? null;
+    })
+    .catch(() => {
+      // ⚠ On oublie l'échec : garder une promesse rejetée condamnerait les
+      //   onglets pour toute la session après un simple hoquet réseau.
+      comptesEnVol = null;
+      return null;
+    });
+  comptesEnVol = p;
+  return p;
 }
 
 export async function chargerFeed(curseur?: string | null, limite = PAR_PALIER()): Promise<Post[]> {

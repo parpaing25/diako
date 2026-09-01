@@ -77,6 +77,21 @@ const EQUIPEMENTS_COURANTS = [
   { code: "eau-chaude", label: "Eau chaude" },
 ];
 
+/**
+ * Les puces de catégorie du bandeau de filtres — CATÉGORIES PEUPLÉES SEULEMENT.
+ *
+ * 🔴 `CATEGORIES.slice(0, 4)` prenait les quatre premières de la liste des
+ *    catégories : hôtel et restaurant, mais aussi agence_voyage (18 fiches
+ *    quasi vides) et guide (0 fiche). Deux puces sur quatre ouvraient donc sur
+ *    du vide — et la location de véhicule, qui a 18 loueurs publiés AVEC leur
+ *    grille tarifaire (0114), était introuvable. Règle du dépôt : pas d'entrée
+ *    de navigation vers un écran qui ouvre sur du vide.
+ *
+ * ⚠ Comptes du 23/08/2026 : restaurant 1 845, hôtel 1 422, site_attraction 21,
+ *   location_vehicule 18. À recompter avant d'en rajouter une.
+ */
+const PUCES_CATEGORIES = new Set(["hotel", "restaurant", "location_vehicule", "site_attraction"]);
+
 interface Recit {
   id: string;
   body: string | null;
@@ -444,7 +459,7 @@ export default function Recherche() {
               className="h-4 w-4 shrink-0 text-muted-foreground"
               aria-hidden="true"
             />
-            {CATEGORIES.slice(0, 4).map((c) => (
+            {CATEGORIES.filter((c) => PUCES_CATEGORIES.has(c.code)).map((c) => (
               <button
                 key={c.code}
                 type="button"

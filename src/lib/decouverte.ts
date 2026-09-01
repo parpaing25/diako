@@ -34,11 +34,25 @@ export interface PlatAtlas {
   spice_level: number | null;
   /** Nombre d'adresses qui le servent. 0 partout tant qu'aucune carte n'est saisie. */
   nb_adresses?: number;
+  /**
+   * 🔴 COLONNE AJOUTÉE PARCE QUE L'ÉCRAN MENTAIT. `CartePlat` écrivait
+   *    « aucune adresse encore » EN DUR sur les 95 plats, avec en commentaire
+   *    « c'est vrai pour les 95 : aucune carte de restaurant n'est saisie ».
+   *    C'était vrai le jour où la phrase a été écrite. Recompté le 01/09/2026 :
+   *    98 lignes de carte existent, 3 sont rattachées à un plat de l'atlas, et
+   *    `dishes.nb_restaurants` est donc > 0 sur 3 plats. Trois cartes sur 95
+   *    affirmaient le contraire de la base — et la colonne qui dit la vérité
+   *    n'était simplement pas demandée.
+   *
+   * ⚠ La valeur est maintenue par déclencheur (0113) ; on la LIT, on ne la
+   *   recalcule pas côté client.
+   */
+  nb_restaurants?: number;
 }
 
 const COLONNES_PLAT =
   "id, slug, name_fr, name_mg, family, photo_url, price_min_ar, price_max_ar, " +
-  "has_pork, has_beef, has_seafood, has_peanut, is_vegetarian, spice_level, " +
+  "has_pork, has_beef, has_seafood, has_peanut, is_vegetarian, spice_level, nb_restaurants, " +
   "typical_place:places!dishes_typical_place_id_fkey(slug, name_fr, region)";
 
 export interface FiltresAtlas {

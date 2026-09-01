@@ -22,6 +22,11 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Bienvenue = lazy(() => import("./pages/Bienvenue"));
 const Compte = lazy(() => import("./pages/Compte"));
 const Explorer = lazy(() => import("./pages/Explorer"));
+/* ⚠ La descente régions › villes vivait sur /explorer sous le nom
+     « Destinations » — un contresens nommé par le propriétaire. /explorer
+     montre désormais les 61 lieux emblématiques ; la géographie habitée vit
+     ici, et les anciennes adresses `?region=`/`?ville=` y sont redirigées. */
+const Villes = lazy(() => import("./pages/Villes"));
 const Recherche = lazy(() => import("./pages/Recherche"));
 const Publier = lazy(() => import("./pages/Publier"));
 const PagePro = lazy(() => import("./pages/PagePro"));
@@ -55,6 +60,9 @@ const Gouts = lazy(() => import("./pages/Gouts"));
 const Circuits = lazy(() => import("./pages/Circuits"));
 const Circuit = lazy(() => import("./pages/Circuit"));
 const Sites = lazy(() => import("./pages/Sites"));
+/* ⚠ Branchée sur la grille tarifaire des loueurs (vehicle_offers, 0114) :
+     18 loueurs publiés — l'écran ouvre sur du réel, pas sur une promesse. */
+const Location = lazy(() => import("./pages/Location"));
 const Site = lazy(() => import("./pages/Site"));
 const Evenements = lazy(() => import("./pages/Evenements"));
 const Projet = lazy(() => import("./pages/Projet"));
@@ -114,6 +122,7 @@ function Shell() {
       <Route path="/bienvenue" element={<Bienvenue />} />
       <Route path="/compte" element={<Compte />} />
       <Route path="/explorer" element={<Explorer />} />
+      <Route path="/villes" element={<Villes />} />
       <Route path="/recherche" element={<Recherche />} />
       <Route path="/publier" element={<Publier />} />
       <Route path="/p/:slug" element={<PagePro />} />
@@ -139,6 +148,8 @@ function Shell() {
       <Route path="/circuit/:slug" element={<Circuit />} />
       <Route path="/sites" element={<Sites />} />
       <Route path="/site/:slug" element={<Site />} />
+      {/* Louer un véhicule : les loueurs et leur grille tarifaire (0114). */}
+      <Route path="/location" element={<Location />} />
       <Route path="/evenements" element={<Evenements />} />
 
       {/* ── L'inverse de l'annonce : l'offre vient au voyageur. ── */}

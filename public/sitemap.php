@@ -76,7 +76,10 @@ $jour = fn(?string $iso) => $iso ? substr($iso, 0, 10) : date('Y-m-d');
 /* ── Pages fixes ─────────────────────────────────────────────────────────── */
 $fixes = [
     ['/',                 '1.0', 'daily',   '2026-08-01'],
-    ['/explorer',         '0.9', 'weekly',  '2026-08-01'],
+    /* /explorer est devenu la vitrine des 61 lieux emblematiques (01/09) ;
+       la descente regions › villes vit desormais sur /villes. */
+    ['/explorer',         '0.9', 'weekly',  '2026-09-01'],
+    ['/villes',           '0.8', 'weekly',  '2026-09-01'],
 
     /* ⚠ LES DEUX PAGES A PLUS FORTE VALEUR DE RECHERCHE, en priorite 0.9.
          Elles repondent a deux requetes que les gens tapent vraiment —
@@ -94,6 +97,10 @@ $fixes = [
 
     ['/recherche',        '0.8', 'weekly',  '2026-08-01'],
     ['/carte',            '0.7', 'weekly',  '2026-08-15'],
+
+    /* La page des loueurs : branchée sur la grille vehicle_offers (0114),
+       18 loueurs publiés — du contenu réel dès le premier jour. */
+    ['/location',         '0.7', 'weekly',  '2026-08-23'],
 
     /* ⚠ CES QUATRE-LA SONT VIDES AUJOURD'HUI et gardent une priorite BASSE.
          Les declarer a 0.8 apprendrait a Google que nos priorites ne veulent

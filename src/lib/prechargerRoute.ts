@@ -25,6 +25,7 @@
  *  téléchargent qu'une fois. */
 const ROUTES: Record<string, () => Promise<unknown>> = {
   "/explorer": () => import("@/pages/Explorer"),
+  "/villes": () => import("@/pages/Villes"),
   "/recherche": () => import("@/pages/Recherche"),
   "/publier": () => import("@/pages/Publier"),
   "/pro": () => import("@/pages/EspacePro"),
@@ -39,6 +40,7 @@ const ROUTES: Record<string, () => Promise<unknown>> = {
   "/gouts": () => import("@/pages/Gouts"),
   "/quand-partir": () => import("@/pages/QuandPartir"),
   "/y-aller": () => import("@/pages/YAller"),
+  "/location": () => import("@/pages/Location"),
   "/circuits": () => import("@/pages/Circuits"),
   "/sites": () => import("@/pages/Sites"),
   "/evenements": () => import("@/pages/Evenements"),

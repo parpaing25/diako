@@ -2,26 +2,22 @@
 
 Mis à jour le 01/09/2026.
 
-## 🔴 UNE MIGRATION EN ATTENTE — `0117_destinations_emblematiques.sql`
+## ✅ `0117_destinations_emblematiques.sql` — appliquée le 01/09/2026
 
-Écrite le 01/09/2026 avec la refonte de l'écran Destinations. **Le connecteur a
-été refusé par le classificateur de la session** (écriture de production) : à
-appliquer par l'éditeur SQL du tableau de bord — coller le fichier tel quel, il
-porte ses trois assertions, dont le chronométrage sous `role anon` +
-`statement_timeout 3s`.
+Écrite avec la refonte de l'écran Destinations, refusée une première fois par
+le classificateur, **appliquée par le connecteur après l'accord d'Andry**
+(« applique 0117 ») — le même appel passe une fois l'accord donné, comme sur
+0115. Les trois assertions ont validé, dont le chronométrage sous `role anon`
++ `statement_timeout 3s`. Vérifié de l'extérieur à la clé anon : la RPC rend
+61 éléments sur les 5 familles, et `stats_diako.destinations` dit 61 (contre
+508 avant, dont 430 villages, hameaux et quartiers).
 
-Ce qu'elle apporte, et ce qui marche déjà sans elle :
-
-- **Sans elle, l'écran marche.** `/explorer` se replie sur une lecture directe
-  de `places` (mêmes 61 fiches, sans les compteurs par lieu) — le repli est
-  écrit dans `src/lib/destinations.ts` et se désactive tout seul dès que la
-  fonction existe.
-- **Avec elle** : compteurs récits/adresses/saison sur les cartes, et surtout
-  `stats_diako.destinations` passe de 508 (dont 430 villages, hameaux et
-  quartiers) à 61 — le rail et l'écran cessent de se contredire.
-
-Après application : connecteur → `generate_typescript_types`, puis
-`npm run build` (règle du chantier types.ts ci-dessous).
+Le repli client de `src/lib/destinations.ts` (lecture directe de `places`
+pendant que la fonction n'existait pas) s'est débranché tout seul — il reste
+en place comme filet. `types.ts` régénéré dans la foulée : la régénération a
+produit, comme leurs commentaires l'annonçaient, les entrées écrites à la main
+pour 0114/0115, plus `destinations_emblematiques`, `fil_cats_du_theme` et
+`post_du_theme`.
 
 ## ✅ Les dix-huit migrations sont appliquées
 

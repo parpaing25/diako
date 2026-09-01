@@ -38,7 +38,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -2831,10 +2831,6 @@ export type Database = {
         }
         Relationships: []
       }
-      /* ⚠ AJOUTÉ À LA MAIN après la migration 0114 (grille tarifaire des
-         loueurs) : le connecteur n'a pas pu régénérer le fichier la veille du
-         lancement. La prochaine régénération produira la même entrée — la
-         structure recopie ce que le générateur écrit pour room_types. */
       vehicle_offers: {
         Row: {
           created_at: string
@@ -3097,6 +3093,7 @@ export type Database = {
           n: number
         }[]
       }
+      destinations_emblematiques: { Args: never; Returns: Json }
       devenir_pro: { Args: { p_metier: string }; Returns: undefined }
       distance_km: {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
@@ -3279,13 +3276,8 @@ export type Database = {
       }
       fiche_destination: { Args: { p_slug: string }; Returns: Json }
       fiche_plat: { Args: { p_slug: string }; Returns: Json }
+      fil_cats_du_theme: { Args: { p_theme: string }; Returns: string[] }
       fil_modes_disponibles: { Args: never; Returns: Json }
-      // ⚠ AJOUTÉE À LA MAIN pendant que 0115 n'était pas encore appliquée (ce
-      //   fichier est GÉNÉRÉ depuis la base : sans la ligne, `tsc` refuse
-      //   l'appel avec TS2345). 0115 et 0116 SONT posées depuis le 01/09/2026 :
-      //   la prochaine régénération produira exactement cette ligne et fera
-      //   disparaître ce commentaire — avec celui de `vehicle_offers`, ajouté
-      //   de la même façon pour 0114.
       fil_themes_comptes: { Args: never; Returns: Json }
       get_feed: {
         Args: { p_curseur?: string; p_limite?: number }
@@ -3401,6 +3393,10 @@ export type Database = {
           rating_count: number
           slug: string
         }[]
+      }
+      post_du_theme: {
+        Args: { p_post: string; p_theme: string }
+        Returns: boolean
       }
       profil_expose: { Args: { p: string }; Returns: boolean }
       profil_public: { Args: { p_id: string }; Returns: Json }

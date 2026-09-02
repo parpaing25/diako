@@ -49,6 +49,12 @@ La spécification de mise en œuvre est dans `DESIGN-HANDOFF.md`.
   la première image du fil, qui prend `fetchpriority="high"`.
 - **`auth.uid()` enveloppé dans un sous-`SELECT`** dans les policies RLS, `search_path` fixé sur
   toutes les fonctions `SECURITY DEFINER`.
+- 🔴 **Toute RPC appelée par le site se chronomètre SOUS LE RÔLE `anon`** (`statement_timeout`
+  3 s ; `authenticated` 8 s). Un contrôle de migration exécuté par le connecteur tourne avec un rôle
+  privilégié et ne prouve rien : mettre `set local role anon` + `set local statement_timeout` dans
+  le bloc de contrôle. *Migration 0115 du fil par thème : quatre contrôles verts, et le vrai appel
+  REST anon rendait 57014 (timeout), soit HTTP 500 pour tout visiteur non connecté — 4 842 ms par
+  page, corrigé en 0116 à 22 ms en partant des liens de la publication.*
 - **Une seule source de vérité de schéma** : `supabase/migrations/`, numéros croissants,
   `types.ts` régénéré après chaque migration.
 - **Build** : `tsc --noEmit && vite build`. Conserver le `manualChunk` radix-vendor (sans lui,
@@ -92,10 +98,3 @@ aujourd'hui, et pourquoi.
 ## Le détail
 
 **18 règles** de plus, remontées des fiches mémoire, dans `REGLES-DETAIL.md` (même dossier). Elles ne sont pas chargées automatiquement : les ouvrir quand le sujet les concerne — le routeur les signale.
-
-## Ajouts en cours de route — à ranger
-
-*Écrites au fil des sessions. À replier dans les sections thématiques lors de la prochaine consolidation.*
-
-- 🔴 **Toute RPC appelee par le site doit etre chronometree SOUS LE ROLE anon, qui porte statement_timeout=3s (authenticated: 8s). Un controle de migration execute par le connecteur tourne avec un role privilegie et ne prouve RIEN sur le delai : mettre set local role anon + set local statement_timeout dans le bloc de controle** *(01/09/2026)*
-  *01/09/2026, migration 0115 du fil par theme : les 4 controles sont passes, feed_filtre rendait les bonnes 45 publications, les compteurs etaient justes. Mais le vrai appel REST avec la cle anon rendait 57014 canceling statement due to statement timeout, soit HTTP 500 pour tout visiteur non connecte. La fonctionnalite etait morte en production tout en etant verifiee. Cause : le predicat partait des 1428 fiches d hotel et les balayait pour chacune des 417 publications, 4842 ms par page de fil. Corrige en 0116 en partant des liens de la publication : 22 ms*

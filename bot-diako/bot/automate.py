@@ -5,7 +5,9 @@ la moitié sont soit évidemment bonnes, soit évidemment inutilisables. Ce modu
 prend en charge ces deux extrêmes, et laisse le milieu — le seul endroit où un
 œil humain apporte quelque chose.
 
-🔴 TOUT EST ÉTEINT PAR DÉFAUT, ET LA PUBLICATION AUTOMATIQUE L'EST DOUBLEMENT.
+🔴 TOUT CE QUI DÉCIDE EST ÉTEINT PAR DÉFAUT (valider, rejeter, publier) ; ce
+   qui collecte est allumé (collecte aux heures dites, sites web, relecture
+   IA, ménage). Et la publication automatique l'est doublement.
    Valider ou rejeter tout seul se rattrape : rien n'est parti en ligne, et les
    deux statuts se rechangent d'un clic. **Publier tout seul ne se rattrape
    pas** — la fiche est écrite sur diako.fonenako.mg, vue par les visiteurs, et
@@ -89,7 +91,9 @@ def rejeter_auto(cfg: dict) -> int:
     faits = 0
     for statut in ("a_trier", "incomplete"):
         for t in base.lister(statut=statut, limite=400):
-            if (t.get("score") or 0) > seuil:
+            # ⚠ Un score NULL n'est pas un score bas : la lecture n'est pas
+            #   finie (ou a été interrompue). On ne juge que ce qui a été noté.
+            if t.get("score") is None or (t.get("score") or 0) > seuil:
                 continue
             base.modifier(t["id"], {
                 "statut": "rejetee",
@@ -127,6 +131,10 @@ def publiables(cfg: dict) -> list[str]:
     for t in base.lister(statut="validee", limite=200):
         complet = base.trouvaille(t["id"])
         if not complet or publication.manque_pour_publier(complet):
+            continue
+        # Déjà en ligne mais restée « validée » (2 lignes le 02/09/2026) : la
+        # republier lèverait « Déjà publiée » à chaque tour de 30 s.
+        if complet.get("lien_diako"):
             continue
         prets.append(t["id"])
         if len(prets) >= reste:
@@ -234,14 +242,69 @@ def entretien(cfg: dict) -> dict:
         "validees": valider_auto(cfg),
         "rejetees": rejeter_auto(cfg),
         "purgees": purger(cfg),
+        "photos_liberees_mo": purger_photos_publiees(cfg),
     }
+
+
+def purger_photos_publiees(cfg: dict) -> int:
+    """Efface les photos LOCALES des trouvailles publiées depuis assez longtemps.
+
+    ⭐ Elles sont chez o2switch et leur URL est en base (`photos.url_o2`) :
+       978 dossiers publiés pesaient 813 Mo sur les 2 Go de data/trouvailles
+       le 02/09/2026, sur un disque C: plein. L'interface montre la copie en
+       ligne quand le fichier local manque (voir `serveur.photo`). La ligne
+       `photos` et le journal `_photos_envoyees.json` restent : une
+       republication réutilise les URL. Rend les mégaoctets libérés.
+    """
+    jours = int(cfg.get("purger_photos_publiees_jours", 0) or 0)
+    if jours <= 0:
+        return 0
+    limite = (datetime.now(timezone.utc) - timedelta(days=jours)).isoformat(
+        timespec="seconds"
+    )
+    with base._verrou, base.connexion() as cx:
+        lignes = cx.execute(
+            "SELECT t.id, t.dossier FROM trouvailles t "
+            "WHERE t.statut = 'publiee' AND t.dossier IS NOT NULL "
+            "AND coalesce(t.publie_a, '') < ? "
+            # Une photo gardée dont l'envoi n'a pas d'URL n'est pas encore en
+            # ligne : on ne touche pas au dossier.
+            "AND NOT EXISTS (SELECT 1 FROM photos p WHERE p.trouvaille_id = t.id "
+            "AND p.garder = 1 AND coalesce(p.url_o2, '') = '')",
+            (limite,),
+        ).fetchall()
+    octets, dossiers = 0, 0
+    for ligne in lignes:
+        dossier = DOSSIER_TROUVAILLES.parent / ligne["dossier"]
+        marque = dossier / "photos-liberees"
+        if not dossier.is_dir() or marque.exists():
+            continue
+        for fichier in dossier.iterdir():
+            if fichier.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"):
+                try:
+                    octets += fichier.stat().st_size
+                    fichier.unlink()
+                except OSError:
+                    pass
+        marque.write_text("photos effacées après publication — copies chez o2switch",
+                          encoding="utf-8")
+        dossiers += 1
+    mo = octets // 1_000_000
+    if dossiers:
+        base.logguer(
+            f"Ménage : photos locales de {dossiers} trouvaille(s) publiée(s) depuis "
+            f"plus de {jours} jours effacées — {mo} Mo libérés, copies en ligne conservées.",
+            "info",
+        )
+    return mo
 
 
 def est_du(cfg: dict) -> bool:
     """Cinq minutes se sont-elles écoulées depuis le dernier entretien ?"""
     if not any(cfg.get(cle) for cle in (
         "auto_valider", "auto_rejeter", "auto_publier"
-    )) and not int(cfg.get("auto_purger_jours", 0) or 0):
+    )) and not int(cfg.get("auto_purger_jours", 0) or 0) \
+            and not int(cfg.get("purger_photos_publiees_jours", 0) or 0):
         return False
     dernier = float(base.lire_etat(CLE_DERNIER_ENTRETIEN, "0") or 0)
     return (datetime.now(timezone.utc).timestamp() - dernier) >= INTERVALLE
@@ -327,12 +390,25 @@ def resume(cfg: dict) -> dict:
     })
 
     purge = int(cfg.get("auto_purger_jours", 0) or 0)
+    photos = int(cfg.get("purger_photos_publiees_jours", 0) or 0)
     lignes.append({
         "quoi": "Ménage",
         "quand": f"au-delà de {purge} jours" if purge else "—",
-        "detail": "efface les rejetées et les doublons, photos comprises."
+        "detail": ("efface les rejetées et les doublons, photos comprises"
+                   + (f" ; libère les photos locales des publiées après {photos} jours "
+                      "(copies en ligne conservées)." if photos else "."))
         if purge else "éteint : la base locale garde tout.",
         "actif": bool(purge),
+    })
+
+    prospection = int(cfg.get("prospection_auto_jours", 0) or 0)
+    lignes.append({
+        "quoi": "Nouvelles sources",
+        "quand": f"tous les {prospection} jours" if prospection else "—",
+        "detail": "cherche de nouveaux groupes et pages et les propose — rien n'est "
+                  "adopté sans vous." if prospection
+        else "éteinte : la recherche de sources se lance à la main.",
+        "actif": bool(prospection),
     })
 
     return {

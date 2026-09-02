@@ -83,16 +83,28 @@ def _jour(iso: str | None) -> str:
 
 
 def bloc_prix(t: dict) -> str:
-    """Le prix, son unité et la date à laquelle il a été vu. Jamais l'un sans l'autre."""
+    """Le prix, son unité et la date à laquelle il a été vu. Jamais l'un sans l'autre.
+
+    ⚠ « RELEVÉ LE » ET « LU LE » NE DISENT PAS LA MÊME CHOSE. « Relevé le »
+      date le tarif : il suppose qu'on connaît la date de la publication. Quand
+      celle-ci manque — `date_post` est vide depuis le 24/08/2026 dès que
+      Facebook n'a pas livré de date — on ne dispose que du jour où le bot a lu
+      le texte, et la phrase le dit. Écrire « relevé le 24/08/2026 » sous un
+      tarif tiré d'un post de 2019 serait un mensonge publié.
+    """
     if not t.get("prix_ar"):
         return ""
     unite = LIBELLE_UNITE.get(t.get("prix_unite") or "", "")
-    vu_le = _jour(t.get("prix_vu_le") or t.get("date_post") or t.get("collecte_le"))
+    date_du_prix = t.get("prix_vu_le") or t.get("date_post")
+    vu_le = _jour(date_du_prix or t.get("collecte_le"))
     morceaux = [f"{montant(t['prix_ar'])} Ar"]
     if unite:
         morceaux.append(unite)
     ligne = " ".join(morceaux)
-    return f"{ligne} — relevé le {vu_le}" if vu_le else ligne
+    if not vu_le:
+        return ligne
+    return (f"{ligne} — relevé le {vu_le}" if date_du_prix
+            else f"{ligne} — lu le {vu_le} (date de publication inconnue)")
 
 
 def titre(t: dict) -> str:

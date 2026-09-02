@@ -12,11 +12,11 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import analyse_llm, automate, base, diako
+from . import analyse_llm, automate, base, diako, sante
 from . import planificateur as plan
 from . import enrichissement, publication, redaction, toile
 from . import sources_prospection as prospection
@@ -24,6 +24,7 @@ from . import score as notation
 from .collecteur import (
     analyser_source,
     collecteur,
+    memoire_libre_mo,
     oublier_session,
     session_enregistree,
 )
@@ -120,6 +121,13 @@ class ChambreEntree(BaseModel):
     description: str | None = None
 
 
+class VehiculeEntree(BaseModel):
+    type_vehicule: str = "autre"
+    modele: str | None = None
+    prix_jour_ar: int | None = None
+    avec_chauffeur: bool | None = None
+
+
 # ── Interface ───────────────────────────────────────────────────────────────
 @app.get("/")
 def accueil():
@@ -143,9 +151,16 @@ def photo(tid: str, fichier: str):
         raise HTTPException(404, "Trouvaille inconnue")
     nom = Path(fichier).name
     chemin = (DOSSIER_TROUVAILLES.parent / t["dossier"] / nom).resolve()
-    if not chemin.is_file() or DOSSIER_TROUVAILLES.resolve() not in chemin.parents:
+    if DOSSIER_TROUVAILLES.resolve() not in chemin.parents:
         raise HTTPException(404, "Photo introuvable")
-    return FileResponse(chemin)
+    if chemin.is_file():
+        return FileResponse(chemin)
+    # Photo locale effacée après publication (ménage) : la copie en ligne
+    # chez o2switch prend le relais.
+    for p in t.get("photos") or []:
+        if p.get("fichier") == nom and p.get("url_o2"):
+            return RedirectResponse(p["url_o2"], status_code=307)
+    raise HTTPException(404, "Photo introuvable")
 
 
 # ── État et journal ─────────────────────────────────────────────────────────
@@ -170,6 +185,8 @@ def etat():
             **base.taille_referentiel(),
             "age_heures": round(diako.age_referentiel(), 1),
         },
+        # Les voyants du rail : le bot peut-il faire son travail maintenant ?
+        "sante": sante.etat(config, session_enregistree(), memoire_libre_mo()),
     }
 
 
@@ -404,7 +421,8 @@ def detail(tid: str):
     #   qu'on gagne, pas seulement ce qu'on publie.
     try:
         t["apports"] = enrichissement.apports(t)
-    except Exception:
+    except Exception as e:
+        base.logguer(f"Apports de la trouvaille {tid[:8]} incalculables : {e}", "avert")
         t["apports"] = []
     return t
 
@@ -666,6 +684,26 @@ def effacer_chambre(lid: int):
     return {"ok": True}
 
 
+# Les offres de location de véhicule suivent la mécanique des chambres : le
+# panneau les corrige ligne à ligne, et une ligne écartée ne part pas.
+@app.post("/api/trouvailles/{tid}/vehicules")
+def ajouter_vehicule(tid: str, entree: VehiculeEntree):
+    base.ajouter_ligne_vehicule(tid, entree.model_dump(), ordre=999)
+    return detail(tid)
+
+
+@app.patch("/api/vehicules/{lid}")
+def maj_vehicule(lid: int, entree: ChampsEntree):
+    base.modifier_ligne_vehicule(lid, **entree.champs)
+    return {"ok": True}
+
+
+@app.delete("/api/vehicules/{lid}")
+def effacer_vehicule(lid: int):
+    base.supprimer_ligne_vehicule(lid)
+    return {"ok": True}
+
+
 # ── Facebook ────────────────────────────────────────────────────────────────
 @app.post("/api/facebook/connexion")
 def connexion_facebook():
@@ -728,13 +766,9 @@ def publier(tid: str):
         def progression(rang, total):
             tache["detail"] = f"photo {rang}/{total}"
 
+        # La relecture de la ligne écrite se fait dans `publication.publier`,
+        # pour toutes les voies (clic, lot, automate).
         resultat = publication.publier(tid, progression)
-        controle = publication.verifier(resultat["table"], resultat["id"])
-        if not controle.get("trouve"):
-            base.logguer(
-                "⚠ Publication annoncée mais la ligne est introuvable en base — "
-                "à vérifier à la main.", "erreur",
-            )
         tache["message"] = f"Publiée : {resultat['lien']}"
 
     if not _lancer("publication", travail):
@@ -835,6 +869,16 @@ def demarrer(port: int = 8757, ouvrir: bool = True) -> None:
         )
     DOSSIER_TROUVAILLES.mkdir(parents=True, exist_ok=True)
     base.logguer("Bot de collecte Diako démarré.", "info")
+    # Ce que l'arrêt précédent a laissé à moitié lu ne se reprend pas : on le
+    # retire, et la prochaine collecte le recollectera s'il repasse.
+    interrompues = base.purger_interrompues()
+    if interrompues:
+        base.logguer(
+            f"{interrompues} trouvaille(s) restée(s) « en lecture » après l'arrêt "
+            "précédent ont été retirées : leur lecture n'avait pas abouti et "
+            "leurs photos n'étaient plus téléchargeables. Elles seront "
+            "recollectées si elles repassent dans les fils.", "avert",
+        )
 
     # Le référentiel se charge au démarrage, en tâche de fond : sans lui, aucun
     # rapprochement n'est possible et l'interface ne peut rien proposer.

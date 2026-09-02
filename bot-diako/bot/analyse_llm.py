@@ -26,7 +26,11 @@ from __future__ import annotations
 
 import base64
 import json
+import re
+from datetime import date as _date
 from pathlib import Path
+
+from . import extraction
 
 import requests
 
@@ -99,6 +103,22 @@ Champs attendus :
   ⚠ N'invente PAS un circuit à partir d'une simple photo de paysage : il faut
     qu'un déroulé, une durée ou un tarif soit décrit.
 
+- vehicules : liste de {"type": "4x4"|"berline"|"citadine"|"minibus"|"van"|
+  "moto"|"quad"|"bateau"|"velo"|"camion"|"autre", "modele": texte|null,
+  "places": entier|null, "avec_chauffeur": booléen|null,
+  "carburant_inclus": booléen|null, "km_par_jour": entier|null,
+  "prix_jour_ar": entier|null, "caution_ar": entier|null,
+  "note_prix": texte court|null}
+  pour chaque véhicule PROPOSÉ À LA LOCATION avec son tarif — « 4x4 Hilux avec
+  chauffeur 250 000 Ar/jour, carburant en sus ». [] si la publication n'en
+  propose aucun.
+  ⚠ Uniquement les offres d'un LOUEUR. « On a loué un 4x4 à 400 000 » dans un
+    récit de voyage n'est pas une offre.
+  ⚠ `prix_jour_ar` est le prix PAR JOUR en ariary. Un prix au trajet ou au
+    circuit ne va pas ici — mets-le dans "note_prix" en toutes lettres.
+  ⚠ `avec_chauffeur` et `carburant_inclus` restent null si le texte ne le dit
+    pas. Ne déduis rien des usages.
+
 - recit : {"corps"} — un texte de 3 à 6 phrases en français, à la première
   personne du pluriel ("on"), qui raconte ce que la publication apprend d'utile
   à un voyageur : ce qu'on y mange, ce qu'on y voit, ce que ça coûte, comment
@@ -165,6 +185,16 @@ Tu réponds UNIQUEMENT par un objet JSON, sans texte autour.
   }],
 
   "plats": [{"nom", "prix_ar", "description", "section"}],
+
+  "vehicules": [{
+     "type": "4x4"|"berline"|"citadine"|"minibus"|"van"|"moto"|"quad"|
+             "bateau"|"velo"|"camion"|"autre",
+     "modele": texte ou null, "places": entier ou null,
+     "avec_chauffeur": booléen ou null, "carburant_inclus": booléen ou null,
+     "km_par_jour": entier ou null, "prix_jour_ar": entier en ariary ou null,
+     "caution_ar": entier ou null, "note_prix": texte court ou null
+  }] — la grille d'un loueur de véhicules, [] sinon. `prix_jour_ar` est le
+  prix PAR JOUR ; un tarif au circuit va dans "note_prix", pas ici.
 
   "devise": "Ar" | "EUR" | "USD" | "melange",
   "confiance": 0 à 100,
@@ -242,27 +272,77 @@ def _via_anthropic(systeme: str, contenu, cfg: dict) -> dict:
     )
 
 
-def _via_passerelle(systeme: str, contenu, cfg: dict) -> dict:
-    """LiteLLM local d'Hermes. Il n'expose que /v1/chat/completions."""
-    adresse = (cfg.get("llm_passerelle") or "http://127.0.0.1:4000").rstrip("/")
+# Les pannes qui valent la peine d'un second essai : surcharge (429), erreur
+# interne (500) ou passerelle à terre (502/503). Une 400 ou une 401, elles,
+# reviendraient à l'identique — les rejouer ne ferait que payer deux fois.
+CODES_A_REESSAYER = {429, 500, 502, 503}
+
+
+def _requete_passerelle(adresse: str, modele: str, systeme: str, contenu,
+                        delai: int) -> dict:
+    """UN appel à la passerelle. `LLMIndisponible.reessayable` dit si ça vaut
+    la peine de retenter avec un autre modèle."""
     try:
         r = requests.post(
             f"{adresse}/v1/chat/completions",
             json={
-                "model": cfg.get("llm_modele") or MODELE_PASSERELLE,
+                "model": modele,
+                # ⚠ 3000 ET PAS MOINS : gemini-flash (le secours) consomme plus
+                #   de jetons de sortie que Claude pour le même JSON ; plus bas,
+                #   il se fait couper au milieu et rend `content: null`.
                 "max_tokens": 3000,
                 "messages": [
                     {"role": "system", "content": systeme},
                     {"role": "user", "content": contenu},
                 ],
             },
-            timeout=int(cfg.get("llm_delai", 120)),
+            timeout=delai,
         )
     except requests.RequestException as e:
-        raise LLMIndisponible(str(e)[:200]) from e
+        # Réseau coupé ou délai dépassé : la passerelle va peut-être mieux dans
+        # une seconde, et le modèle de secours est souvent plus rapide.
+        erreur = LLMIndisponible(str(e)[:200])
+        erreur.reessayable = True
+        raise erreur from e
     if not r.ok:
-        raise LLMIndisponible(f"HTTP {r.status_code} — {r.text[:160]}")
-    return _extraire_json(r.json()["choices"][0]["message"]["content"])
+        erreur = LLMIndisponible(f"HTTP {r.status_code} — {r.text[:160]}")
+        erreur.reessayable = r.status_code in CODES_A_REESSAYER
+        raise erreur
+    contenu_rendu = r.json()["choices"][0]["message"]["content"]
+    # 🔴 gemini-flash SUR CETTE PASSERELLE REND PARFOIS `content: null` quand il
+    #    dépasse sa longueur de sortie. Sans ce test, `.find()` sur None lève un
+    #    TypeError qui remonte comme un bug du bot — alors que c'est un échec
+    #    du modèle, à traiter proprement comme les autres.
+    if not contenu_rendu:
+        raise LLMIndisponible(f"{modele} : réponse vide (content null — "
+                              "probablement sortie trop longue)")
+    return _extraire_json(contenu_rendu)
+
+
+def _via_passerelle(systeme: str, contenu, cfg: dict) -> dict:
+    """LiteLLM local d'Hermes. Il n'expose que /v1/chat/completions.
+
+    ⭐ UN SEUL RE-ESSAI, SUR LE MODÈLE DE SECOURS. `claude-abo` tombe par vagues
+       (16 × HTTP 500 et 15 × HTTP 429 relevés le 23/08/2026) et chaque échec
+       laissait une trouvaille « non relue ». Plutôt que d'insister sur le même
+       modèle — la vague dure plus qu'un retry —, on bascule une fois sur
+       `llm_modele_secours` (gemini-flash), qui passe par un autre fournisseur.
+    """
+    adresse = (cfg.get("llm_passerelle") or "http://127.0.0.1:4000").rstrip("/")
+    modele = cfg.get("llm_modele") or MODELE_PASSERELLE
+    delai = int(cfg.get("llm_delai", 120))
+    try:
+        return _requete_passerelle(adresse, modele, systeme, contenu, delai)
+    except LLMIndisponible as e:
+        secours = (cfg.get("llm_modele_secours") or "").strip()
+        if not secours or secours == modele or not getattr(e, "reessayable", False):
+            raise
+        from . import base
+        base.logguer(
+            f"Passerelle en échec sur {modele} ({e}) — nouvel essai avec "
+            f"{secours}.", "avert",
+        )
+        return _requete_passerelle(adresse, secours, systeme, contenu, delai)
 
 
 def _appeler(systeme: str, contenu_anthropic, contenu_passerelle, cfg: dict) -> dict:
@@ -295,6 +375,119 @@ def relire_site(texte: str, cfg: dict) -> dict:
     if not texte.strip():
         raise LLMIndisponible("site vide")
     return _appeler(SYSTEME_SITE, texte[:TAILLE_SITE_MAX], texte[:TAILLE_SITE_MAX], cfg)
+
+
+TYPES_VEHICULE_VALIDES = ("4x4", "berline", "citadine", "minibus", "van",
+                          "moto", "quad", "bateau", "velo", "camion", "autre")
+
+
+def _vehicules_valides(llm: dict) -> list[dict]:
+    """Nettoie les offres de véhicule rendues par le modèle.
+
+    ⚠ Le type est ramené aux valeurs de la contrainte `vehicle_offers` : un
+      type inventé (« SUV », « pickup ») ferait échouer l'INSERT ENTIER en
+      prod. On le range en « autre » plutôt que de perdre la ligne.
+    """
+    lignes = []
+    for v in llm.get("vehicules") or []:
+        if not isinstance(v, dict):
+            continue
+        type_v = (v.get("type") or "").strip().lower()
+        if type_v not in TYPES_VEHICULE_VALIDES:
+            type_v = "autre"
+        prix = v.get("prix_jour_ar")
+        prix = int(prix) if isinstance(prix, (int, float)) \
+            and 3_000 <= prix <= 5_000_000 else None
+        caution = v.get("caution_ar")
+        caution = int(caution) if isinstance(caution, (int, float)) \
+            and 10_000 <= caution <= 50_000_000 else None
+        modele = (v.get("modele") or "").strip()[:120] or None
+        note = (v.get("note_prix") or "").strip()[:280] or None
+        if not (prix or modele or note):
+            continue   # une ligne sans rien de concret n'apporte rien
+        lignes.append({
+            "type_vehicule": type_v,
+            "modele": modele,
+            "places": v.get("places") if isinstance(v.get("places"), int) else None,
+            "avec_chauffeur": v.get("avec_chauffeur")
+            if isinstance(v.get("avec_chauffeur"), bool) else None,
+            "carburant_inclus": v.get("carburant_inclus")
+            if isinstance(v.get("carburant_inclus"), bool) else None,
+            "km_par_jour": v.get("km_par_jour")
+            if isinstance(v.get("km_par_jour"), int) else None,
+            "prix_jour_ar": prix,
+            "note_prix": note,
+            "caution_ar": caution,
+        })
+    return lignes
+
+
+def _cle_chambre(nom: str, saison: str | None = None) -> tuple[str, str]:
+    """(libellé, saison) normalisés — pour reconnaître la même chambre des deux côtés."""
+    def propre(texte: str | None) -> str:
+        return re.sub(r"[^a-z0-9]+", " ", extraction.sans_accent(texte or "")).strip()
+
+    return propre(nom), propre(saison)
+
+
+def _prix_repris_des_regles(du_modele: list[dict], des_regles: list[dict]) -> list[dict]:
+    """Rend les chambres du modèle, complétées des prix lus par les règles.
+
+    ⚠ TROIS FAÇONS DE RECONNAÎTRE LA MÊME CHAMBRE, de la plus sûre à la moins :
+      le libellé ET la saison, le libellé seul, puis deux mots en commun — le
+      modèle reformule (« Location de la villa (jusqu'à 6 personnes) » là où la
+      page écrit « Location de villa exclusive avec service hotelier »).
+
+    ⚠ ET AUCUN PRIX N'EST INVENTÉ : une chambre que les règles n'ont pas
+      chiffrée reste sans prix, comme avant.
+    """
+    chiffrees = [c for c in des_regles if c.get("prix_ar")]
+    if not chiffrees:
+        return du_modele
+
+    def mots(nom: str) -> set:
+        # Le pluriel ne fait pas deux chambres : la page annonce
+        # « Bungalows de luxe », le modele rend « Bungalow de luxe ».
+        return {m.rstrip("s") for m in _cle_chambre(nom)[0].split() if len(m) >= 4}
+
+    def meme_saison(a: str, b: str) -> bool:
+        # Le modele recopie les dates avec l'etiquette : « Basse Saison
+        # (05/01-31/03) » est bien la « Basse Saison » lue sur la page.
+        return a == b or (bool(a) and bool(b) and (a in b or b in a))
+
+    utilisees = set()
+    sortie = []
+    for chambre in du_modele:
+        if chambre.get("prix_ar"):
+            sortie.append(chambre)
+            continue
+        cle = _cle_chambre(chambre["nom"], chambre.get("saison"))
+        jumelle = next(
+            (c for i, c in enumerate(chiffrees) if i not in utilisees
+             and _cle_chambre(c["nom"], c.get("saison")) == cle),
+            None,
+        ) or next(
+            (c for i, c in enumerate(chiffrees) if i not in utilisees
+             and _cle_chambre(c["nom"])[0] == cle[0]),
+            None,
+        ) or next(
+            (c for i, c in enumerate(chiffrees) if i not in utilisees
+             and meme_saison(_cle_chambre(c["nom"], c.get("saison"))[1], cle[1])
+             and len(mots(c["nom"]) & mots(chambre["nom"])) >= 2),
+            None,
+        )
+        if jumelle is not None:
+            utilisees.add(chiffrees.index(jumelle))
+            chambre = dict(chambre, prix_ar=jumelle["prix_ar"],
+                           description=chambre.get("description")
+                           or jumelle.get("description"))
+        sortie.append(chambre)
+
+    # Une chambre chiffrée que le modèle n'a pas vue vaut mieux qu'un trou.
+    for i, chambre in enumerate(chiffrees):
+        if i not in utilisees:
+            sortie.append(chambre)
+    return sortie
 
 
 def fusionner_site(regles: dict, llm: dict) -> dict:
@@ -347,6 +540,14 @@ def fusionner_site(regles: dict, llm: dict) -> dict:
             "description": (chambre.get("description") or "").strip()[:280] or None,
         })
     if chambres:
+        # 🔴 C'EST ICI QUE LES 55 CHAMBRES PERDAIENT LEUR PRIX. Le prompt
+        #    interdit au modèle de convertir une devise (à raison), donc sur un
+        #    site affiché en euros il rend des chambres bien nommées et SANS
+        #    PRIX — puis sa liste remplaçait celle des règles. Or
+        #    `room_types.base_price_ar` est NOT NULL : ces chambres ne
+        #    partaient jamais. Le modèle garde la main sur la structure, les
+        #    règles lui prêtent le chiffre qu'elles ont su lire.
+        chambres = _prix_repris_des_regles(chambres, regles.get("lignes_chambre") or [])
         fusion["lignes_chambre"] = chambres
 
     plats = []
@@ -366,6 +567,12 @@ def fusionner_site(regles: dict, llm: dict) -> dict:
     if plats:
         fusion["lignes_carte"] = plats
 
+    # Comme pour les chambres : le modèle fait autorité s'il a lu des offres,
+    # mais une liste vide ne fait pas oublier celles des règles.
+    vehicules = _vehicules_valides(llm)
+    if vehicules:
+        fusion["lignes_vehicule"] = vehicules
+
     # Le prix d'appel se recalcule sur ce que le modèle a rendu.
     chiffrees = [c["prix_ar"] for c in fusion.get("lignes_chambre") or [] if c["prix_ar"]]
     if chiffrees:
@@ -382,11 +589,28 @@ def fusionner_site(regles: dict, llm: dict) -> dict:
 
 
 # ── Lecture d'une carte photographiée ───────────────────────────────────────
-def _image_en_base64(chemin: Path) -> tuple[str, str]:
-    octets = chemin.read_bytes()
-    suffixe = chemin.suffix.lower()
-    type_mime = "image/png" if suffixe == ".png" else "image/jpeg"
-    return type_mime, base64.b64encode(octets).decode()
+def _image_en_base64(chemin: Path, cote_max: int = 1600) -> tuple[str, str]:
+    """L'image, réduite à `cote_max` px et recompressée avant l'envoi.
+
+    ⚠ Une photo Facebook pleine taille pèse quatre à huit fois la version
+      1 600 px : c'était le poste de coût le plus lourd du bot, pour une carte
+      que le modèle lit aussi bien en petit.
+    """
+    try:
+        from PIL import Image, ImageOps
+        import io
+        with Image.open(chemin) as img:
+            img = ImageOps.exif_transpose(img).convert("RGB")
+            if max(img.size) > cote_max:
+                img.thumbnail((cote_max, cote_max), Image.LANCZOS)
+            tampon = io.BytesIO()
+            img.save(tampon, "JPEG", quality=82, optimize=True)
+            return "image/jpeg", base64.b64encode(tampon.getvalue()).decode()
+    except Exception:
+        octets = chemin.read_bytes()
+        suffixe = chemin.suffix.lower()
+        type_mime = "image/png" if suffixe == ".png" else "image/jpeg"
+        return type_mime, base64.b64encode(octets).decode()
 
 
 def lire_carte(chemins: list[Path], cfg: dict) -> dict:
@@ -443,15 +667,66 @@ def plats_depuis_carte(lecture: dict) -> list[dict]:
 
 
 # ── Fusion des deux lectures ────────────────────────────────────────────────
-def fusionner(regles: dict, llm: dict) -> dict:
+UNITES_CONNUES = {"nuit", "plat", "portion", "personne", "jour", "circuit", "chambre",
+                  "entree", "groupe", "vehicule", "trajet"}
+
+
+def _chiffres(texte: str) -> str:
+    return re.sub(r"\D", "", texte or "")
+
+
+def montant_dans_le_texte(montant, texte: str) -> bool:
+    """Le montant rendu par le modèle figure-t-il dans le texte source ?
+
+    🔴 LE MODÈLE NE DOIT RIEN INVENTER, et le prompt le lui dit. Mais rien ne
+       le vérifiait : un « 25 000 Ar » plausible et absent de la publication
+       passait les bornes et partait en base. On exige que les chiffres du
+       montant apparaissent dans le texte (« 25 000 », « 25.000 », « 25000 »,
+       « 25k »). Sans texte, on fait confiance (relecture à la main).
+    """
+    if not texte:
+        return True
+    try:
+        n = int(montant)
+    except (TypeError, ValueError):
+        return False
+    if n <= 0:
+        return False
+    chiffres = _chiffres(texte)
+    if str(n) in chiffres:
+        return True
+    if n % 1000 == 0 and re.search(rf"(?<!\d){n // 1000}\s*k(?![a-z])", texte, re.I):
+        return True
+    # « 1,5 million », « 1.5M »
+    if n % 100_000 == 0 and re.search(
+        rf"(?<!\d){n // 1_000_000}[.,]?{(n % 1_000_000) // 100_000 or ''}\s*(m|millions?)(?![a-z])",
+        texte, re.I,
+    ):
+        return True
+    return False
+
+
+def fusionner(regles: dict, llm: dict, texte: str = "", cfg: dict | None = None) -> dict:
     """Combine la lecture par règles et celle du modèle.
 
     Le modèle fait autorité sur ce qui demande du jugement (nature de la
     publication, nom de l'établissement, résumé). Les règles gardent la main
     sur le téléphone : le format malgache est rigide, un motif ne s'y trompe
     pas et surtout ne l'invente pas.
+
+    ⚠ DEUX GARDE-FOUS AJOUTÉS LE 02/09/2026, parce qu'aucun n'existait :
+      - un montant ou une date que le texte ne contient pas est ÉCARTÉ (voir
+        `montant_dans_le_texte`) ;
+      - sous `llm_confiance_min`, on ne reprend du modèle que le genre, le
+        résumé et les catégories — les chiffres restent aux règles. Le
+        réglage existait dans la configuration et n'était lu nulle part.
     """
     fusion = dict(regles)
+    doutes: list[str] = []
+
+    confiance = llm.get("confiance")
+    mini = int((cfg or {}).get("llm_confiance_min", 55) or 0)
+    peu_sur = isinstance(confiance, (int, float)) and confiance < mini
 
     genre = llm.get("genre")
     if genre in ("etablissement", "carte", "evenement", "recit", "rien"):
@@ -464,8 +739,20 @@ def fusionner(regles: dict, llm: dict) -> dict:
     }
     for cle_llm, cle_nous in correspondances.items():
         valeur = llm.get(cle_llm)
-        if valeur not in (None, "", []):
-            fusion[cle_nous] = valeur
+        if valeur in (None, "", []):
+            continue
+        # ⚠ LE LIEU DES RÈGLES EST UN NOM DU RÉFÉRENTIEL (donc rapprochable) ;
+        #   celui du modèle est du texte libre (« Majunga », « Dubai »). Il ne
+        #   remplace pas ce que les règles ont déjà reconnu — 104 trouvailles
+        #   bloquées « sans lieu » venaient de là (02/09/2026).
+        if cle_nous == "lieu_texte" and regles.get("lieu_texte"):
+            continue
+        if peu_sur and cle_nous not in ("resume", "nom_etab", "lieu_texte"):
+            continue
+        fusion[cle_nous] = valeur
+
+    if peu_sur:
+        doutes.append(f"confiance {confiance}/100 sous le seuil {mini} : chiffres laissés aux règles")
 
     if llm.get("categories"):
         fusion["categories"] = [
@@ -479,25 +766,33 @@ def fusionner(regles: dict, llm: dict) -> dict:
         fusion["telephone"] = llm["telephone"]
 
     prix = llm.get("prix")
-    if isinstance(prix, dict) and prix.get("montant"):
+    if isinstance(prix, dict) and prix.get("montant") and not peu_sur:
         try:
-            fusion["prix_ar"] = int(prix["montant"])
-            fusion["prix_unite"] = prix.get("unite") or fusion.get("prix_unite")
+            montant = int(prix["montant"])
         except (TypeError, ValueError):
-            pass
+            montant = None
+        if montant and not montant_dans_le_texte(montant, texte):
+            doutes.append(f"prix {montant} Ar rendu par le modèle, absent du texte : écarté")
+        elif montant:
+            fusion["prix_ar"] = montant
+            unite = (prix.get("unite") or "").strip().lower()
+            fusion["prix_unite"] = unite if unite in UNITES_CONNUES else fusion.get("prix_unite")
 
     # Les plats du modèle complètent ceux des règles ; les doublons de nom
     # sautent, le prix le plus précis gagne.
     plats_llm = []
-    for plat in llm.get("plats") or []:
+    for plat in (llm.get("plats") or []) if not peu_sur else []:
         nom = (plat.get("nom") or "").strip()
         if not nom:
             continue
         prix_plat = plat.get("prix_ar")
+        prix_ok = isinstance(prix_plat, (int, float)) and 500 <= prix_plat <= 500_000
+        if prix_ok and not montant_dans_le_texte(int(prix_plat), texte):
+            doutes.append(f"prix du plat « {nom[:30]} » absent du texte : laissé vide")
+            prix_ok = False
         plats_llm.append({
             "nom": nom[:120],
-            "prix_ar": int(prix_plat) if isinstance(prix_plat, (int, float))
-            and 500 <= prix_plat <= 500_000 else None,
+            "prix_ar": int(prix_plat) if prix_ok else None,
             "description": (plat.get("description") or "").strip()[:280] or None,
             "unite": "portion",
             "section": (plat.get("section") or "").strip() or None,
@@ -510,23 +805,38 @@ def fusionner(regles: dict, llm: dict) -> dict:
         ]
 
     evenement = llm.get("evenement")
-    if isinstance(evenement, dict):
+    if isinstance(evenement, dict) and not peu_sur:
         if evenement.get("titre"):
             fusion["titre_evt"] = evenement["titre"][:160]
         for cle_llm, cle_nous in (("debut", "evt_debut"), ("fin", "evt_fin")):
             valeur = evenement.get(cle_llm)
-            if isinstance(valeur, str) and len(valeur) == 10:
-                fusion[cle_nous] = valeur
+            if not (isinstance(valeur, str) and len(valeur) == 10):
+                continue
+            try:
+                jour = _date.fromisoformat(valeur)
+            except ValueError:
+                doutes.append(f"date « {valeur} » illisible : écartée")
+                continue
+            # L'année doit être écrite quelque part dans le texte, ou être
+            # celle des règles : le prompt l'exige, on le vérifie enfin.
+            if texte and str(jour.year) not in texte and regles.get(cle_nous) != valeur:
+                doutes.append(f"date {valeur} : année absente du texte, écartée")
+                continue
+            fusion[cle_nous] = valeur
         if evenement.get("organisateur"):
             fusion["organisateur"] = evenement["organisateur"][:120]
         if evenement.get("recurrent") is not None:
             fusion["evt_recurrent"] = bool(evenement["recurrent"])
         if evenement.get("prix_entree"):
             try:
-                fusion["prix_ar"] = int(evenement["prix_entree"])
-                fusion["prix_unite"] = "personne"
+                entree = int(evenement["prix_entree"])
             except (TypeError, ValueError):
-                pass
+                entree = None
+            if entree and montant_dans_le_texte(entree, texte):
+                fusion["prix_ar"] = entree
+                fusion["prix_unite"] = "personne"
+            elif entree:
+                doutes.append(f"prix d'entrée {entree} Ar absent du texte : écarté")
 
     # ⭐ LES CIRCUITS D'AGENCE. `tours` est vide sur Diako alors que les agences
     #   ne racontent que ça. Un circuit sans durée n'entre pas : `duration_days`
@@ -558,12 +868,21 @@ def fusionner(regles: dict, llm: dict) -> dict:
     if circuits:
         fusion["lignes_circuit"] = circuits
 
+    # ⭐ LA GRILLE D'UN LOUEUR. 24 trouvailles `location_vehicule` ne
+    #   produisaient AUCUN tarif : les règles ne lisent que les lignes
+    #   « type + prix/jour », le modèle lit aussi la prose.
+    vehicules = _vehicules_valides(llm)
+    if vehicules:
+        fusion["lignes_vehicule"] = vehicules
+
     recit = llm.get("recit")
     if isinstance(recit, dict) and (recit.get("corps") or "").strip():
         fusion["corps"] = recit["corps"].strip()
 
     fusion["llm_confiance"] = llm.get("confiance")
-    fusion["llm_doute"] = (llm.get("doute") or "").strip()
+    fusion["llm_doute"] = " · ".join(
+        [d for d in [(llm.get("doute") or "").strip()] if d] + doutes
+    )[:600]
     fusion["lu_par_llm"] = True
     return fusion
 

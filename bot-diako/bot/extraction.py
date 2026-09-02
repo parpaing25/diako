@@ -52,16 +52,32 @@ def telephones(texte: str) -> list[str]:
 def whatsapp(texte: str) -> str | None:
     """Le numéro présenté comme WhatsApp, quand le texte le dit."""
     n = sans_accent(texte)
-    for m in re.finditer(r"(whatsapp|wa|watsap)[^\d+]{0,20}((?:\+?261|0)[\d\s.\-]{8,14})", n):
+    # `\bwa\b` : « Iwan et Sarah au 032… » donnait un WhatsApp qui n'en est pas un.
+    for m in re.finditer(r"(whatsapp|\bwa\b|wa\.me|watsap|wtsp)[^\d+]{0,20}((?:\+?261|0)[\d\s.\-]{8,14})", n):
         formate = _formater_tel(m.group(2))
         if len(re.sub(r"\D", "", formate)) == 10:
             return formate
     return None
 
 
+MOTIF_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[a-z]{2,})+", re.I)
+# Ce qui n'est jamais le site d'un établissement : messageries, réseaux,
+# raccourcisseurs. « contact@gmail.com » donnait `site_web = https://gmail.com`
+# sur 162 trouvailles, dont 50 publiées (mesuré le 02/09/2026).
+HOTES_PAS_UN_SITE = (
+    "gmail.com", "hotmail.com", "hotmail.fr", "yahoo.com", "yahoo.fr", "outlook.com",
+    "outlook.fr", "icloud.com", "live.com", "live.fr", "free.fr", "moov.mg", "orange.mg",
+    "telma.mg", "instagram.com", "tiktok.com", "youtube.com", "youtu.be", "twitter.com",
+    "x.com", "wa.me", "m.me", "linktr.ee", "bit.ly", "t.co", "goo.gl", "messenger.com",
+    "telegram.me", "t.me", "whatsapp.com", "booking.com", "tripadvisor.com", "airbnb.com",
+)
+
+
 def liens(texte: str) -> dict:
     """Site web et page Facebook cités dans le texte."""
     sortie = {"site_web": None, "page_facebook": None}
+    # Les adresses e-mail d'abord : leur domaine n'est pas un site.
+    texte = MOTIF_EMAIL.sub(" ", texte or "")
     for m in re.finditer(r"(?:https?://)?(?:www\.)?([\w.-]+\.[a-z]{2,})(/[^\s)]*)?", texte, re.I):
         url = m.group(0)
         hote = m.group(1).lower()
@@ -69,14 +85,14 @@ def liens(texte: str) -> dict:
             if not sortie["page_facebook"]:
                 sortie["page_facebook"] = url if url.startswith("http") else "https://" + url
         elif hote.split(".")[-1] in ("mg", "com", "net", "org", "fr", "io") \
-                and not hote.endswith(("instagram.com", "tiktok.com", "youtube.com")):
+                and not hote.endswith(HOTES_PAS_UN_SITE):
             if not sortie["site_web"]:
                 sortie["site_web"] = url if url.startswith("http") else "https://" + url
     return sortie
 
 
 def email(texte: str) -> str | None:
-    trouve = re.search(r"[\w.+-]+@[\w-]+\.[\w.]{2,}", texte)
+    trouve = MOTIF_EMAIL.search(texte or "")
     return trouve.group(0) if trouve else None
 
 
@@ -91,16 +107,86 @@ UNITES = [
     ("nuit", r"nuit|nuitee|nuitées?|par nuit|/ ?nuit|la nuit|alina"),
     ("personne", r"par personne|/ ?pers|par pers\b|pax|olona|isaky ny olona"),
     ("plat", r"le plat|par plat|/ ?plat|assiette|portion|sakafo"),
-    ("jour", r"par jour|/ ?jour|la journee|journee"),
+    # ⚠ « le jour » et « isan'andro » (« par jour » en malgache) manquaient :
+    #   les loueurs de voiture écrivent surtout comme ça, et leurs tarifs
+    #   partaient sans unité — donc jamais publiés.
+    ("jour", r"par jour|/ ?jour|la journee|journee|le jour|isan[’' -]?andro"),
     ("circuit", r"le circuit|par circuit|le sejour|forfait"),
 ]
 
 MOTIF_MONTANT = re.compile(
     r"(?P<nombre>\d[\d\s.,  ]*\d|\d)\s*"
     r"(?P<mult>millions?|mille|tapitrisa|arivo|k)?\s*"
-    r"(?P<devise>ariary|ariari|\bar\b|\bmga\b|€|euros?|\$|usd)",
+    # ⚠ `ar(?![a-z])`, PAS `\bar\b` : la limite de mot à gauche refusait la
+    #   devise collée au nombre (« 60 000Ar », « 75.000ar »), soit 41 % des
+    #   prix écrits sur Facebook — 172 trouvailles sans prix le 02/09/2026.
+    r"(?P<devise>ariary|ariari|ar(?![a-z])|mga(?![a-z])|€|euros?|\$|usd)",
     re.I,
 )
+
+
+# ── Devises étrangères ──────────────────────────────────────────────────────
+# ⚠ CE MODULE REFUSAIT LES DEVISES ÉTRANGÈRES, EN SILENCE. Le réflexe était le
+#   bon — un montant converti au petit bonheur est un montant faux — mais le
+#   silence coûtait cher : sur les 55 chambres sans prix relevées le
+#   24/08/2026, 14 ont leur tarif écrit UNIQUEMENT en euros, et
+#   `room_types.base_price_ar` est NOT NULL. Sans conversion, ces chambres ne
+#   partent jamais ; avec une conversion muette, personne ne peut vérifier le
+#   chiffre.
+#   Le refus reste donc le défaut (aucun appelant existant ne change de
+#   comportement), et la conversion devient EXPLICITE : un taux relevé à la
+#   main, daté, remplaçable, et le montant d'origine collé au résultat pour que
+#   la fiche publiée dise d'où vient le chiffre.
+# Taux RELEVES le 24/08/2026 sur open.er-api.com (source publique,
+# mise a jour quotidienne) : 1 EUR = 5 046,46 Ar, 1 USD = 4 286,18 Ar.
+# Arrondis a l'entier : un tarif d'hotel converti n'a pas de sens au
+# centime, et la note collee a chaque prix dit le taux employe.
+TAUX_ARIARY = {"EUR": 5_046, "USD": 4_286}
+TAUX_RELEVE_LE = "24/08/2026"
+
+_NOM_DEVISE = {"€": "EUR", "euro": "EUR", "euros": "EUR", "eur": "EUR",
+               "$": "USD", "usd": "USD"}
+
+# « € 70.00 », « €403 » : la devise DEVANT le nombre. MOTIF_MONTANT ne lit que
+# la forme inverse, et c'est comme ça que les grilles des lodges (Babaomby,
+# Tsara Komba) passaient entièrement à travers.
+MOTIF_MONTANT_PREFIXE = re.compile(
+    r"(?P<devise>€|\$)\s*(?P<nombre>\d[\d\s.,  ]*\d|\d)"
+)
+
+
+def nom_de_devise(brut: str | None) -> str:
+    """« € », « euros », « USD » -> 'EUR' / 'USD'. 'MGA' partout ailleurs."""
+    return _NOM_DEVISE.get((brut or "").strip().lower(), "MGA")
+
+
+def convertir_en_ariary(montant: float, devise: str,
+                        taux: dict | None = None) -> int | None:
+    """Un montant étranger en ariary, ou None si aucun taux ne le couvre.
+
+    ⚠ RENDRE None PLUTÔT QU'UN À-PEU-PRÈS. Une devise sans taux connu
+      (la livre, le rand) doit laisser la case vide, pas produire un nombre.
+    """
+    valeur = (TAUX_ARIARY if taux is None else taux).get((devise or "").upper())
+    if not valeur:
+        return None
+    return int(round(montant * valeur))
+
+
+def note_de_conversion(montant: float, devise: str,
+                       taux: dict | None = None) -> str:
+    """La phrase qui accompagne un prix converti — elle part en base avec lui.
+
+    C'est elle qui rend la conversion vérifiable : sans elle, un tarif converti
+    est indiscernable d'un tarif relevé en ariary, et plus personne ne sait
+    qu'il faut le refaire quand le taux bouge.
+    """
+    valeur = (TAUX_ARIARY if taux is None else taux).get((devise or "").upper()) or 0
+    affiche = int(montant) if float(montant).is_integer() else montant
+    symbole = "€" if (devise or "").upper() == "EUR" else "$"
+    lisible = f"{valeur:,}".replace(",", " ")
+    return (f"Tarif affiché {affiche} {symbole}, converti à 1 {symbole} = "
+            f"{lisible} Ar (taux relevé le {TAUX_RELEVE_LE}).")
 
 
 def _nombre(brut: str) -> float | None:
@@ -111,15 +197,21 @@ def _nombre(brut: str) -> float | None:
     return float(chiffres) if chiffres else None
 
 
-def montants(texte: str) -> list[dict]:
+def montants(texte: str, avec_devises: bool = False) -> list[dict]:
     """Tous les montants en ariary trouvés, avec leur unité et leur contexte.
 
     ⚠ ON EFFACE D'ABORD LES NUMÉROS DE TÉLÉPHONE. « 034 12 345 67 » ressemble
       énormément à un prix, et c'est l'erreur qui produit des tarifs absurdes.
+
+    `avec_devises=True` ajoute les montants en euros et en dollars — TELS
+    QUELS, jamais convertis, avec leur devise dans la clé `devise`. Convertir
+    est une décision, elle se prend chez l'appelant (`convertir_en_ariary`),
+    pas comme effet de bord d'une lecture.
     """
     propre = MOTIF_TEL.sub(" ", texte)
     normalise = sans_accent(propre)
-    trouves = []
+
+    bruts: list[tuple] = []
     for m in MOTIF_MONTANT.finditer(normalise):
         valeur = _nombre(m.group("nombre"))
         if valeur is None:
@@ -128,27 +220,40 @@ def montants(texte: str) -> list[dict]:
         if mult == "k" and valeur >= 1000:   # « 15000k » est du bruit
             mult = ""
         valeur *= MULTIPLICATEURS.get(mult, 1)
-        devise = m.group("devise").lower()
-        if devise in ("€", "euro", "euros"):
-            continue   # une devise étrangère se vérifie à la main, on ne convertit pas
-        if devise in ("$", "usd"):
+        bruts.append((m.start(), m.end(), valeur, nom_de_devise(m.group("devise"))))
+    if avec_devises:
+        for m in MOTIF_MONTANT_PREFIXE.finditer(normalise):
+            valeur = _nombre(m.group("nombre"))
+            if valeur is not None:
+                bruts.append((m.start(), m.end(), valeur,
+                              nom_de_devise(m.group("devise"))))
+
+    trouves: list[dict] = []
+    pris: list[tuple[int, int]] = []
+    for debut, fin, valeur, devise in sorted(bruts):
+        # Les deux motifs peuvent tomber sur le même montant : le premier lu
+        # gagne, sinon « € 70.00 Ar » compterait deux fois.
+        if any(debut < f and d < fin for d, f in pris):
             continue
-        if valeur < 200:                      # « 5 Ar » n'existe pas
+        pris.append((debut, fin))
+        if devise != "MGA":
+            if not avec_devises or valeur < 5:
+                continue
+        elif valeur < 200:                    # « 5 Ar » n'existe pas
             continue
-        avant = normalise[max(0, m.start() - 70):m.start()]
-        apres = normalise[m.end():m.end() + 40]
+        avant = normalise[max(0, debut - 70):debut]
+        apres = normalise[fin:fin + 40]
         unite = None
         for code, motif in UNITES:
             if re.search(motif, apres) or re.search(motif, avant[-45:]):
                 unite = code
                 break
-        trouves.append({
-            "montant": int(round(valeur)), "unite": unite,
-            "avant": avant.strip()[-60:], "position": m.start(),
-        })
+        ligne = {"montant": int(round(valeur)), "unite": unite,
+                 "avant": avant.strip()[-60:], "position": debut}
+        if devise != "MGA":
+            ligne["devise"] = devise
+        trouves.append(ligne)
     return trouves
-
-
 def prix_principal(texte: str, categories: list[str]) -> dict | None:
     """Le prix d'appel d'un établissement : le plus BAS, pas le plus haut.
 
@@ -180,8 +285,16 @@ MOTS_CATEGORIE = {
                       "séjour", "excursion organisee", "voyagiste"),
     "guide": ("guide touristique", "guide local", "mpitari-dalana"),
     "transporteur": ("transport", "taxi-brousse", "navette", "location de voiture"),
-    "location_vehicule": ("location de voiture", "location 4x4", "louer une voiture",
-                          "rent a car"),
+    # ⚠ Les loueurs malgaches écrivent rarement « location de voiture » en
+    #   toutes lettres : « location 4x4 », « voiture à louer », « location moto »
+    #   sont les formes réelles. Sans elles, 24 trouvailles de loueurs passaient
+    #   en « transporteur » et aucune grille tarifaire n'était cherchée.
+    "location_vehicule": ("location de voiture", "location voiture",
+                          "location de vehicule", "location vehicule",
+                          "location 4x4", "location de 4x4", "location moto",
+                          "location scooter", "location quad",
+                          "louer une voiture", "voiture a louer", "4x4 a louer",
+                          "moto a louer", "rent a car", "car rental"),
     "site_attraction": ("parc national", "reserve", "réserve", "musee", "musée",
                         "cascade", "grotte", "tsingy", "lac", "plage", "point de vue",
                         "belvedere", "belvédère", "site touristique"),
@@ -241,6 +354,127 @@ def parle_de_tourisme(texte: str, nb_photos: int = 0) -> bool:
         return False
     trouves = sum(1 for mot in MOTS_TOURISME if mot in n)
     return trouves >= 2 or (trouves >= 1 and nb_photos >= 1)
+
+
+# ── Immobilier : le périmètre de Fonenako, pas celui de Diako ───────────────
+# ⭐ POURQUOI CE FILTRE (24/08/2026). Les groupes « bons plans » malgaches
+#   mélangent tourisme et petites annonces : sur les 2 217 textes déjà en base,
+#   36 sont des ventes de terrain, des villas à vendre ou des logements loués au
+#   mois. Ils n'ont rien à faire dans un annuaire de voyage — et Fonenako,
+#   l'autre projet de la maison, les traite déjà.
+#
+# ⚠⚠ LE PIÈGE, ET IL EST PARTOUT : un hôtel écrit « chambre à louer »,
+#    « bungalow à louer », « villa meublée pour vos vacances », « location de
+#    vacances ». Ce sont des touristes, pas des locataires. La différence n'est
+#    JAMAIS le verbe « louer » : c'est la DURÉE et l'INTENTION.
+#      · nuitée, séjour, week-end, petit déjeuner -> tourisme, on garde ;
+#      · loyer, caution, bail, « par mois »       -> bail, on écarte.
+#    Trois textes réels de la base l'illustrent :
+#      · « Appartement ahofa eto Mahajanga … PRIX AZO ATAO PAR JOUR (60 000
+#        ariary/nuitée) »       -> tourisme, GARDÉ malgré « ahofa » ;
+#      · « Je propose des locations de vacances à Foulpointe … Je propose aussi
+#        des locations longue durée … Tarif pour une nuitée : 50 euros »
+#                               -> tourisme, GARDÉ malgré « longue durée » ;
+#      · « trano vato ahofa … loyer: 800 mille fmg tsis caution … 50% Agence
+#        immobilier »           -> bail, ÉCARTÉ.
+
+# Ce qui se vend et qui ne bouge pas. « chambre », « bungalow » et « pièce » n'y
+# sont PAS : ce sont les mots d'un hôtel autant que ceux d'un logement.
+_BIEN = (r"(?<![a-z])(?:villas?|maisons?|trano|tragno|appartements?|appart|studio|"
+         r"duplex|terrains?|tany|tokotany|parcelles?|lotissement|immeubles?|"
+         r"propriete|hectares?|ares?(?![a-z])|m2|m²|f[1-9](?![a-z0-9])|"
+         r"t[1-9](?![a-z0-9])|r\+[0-9])")
+
+# ⚠ « mivarotra » et « hivarotra » NE SONT PAS DANS CETTE LISTE, à dessein. En
+#   malgache ils veulent dire « vendre » N'IMPORTE QUOI : sur la base réelle ils
+#   attrapaient « Mivarotra VIANDES PRÉPARÉES » (un restaurant), « mpivarotra
+#   omby » (un récit d'histoire locale) et jusqu'au nom d'un membre du groupe
+#   (« Fah Mivarotra volafotsy ») — six fausses alertes pour zéro vraie.
+_VENTE_FR = (r"(?<![a-z])(?:a\s+vendre|a\s+vandre|en\s+vente|mise\s+en\s+vente|"
+             r"a\s+ceder|acquereur)")
+# « amidy » et « alafo » (à vendre) sont sûrs, MAIS collés au bien : les formes
+# réelles sont « TRANO AMIDY », « AMIDY TANY », « Tany alafo ». Au-delà de 30
+# caractères on retombe sur « koba amidy » (des gâteaux) — d'où cette fenêtre
+# quatre fois plus serrée que celle du français.
+_VENTE_MG = r"(?<![a-z])(?:amidy|alafo)(?![a-z])"
+
+MOTIF_VENTE_BIEN = re.compile(
+    _VENTE_FR + r"[\s\S]{0,140}?" + _BIEN + r"|" + _BIEN + r"[\s\S]{0,140}?" + _VENTE_FR,
+    re.I,
+)
+MOTIF_VENTE_BIEN_MG = re.compile(
+    _VENTE_MG + r"[\s\S]{0,30}?" + _BIEN + r"|" + _BIEN + r"[\s\S]{0,30}?" + _VENTE_MG,
+    re.I,
+)
+# Les papiers d'un terrain. Aucun hôtel ne parle de son titre foncier dans une
+# publication ; une vente de terrain, elle, ne parle que de ça.
+MOTIF_PAPIER_FONCIER = re.compile(
+    r"titre foncier|acte de vente|titree? et bornee?|titree? bornee?|"
+    r"bornee? et titree?|terrain domanial|livre foncier|certificat foncier", re.I,
+)
+# ⚠ AUCUN MOT-DIÈSE ICI. « #tianimmo » signe une agence de Tuléar qui publie
+#   AUSSI des séjours en bord de mer et de la location de voitures : l'écarter
+#   sur son mot-dièse supprimait deux publications touristiques légitimes.
+MOTIF_AGENCE_IMMO = re.compile(
+    r"agence immobili|vente immobili|annonce immobili|location immobili", re.I)
+
+# Un loyer se paie au mois, une nuitée à la nuit : la frontière est là.
+MOTIF_LOYER = re.compile(
+    r"(?<![a-z])(?:loyer|caution|contrat de bail|frais d.agence|isam.bolana|"
+    r"par mois|/ ?mois|le mois)", re.I)
+MOTIF_LOUER = re.compile(r"(?<![a-z])(?:a\s+louer|ahofa|hofany|location|louer)", re.I)
+MOTIF_LOGEMENT = re.compile(
+    r"(?<![a-z])(?:villas?|maisons?|trano|tragno|appartements?|appart|studio|"
+    r"duplex|local|locaux|magasin|magazay|tsena|bureau|piece|"
+    r"f[1-9](?![a-z0-9])|t[1-9](?![a-z0-9]))", re.I)
+# Le garde-fou : ce vocabulaire-là dit « on y dort quelques nuits ».
+MOTIF_SEJOUR = re.compile(
+    r"(?<![a-z])(?:nuitees?|nuits?|/ ?nuit|par nuit|par jour|/ ?jour|sejours?|"
+    r"petit dejeuner|demi.pension|pension complete|vacances|hotel|bungalow|"
+    r"lodge|resort|check.?in|week.?end|isan.andro|chambre double|reservez|"
+    r"a la semaine|par semaine|/ ?semaine|courte duree|location de vacances)", re.I)
+
+
+def _aplati(texte: str) -> str:
+    """Minuscules SANS accent ET sans police fantaisie.
+
+    🔴 NFKD, PAS NFD — la différence coûte une annonce sur trente-six. Les
+       annonceurs Facebook écrivent en gras Unicode : « 𝗠𝗔𝗜𝗦𝗢𝗡 INDEPENDENT A
+       louer … 𝗧𝗥𝗔𝗚𝗡𝗢 HAFODRO ». `sans_accent()` normalise en NFD, qui laisse
+       ces caractères tels quels : le filtre lisait « 𝗠𝗔𝗜𝗦𝗢𝗡 » et n'y voyait
+       pas « maison ». NFKD les ramène aux lettres latines ordinaires.
+    """
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", texte or "")
+        if unicodedata.category(c) != "Mn"
+    ).lower()
+
+
+def raisons_immobilier(texte: str) -> list[str]:
+    """Pourquoi cette publication est une annonce immobilière. Liste vide = elle ne l'est pas.
+
+    Renvoyer les motifs plutôt qu'un booléen permet de les écrire au journal :
+    « écartée (vente d'un bien) » se vérifie, « écartée » ne se vérifie pas.
+    """
+    n = _aplati(texte)
+    motifs = []
+    if MOTIF_VENTE_BIEN.search(n) or MOTIF_VENTE_BIEN_MG.search(n):
+        motifs.append("vente d'un bien")
+    if MOTIF_PAPIER_FONCIER.search(n):
+        motifs.append("papiers fonciers")
+    if MOTIF_AGENCE_IMMO.search(n):
+        motifs.append("agence immobilière")
+    # Le bail : un loyer, un verbe de location, un logement — et aucun mot de
+    # séjour. Les quatre conditions ensemble, jamais une seule.
+    if (MOTIF_LOYER.search(n) and MOTIF_LOUER.search(n)
+            and MOTIF_LOGEMENT.search(n) and not MOTIF_SEJOUR.search(n)):
+        motifs.append("loyer au mois")
+    return motifs
+
+
+def parle_d_immobilier(texte: str) -> bool:
+    """Vrai si la publication vend ou loue un logement — le métier de Fonenako."""
+    return bool(raisons_immobilier(texte))
 
 
 def categories(texte: str) -> list[str]:
@@ -511,7 +745,11 @@ MOTIF_LIGNE_CARTE = re.compile(
     r"(?P<nom>[^\d\n]{3,60}?)"
     r"[\s:.…\-–—>»]*"
     r"(?P<prix>\d[\d\s.,  ]{2,12})\s*"
-    r"(?:ar|ariary|mga)?\s*$",
+    # ⚠ Une queue SANS CHIFFRE est tolérée après le prix : « 12 000 Ar. »,
+    #   « 12 000 Ar (avec riz) », « 12 000 Ar 🔥 ». Ancré en fin de ligne, le
+    #   motif perdait 428 lignes de carte sur 762 (mesuré le 02/09/2026) —
+    #   même leçon que pour les chambres.
+    r"(?:ar|ariary|mga)?(?P<suite>[^\d\n]{0,28})$",
     re.I | re.M,
 )
 MOTS_PAS_UN_PLAT = (
@@ -590,14 +828,195 @@ MOTIF_LIGNE_CHAMBRE = re.compile(
     #   lu comme prix, ce qui est exactement la convention d'une grille.
     r"(?P<nom>[^\n]{3,70}?)"
     r"[\s:.…\-–—>»]*"
-    r"(?P<prix>\d[\d\s.,  ]{2,14})\s*"
-    r"(?:ar|ariary|mga)?\s*"
-    r"(?P<suite>/?\s*(?:nuit|nuitée|nuitee|la nuit|par nuit|pers|personne)?)\s*$",
+    # ⚠ LA DEVISE PEUT PRÉCÉDER LE NOMBRE : « € 70.00 » est la mise en page
+    #   d'un site sur deux, et elle passait entièrement à travers.
+    r"(?P<avant_devise>[€$])?\s*"
+    r"(?P<prix>\d[\d\s.,  ]{2,12})\s*"
+    r"(?P<devise>ariary|ar\b|mga|€|\$|euros?|eur\b|usd)?\s*"
+    # ⚠ LA QUEUE EST LIBRE, MAIS SANS CHIFFRE. Elle ne sert qu'à lire l'unité
+    #   et n'acceptait que « /nuit » ou « pers » : « 50 € HT » et « 180 000 Ar
+    #   par chambre » n'atteignaient jamais la fin de ligne et tombaient.
+    #   Interdire les chiffres suffit à garder la convention « le dernier
+    #   nombre de la ligne est le prix ».
+    r"(?P<suite>[^\d\n]{0,28})$",
     re.I | re.M,
 )
 
+# Une ligne qui ne porte QUE le prix : « € 70.00 », « 50€ HT », « 180 000 Ar ».
+# C'est la mise en page des sites d'hôtel — le libellé de la chambre est un
+# titre, le prix vient trois lignes plus bas, et la lecture ligne à ligne les
+# perdait tous les deux.
+# ⚠ LA DEVISE EST EXIGÉE ICI. Sans elle, « 2026 » ou « 150 » (une année, un
+#   nombre de m², un numéro) deviendrait un tarif de chambre.
+MOTIF_PRIX_SEUL = re.compile(
+    r"^[\s\-•·*]*"
+    r"(?:(?:a partir de|des|prix|tarif|from)\s*[:\-–—]?\s*)?"
+    r"(?P<avant_devise>[€$])?\s*"
+    r"(?P<prix>\d[\d\s.,  ]{1,12})\s*"
+    r"(?P<devise>ariary|ar\b|mga|€|\$|euros?|eur\b|usd)?\s*"
+    r"(?P<suite>[^\d\n]{0,30})$",
+    re.I,
+)
 
-def types_de_chambre(texte: str) -> list[dict]:
+MOTS_SAISON = (r"haute saison|basse saison|moyenne saison|saison seche"
+               r"|saison des pluies|toute l'annee|high season|low season"
+               r"|peak season|rest of the year")
+
+# Un libellé de chambre est un TITRE : court, et il se lit seul. Sans ce
+# filtre, « Le Camp Catta vous propose 4 types d'hébergement (Bungalow
+# confort, …) » devenait un type de chambre.
+MOTS_PAS_UN_LIBELLE = (
+    "voir les disponibilit", "reserver", "en savoir plus", "voir la chambre",
+    "decouvrir", "nous contacter", "cliquez", "vous propose",
+    "nos hebergements", "options d'hebergement",
+)
+
+
+def _prix_de_grille(trouve, taux: dict | None = None,
+                    mini: int = 5_000, maxi: int = 5_000_000,
+                    ligne: str = "") -> dict | None:
+    """Le prix d'une correspondance de grille — ariary direct, ou devise convertie.
+
+    Rend {"prix_ar", "devise", "origine", "note", "nom_court"} ou None. La note
+    n'est remplie QUE sur une conversion : elle est la preuve qu'il faudra
+    refaire le calcul quand le taux bougera.
+
+    ⚠ L'ARIARY GAGNE TOUJOURS. Quand la ligne donne les deux (« 165 000 Ar /
+      35 € »), c'est le montant affiché en ariary qui part en base : une
+      conversion, même honnête, reste une estimation.
+    """
+    valeur = _nombre(trouve.group("prix"))
+    if valeur is None:
+        return None
+    groupes = trouve.groupdict()
+    devise = nom_de_devise(groupes.get("devise") or groupes.get("avant_devise"))
+    if devise == "MGA":
+        if not mini <= valeur <= maxi:
+            return None
+        return {"prix_ar": int(valeur), "devise": None, "origine": None,
+                "note": None, "nom_court": None}
+
+    double = _ariary_de_ligne(ligne, mini, maxi) if ligne else None
+    if double:
+        montant, debut = double
+        return {"prix_ar": montant, "devise": None, "origine": None,
+                "note": None,
+                "nom_court": ligne[:debut].strip(" .:-–—•*/") or None}
+
+    # Bornes en devise : sous 5 € ce n'est pas une nuit, au-delà de 20 000 € non
+    # plus. C'est le garde-fou qui remplace celui des ariary, pas son absence.
+    if not 5 <= valeur <= 20_000:
+        return None
+    ariary = convertir_en_ariary(valeur, devise, taux)
+    if ariary is None or not mini <= ariary <= maxi:
+        return None
+    return {"prix_ar": ariary, "devise": devise, "origine": valeur,
+            "note": note_de_conversion(valeur, devise, taux), "nom_court": None}
+
+
+def _est_un_nom_de_chambre(nom: str) -> bool:
+    """Un libellé de chambre nomme un couchage et ne vend pas autre chose."""
+    n = sans_accent(nom)
+    if len(nom) < 3 or not re.search(r"[a-zA-ZÀ-ÿ]{3}", nom):
+        return False
+    if any(mot in n for mot in MOTS_PAS_UNE_CHAMBRE):
+        return False
+    return _nomme_un_couchage(n)
+# « Bungalow Saline : 165 000 Ar / 35 € » — le même tarif écrit deux fois. Le
+# motif étant paresseux, il lit le DERNIER nombre, donc les 35 €, et publiait
+# 178 500 Ar au lieu des 165 000 Ar affichés. L'ariary est ce que le site
+# annonce : c'est lui qui gagne, la conversion n'est qu'un pis-aller.
+MOTIF_ARIARY_DE_LIGNE = re.compile(
+    r"(\d[\d\s.,\u202f\u00a0]{2,12})\s*(?:ariary|ar\b|mga)", re.I
+)
+
+
+def _ariary_de_ligne(ligne: str, mini: int = 5_000,
+                     maxi: int = 5_000_000) -> tuple[int, int] | None:
+    """(montant, position) du DERNIER montant en ariary de la ligne, ou None."""
+    dernier = None
+    for m in MOTIF_ARIARY_DE_LIGNE.finditer(ligne):
+        valeur = _nombre(m.group(1))
+        if valeur is not None and mini <= valeur <= maxi:
+            dernier = (int(valeur), m.start())
+    return dernier
+
+
+def _attributs_chambre(n: str, suite: str) -> dict:
+    """Unité, capacité, vue, eau chaude — lus dans le libellé et sa queue."""
+    suite = sans_accent(suite or "")
+    unite = "personne" if ("pers" in suite or "personne" in suite
+                           or "per person" in n) else "chambre"
+    capacite = None
+    chiffre = re.search(r"\b(\d)\s*(?:pers|personne|adulte|pax)", n)
+    if chiffre:
+        capacite = int(chiffre.group(1))
+    elif "double" in n or "twin" in n:
+        capacite = 2
+    elif "single" in n or "simple" in n:
+        capacite = 1
+    elif "triple" in n:
+        capacite = 3
+    return {
+        "unite": unite, "capacite": capacite,
+        "eau_chaude": bool(re.search(r"eau chaude|hot water", n)),
+        "sdb_privee": not bool(re.search(r"sdb commune|salle de bain commune"
+                                         r"|shared bathroom", n)),
+        "vue": ("mer" if "vue mer" in n else
+                "lac" if "vue lac" in n else
+                "montagne" if "vue montagne" in n else None),
+    }
+
+
+# ⚠ EN DÉBUT DE MOT, PAS N'IMPORTE OÙ. « détente » contient « tente »,
+#   « nécessaire » contient « case » : la recherche par sous-chaîne faisait
+#   entrer « offrent tout le confort nécessaire à votre détente » comme type de
+#   chambre, avec le prix du bungalow d'à côté. Pas de limite à droite, pour
+#   que « bungalows » et « chambres » restent reconnus.
+MOTIF_COUCHAGE = re.compile(
+    r"\b(?:" + "|".join(sans_accent(m) for m in MOTS_CHAMBRE) + r")s?\b"
+)
+
+# Ces libellés portent un mot de couchage sans être une chambre. Sans eux,
+# « Petit déjeuner standard : 23 000 Ar » entre comme un type de chambre à
+# 23 000 la nuit — c'est le cas que la documentation de la fonction promet
+# d'écarter, et « standard » suffisait à le faire passer.
+MOTS_PAS_UNE_CHAMBRE = (
+    "petit dejeuner", "petit-dejeuner", "demi pension", "demi-pension",
+    "pension complete", "taxe", "transfert", "massage", "excursion",
+    "location de board", "menu", "diner", "dejeuner", "prix chambre",
+    "room price", "number of", "prix de la chambre",
+)
+
+
+def _nomme_un_couchage(n: str) -> bool:
+    return bool(MOTIF_COUCHAGE.search(n))
+
+
+def _est_un_libelle(ligne: str, n: str) -> bool:
+    """Cette ligne est-elle le TITRE d'un type de chambre ?
+
+    Un titre est court, se lit seul, et NOMME la chambre dès ses premiers mots.
+    Une phrase de brochure de 150 signes qui cite trois hébergements n'en est
+    pas un — l'accepter fabriquerait une chambre « Le Camp Catta vous propose
+    4 types d'hébergement… ».
+
+    ⚠ ET IL NE COMMENCE PAS PAR UN CHIFFRE. « 1 pièce avec lit double + 1 pièce
+      avec Twin » décrit le couchage du bungalow annoncé juste au-dessus ; le
+      prendre pour un titre volait son prix au vrai libellé (Couleur Café).
+    """
+    if not (3 <= len(ligne) <= 70) or len(ligne.split()) > 10:
+        return False
+    if re.match(r"^[\d+•\-*]", ligne.strip()):
+        return False
+    if any(mot in n for mot in MOTS_PAS_UN_LIBELLE + MOTS_PAS_UNE_CHAMBRE):
+        return False
+    # Le mot qui nomme le couchage doit être dans les quatre premiers : au-delà,
+    # la ligne parle d'autre chose et le cite en passant.
+    return _nomme_un_couchage(" ".join(n.split()[:4]))
+
+
+def types_de_chambre(texte: str, taux: dict | None = None) -> list[dict]:
     """Les chambres chiffrées d'une grille de tarifs.
 
     ⚠ LE SEUIL DE PRIX FAIT LE TRI. Une page de tarifs croise des nuitées
@@ -605,74 +1024,920 @@ def types_de_chambre(texte: str) -> list[dict]:
       « chambre 12 », un numéro de téléphone, une année. Sous 5 000 Ar une nuit
       n'existe pas à Madagascar, au-delà de 5 000 000 non plus.
 
-    ⚠ ET LE LIBELLÉ DOIT NOMMER UN COUCHAGE. Sans ce test, « Petit déjeuner
-      15 000 Ar » entrerait comme un type de chambre à 15 000 la nuit.
+    ⚠ ET LE LIBELLÉ DOIT NOMMER UN COUCHAGE — le libellé, pas la ligne. Le
+      test portait sur la ligne entière : « tarif de 250 000 Ar pour la villa »
+      créait donc une chambre nommée « tarif de ».
+
+    Trois lectures, dans cet ordre :
+      ① la ligne se suffit — « Bungalow vue mer : 180 000 Ar » ;
+      ② le libellé est un titre et le prix vient plus bas, seul sur sa ligne.
+        C'est la mise en page de tous les sites d'hôtel lus le 24/08/2026
+        (Babaomby, Couleur Café), et c'est elle qui laissait 55 chambres sur 94
+        sans prix ;
+      ③ « Basse Saison : 100 €/nuit » — un tarif de saison, rattaché au dernier
+        libellé rencontré.
+
+    `taux` : table de conversion des devises (None = celle du module, {} = ne
+    rien convertir). Un prix converti porte sa note dans `description`, pour
+    qu'on sache toujours quel chiffre a vraiment été lu sur la page.
     """
-    trouvees, saison = [], None
-    for ligne_brute in texte.split("\n"):
-        ligne = ligne_brute.strip()
-        if not ligne or len(ligne) > 160:
+    lignes = [l.strip() for l in texte.split("\n")]
+    # « === https://…/chambres.html === » est le séparateur de page posé par le
+    # collecteur, pas un libellé : il contient tous les mots du métier.
+    utiles = [(i, l) for i, l in enumerate(lignes)
+              if l and len(l) <= 200 and not l.startswith("===")]
+
+    trouvees: list[dict] = []
+    saison = None
+    servies: set[int] = set()          # lignes déjà transformées en chambre
+    prix_pris: set[int] = set()        # lignes de prix déjà attribuées
+    for rang, (i, ligne) in enumerate(utiles):
+        if len(ligne) > 160:
             continue
         n = sans_accent(ligne)
 
-        # Un intitulé de saison s'applique aux lignes qui suivent.
-        if len(ligne) <= 60 and not re.search(r"\d{4,}", ligne) and re.search(
-            r"haute saison|basse saison|moyenne saison|saison seche|saison des pluies"
-            r"|toute l'annee|high season|low season", n
-        ):
-            saison = ligne.strip(" :–—-")
+        # ── ③ Saisons ───────────────────────────────────────────────────────
+        if re.search(MOTS_SAISON, n) and len(ligne) <= 60:
+            trouve = MOTIF_LIGNE_CHAMBRE.match(ligne)
+            prix = _prix_de_grille(trouve, taux, ligne=ligne) if trouve else None
+            if prix is None:
+                # Un intitulé de saison nu s'applique aux lignes qui suivent.
+                if not re.search(r"\d{4,}", ligne):
+                    saison = ligne.strip(" :–—-")
+                continue
+            # La saison porte elle-même le prix : c'est un TARIF, rattaché au
+            # dernier libellé de couchage vu. Pas plus loin que la section
+            # courante, sinon on collerait un prix à une chambre d'ailleurs.
+            ancre = next(
+                (l for k, (_, l) in reversed(list(enumerate(utiles[:rang])))
+                 if rang - k <= 25 and _est_un_libelle(l, sans_accent(l))), None
+            )
+            if not ancre:
+                continue
+            libelle = ancre.strip(" .:-–—•*")
+            etiquette = re.split(r"[:\-–—]", ligne, 1)[0].strip() or None
+            trouvees.append({
+                "nom": libelle[:120], "prix_ar": prix["prix_ar"],
+                "saison": etiquette, "description": prix["note"],
+                **_attributs_chambre(sans_accent(libelle), trouve.group("suite")),
+            })
+            servies.add(i)
             continue
 
-        if not any(mot in n for mot in (sans_accent(m) for m in MOTS_CHAMBRE)):
-            continue
         if MOTIF_TEL.search(ligne):
             continue
-        trouve = MOTIF_LIGNE_CHAMBRE.match(ligne)
-        if not trouve:
-            continue
-        prix = _nombre(trouve.group("prix"))
-        if prix is None or prix < 5_000 or prix > 5_000_000:
-            continue
-        nom = trouve.group("nom").strip(" .:-–—•*")
-        if len(nom) < 3 or not re.search(r"[a-zA-ZÀ-ÿ]{3}", nom):
-            continue
 
-        suite = sans_accent(trouve.group("suite") or "")
-        unite = "personne" if ("pers" in suite or "personne" in suite) else "chambre"
-        capacite = None
-        chiffre = re.search(r"\b(\d)\s*(?:pers|personne|adulte|pax)", n)
-        if chiffre:
-            capacite = int(chiffre.group(1))
-        elif "double" in n or "twin" in n:
-            capacite = 2
-        elif "single" in n or "simple" in n:
-            capacite = 1
-        elif "triple" in n:
-            capacite = 3
+        # ── ① La ligne se suffit ────────────────────────────────────────────
+        if _nomme_un_couchage(n):
+            trouve = MOTIF_LIGNE_CHAMBRE.match(ligne)
+            prix = _prix_de_grille(trouve, taux, ligne=ligne) if trouve else None
+            if prix is not None:
+                nom = trouve.group("nom").strip(" .:-–—•*")
+                if prix.get("nom_court"):
+                    nom = prix["nom_court"]
+                if _est_un_nom_de_chambre(nom):
+                    trouvees.append({
+                        "nom": nom[:120], "prix_ar": prix["prix_ar"],
+                        "saison": saison, "description": prix["note"],
+                        **_attributs_chambre(sans_accent(nom), trouve.group("suite")),
+                    })
+                    servies.add(i)
+                    continue
 
-        trouvees.append({
-            "nom": nom[:120], "prix_ar": int(prix), "unite": unite,
-            "capacite": capacite, "saison": saison,
-            "eau_chaude": bool(re.search(r"eau chaude|hot water", n)),
-            "sdb_privee": not bool(re.search(r"sdb commune|salle de bain commune"
-                                             r"|shared bathroom", n)),
-            "vue": ("mer" if "vue mer" in n else
-                    "lac" if "vue lac" in n else
-                    "montagne" if "vue montagne" in n else None),
-        })
+        # ── ② Le libellé est un titre, le prix vient plus bas ───────────────
+        if i in servies or not _est_un_libelle(ligne, n):
+            continue
+        for j, suivante in utiles[rang + 1:rang + 1 + 8]:
+            m = sans_accent(suivante)
+            # Un autre libellé ouvre le bloc suivant ; un en-tête de saison
+            # ouvre une GRILLE à colonnes, qu'une lecture ligne à ligne ne sait
+            # pas reconstituer (Tsara Komba : quatre prix, deux chambres, deux
+            # occupations). Dans les deux cas on s'arrête au lieu de deviner.
+            if _est_un_libelle(suivante, m) or re.search(MOTS_SAISON, m):
+                break
+            if j in prix_pris or MOTIF_TEL.search(suivante):
+                continue
+            trouve = MOTIF_PRIX_SEUL.match(m)
+            if not trouve or not (trouve.group("devise")
+                                  or trouve.group("avant_devise")):
+                continue
+            prix = _prix_de_grille(trouve, taux, ligne=suivante)
+            if prix is None:
+                continue
+            libelle = ligne.strip(" .:-–—•*")
+            trouvees.append({
+                "nom": libelle[:120], "prix_ar": prix["prix_ar"],
+                "saison": saison, "description": prix["note"],
+                **_attributs_chambre(n, trouve.group("suite")),
+            })
+            # ⚠ UNE LIGNE DE PRIX NE SE DONNE QU'UNE FOIS. Sur une grille
+            #   aplatie (Savannah Beach), trois libellés se servaient tour à
+            #   tour dans les mêmes quatre prix et fabriquaient douze chambres.
+            prix_pris.add(j)
+            break
 
     # Deux fois le même libellé = deux saisons, ou une répétition de mise en
     # page. On garde la première occurrence de chaque couple (nom, prix).
     vus, propres = set(), []
     for chambre in trouvees:
-        cle = (chambre["nom"].lower(), chambre["prix_ar"])
+        cle = (chambre["nom"].lower(), chambre["prix_ar"], chambre.get("saison"))
         if cle in vus:
             continue
         vus.add(cle)
         propres.append(chambre)
     return propres
+# ── Circuits d'agence ────────────────────────────────────────────
+# 🔴 `tours` EST VIDE SUR DIAKO alors que 233 trouvailles sont des agences de
+#    voyage. La raison n'est pas l'écriture, c'est la lecture : `lignes_circuit`
+#    n'avait qu'UN producteur, `analyse_llm.py`, et la passerelle tombe par
+#    vagues. Un circuit se lit pourtant très bien par règles — une durée, un
+#    tarif par personne, des étapes, une liste d'inclusions — parce que les
+#    agences écrivent toutes de la même façon.
+#
+# ⚠ LA DURÉE EST LA CLÉ DE VOÛTE. `tours.duration_days` est l'entier sur lequel
+#   le site filtre : un circuit sans durée lisible ne sert à rien, et une durée
+#   approximative le fait ressortir dans les mauvaises recherches. Sans durée,
+#   on ne rend rien.
+MOTIFS_DUREE = (
+    # « 7 Jours / 6 Nuits », « 2 jours & 1 nuit », « 9 jours / 8 nuits »
+    re.compile(r"(?P<jours>\d{1,2})\s*jours?\b[^\d\n]{0,6}(?P<nuits>\d{1,2})\s*nuit"),
+    # « 2 nuits / 3 jours »
+    re.compile(r"(?P<nuits>\d{1,2})\s*nuits?\b[^\d\n]{0,6}(?P<jours>\d{1,2})\s*jours?"),
+    # « 7J/6N » — l'abrégé des brochures
+    re.compile(r"(?P<jours>\d{1,2})\s*j\s*/\s*(?P<nuits>\d{1,2})\s*n\b"),
+    # « (8 jours) », « circuit de 5 jours », « 2JOURS »
+    re.compile(r"(?P<jours>\d{1,2})\s*jours?\b"),
+)
+
+# Une agence qui raconte un souvenir n'offre pas un circuit. Sans un de ces
+# mots, « on a passé 3 jours à Nosy Be » deviendrait un produit à vendre.
+MOTS_OFFRE_CIRCUIT = (
+    "circuit", "excursion", "sejour", "voyage organise", "pack", "forfait",
+    "tour operateur", "programme", "itineraire", "depart", "reservation",
+    "places disponibles", "places limitees", "tarif", "combo", "bivouac",
+    "escapade", "safari",
+)
+
+# Ces montants ne sont PAS le prix du circuit : l'acompte qui réserve la place,
+# le supplément étranger, la remise enfant. Les confondre publierait
+# « Ampefy 2 jours à 50 000 Ar » là où le tarif est 160 000.
+MOTS_PAS_LE_PRIX = (
+    "reservation", "acompte", "arrhes", "caution", "supplement", "si etranger",
+    "si etrangers", "en plus", "enfant", "zaza", "reduction", "remise",
+    "annulation", "penalite", "gratuit", "+",
+)
+
+INCLUSIONS_CIRCUIT = (
+    ("pension complète", r"pension complete"),
+    ("demi-pension", r"demi[- ]pension"),
+    ("petit déjeuner", r"petits? dejeuners?"),
+    ("repas", r"\brepas\b|dejeuner|diner|sakafo"),
+    ("guide", r"\bguides?\b|guidage"),
+    ("transport", r"\btransports?\b|transfert"),
+    ("hébergement", r"hebergement|nuitees?\b|bungalow|\bhotel\b|\btentes?\b"),
+    ("droits d'entrée", r"tickets? d[’']entree|droits? d[’']entree|frais d[’']entree"),
+    ("vol", r"\bvols?\b|\bavion\b"),
+    ("boissons", r"boissons?"),
+)
+
+TRANSPORTS_CIRCUIT = (
+    ("avion", r"\bavion\b|\bvol\b|aerien"),
+    ("bateau", r"\bbateau|\bvedette|\bboutre|\bpirogue|\bcatamaran|\bhors[- ]bord"),
+    ("4x4", r"4\s?[x*×]\s?4|\bland ?cruiser\b|\bhilux\b|tout[- ]terrain"),
+    ("minibus", r"mini[- ]?bus|\bsprinter\b|\bcoaster\b"),
+    ("van", r"\bvans?\b|\bstarex\b|\bhiace\b"),
+    ("bus", r"\bbus\b|taxi[- ]brousse"),
+    ("train", r"\btrain\b|\bfce\b"),
+    ("vélo", r"\bvelos?\b|\bvtt\b"),
+)
+
+# Le fil Facebook insère ses propres lignes dans le texte copié. Aucune ne
+# peut être le titre d'un circuit.
+BRUIT_FIL = re.compile(
+    r"^(?:·|\+\d+|en ligne|indicateur de statut.*|contenu ia|voir moins|voir plus"
+    r"|suivre|· suivre|ecrivez un commentaire public\.*|tous les commentaires"
+    r"|.* · audio d[’']origine|\d+ (?:j|h|min|sem))$", re.I
+)
 
 
+def duree_de_circuit(texte: str) -> tuple[int | None, int | None, int]:
+    """(jours, nuits, position) de la durée annoncée. (None, None, -1) sinon.
+
+    ⚠ UNE DURÉE PLAUSIBLE, PAS N'IMPORTE QUEL NOMBRE SUIVI DE « JOURS ». Au-delà
+      de 30 jours ce n'est plus un circuit vendu à Madagascar, et un nombre de
+      nuits supérieur au nombre de jours trahit une lecture ratée.
+
+    ⚠ ET LA PLUS TÔT DANS LE TEXTE, pas la mieux formée. Le titre annonce
+      « 9 JOURS » et le corps répète « 9 jours / 8 nuits » : privilégier la
+      forme riche renvoyait une position au milieu du texte, et le titre du
+      circuit devenait la phrase d'ambiance qui la précédait.
+    """
+    n = sans_accent(texte)
+    trouvailles = []
+    for motif in MOTIFS_DUREE:
+        for trouve in motif.finditer(n):
+            groupes = trouve.groupdict()
+            jours = int(groupes["jours"])
+            nuits = int(groupes["nuits"]) if groupes.get("nuits") else None
+            if not 1 <= jours <= 30:
+                continue
+            if nuits is not None and not jours - 2 <= nuits <= jours:
+                continue
+            trouvailles.append((trouve.start(), nuits is None, jours, nuits))
+    if not trouvailles:
+        return None, None, -1
+    # À position égale, la forme qui donne aussi les nuits l'emporte.
+    debut, _, jours, nuits = min(trouvailles)
+    memes = [t for t in trouvailles if t[0] == debut] + [
+        t for t in trouvailles if abs(t[0] - debut) <= 12 and t[3] is not None]
+    riche = min(memes, key=lambda t: (t[1], t[0]))
+    return riche[2], riche[3], riche[0]
+# Un pays n'est pas une étape de circuit : « Madagascar » est cité par toutes
+# les annonces et arrivait en tête de toutes les listes d'étapes.
+LIEUX_TROP_LARGES = ("madagascar", "afrique", "europe", "france", "ocean indien")
+
+
+def etapes_citees(texte: str, noms_connus: list[str]) -> list[str]:
+    """Les lieux du référentiel Diako cités dans le texte, dans l'ordre du récit.
+
+    ⚠ QUATRE LETTRES AU MINIMUM. Le référentiel porte 18 334 lieux, dont des
+      milliers de hameaux aux noms de trois lettres : les laisser entrer
+      transformerait n'importe quelle syllabe en étape de circuit.
+
+    ⚠ ET PAS DEUX FOIS LE MÊME ENDROIT. Les noms sont essayés du plus long au
+      plus court, et la place prise par « Nosy Iranja » est rendue
+      indisponible : sans ça, le hameau « Nosy » ressortait à chaque île et la
+      liste d'étapes racontait n'importe quoi.
+    """
+    n = sans_accent(texte)
+    pris: list[tuple[int, int]] = []
+    vus: dict[str, int] = {}
+    for nom in noms_connus or []:
+        if len(nom) < 4:
+            continue
+        cle = sans_accent(nom)
+        if cle in vus or cle in LIEUX_TROP_LARGES or cle not in n:
+            continue
+        for trouve in re.finditer(rf"\b{re.escape(cle)}\b", n):
+            if any(trouve.start() < f and d < trouve.end() for d, f in pris):
+                continue
+            pris.append((trouve.start(), trouve.end()))
+            vus[cle] = trouve.start()
+            break
+    ordonnes = sorted(vus.items(), key=lambda c: c[1])
+    # On rend le nom tel qu'il est écrit dans le référentiel, pas sans accents :
+    # c'est lui qui sera rapproché ensuite.
+    par_cle = {sans_accent(nom): nom for nom in (noms_connus or [])}
+    return [par_cle[cle] for cle, _ in ordonnes][:12]
+def inclusions(texte: str) -> list[str]:
+    """Ce que le tarif comprend, tel que l'annonce le dit.
+
+    Deux formes, et seulement celles-là : une section « INCLUS : » (qui s'arrête
+    net à « NON INCLUS » — sans cette borne, on publierait comme inclus tout ce
+    que le client doit payer en plus), ou un « X inclus » en toutes lettres.
+    """
+    lignes = sans_accent(texte).split("\n")
+    dedans: list[str] = []
+    section = False
+    for ligne in lignes:
+        nu = ligne.strip(" :–—-*•")
+        if re.match(r"^(?:non[- ]inclus|ne comprend pas|non compris|exclus)\b", nu):
+            section = False
+            continue
+        if re.match(r"^(?:inclus|ce qui est inclus|le tarif comprend"
+                    r"|comprenant|nos prestations|compris)\b", nu):
+            section = True
+            continue
+        if section and nu:
+            dedans.append(nu)
+    matiere = "\n".join(dedans)
+
+    trouvees = []
+    for etiquette, motif in INCLUSIONS_CIRCUIT:
+        if matiere and re.search(motif, matiere):
+            trouvees.append(etiquette)
+            continue
+        # Hors section : le mot doit être collé à « inclus » ou « compris ».
+        n = sans_accent(texte)
+        if re.search(rf"(?:{motif})[^.\n]{{0,24}}(?:inclus|compris|offert)", n) or \
+           re.search(rf"(?:avec|inclus|comprend)[^.\n]{{0,20}}(?:{motif})", n):
+            trouvees.append(etiquette)
+    return trouvees[:12]
+
+
+def transports_cites(texte: str) -> list[str]:
+    n = sans_accent(texte)
+    return [etiquette for etiquette, motif in TRANSPORTS_CIRCUIT
+            if re.search(motif, n)][:6]
+
+
+def prix_de_circuit(texte: str) -> dict | None:
+    """Le tarif du circuit — PAR PERSONNE, annoncé comme tel, et le plus bas.
+
+    ⚠ DEUX CONDITIONS, PAS UNE. L'unité (« par personne ») ne suffit pas : une
+      annonce de circuit cite l'acompte, le supplément étranger, le prix d'une
+      sortie en bateau — tous « par personne ». Le montant doit AUSSI être
+      présenté comme le tarif du voyage, sinon on publie une excursion à
+      50 000 Ar là où le séjour en vaut cinq cent mille.
+    """
+    candidats = []
+    for m in montants(texte):
+        if m["unite"] not in ("personne", "circuit"):
+            continue
+        if not 10_000 <= m["montant"] <= 50_000_000:
+            continue
+        if any(mot in m["avant"] for mot in MOTS_PAS_LE_PRIX):
+            continue
+        if not re.search(r"tarif|prix|pack|forfait|circuit|sejour|voyage",
+                         m["avant"]):
+            continue
+        candidats.append(m)
+    if not candidats:
+        return None
+    choisi = min(candidats, key=lambda m: m["montant"])
+    return {"montant": choisi["montant"],
+            "unite": "personne" if choisi["unite"] == "personne" else "circuit"}
+def _titre_de_circuit(texte: str, position: int) -> str | None:
+    """Le titre : la ligne qui porte la durée, ou la première ligne qui nomme.
+
+    ⚠ LA LIGNE DE DURÉE N'EST PAS TOUJOURS UN TITRE. Mesuré sur les annonces
+      réelles : « 2 jours • 1 nuit • Une expérience inoubliable », « 10 Septembre
+      au 17 Septembre 2026 (8 jours) », « À seulement 475 000 Ar par personne »
+      — une durée, une date, un prix. Aucune ne dit OÙ l'on va, et c'est le
+      titre qui devient le nom du circuit sur Diako et son adresse web. Le nom
+      est alors juste au-dessus.
+    """
+    lignes = texte.split("\n")
+    debuts, curseur = [], 0
+    for ligne in lignes:
+        debuts.append(curseur)
+        curseur += len(ligne) + 1
+    indice = max((k for k, d in enumerate(debuts) if d <= position), default=0)
+
+    def parlante(k: int) -> str | None:
+        if not 0 <= k < len(lignes):
+            return None
+        ligne = lignes[k].strip(" .:–—-•*")
+        if not (3 < len(ligne) <= 160) or BRUIT_FIL.match(sans_accent(ligne)):
+            return None
+        return ligne
+
+    def nomme_le_voyage(ligne: str) -> bool:
+        """Une ligne qui nomme : assez longue, sans date, sans prix, sans mot-dièse."""
+        n = sans_accent(ligne)
+        if len(n.replace(" ", "")) < 8:
+            return False
+        if re.match(r"^[#@]|^en #", n):
+            return False
+        if re.match(r"^\d|^(?:tarif|prix|date|du \d|le \d)\b", n):
+            return False
+        return not re.search(r"\d[\d\s.,]*\s*(?:ar\b|ariary|mga|€|euros?)", n)
+
+    ligne = parlante(indice)
+    # Une ligne trop courte pour nommer quoi que ce soit — « 9 jours / 8 nuits »
+    # — ou qui donne la date ou le tarif : le nom est au-dessus.
+    if ligne and (len(sans_accent(ligne).replace(" ", "")) <= 24
+                  or not nomme_le_voyage(ligne)):
+        for k in range(indice - 1, max(-1, indice - 6), -1):
+            au_dessus = parlante(k)
+            if au_dessus and nomme_le_voyage(au_dessus):
+                return au_dessus[:160]
+    if ligne:
+        return ligne[:160]
+    for k in range(len(lignes)):
+        ligne = parlante(k)
+        if ligne:
+            return ligne[:160]
+    return None
+def circuits(texte: str, noms_de_lieux: list[str] | None = None) -> list[dict]:
+    """Le circuit vendu par une agence, lu par règles. [] si le texte n'en vend pas.
+
+    UN circuit par publication, jamais plus : une annonce qui cite deux durées
+    (« 3 jours à Nosy Be, ou 5 jours avec Nosy Iranja ») ne dit pas quel tarif
+    va avec laquelle, et fabriquer les deux mettrait un prix faux sur l'une.
+    """
+    jours, nuits, position = duree_de_circuit(texte)
+    if not jours:
+        return []
+    # ⚠ UNE OFFRE ANNONCE SA DURÉE D'ENTRÉE DE JEU. Mesuré sur les 233 agences
+    #   du 24/08/2026 : « Au-delà de 7 jours les prix seront adaptés » (une note
+    #   de bas de page d'un lodge) et « Ai-je besoin d'un visa… 15 jours » (une
+    #   FAQ) fabriquaient des circuits de 7 et 15 jours. Aucune vraie annonce ne
+    #   cache sa durée au-delà des premières lignes.
+    if position > 400:
+        return []
+    n = sans_accent(texte)
+    if not any(mot in n for mot in MOTS_OFFRE_CIRCUIT):
+        return []
+    titre = _titre_de_circuit(texte, position)
+    if not titre:
+        return []
+
+    etapes = etapes_citees(texte, noms_de_lieux or [])
+    prix = prix_de_circuit(texte)
+    inclus = inclusions(texte)
+
+    depart = None
+    explicite = re.search(r"depart\s*[:–—-]\s*([^\n]{3,60})", n)
+    if explicite:
+        # « Départ : INSTAT ANOSY 7h00 » — l'heure n'est pas le lieu.
+        depart = re.sub(r"\s*\d{1,2}\s*h\s*\d{0,2}\s*$", "",
+                        explicite.group(1)).strip(" .,;–—-")
+    elif len(etapes) >= 2:
+        depart = etapes[0]
+    arrivee = etapes[-1] if len(etapes) >= 2 and etapes[-1] != depart else None
+
+    morceaux = [f"{jours} jour(s)" + (f" / {nuits} nuit(s)" if nuits else "")]
+    if etapes:
+        morceaux.append("Étapes : " + " → ".join(etapes[:8]))
+    if inclus:
+        morceaux.append("Inclus : " + ", ".join(inclus))
+    return [{
+        "titre": titre,
+        "resume": ". ".join(morceaux)[:600],
+        "jours": jours,
+        "nuits": nuits,
+        "prix_ar": prix["montant"] if prix else None,
+        "prix_unite": prix["unite"] if prix else "personne",
+        "base_personnes": None,
+        "depart": depart,
+        "arrivee": arrivee,
+        "transports": transports_cites(texte),
+        "inclus": inclus,
+    }]
+
+
+# ── Location de véhicules ───────────────────────────────────────────────────
+# Un loueur publie une grille comme un hôtel : un libellé, un prix. Ce qui
+# change, c'est l'unité (le jour, jamais la nuit) et le vocabulaire (chauffeur,
+# carburant, caution).
+#
+# ⚠ LES CLÉS SONT EXACTEMENT LES VALEURS DE LA CONTRAINTE
+#   `vehicle_offers.vehicle_type` (migration 0114). En inventer une ferait
+#   échouer l'INSERT ENTIER côté Diako, pas seulement la ligne fautive.
+# ⚠ MESURÉ SUR LES 58 ANNONCES DU 24/08/2026 : pas une seule ne produisait
+#   d'offre. Trois causes, toutes de vocabulaire — « 4×4 » et « 4*4 » écrits
+#   avec une étoile ou un signe multiplier, « SUV 4WD » qui ne dit jamais
+#   « 4x4 », et « voiture »/« véhicule » tout court, qui est la façon normale
+#   d'annoncer une location à Madagascar.
+TYPES_VEHICULE = {
+    "4x4": (r"4\s?[x*×]\s?4", r"pick[ -]?up", r"tout[- ]terrain", r"4\s?wd",
+            r"\bsuv\b"),
+    "berline": (r"berlines?",),
+    "citadine": (r"citadines?",),
+    "minibus": (r"mini[- ]?bus",),
+    "van": (r"\bvans?\b", r"fourgons?"),
+    "moto": (r"\bmotos?\b", r"scooters?"),
+    "quad": (r"\bquads?\b",),
+    "bateau": (r"bateaux?", r"vedettes?", r"hors[- ]bord"),
+    "velo": (r"\bvelos?\b", r"\bvtt\b", r"bicyclettes?"),
+    "camion": (r"camions?",),
+    # ⚠ EN DERNIER, TOUJOURS. `_type_vehicule` rend le premier type qui
+    #   correspond : placé plus haut, « voiture » raflerait les 4x4 et les
+    #   minibus, qui sont aussi des voitures. 'autre' est une valeur de la
+    #   contrainte `vehicle_offers_vehicle_type`, pas un bouche-trou.
+    "autre": (r"\bvoitures?\b", r"\bautos?\b", r"\bvehicules?\b",
+              r"tete de cortege"),
+}
+
+# Un nom de modèle connu sert deux fois : il remplit `model`, et il dit le type
+# quand la ligne ne le dit pas — « Hilux 250 000 Ar/jour » EST un 4x4, même si
+# le mot « 4x4 » n'apparaît pas sur la ligne.
+MODELES_VEHICULE = {
+    "hilux": "4x4", "land cruiser": "4x4", "landcruiser": "4x4", "prado": "4x4",
+    "pajero": "4x4", "defender": "4x4", "ranger": "4x4", "navara": "4x4",
+    "everest": "4x4", "sprinter": "minibus", "crafter": "minibus",
+    "coaster": "minibus", "starex": "van",
+    # Relevés dans les annonces réelles : ce sont EUX que les loueurs citent,
+    # bien plus souvent que le mot « 4x4 ».
+    "sorento": "4x4", "santa fe": "4x4", "tucson": "4x4", "galloper": "4x4",
+    "terios": "4x4", "rav4": "4x4", "duster": "4x4", "jimny": "4x4",
+    "patrol": "4x4", "x-trail": "4x4", "captiva": "4x4",
+    "picanto": "citadine",
+    "hiace": "minibus",
+}
+
+# « 250 000 Ar/jour », « 250 000 par jour », « 250 000 Ar isan'andro ». La
+# devise est optionnelle ICI seulement : le contexte (un véhicule + « par
+# jour ») est assez fort pour qu'un montant nu soit un prix, pas une année.
+MOTIF_PRIX_JOUR = re.compile(
+    r"(?P<nombre>\d[\d\s.,  ]{2,12})\s*(?:ar\b|ariary|mga)?\s*"
+    r"(?:/\s?j(?:our)?\b|par jour|le jour|la journee|isan[’' -]?andro)"
+)
+
+
+def _type_vehicule(n: str) -> tuple[str | None, str | None]:
+    """(type, modèle) lus dans un fragment normalisé. (None, None) si rien de sûr.
+
+    ⚠ « AUTRE » NE DOIT JAMAIS ÉCRASER UN MODÈLE CONNU. Le mot « véhicule »
+      apparaît dans presque toutes les annonces : sans cette règle, un
+      « Hyundai Tucson avec chauffeur privé » sortait en type 'autre' alors que
+      le modèle dit clairement un 4x4.
+
+    ⚠ ET UN MODÈLE D'UN AUTRE TYPE N'EST PAS LE MODÈLE DE CE VÉHICULE.
+      « Starex, 4*4, bus et tête de cortège » énumère une flotte : coller
+      « Starex » (un van) sur le type 4x4 fabriquerait un véhicule qui n'existe
+      pas. Dans le doute, on garde le type et on lâche le modèle.
+    """
+    modele, type_du_modele = None, None
+    for nom, type_deduit in MODELES_VEHICULE.items():
+        if re.search(rf"\b{re.escape(nom)}\b", n):
+            modele, type_du_modele = nom.title(), type_deduit
+            break
+    for code, motifs in TYPES_VEHICULE.items():
+        if any(re.search(motif, n) for motif in motifs):
+            if code == "autre" and type_du_modele:
+                return type_du_modele, modele
+            return code, (modele if type_du_modele in (None, code) else None)
+    return (type_du_modele, modele) if type_du_modele else (None, None)
+def _prix_par_jour(fragment: str) -> int | None:
+    """Le prix journalier d'un fragment, ou None. Jamais un montant sans « jour »."""
+    n = sans_accent(MOTIF_TEL.sub(" ", fragment))
+    trouve = MOTIF_PRIX_JOUR.search(n)
+    if trouve:
+        valeur = _nombre(trouve.group("nombre"))
+        if valeur and 3_000 <= valeur <= 5_000_000:
+            return int(valeur)
+    # « Tarif par jour : 250 000 Ar » — le mot « jour » précède le montant.
+    # `montants()` regarde une fenêtre avant ET après : on le laisse trancher.
+    par_jour = [m for m in montants(fragment) if m["unite"] == "jour"
+                and 3_000 <= m["montant"] <= 5_000_000]
+    return par_jour[0]["montant"] if par_jour else None
+
+
+def _attributs_vehicule(n: str) -> dict:
+    """Chauffeur, carburant, caution, places, km — lus dans un fragment normalisé.
+
+    ⚠ CHAQUE ATTRIBUT NON DIT RESTE None. `vehicle_offers.with_driver` a un
+      défaut en base (true — c'est la norme à Madagascar) : c'est à la base de
+      l'appliquer, pas à nous d'écrire « avec chauffeur » qu'on n'a pas lu.
+    """
+    sortie: dict = {"avec_chauffeur": None, "carburant_inclus": None,
+                    "caution_ar": None, "places": None, "km_par_jour": None}
+    avec = bool(re.search(r"avec chauffeur", n))
+    sans = bool(re.search(r"sans chauffeur|auto[- ]conduite|self[- ]?drive", n))
+    # ⚠ « disponibles avec chauffeur OU sans chauffeur » : les deux sont vrais,
+    #   donc aucun ne l'est. Le premier test gagnait, et Locamad Nosy Be
+    #   partait en base « avec chauffeur » alors qu'il propose les deux.
+    if avec and not sans:
+        sortie["avec_chauffeur"] = True
+    elif sans and not avec:
+        sortie["avec_chauffeur"] = False
+
+    # 🔴 LA NÉGATION D'ABORD. « Carburant non inclus » contient
+    #    « carburant … inclus » : le test positif gagnait, et TL Voyage partait
+    #    en base carburant compris alors que son annonce dit l'inverse.
+    if re.search(r"(?:hors|sans)\s+(?:carburant|essence|gasoil)"
+                 r"|(?:carburant|essence|gasoil|gazole|fuel)[^.\n]{0,14}"
+                 r"(?:non inclus|non compris|en sus|a (?:votre |la )?charge)", n):
+        sortie["carburant_inclus"] = False
+    elif re.search(r"(?:carburant|essence|gasoil|gazole|fuel)[^.\n]{0,14}"
+                   r"(?:inclus|compris)", n):
+        sortie["carburant_inclus"] = True
+
+    caution = re.search(
+        r"(?:caution|depot de garantie|garantie)\D{0,14}"
+        r"(\d[\d\s.,  ]{2,12})\s*(?:ar\b|ariary|mga)?", n
+    )
+    if caution:
+        valeur = _nombre(caution.group(1))
+        if valeur and 10_000 <= valeur <= 50_000_000:
+            sortie["caution_ar"] = int(valeur)
+
+    places = re.search(r"(\d{1,2})\s*places", n)
+    if places and 1 <= int(places.group(1)) <= 70:
+        sortie["places"] = int(places.group(1))
+
+    km = re.search(r"(\d{2,4})\s*km\s*(?:/|par)?\s*jour", n)
+    if km:
+        sortie["km_par_jour"] = int(km.group(1))
+    return sortie
+
+
+# Le mot qui dit que le tarif est journalier. Il n'est presque jamais sur la
+# même ligne que le montant : « 100 000 Ar en ville » puis, deux lignes plus
+# bas, « (Journée de 8h à 18h) ».
+MOTS_JOURNEE = (r"journee|par jour|/\s?jour|le jour|isan[’' -]?andro"
+                r"|24\s?h\s?/\s?24|jour et nuit")
+
+# Un loueur qui ne chiffre pas dit quand même quelque chose du prix. C'est
+# `vehicle_offers.price_note`, et c'est mieux qu'une fiche vide : « tarif à
+# discuter » se lit, « NULL » ne se lit pas.
+MOTIFS_NOTE_PRIX = (
+    r"tarifs?[^.\n]{0,30}(?:a discuter|negociable|sur demande|sur devis|abordable)",
+    r"prix[^.\n]{0,34}(?:abordable|negociable|a discuter|sur demande|sur devis)",
+    r"a partir de\s*\d[\d\s.,\u202f\u00a0]{2,12}\s*(?:ar\b|ariary|mga)",
+)
+
+
+def _note_de_prix(texte: str) -> str | None:
+    """Ce que l'annonce dit du prix quand elle ne le chiffre pas.
+
+    ⚠ « À PARTIR DE 155 000 AR » SE LIT LIGNE PAR LIGNE, ET SUR UNE LIGNE QUI
+      PARLE DE VÉHICULE. Mesuré : la même tournure ouvre un tarif de bungalow
+      chez un écolodge et un pack voyage d'études à 235 000 Ar par personne.
+      Les deux entraient dans `vehicle_offers`. Un tarif par personne n'est
+      jamais une location de véhicule : elle se loue au véhicule.
+    """
+    for brute in texte.split("\n"):
+        ligne = brute.strip()
+        if not ligne or len(ligne) > 200:
+            continue
+        n = sans_accent(ligne)
+        for rang, motif in enumerate(MOTIFS_NOTE_PRIX):
+            trouve = re.search(motif, n)
+            if not trouve:
+                continue
+            if rang == 2:                       # « à partir de X Ar »
+                if re.search(r"\bpers\b|personne|adulte|enfant", n):
+                    continue
+                if not _type_vehicule(n)[0]:
+                    continue
+            brut = (ligne[trouve.start():trouve.end()] if len(n) == len(ligne)
+                    else trouve.group(0))
+            return brut.strip(" .;:-")[:200]
+    return None
+def _grille_en_bloc(texte: str) -> tuple[int | None, str | None]:
+    """Les tarifs listés sous « Nos tarifs », le mot « jour » étant ailleurs.
+
+    🔴 C'EST LA MISE EN PAGE LA PLUS COURANTE DES LOUEURS, et elle ne donnait
+       rien : `montants()` ne cherche l'unité que dans les 40 signes qui
+       entourent le montant, or « (Journée de 8h à 18h) » arrive deux lignes
+       plus bas. On accepte donc le journalier au niveau du TEXTE, à condition
+       que chaque ligne retenue ne soit qu'un montant et son étiquette.
+
+    Rend (prix le plus bas, note reprenant toutes les lignes).
+    """
+    n = sans_accent(texte)
+    if not re.search(MOTS_JOURNEE, n):
+        return None, None
+    retenues = []
+    for brute in texte.split("\n"):
+        ligne = brute.strip()
+        if not ligne or len(ligne) > 120 or MOTIF_TEL.search(ligne):
+            continue
+        # Un tarif « par personne » est une excursion, pas une location : un
+        # véhicule se loue au véhicule. Sans ce tri, « Adulte : 95 000 Ar /
+        # personne » devenait le prix journalier d'un bateau.
+        if re.search(r"\bpers\b|personne|adulte|enfant",
+                     sans_accent(ligne)):
+            continue
+        trouve = re.fullmatch(
+            r"[^\d]{0,20}(\d[\d\s.,\u202f\u00a0]{2,12})\s*"
+            r"(?:ar\b|ariary|mga)[^\d]{0,30}", sans_accent(ligne)
+        )
+        if not trouve:
+            continue
+        valeur = _nombre(trouve.group(1))
+        if valeur and 3_000 <= valeur <= 5_000_000:
+            retenues.append((int(valeur), ligne))
+    if not retenues:
+        return None, None
+    return min(v for v, _ in retenues), " ; ".join(l for _, l in retenues)[:200]
+
+
+def lignes_vehicule(texte: str) -> list[dict]:
+    """La grille tarifaire d'un loueur : un type de véhicule, un prix PAR JOUR.
+
+    Même discipline que les chambres : un montant sans « jour » à côté n'est pas
+    un tarif de location — c'est peut-être le prix de vente du véhicule, et le
+    confondre mettrait 45 000 000 Ar la journée sur une fiche.
+
+    ⚠ LE TÉLÉPHONE EST EFFACÉ D'ABORD, comme partout : « 034 12 345 67 »
+      ressemble à un prix, et les annonces de loueurs en portent toujours un.
+
+    Quatre passes, de la plus sûre à la plus large :
+      ① ligne par ligne — « 4x4 Hilux avec chauffeur : 250 000 Ar/jour » ;
+      ② tout le texte — beaucoup d'annonces décrivent UN véhicule en prose,
+        avec le prix trois lignes plus bas. On n'accepte ce repli que si le
+        texte ne parle que d'UN type : deux types et un seul prix, on ne sait
+        pas à qui il va ;
+      ③ la grille en bloc — « Nos tarifs : à partir de / 100 000 Ar en ville /
+        250 000 Ar en province / (Journée de 8h à 18h) » ;
+      ④ la fiche de flotte sans tarif. `price_day_ar` est NULLABLE en prod :
+        un loueur avec son modèle, ses places et « tarif à discuter » vaut
+        mieux qu'un loueur absent — et c'est ce que dit l'annonce.
+    """
+    propre = MOTIF_TEL.sub(" ", texte)
+    trouvees = []
+    for ligne_brute in propre.split("\n"):
+        ligne = ligne_brute.strip()
+        if not ligne or len(ligne) > 220:
+            continue
+        n = sans_accent(ligne)
+        type_v, modele = _type_vehicule(n)
+        if not type_v:
+            continue
+        prix = _prix_par_jour(ligne)
+        if prix is None:
+            continue
+        trouvees.append({
+            "type_vehicule": type_v, "modele": modele,
+            "prix_jour_ar": prix, **_attributs_vehicule(n),
+        })
+
+    n_texte = sans_accent(propre)
+    types_presents = {
+        code for code, motifs in TYPES_VEHICULE.items()
+        if any(re.search(motif, n_texte) for motif in motifs)
+    }
+    type_v, modele = _type_vehicule(n_texte)
+    un_seul_type = type_v and len({t for t in types_presents if t != "autre"}) <= 1
+    # ⚠ « VÉHICULE » TOUT SEUL N'EST PAS UN ANCRAGE. Mesuré : un voyage
+    #   organisé « à partir de 1 450 000 Ariary » entrait dans `vehicle_offers`
+    #   parce que son texte disait « véhicule » quelque part. Sur les passes
+    #   larges, il faut un type précis ou un modèle nommé.
+    ancre_sure = un_seul_type and (type_v != "autre" or modele)
+    # Et le texte doit parler de LOUER. Un hôtel qui emmène ses clients en
+    # bateau ne loue pas de bateau : c'est une excursion, pas une flotte.
+    loue = bool(re.search(r"\blouer\b|\blocation|\blou(?:e|ons|ez)\b"
+                          r"|\brent(?:al|-a-car)?\b", n_texte))
+
+    if not trouvees and ancre_sure:
+        en_prose = _prix_par_jour(propre)
+        en_bloc, note = _grille_en_bloc(propre)
+        # ⚠ LE PLUS BAS DES DEUX, comme partout ailleurs. « 100 000 Ar en ville /
+        #   250 000 Ar en province » : la lecture en prose attrapait 250 000
+        #   (le seul montant collé au mot « journée ») et affichait le tarif le
+        #   plus cher comme prix d'appel du loueur.
+        candidats = [p for p in (en_prose, en_bloc) if p is not None]
+        if candidats:
+            trouvees.append({
+                "type_vehicule": type_v, "modele": modele,
+                "prix_jour_ar": min(candidats),
+                "note_prix": note if en_bloc is not None else None,
+                **_attributs_vehicule(n_texte),
+            })
+
+    if not trouvees and type_v and loue and (type_v != "autre" or modele):
+        attributs = _attributs_vehicule(n_texte)
+        note = _note_de_prix(propre)
+        # ⚠ PAS DE FICHE VIDE. Sans modèle, sans places et sans un mot sur le
+        #   prix, il ne reste que « quelqu'un loue un véhicule » — ça n'aide
+        #   personne et ça encombre la fiche du loueur.
+        if modele or attributs.get("places") or note:
+            trouvees.append({
+                "type_vehicule": type_v, "modele": modele, "prix_jour_ar": None,
+                "note_prix": note, **attributs,
+            })
+
+    # Les attributs écrits une fois pour toute l'annonce (« toutes nos voitures
+    # partent avec chauffeur ») valent pour les lignes qui ne disent rien.
+    if trouvees:
+        globaux = _attributs_vehicule(n_texte)
+        for ligne in trouvees:
+            for cle in ("avec_chauffeur", "carburant_inclus", "caution_ar"):
+                if ligne.get(cle) is None:
+                    ligne[cle] = globaux[cle]
+
+    # Deux fois le même couple (type, prix) = une répétition de mise en page.
+    vus, propres = set(), []
+    for ligne in trouvees:
+        cle = (ligne["type_vehicule"], ligne.get("modele"), ligne["prix_jour_ar"])
+        if cle in vus:
+            continue
+        vus.add(cle)
+        propres.append(ligne)
+    return propres
+# ── Droits d'entrée d'un site ou d'un parc ──────────────────────────────────
+# `attractions` porte fee_resident_ar / fee_nonresident_ar / guide_required /
+# guide_fee_group_ar — toutes vides aujourd'hui. C'est ici qu'on les lit.
+_FRAIS = r"(\d[\d\s.,  ]{2,10})\s*(?:ar\b|ariary|mga)?"
+# ⚠ LE SÉPARATEUR NE PEUT PAS ÊTRE UN « + ». « (étranger + 20.000 Ar) » est le
+#   supplément payé par un vazaha sur un forfait, pas son droit d'entrée : lu
+#   comme un tarif, il donnait un parc à 20 000 Ar pour les étrangers et rien
+#   pour les résidents.
+_SEPARATEUR = r"[^\w+]{0,12}"
+
+# Un prix annoncé au milieu d'une offre n'est pas un droit d'entrée : il
+# comprend le bateau, le guide et le déjeuner. Ces mots disqualifient la ligne.
+MOTS_PAS_UN_DROIT = (r"excursion|transfert|tout compris|\bpack\b|circuit"
+                     r"|sejour|pension|hebergement|bungalow|forfait")
+
+# 🔴 ET LE CHAPEAU DISQUALIFIE TOUT CE QUI SUIT. « Voici le tarif de nos
+#    excursions (par personne) » ouvre une liste d'îles ; trois lignes plus bas,
+#    « Komba et Tanikely : Malagasy 110.000ar / étranger 155.000ar » ne dit plus
+#    qu'il s'agit d'une sortie en bateau déjeuner compris. C'était la SEULE
+#    lecture de droits d'entrée du corpus, et elle était fausse.
+MOTIF_OFFRE_VENDUE = re.compile(
+    r"tarifs?\s+(?:de\s+)?(?:nos|notre|des|du)\s+"
+    r"(?:excursions?|circuits?|sejours?|packs?|forfaits?|voyages?)"
+    r"|prix\s+(?:de\s+)?(?:nos|notre)\s+(?:excursions?|circuits?|sejours?)"
+)
+_MOTS_NONRESIDENT = r"(?:vazaha|etranger(?:e|s|es)?|non[- ]residents?|touristes? etrangers?)"
+_MOTS_RESIDENT = r"(?:residents?|malagasy|malgaches?|\bgasy\b|nationaux)"
+
+
+def _frais_valide(brut: str, mini: int = 500, maxi: int = 1_000_000) -> int | None:
+    valeur = _nombre(brut)
+    if valeur is None or not mini <= valeur <= maxi:
+        return None
+    # « Édition 2026 » n'est pas un droit d'entrée à 2 026 Ar.
+    if re.fullmatch(r"(19|20)\d{2}", re.sub(r"\D", "", brut)):
+        return None
+    return int(valeur)
+
+
+def droits_entree(texte: str, nom_du_site: str = "") -> dict:
+    """Droits d'entrée et guide d'un parc, tels que le texte les donne.
+
+    Rend {"resident_ar", "nonresident_ar", "guide_obligatoire", "guide_groupe_ar"} —
+    chaque champ None quand le texte ne le dit pas.
+
+    ⚠ UN PRIX SANS ÉTIQUETTE VA AUX RÉSIDENTS, et c'est un choix assumé : sur
+      les pages malgaches, le tarif écrit sans précision est celui de tout le
+      monde ou des locaux, et le tarif vazaha est TOUJOURS étiqueté quand il
+      diffère (c'est l'argument de vente inverse). L'écriture en base ne
+      remplit de toute façon qu'une colonne NULL — une erreur se corrige, elle
+      n'écrase rien.
+
+    🔴 ET UNE LISTE DE PLUSIEURS PARCS NE SE LIT PAS AU HASARD. Mesuré le
+       24/08/2026 sur les 361 trouvailles rapprochées d'un site : la seule qui
+       donnait deux tarifs était « Iranja : Malagasy 110.000ar / étranger
+       155.000ar » suivi de deux autres îles à des prix différents, écrite sur
+       la fiche du parc de Nosy Tanikely. On cherche donc d'abord la ligne qui
+       NOMME le site ; à défaut, on n'accepte qu'un texte qui ne donne qu'un
+       seul tarif — sinon on ne sait pas lequel appartient à qui.
+    """
+    if MOTIF_OFFRE_VENDUE.search(sans_accent(texte)):
+        return {"resident_ar": None, "nonresident_ar": None,
+                "guide_obligatoire": None, "guide_groupe_ar": None}
+    lignes = [l for l in MOTIF_TEL.sub(" ", texte).split("\n") if l.strip()]
+
+    # ① La ligne qui nomme le site : c'est la seule lecture non ambiguë.
+    jetons = [j for j in re.split(r"\W+", sans_accent(nom_du_site)) if len(j) >= 4]
+    if jetons:
+        for ligne in lignes:
+            n = sans_accent(ligne)
+            if any(j in n for j in jetons) and re.search(r"\d{3}", n):
+                lu = _tarifs_du_fragment(n)
+                if lu["resident_ar"] or lu["nonresident_ar"]:
+                    lu.update(_guide_du_texte(sans_accent(texte)))
+                    return lu
+
+    # ② Sinon le texte entier, mais seulement s'il ne parle que d'un tarif.
+    n_texte = sans_accent(MOTIF_TEL.sub(" ", texte))
+    sortie = _tarifs_du_fragment(n_texte)
+    for cle, mots in (("resident_ar", _MOTS_RESIDENT),
+                      ("nonresident_ar", _MOTS_NONRESIDENT)):
+        valeurs = set()
+        for trouve in re.finditer(rf"{mots}{_SEPARATEUR}{_FRAIS}", n_texte):
+            valeur = _frais_valide(trouve.group(1))
+            if valeur:
+                valeurs.add(valeur)
+        if len(valeurs) > 1:
+            sortie[cle] = None
+    sortie.update(_guide_du_texte(n_texte))
+    return sortie
+
+
+def _tarifs_du_fragment(n: str) -> dict:
+    """Les deux tarifs d'un fragment déjà normalisé. Ni guide, ni ambiguïté."""
+    sortie = {"resident_ar": None, "nonresident_ar": None,
+              "guide_obligatoire": None, "guide_groupe_ar": None}
+    # 🔴 MESURÉ : la seule trouvaille qui donnait deux tarifs de parc était
+    #    « voici le tarif de nos excursions (par personne) : Iranja malagasy
+    #    110.000ar / étranger 155.000ar ». C'est le prix d'une sortie en bateau
+    #    déjeuner compris, pas le droit d'entrée du parc — et il serait parti
+    #    dans `attractions.fee_resident_ar`.
+    if re.search(MOTS_PAS_UN_DROIT, n):
+        return sortie
+
+    # « vazaha : 55 000 Ar » et la forme inverse « 55 000 Ar pour les vazaha ».
+    pour = re.search(rf"{_MOTS_NONRESIDENT}{_SEPARATEUR}{_FRAIS}", n) or \
+        re.search(rf"{_FRAIS}\s*(?:ar\b|ariary|mga)?[^.\n]{{0,16}}{_MOTS_NONRESIDENT}", n)
+    if pour:
+        sortie["nonresident_ar"] = _frais_valide(pour.group(1))
+
+    local = re.search(rf"{_MOTS_RESIDENT}{_SEPARATEUR}{_FRAIS}", n) or \
+        re.search(rf"{_FRAIS}\s*(?:ar\b|ariary|mga)?[^.\n]{{0,16}}{_MOTS_RESIDENT}", n)
+    if local:
+        sortie["resident_ar"] = _frais_valide(local.group(1))
+
+    # « Droit d'entrée : 10 000 Ar » sans distinction. La devise est EXIGÉE ici :
+    # sans elle, « entrée 2 » (une deuxième entrée au menu) ferait un tarif.
+    if sortie["resident_ar"] is None and sortie["nonresident_ar"] is None:
+        generique = re.search(
+            r"(?:droits? d[’']entree|frais d[’']entree|ticket d[’']entree|entree)"
+            r"\s*[:\-–—]?\s*(\d[\d\s.,\u202f\u00a0]{2,10})\s*(?:ar\b|ariary|mga)", n
+        )
+        if generique:
+            sortie["resident_ar"] = _frais_valide(generique.group(1))
+    return sortie
+
+
+def _guide_du_texte(n: str) -> dict:
+    """Ce que le texte dit du guide. Vaut pour tout le parc, pas pour une ligne."""
+    sortie: dict = {}
+    if re.search(r"guide (?:local |accompagnateur )?(?:est |y est )?obligatoire"
+                 r"|avec guide obligatoire", n):
+        sortie["guide_obligatoire"] = True
+    guide = re.search(rf"(?:frais de )?guide\b[^.\n\d]{{0,24}}{_FRAIS}", n)
+    if guide:
+        valeur = _frais_valide(guide.group(1), 1_000, 2_000_000)
+        if valeur:
+            sortie["guide_groupe_ar"] = valeur
+    return sortie
 # ── Dates d'événement ───────────────────────────────────────────────────────
 MOIS = {
     "janvier": 1, "janv": 1, "jan": 1, "fevrier": 2, "fev": 2, "mars": 3,
@@ -684,9 +1949,13 @@ MOIS = {
     "jolay": 7, "aogositra": 8, "septambra": 9, "oktobra": 10, "novambra": 11,
     "desambra": 12,
 }
+# ⚠ « saison » seul n'y est plus : « en haute saison nos bungalows sont à
+#   200 000 Ar » rendait un événement ANNUEL (36 événements marqués récurrents
+#   le 02/09/2026). Une saison se dit « de juin à septembre ».
 MOTS_PERIODE = (
-    "chaque annee", "chaque année", "tous les ans", "isan-taona", "saison",
+    "chaque annee", "chaque année", "tous les ans", "isan-taona", "chaque saison",
     "de juin a septembre", "tous les samedis", "chaque semaine", "isaky ny",
+    "edition annuelle", "annuel",
 )
 
 
@@ -704,43 +1973,61 @@ def dates_evenement(texte: str, aujourdhui: date | None = None) -> dict:
 
     resultat["recurrent"] = any(m in n for m in MOTS_PERIODE)
 
+    # ⚠ TOUS LES CANDIDATS, pas le premier. « Nous fêtons nos 10 ans le 20
+    #   septembre » : `re.search` s'arrêtait sur « 10 ans », qui n'est pas un
+    #   mois, et la vraie date était perdue.
     # « du 12 au 15 septembre 2026 » / « du 12 au 15 septembre »
-    plage = re.search(
+    for plage in re.finditer(
         r"du\s+(\d{1,2})\s*(?:er)?\s*(?:au|-|–)\s*(\d{1,2})\s+([a-z]+)\.?\s*(\d{4})?", n
-    )
-    if plage and plage.group(3) in MOIS:
+    ):
+        if plage.group(3) not in MOIS:
+            continue
         mois = MOIS[plage.group(3)]
         annee = int(plage.group(4)) if plage.group(4) else _annee_probable(
             mois, int(plage.group(1)), aujourdhui)
         try:
             resultat["debut"] = date(annee, mois, int(plage.group(1))).isoformat()
             resultat["fin"] = date(annee, mois, int(plage.group(2))).isoformat()
+            resultat["annee_devinee"] = not plage.group(4)
             return resultat
         except ValueError:
-            pass
+            continue
 
     # « le 14 septembre 2026 » / « 14 septembre »
-    simple = re.search(r"\b(\d{1,2})\s*(?:er)?\s+([a-z]{3,10})\.?\s*(\d{4})?", n)
-    if simple and simple.group(2) in MOIS:
+    for simple in re.finditer(r"\b(\d{1,2})\s*(?:er)?\s+([a-z]{3,10})\.?\s*(\d{4})?", n):
+        if simple.group(2) not in MOIS:
+            continue
         mois = MOIS[simple.group(2)]
         annee = int(simple.group(3)) if simple.group(3) else _annee_probable(
             mois, int(simple.group(1)), aujourdhui)
         try:
             resultat["debut"] = date(annee, mois, int(simple.group(1))).isoformat()
+            resultat["annee_devinee"] = not simple.group(3)
             return resultat
         except ValueError:
-            pass
+            continue
 
     # « 14/09/2026 » ou « 14-09-26 »
-    chiffree = re.search(r"\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\b", n)
-    if chiffree:
+    for chiffree in re.finditer(r"\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\b", n):
         jour, mois, annee = (int(g) for g in chiffree.groups())
         annee = annee + 2000 if annee < 100 else annee
         try:
             resultat["debut"] = date(annee, mois, jour).isoformat()
             return resultat
         except ValueError:
-            pass
+            continue
+
+    # « le 12/09 » sans année
+    for courte in re.finditer(r"\b(\d{1,2})[/\-](\d{1,2})(?![/\-.\d])", n):
+        jour, mois = int(courte.group(1)), int(courte.group(2))
+        if not (1 <= mois <= 12 and 1 <= jour <= 31):
+            continue
+        try:
+            resultat["debut"] = date(_annee_probable(mois, jour, aujourdhui), mois, jour).isoformat()
+            resultat["annee_devinee"] = True
+            return resultat
+        except ValueError:
+            continue
 
     for mot, mois in MOIS.items():
         if re.search(rf"\b{mot}\b", n) and len(mot) > 3:
@@ -779,13 +2066,30 @@ def lieu_dans_le_texte(texte: str, noms_connus: list[str]) -> str | None:
       qui a rangé six îles distinctes sous une seule fiche lors de l'import des
       photos d'archive.
     """
-    n = sans_accent(texte)
+    # ⚠ NFKD ET TRAITS D'UNION APLANIS DES DEUX CÔTÉS : « Nosy-Be », « Sainte
+    #   Marie » et « 𝗡𝗢𝗦𝗬 𝗕𝗘 » ne trouvaient pas « Nosy Be » ni « Sainte-Marie »
+    #   — 236 trouvailles sans lieu alors que le texte le citait (02/09/2026).
+    #   Et `cle in n` AVANT la regex : 11 000 `re.search` par publication
+    #   coûtaient 300 ms, le pré-test divise par vingt.
+    n = _norme_lieu(texte)
     for nom in noms_connus:
-        if len(nom) < 4:
+        cle = _norme_lieu(nom)
+        if len(cle) < 4 or cle in LIEUX_TROP_LARGES_POUR_UN_LIEU or cle not in n:
             continue
-        if re.search(rf"\b{re.escape(sans_accent(nom))}\b", n):
+        if re.search(rf"(?<![a-z0-9]){re.escape(cle)}(?![a-z0-9])", n):
             return nom
     return None
+
+
+LIEUX_TROP_LARGES_POUR_UN_LIEU = {"madagascar", "madagasikara", "mada"}
+
+
+def _norme_lieu(texte: str) -> str:
+    plat = "".join(
+        c for c in unicodedata.normalize("NFKD", texte or "")
+        if unicodedata.category(c) != "Mn"
+    ).lower()
+    return re.sub(r"\s+", " ", re.sub(r"[-'’.]+", " ", plat)).strip()
 
 
 # ── Assemblage ──────────────────────────────────────────────────────────────
@@ -800,6 +2104,20 @@ def analyser(texte: str, nb_photos: int = 0, auteur_page: str | None = None,
     tels = telephones(texte)
     adresses = liens(texte)
     prix = prix_principal(texte, cats)
+
+    # La grille d'un loueur ne se cherche que chez un loueur : sur un récit de
+    # voyage, « on a loué un 4x4 à 400 000 Ar la journée » est un prix vécu,
+    # pas une offre — le mettre dans `vehicle_offers` inventerait un loueur.
+    vehicules = lignes_vehicule(texte) if any(
+        c in cats for c in ("location_vehicule", "transporteur")
+    ) else []
+
+    # ⭐ LES CIRCUITS D'AGENCE, PAR RÈGLES. `lignes_circuit` n'avait qu'un seul
+    #   producteur, `analyse_llm.py` : passerelle en panne = zéro circuit, et
+    #   `tours` est restée vide. Même garde que pour les véhicules — on ne
+    #   cherche un circuit que chez une agence, sinon un récit de vacances
+    #   (« trois jours à Nosy Be ») deviendrait un produit à vendre.
+    tours = circuits(texte, noms_de_lieux or []) if "agence_voyage" in cats else []
 
     return {
         "genre": genre,
@@ -818,6 +2136,8 @@ def analyser(texte: str, nb_photos: int = 0, auteur_page: str | None = None,
         "prix_ar": prix["montant"] if prix else None,
         "prix_unite": prix["unite"] if prix else None,
         "lignes_carte": plats,
+        "lignes_circuit": tours,
+        "lignes_vehicule": vehicules,
         "evt_debut": dates["debut"],
         "evt_fin": dates["fin"],
         "evt_recurrent": dates["recurrent"],
@@ -827,7 +2147,8 @@ def analyser(texte: str, nb_photos: int = 0, auteur_page: str | None = None,
 
 
 def analyser_site(texte: str, titre_page: str = "", nom_connu: str = "",
-                  noms_de_lieux: list[str] | None = None) -> dict:
+                  noms_de_lieux: list[str] | None = None,
+                  taux: dict | None = None) -> dict:
     """Lecture d'un SITE d'établissement. Toujours un établissement, jamais un récit.
 
     La différence avec Facebook n'est pas le vocabulaire, c'est la nature de
@@ -844,12 +2165,20 @@ def analyser_site(texte: str, titre_page: str = "", nom_connu: str = "",
         # des nuits. Le titre de la page tranche souvent.
         cats = categories(titre_page)
 
-    chambres = types_de_chambre(texte)
+    chambres = types_de_chambre(texte, taux)
     plats = _plats_hors_chambres(lignes_de_carte(texte), chambres)
     if chambres and "hotel" not in cats:
         cats = cats + ["hotel"]
     if plats and "restaurant" not in cats:
         cats = cats + ["restaurant"]
+
+    # Un site de loueur affiche sa grille comme un hôtel ses chambres.
+    vehicules = lignes_vehicule(texte) if any(
+        c in cats for c in ("location_vehicule", "transporteur")
+    ) else []
+    if vehicules and "location_vehicule" not in cats:
+        cats = cats + ["location_vehicule"]
+    tours = circuits(texte, noms_de_lieux or []) if "agence_voyage" in cats else []
 
     tels = telephones(texte)
     adresses = liens(texte)
@@ -892,6 +2221,8 @@ def analyser_site(texte: str, titre_page: str = "", nom_connu: str = "",
         "prix_unite": prix["unite"] if prix else None,
         "lignes_carte": plats,
         "lignes_chambre": chambres,
+        "lignes_circuit": tours,
+        "lignes_vehicule": vehicules,
         "evt_debut": None, "evt_fin": None, "evt_recurrent": False,
         "titre_evt": None, "post_genre": "photo",
     }

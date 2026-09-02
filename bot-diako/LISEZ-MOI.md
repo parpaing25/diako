@@ -136,7 +136,7 @@ dans un hôtel.
 
 | Genre | Reconnu à | Va dans |
 |---|---|---|
-| **carte** | au moins 3 plats chiffrés | `menu_sections` + `menu_items` (+ `menu_photos`) |
+| **carte** | au moins 3 plats chiffrés | `menu_sections` + `menu_items` (+ `menu_photos`) — crée la fiche si elle manque, comme un établissement |
 | **evenement** | une **date** + un mot d'événement | `events` |
 | **etablissement** | une catégorie + un moyen de joindre + de quoi le situer | `pages` (créée ou complétée) |
 | **recit** | tout le reste | `posts`, sur le compte Diako |
@@ -190,8 +190,8 @@ passage, celui-ci **déroule plus loin dans les mêmes fils** — deux fois plus
 défilements. Les pauses, elles, ne changent pas : c'est la profondeur qui
 augmente, pas le rythme. Le bot ne devient donc pas plus agressif un jour creux.
 
-Un créneau raté reste rattrapable pendant 30 minutes. Deux collectes ne se
-chevauchent jamais.
+Un créneau raté reste dû jusqu'au créneau suivant (un bot relevé à 14 h 48
+fait la collecte de 11 h). Deux collectes ne se chevauchent jamais.
 
 > ⚠️ **Les collectes n'ont lieu que si le bot tourne.** L'horloge est dans le
 > bot, pas dans Windows. Voir « Garder les trois bots en vie » ci-dessous.
@@ -507,8 +507,7 @@ Toutes les colonnes passent donc par `coalesce(existant, nouveau)` :
 | Colonne | Règle |
 |---|---|
 | `phone`, `whatsapp`, `email`, `website`, `facebook`, `address`, `landmark` | remplie **seulement si vide** |
-| `short_desc` | remplacée seulement si elle fait **moins de 20 caractères** (le seuil du barème de complétude, migration 0040) |
-| `long_desc` | idem, en dessous de 80 caractères |
+| `short_desc`, `long_desc` | remplies **seulement si vides** (depuis le 02/09/2026 : le seuil « moins de 20 caractères » écrasait une description courte écrite à la main) |
 | `cover_url` | posée **seulement s'il n'y en a pas** |
 | `gallery` | **s'allonge**, sans jamais reprendre une URL déjà présente |
 | `categories` | **s'ajoutent** — un hôtel qui se révèle aussi restaurant doit sortir dans les deux recherches |
@@ -750,6 +749,106 @@ bot-diako/
         ├── publication.txt   texte d'origine
         └── trouvaille.json   champs extraits
 ```
+
+---
+
+## Audit du 02/09/2026 — ce qui a changé, et pourquoi
+
+Quatre relectures du code, chaque chiffre remesuré sur `data/bot.db` et sur la
+base Diako. Les corrections, par gravité :
+
+**Ce qui empêchait le bot de faire son travail**
+
+- **Les 333 fiches créées par le bot étaient invisibles sur le site.** Le
+  déclencheur `pages_avant_ecriture` force `is_published = false` hors d'un
+  compte administrateur, et l'API Management n'a pas de compte. Chaque lot
+  d'écriture s'exécute maintenant **au nom du compte Diako**
+  (`set_config('request.jwt.claims', …)`), et la publication **relit la ligne
+  écrite** sur toutes les voies (clic, lot, automate) — un `is_published`
+  resté à false est signalé en erreur. Les 333 déjà créées : voir
+  `docs/A-APPLIQUER.md` (76 sont des sosies probables de fiches existantes).
+- **311 trouvailles dormaient « en lecture » depuis dix jours.** Créées par le
+  navigateur, jamais terminées par l'atelier parce que la machine a tué le bot
+  entre les deux (redémarrages brutaux le 02/09 à 11 h 11, 13 h 23, 19 h 01).
+  Au démarrage, le bot retire maintenant ce qui est resté en lecture ; une
+  lecture qui lève passe en « incomplète » avec la raison.
+- **Le verrou navigateur partagé était corrompu** (68 octets nuls après un
+  redémarrage brutal) et **son résultat n'était pas lu** : `prendre()` rendait
+  False pour les trois bots, et Diako ouvrait Chromium quand même. Un fichier
+  illisible est traité comme un porteur mort ; le verrou est pris **et testé**
+  sur les quatre chemins qui ouvrent Chromium ; il se rafraîchit à chaque
+  source (une tournée dure 2 h 44, sa péremption était d'une heure).
+- **Les recherches Facebook étaient mortes à vie** : le premier lien `/posts/`
+  d'une page de résultats est l'adresse de la recherche elle-même, donc une
+  seule clé pour toute la page (2 trouvailles en dix jours). Le permalien
+  exige un identifiant et exclut `/search/` ; un défilement n'est stérile que
+  s'il ne montre **rien d'inédit** (pas seulement rien de retenu), avec quatre
+  tours de tolérance pour le fil et la recherche.
+- **34 sites sur 41 « illisibles » se refusaient eux-mêmes** : robots.txt
+  était lu avec l'agent `Python-urllib`, que les hébergeurs bloquent en 403,
+  et la stdlib traduit 403 par « tout interdit ». robots.txt est lu avec
+  `requests` et l'agent du bot ; 401/403/404/5xx valent autorisation. Chaque
+  échec a maintenant une **raison** (DNS mort, 404, certificat, délai…),
+  visible dans l'onglet Sources ; **quatre échecs de suite = un mois de
+  pause** (88 sites morts sur 250 mangeaient 35 % de chaque tournée).
+- **Un créneau manqué était perdu** au-delà de 30 minutes. Il reste dû
+  jusqu'au créneau suivant, et la marque n'est posée que si la collecte est
+  partie.
+
+**Ce qui écrivait faux, ou trop**
+
+- Republier une grille de chambres **supprimait** les types de même nom avant
+  de ne reposer que les chiffrés : une chambre relue sans prix effaçait un
+  tarif existant. On ne retire que ce qu'on repose, et le DELETE part dans le
+  même lot que l'INSERT. Même règle pour les véhicules.
+- `short_desc` / `long_desc` : l'ancien seuil « moins de 20 caractères »
+  remplaçait une description courte posée à la main. **Seulement si vide.**
+- `https://gmail.com` inscrit comme site web sur 23 fiches : le domaine des
+  adresses e-mail n'est plus un site ; une seule fonction `normaliser_site`
+  filtre les quatre chemins d'entrée (annuaire, OSM, publications, saisie),
+  retire le balisage Wikivoyage (`{{dead link|…}}`) et fond les doublons
+  http/https/www.
+- Un événement pouvait être publié deux fois (le calendrier n'était relu qu'à
+  la collecte) ; un événement passé pouvait être publié ; « haute saison »
+  suffisait à le rendre annuel ; `confiance` valait toujours « certaine ».
+- Le modèle pouvait **inventer un montant ou une date** : rien ne confrontait
+  sa réponse au texte. Un montant absent du texte est écarté ; sous
+  `llm_confiance_min` (réglage qui existait sans être lu), les chiffres
+  restent aux règles ; le lieu reconnu par les règles n'est plus écrasé par
+  du texte libre (« Majunga », « Dubai »).
+
+**Ce qui lisait mal (mesuré sur les 3 624 textes en base)**
+
+- `\bar\b` refusait la devise collée au nombre (« 60 000Ar ») : **41 % des
+  prix**, 172 trouvailles sans prix. Un caractère.
+- Le prix d'une ligne de carte devait finir la ligne : « 12 000 Ar. » ou
+  « 12 000 Ar (avec riz) » étaient perdus — 428 lignes sur 762.
+- Majunga, Tuléar, Diego, Tamatave, Fort-Dauphin ne trouvaient pas leur fiche
+  (65 trouvailles « sans lieu ») : table d'alias. « Nosy-Be », « Sainte
+  Marie », « 𝗡𝗢𝗦𝗬 𝗕𝗘 » ne trouvaient pas « Nosy Be » : NFKD et traits d'union
+  aplanis (236 trouvailles), pré-test `in` avant la regex (20 fois plus vite).
+- « Nous fêtons nos 10 ans le 20 septembre » : la première correspondance
+  n'était pas un mois et la date était perdue. Le lieu ne bloque plus un récit
+  ni un événement (79 trouvailles publiables retenues en « incomplète »).
+- « Vol Paris Antananarivo » prenait −40 pour « pari » dans la notation des
+  sources : mots entiers.
+
+**Ce qui coûtait**
+
+- Les photos envoyées au modèle partaient en pleine taille : réduites à
+  1 600 px. Les photos locales des trouvailles publiées (813 Mo) sont libérées
+  après 7 jours ; l'interface montre alors la copie chez o2switch.
+- Le journal SQLite ne gardait que 500 lignes (moins d'une collecte) et les
+  purgeait à chaque écriture : 4 000 lignes, purge toutes les 50 écritures.
+  Les connexions SQLite sont fermées.
+- `data/bot-erreurs.log` reçoit stderr et les plantages (`faulthandler`) en
+  mode sans fenêtre : on sait enfin pourquoi le bot meurt.
+
+**L'interface** a été refaite : un rail à gauche qui porte la navigation et
+les **voyants** (bot, Facebook, IA, mémoire), une bande « Aujourd'hui »
+(objectif du jour, passages), des jauges pour ce qui manque à Diako, un
+tableau des sources filtrable avec le résultat de la dernière lecture, une
+barre du bas sur téléphone.
 
 ## Secrets
 

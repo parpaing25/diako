@@ -30,6 +30,37 @@ const UNITES = {
   circuit: "le circuit",
 };
 
+/* Les 11 valeurs que la contrainte `vehicle_offers_vehicle_type` accepte, et
+   rien d'autre : un type hors liste ferait échouer l'INSERT ENTIER de la
+   grille, pas seulement la ligne fautive. */
+const TYPES_VEHICULE = {
+  "4x4": "4x4",
+  berline: "Berline",
+  citadine: "Citadine",
+  minibus: "Minibus",
+  van: "Van",
+  moto: "Moto",
+  quad: "Quad",
+  bateau: "Bateau",
+  velo: "Vélo",
+  camion: "Camion",
+  autre: "Autre",
+};
+
+/* Tri-état. « oui », « non » et « le texte ne le dit pas » sont TROIS réponses
+   différentes : `with_driver` a un défaut en base (avec chauffeur, la norme à
+   Madagascar). Laisser vide, c'est laisser la base trancher ; écrire « non »,
+   c'est affirmer ce qu'on n'a pas lu.
+
+   ⚠ Une LISTE de paires, pas un objet : JavaScript remonte les clés qui
+     ressemblent à des entiers en tête ({"":…, "1":…, "0":…} sort « non, oui,
+     — ? — »), et la valeur neutre se retrouverait en dernier. */
+const TRI_ETAT = [
+  ["", "— ? —"],
+  ["1", "oui"],
+  ["0", "non"],
+];
+
 /* Les valeurs de `posts.kind`, telles que la contrainte les accepte. */
 const GENRES_POST = {
   recit: "Récit", assiette: "Assiette", photo: "Photo", bon_plan: "Bon plan",
@@ -60,12 +91,17 @@ const REGLAGES = {
   pages_max_par_site: "Pages max par site web",
   sites_max_par_collecte: "Sites web par collecte (0 = tous)",
   memoire_mini_mo: "Mémoire mini pour ouvrir Chromium (Mo)",
+  llm_delai: "Délai maxi d'une relecture IA (s)",
   photos_max_par_trouvaille: "Photos max par trouvaille",
   largeur_photo_min: "Largeur mini d'une photo (px)",
   cote_photo_min: "Côté long mini pour une couverture (px)",
   cote_photo_max: "Côté long max à l'envoi (px)",
   qualite_photo: "Qualité JPEG (0-100)",
   jours_max: "Ignorer au-delà de (jours)",
+  // Le réglage de fraîcheur. Une publication d'une année antérieure est
+  // écartée ; celle dont la date est illisible passe quand même — sinon
+  // 99 % de la collecte disparaîtrait (voir `collecteur.annee_de_publication`).
+  annee_minimum: "Année minimale d'une publication",
   pause_entre_envois_photos: "Pause entre envois de photos (s)",
   navigateur_visible: "Afficher le navigateur",
   travailleurs: "Traitements en parallèle (hors Facebook)",
@@ -177,15 +213,27 @@ async function rafraichirEtat() {
   );
   $("#n-plats").textContent = c.plats;
   $("#n-chambres").textContent = c.chambres ?? 0;
-  $("#pastille-trier").textContent = c.a_trier;
+  /* La perte silencieuse au grand jour : ces chambres ne partiront jamais
+     tant que leur prix n'est pas saisi (base_price_ar est NOT NULL en prod). */
+  $("#n-chambres-sans-prix").textContent = c.chambres_sans_prix ?? 0;
+  $("#n-vehicules").textContent = c.vehicules ?? 0;
+  // Les pastilles existent deux fois : rail (PC) et barre du bas (téléphone).
+  $$(".pastille-trier").forEach((p) => {
+    p.textContent = c.a_trier;
+    p.classList.toggle("zero", !c.a_trier);
+  });
   if (e.candidats !== undefined) {
-    const pastille = $("#pastille-candidats");
-    pastille.textContent = e.candidats;
-    pastille.classList.toggle("vif", e.candidats > 0);
+    $$(".pastille-candidats").forEach((p) => {
+      p.textContent = e.candidats;
+      p.classList.toggle("zero", !e.candidats);
+      p.classList.toggle("vif", e.candidats > 0);
+    });
   }
 
   const occupe = e.tache.actif;
   majCompteFacebook(e.session_fb, occupe && e.tache.type === "connexion", e.sources_actives);
+  majSante(e);
+  majAujourdhui(e);
 
   // Sans compte Facebook, la collecte ne peut rien faire : on l'empêche plutôt
   // que de la laisser échouer dans le journal.
@@ -202,8 +250,19 @@ async function rafraichirEtat() {
   const prog = $("#progression");
   prog.hidden = !occupe;
   if (occupe) {
+    // ⭐ CE QUI EST ÉCARTÉ SE DIT PENDANT LA COLLECTE, pas seulement à la fin
+    //   dans le journal. Un filtre trop sévère ressemble sinon à une source
+    //   tarie : on lit « 0 retenue » sans savoir si Facebook n'a rien donné ou
+    //   si le bot a tout jeté.
+    //   ⚠ Les trois compteurs peuvent manquer : la page est servie du disque
+    //     et le serveur en cours peut dater d'avant. `|| 0` partout.
+    const ecartes = [
+      [e.collecte.ecartes_immobilier || 0, "immobilier"],
+      [e.collecte.ecartes_anciennes || 0, "trop ancienne(s)"],
+      [e.collecte.ecartes_doublons || 0, "déjà collecté(s)"],
+    ].filter(([n]) => n > 0).map(([n, quoi]) => `${n} ${quoi}`);
     const libelles = {
-      collecte: `Collecte${e.collecte.source ? " — " + e.collecte.source : ""} · ${e.collecte.trouvees} retenue(s)${c.en_traitement ? ` · ${c.en_traitement} en lecture` : ""}`,
+      collecte: `Collecte${e.collecte.source ? " — " + e.collecte.source : ""} · ${e.collecte.trouvees} retenue(s)${c.en_traitement ? ` · ${c.en_traitement} en lecture` : ""}${ecartes.length ? ` · écarté : ${ecartes.join(", ")}` : ""}`,
       publication: `Publication en cours ${e.tache.detail || ""}`,
       referentiel: "Rechargement du référentiel Diako…",
       moisson: e.tache.detail || "Recherche des sites web…",
@@ -218,10 +277,107 @@ async function rafraichirEtat() {
   $("#journal").innerHTML = e.journal
     .map(
       (l) =>
-        `<li><time>${new Date(l.ts).toLocaleTimeString("fr-FR")}</time>
-         <span class="${l.niveau}">${echapper(l.message)}</span></li>`
+        `<li class="${l.niveau}"><time>${new Date(l.ts).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</time>
+         <span>${echapper(l.message)}</span></li>`
     )
     .join("");
+}
+
+/* ── Les voyants du rail : le bot peut-il faire son travail maintenant ? ──
+   Le 02/09/2026, le tableau de bord disait « Compte Facebook connecté, 409
+   sources surveillées » pendant que la collecte de 18 h sautait sa partie
+   Facebook faute de mémoire et que 311 trouvailles dormaient « en lecture ».
+   Tout allait bien à l'écran ; rien n'allait. */
+function dureeLisible(s) {
+  if (s == null) return "";
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))} min`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ${String(Math.round((s % 3600) / 60)).padStart(2, "0")}`;
+  return `${Math.floor(s / 86400)} j ${Math.round((s % 86400) / 3600)} h`;
+}
+
+function majSante(e) {
+  const s = e.sante;
+  if (!s) return;
+  const occupe = e.tache.actif;
+  const voyants = [];
+  const enLecture = s.en_lecture || 0;
+  voyants.push({
+    classe: occupe ? "actif" : "ok",
+    titre: occupe ? `Au travail : ${e.tache.type === "collecte" ? "collecte" : e.tache.type}` : "Bot en veille",
+    detail: `tourne depuis ${dureeLisible(s.depuis_s)}` +
+      (s.demarrages_24h > 1 ? `, ${s.demarrages_24h} démarrages en 24 h` : "") +
+      (enLecture ? `, ${enLecture} en lecture` : ""),
+  });
+  voyants.push({
+    classe: s.facebook ? "ok" : "ko",
+    titre: s.facebook ? "Facebook connecté" : "Facebook : aucune session",
+    detail: s.facebook ? `${e.sources_actives} sources surveillées` : "la partie Facebook sera sautée",
+  });
+  const ia = s.ia || {};
+  voyants.push({
+    classe: ia.ok === true ? "ok" : ia.ok === false ? "ko" : "moyen",
+    titre: ia.ok === true ? "IA prête" : ia.ok === false ? "IA indisponible" : "IA : " + (ia.detail || "—"),
+    detail: ia.ok === true ? ia.detail : ia.ok === false ? `${ia.detail}, lecture par règles` : ia.chemin || "",
+  });
+  const m = s.memoire || {};
+  voyants.push({
+    classe: m.ok === true ? "ok" : m.ok === false ? "ko" : "moyen",
+    titre: m.libre_mo != null ? `${nombre(m.libre_mo)} Mo libres` : "Mémoire inconnue",
+    detail: m.ok === false ? `il en faut ${m.mini_mo} pour ouvrir Chromium` : `seuil ${m.mini_mo} Mo pour Chromium`,
+  });
+  if (s.derniere_erreur) {
+    voyants.push({ classe: "ko", titre: "Dernier plantage", detail: s.derniere_erreur.slice(0, 90) });
+  }
+  const html = voyants
+    .map(
+      (v) => `<div class="voyant ${v.classe}"><i></i><div><strong>${echapper(v.titre)}</strong><span>${echapper(v.detail)}</span></div></div>`
+    )
+    .join("");
+  const rail = $("#voyants");
+  if (rail) rail.innerHTML = html;
+  const mobile = $("#voyants-mobile");
+  if (mobile) mobile.innerHTML = html;
+}
+
+/* ── « Aujourd'hui » : l'objectif et les passages, pas un mur de compteurs ── */
+function majAujourdhui(e) {
+  const p = e.planning || {};
+  const bloc = $("#aujourdhui");
+  if (!bloc) return;
+  const objectif = p.objectif || 0;
+  const fait = p.collectees || 0;
+  const part = objectif ? Math.min(1, fait / objectif) : 0;
+  const cercle = $("#jauge-fait");
+  if (cercle) cercle.style.strokeDashoffset = String(364.4 * (1 - part));
+  $("#jauge-nombre").innerHTML = `${fait}<small>${objectif ? "/" + objectif : ""}</small>`;
+  bloc.classList.toggle("atteint", Boolean(p.atteint));
+  bloc.classList.toggle("eteint", !p.actif);
+
+  const maintenant = new Date();
+  const heures = p.heures || [];
+  const enCours = e.tache.actif && e.tache.type === "collecte";
+  const passages = heures.map((h, i) => {
+    const [hh, mm] = h.split(":").map(Number);
+    const moment = new Date(); moment.setHours(hh, mm, 0, 0);
+    const suivant = heures[i + 1];
+    let etat = moment > maintenant ? "a-venir" : "fait";
+    let libelle = moment > maintenant ? "à venir" : "passé";
+    if (enCours && moment <= maintenant) {
+      const finFenetre = suivant ? (() => { const [sh, sm] = suivant.split(":").map(Number); const d = new Date(); d.setHours(sh, sm, 0, 0); return d; })() : null;
+      if (!finFenetre || maintenant < finFenetre) { etat = "en-cours"; libelle = "en cours"; }
+    }
+    return `<div class="passage ${etat}"><i></i><b>${h}</b><span>${libelle}</span></div>`;
+  });
+  $("#passages").innerHTML = passages.join("");
+
+  const reste = Math.max(0, objectif - fait);
+  let phrase;
+  if (!p.actif) phrase = "Collectes automatiques éteintes : seul le bouton ramène des trouvailles.";
+  else if (enCours) phrase = `Collecte en cours${e.collecte.source ? ", " + e.collecte.source : ""}.`;
+  else if (p.atteint) phrase = `Objectif atteint. Prochain passage ${p.prochain || "—"}.`;
+  else phrase = `Encore ${reste} à trouver. Prochain passage ${p.prochain || "—"}. Un passage manqué se rattrape jusqu'au suivant.`;
+  $("#aujourdhui-phrase").textContent = phrase;
+  $("#aujourdhui-titre").textContent = maintenant.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).replace(/^./, (c) => c.toUpperCase());
 }
 
 function majManques(m, referentiel) {
@@ -233,11 +389,15 @@ function majManques(m, referentiel) {
     zone.innerHTML = TROUS.map((t) => {
       const valeur = m[t.cle] ?? 0;
       const total = t.sur ? m[t.sur] : null;
+      // La barre montre ce qui est COMBLÉ : sur 3 689 fiches, 3 396 sans
+      // photo = 8 % illustrées. C'est ce pourcentage qui doit monter.
+      const comble = total ? Math.max(0, Math.min(1, 1 - valeur / total)) : null;
       return `<div class="trou ${t.inverse ? "comble" : ""}">
-        <span class="chiffre-trou">${nombre(valeur)}</span>${
-          total ? `<span class="etiquette"> / ${nombre(total)}</span>` : ""
-        }
         <span class="quoi">${t.quoi}</span>
+        <span><span class="chiffre-trou">${nombre(valeur)}</span>${
+          total ? `<span class="etiquette"> / ${nombre(total)}</span>` : ""
+        }</span>
+        ${comble != null ? `<span class="jauge-trou" title="${Math.round(comble * 100)} % comblé"><i style="width:${(comble * 100).toFixed(1)}%"></i></span>` : ""}
       </div>`;
     }).join("");
   }
@@ -332,8 +492,7 @@ function majPlanning(p) {
 
 /* ── Compte Facebook ─────────────────────────────────────────────── */
 function majCompteFacebook(connecte, enCours, sourcesActives) {
-  const pastille = $("#etat-fb");
-  pastille.classList.toggle("ok", connecte);
+  $$(".etat-fb").forEach((pastille) => pastille.classList.toggle("ok", connecte));
   $("#etat-fb-texte").textContent = enCours
     ? "Facebook : connexion…"
     : connecte
@@ -387,10 +546,12 @@ async function deconnecterFacebook() {
 }
 
 $("#btn-connexion-banniere").addEventListener("click", connecterFacebook);
-$("#etat-fb").addEventListener("click", () => {
-  montrerVue("bord");
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
+$$(".etat-fb").forEach((b) =>
+  b.addEventListener("click", () => {
+    montrerVue("bord");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  })
+);
 
 /* ── Boutons du tableau de bord ──────────────────────────────────── */
 /* Deux boutons, un seul chemin. `ia` ne surcharge que CE passage : partir sans
@@ -517,12 +678,134 @@ $("#recherche").addEventListener("input", (e) => {
   }, 300);
 });
 
+/* ── Regrouper ce qui vient du même établissement ─────────────────────────
+ *
+ * ⭐ POURQUOI (mesuré le 24/08/2026 sur les 2 217 trouvailles de la base) :
+ *    84 établissements reviennent au moins deux fois et totalisent 1 238
+ *    trouvailles — 83 pour « Nosy Be Hôtel & Spa », 61 pour l'« Hôtel
+ *    Carlton », 55 pour « KIBAN HOTEL Nosy Be ». Les trier une par une, c'est
+ *    ouvrir 61 panneaux pour remplir UNE fiche Diako. Repliés, ils tiennent en
+ *    une ligne qu'on déplie quand on veut.
+ *
+ * ⚠ CE CODE DOIT MARCHER AVEC L'ANCIEN SERVEUR. La page est servie du disque
+ *   alors que le processus en cours peut dater d'avant ce changement :
+ *   `groupe_cle` sera alors absent de la réponse. On le recalcule ici à
+ *   l'identique — mêmes clés, même ordre que `base.cle_entite` — plutôt que
+ *   d'appeler une route qui n'existe pas encore.
+ */
+const groupesOuverts = new Set();
+
+function cleEntite(t) {
+  if (t.groupe_cle !== undefined) return t.groupe_cle;
+  if (t.page_id) return `fiche:${t.page_id}`;
+  const page = (t.page_facebook || "").trim().toLowerCase().replace(/\/+$/, "");
+  if (page) return `fb:${page}`;
+  // ⚠ NFKD + suppression des diacritiques, comme `base.cle_entite` :
+  //   « Hôtel Carlton » et « Hotel Carlton » sont le même établissement.
+  const nom = (t.nom_etab || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  return nom.length >= 3 ? `nom:${nom}` : "";
+}
+
+function nomEntite(t) {
+  // ⚠ Coupé à 60 : `nom_etab` est extrait d'un texte et ramasse parfois une
+  //   phrase entière (« 𝗩𝗼𝘆𝗮𝗴𝗲𝗿, 𝗰'𝗲𝘀𝘁 𝗱𝗲́𝗰𝗼𝘂𝘃𝗿𝗶𝗿… » coiffait un groupe de
+  //   52 publications). `normalize("NFKC")` ramène le gras Unicode à des
+  //   lettres ordinaires — sinon le titre du bloc est illisible.
+  // ⚠ « Nosy Be Hôtel & Spa est à Nosy Be Hôtel & Spa. » est le libellé d'un
+  //   enregistrement de lieu, et il coiffe le plus gros groupe de la base
+  //   (83 publications). On coupe à la tournure, comme `base.nom_entite`.
+  const brut = (t.groupe_nom || t.page_nom || t.nom_etab || t.page_facebook || "")
+    .normalize("NFKC")
+    .split(/\s+(?:est à|est chez|a actualisé|est en direct)\b/)[0]
+    .replace(/^[\s.,–—-]+|[\s.,–—-]+$/g, "");
+  return brut.length > 60 ? brut.slice(0, 60).trimEnd() + "…" : brut;
+}
+
+function blocGroupe(cle, membres) {
+  const nom = nomEntite(membres[0]) || "Établissement sans nom";
+  // `groupe_total` compte AUSSI ce que la limite de 300 lignes a laissé
+  // derrière ; sans lui on annoncerait douze publications là où il y en a 61.
+  const total = membres[0].groupe_total || membres.length;
+  const reste = total > membres.length ? ` · ${total} en tout` : "";
+  const photos = membres.reduce((n, t) => n + (t.nb_photos || 0), 0);
+  const meilleur = Math.max(...membres.map((t) => t.score || 0));
+  return `<details class="groupe"${groupesOuverts.has(cle) ? " open" : ""}
+      data-groupe="${echapper(cle)}">
+    <summary>
+      <span class="groupe-nom">${echapper(nom)}</span>
+      <span class="groupe-compte">${membres.length} publication${
+        membres.length > 1 ? "s" : ""
+      }${reste}</span>
+      <span class="groupe-chiffres">${photos} photo${photos > 1 ? "s" : ""} ·
+        meilleur score ${meilleur}</span>
+      <button type="button" class="groupe-cocher"
+        title="Cocher ou décocher tout le groupe">Tout cocher</button>
+    </summary>
+    <div class="groupe-corps">${membres.map(carte).join("")}</div>
+  </details>`;
+}
+
+function grilleGroupee(liste) {
+  const par = new Map();
+  for (const t of liste) {
+    const cle = cleEntite(t);
+    if (!cle) continue;
+    if (!par.has(cle)) par.set(cle, []);
+    par.get(cle).push(t);
+  }
+  // L'ordre de la liste est celui du tri choisi : le groupe prend la place de
+  // son premier membre, il ne remonte ni ne descend.
+  const sortis = new Set();
+  const blocs = [];
+  for (const t of liste) {
+    const cle = cleEntite(t);
+    const membres = cle ? par.get(cle) : null;
+    if (!membres || membres.length < 2) {
+      blocs.push(carte(t));
+      continue;
+    }
+    if (sortis.has(cle)) continue;
+    sortis.add(cle);
+    blocs.push(blocGroupe(cle, membres));
+  }
+  return blocs.join("");
+}
+
 async function chargerListe() {
   const q = new URLSearchParams(etatFiltres);
   const liste = await api(`/api/trouvailles?${q}`);
   const grille = $("#grille");
   $("#vide").hidden = liste.length > 0;
-  grille.innerHTML = liste.map(carte).join("");
+  grille.innerHTML = grilleGroupee(liste);
+  $$("details.groupe", grille).forEach((d) =>
+    d.addEventListener("toggle", () => {
+      // Un groupe déplié le reste au rafraîchissement suivant : sinon il se
+      // referme sous les doigts toutes les deux secondes.
+      d.open ? groupesOuverts.add(d.dataset.groupe)
+             : groupesOuverts.delete(d.dataset.groupe);
+    })
+  );
+  $$(".groupe-cocher", grille).forEach((b) =>
+    b.addEventListener("click", (e) => {
+      // Dans un <summary>, le clic par défaut ouvre ou ferme le bloc.
+      e.preventDefault();
+      e.stopPropagation();
+      const cases = $$("[data-choix-annonce]", b.closest("details.groupe"));
+      const toutCoche = cases.every((c) => c.checked);
+      cases.forEach((c) => {
+        c.checked = !toutCoche;
+        c.checked
+          ? cochesTrouvailles.add(c.dataset.choixAnnonce)
+          : cochesTrouvailles.delete(c.dataset.choixAnnonce);
+        c.closest(".annonce-enveloppe").classList.toggle("cochee", c.checked);
+      });
+      majChoixTrouvailles();
+    })
+  );
   $$(".annonce", grille).forEach((el) =>
     el.addEventListener("click", () => ouvrir(el.dataset.id))
   );
@@ -614,6 +897,7 @@ function carte(t) {
     t.nb_plats ? `<span class="badge plat">${t.nb_plats} plats</span>` : "",
     t.nb_chambres ? `<span class="badge etab">${t.nb_chambres} chambres</span>` : "",
     t.nb_circuits ? `<span class="badge lieu">${t.nb_circuits} circuits</span>` : "",
+    t.nb_vehicules ? `<span class="badge vehicule">${t.nb_vehicules} véhicules</span>` : "",
     t.source_genre === "site" ? `<span class="badge recherche">site web</span>` : "",
     t.statut === "publiee" ? `<span class="badge ok">publiée</span>` : "",
     t.statut === "doublon" ? `<span class="badge doublon">doublon</span>` : "",
@@ -661,7 +945,13 @@ async function ouvrir(id) {
   $("#p-titre").textContent = t.titre || GENRES[t.genre] || "Trouvaille";
   $("#p-source").innerHTML =
     `${echapper(t.source_nom || "")} · ${echapper(t.auteur || "auteur inconnu")}` +
-    (t.date_post ? ` · ${jour(t.date_post)}` : "") +
+    // ⚠ « Date inconnue » se dit, elle ne se cache pas. Avant le 24/08/2026 le
+    //   bot inscrivait la date du jour dès qu'il ne savait pas lire celle de
+    //   Facebook : la ligne affichait donc TOUJOURS une date, et toujours la
+    //   bonne en apparence. Un blanc silencieux referait la même illusion.
+    (t.date_post
+      ? ` · ${jour(t.date_post)}`
+      : ` · <span class="sans-date">date de publication inconnue</span>`) +
     (t.permalien
       ? ` · <a class="lien-post" href="${t.permalien}" target="_blank" rel="noreferrer">voir sur Facebook</a>`
       : "");
@@ -752,6 +1042,11 @@ function corpsPanneau(t) {
     ${(t.lignes_circuit || []).length ? blocCircuits(t) : ""}
 
     ${(t.lignes_chambre || []).length || t.source_genre === "site" ? blocChambres(t) : ""}
+
+    ${(t.lignes_vehicule || []).length ||
+    (t.categories || []).includes("location_vehicule")
+      ? blocVehicules(t)
+      : ""}
 
     ${t.genre === "carte" || (t.lignes_carte || []).length ? blocCarte(t) : ""}
 
@@ -977,14 +1272,14 @@ function blocChambres(t) {
       (c) => `<div class="plat-ligne ${c.garder ? "" : "ecarte"}" data-cid="${c.id}">
         <input data-chambre="nom" value="${echapper(c.nom)}">
         <input data-chambre="prix_ar" type="number" value="${c.prix_ar ?? ""}" placeholder="prix Ar">
-        <span class="rattache ${c.prix_ar ? "" : "non"}">${
+        <span class="rattache ${c.prix_ar ? "" : "non bloquant"}">${
           c.prix_ar
             ? echapper(
                 (c.unite === "personne" ? "par personne" : "la chambre") +
                   (c.saison ? " · " + c.saison : "") +
                   (c.capacite ? " · " + c.capacite + " pers." : "")
               )
-            : "sans prix — non publiable"
+            : "sans prix — ne partira pas"
         }</span>
         <button class="oter" data-oter-chambre="${c.id}" title="Retirer">×</button>
       </div>`
@@ -1009,6 +1304,113 @@ function blocChambres(t) {
       de tarif. Deux lignes de même nom ne sont pas un doublon — ce sont deux
       saisons, et elles deviennent un seul type de chambre avec ses
       <code>season_rates</code>.
+    </p>`;
+}
+
+/* ⭐ LA GRILLE D'UN LOUEUR. `location_vehicule` comptait 24 trouvailles et
+   produisait ZÉRO ligne de tarif : les prix restaient dans le texte, invisibles
+   au site. Ce bloc suit exactement la mécanique des chambres — corriger,
+   retirer, ajouter à la main — parce que c'est le geste que la main connaît. */
+function blocVehicules(t) {
+  const choix = (paires, v) =>
+    paires
+      .map(([k, l]) => `<option value="${k}" ${k === (v ?? "") ? "selected" : ""}>${l}</option>`)
+      .join("");
+  /* SQLite rend 1, 0 ou null ; un <select> ne connaît que des chaînes. */
+  const triEtat = (v) => (v == null ? "" : String(Number(v)));
+  /* ⚠ Contrairement aux chambres, `price_day_ar` est NULLABLE côté Diako : une
+     offre sans prix mais avec un modèle ou une note entre quand même — c'est
+     une fiche de flotte, pas un tarif inventé. Une ligne qui n'a AUCUN des
+     trois, en revanche, ne partira jamais : la publication l'écarte. */
+  const publiable = (v) => Boolean(v.prix_jour_ar || v.modele || v.note_prix);
+
+  const lignes = (t.lignes_vehicule || [])
+    .map((v) => {
+      const etat = [
+        v.avec_chauffeur == null
+          ? "chauffeur non dit"
+          : v.avec_chauffeur
+          ? "avec chauffeur"
+          : "sans chauffeur",
+        v.places ? v.places + " places" : "",
+        v.km_par_jour ? v.km_par_jour + " km/j" : "",
+        v.carburant_inclus == null
+          ? ""
+          : v.carburant_inclus
+          ? "carburant inclus"
+          : "carburant en sus",
+        v.caution_ar ? "caution " + ar(v.caution_ar) : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      return `<div class="plat-ligne vehicule ${v.garder ? "" : "ecarte"}" data-vid="${v.id}">
+        <select data-vehicule="type_vehicule">${choix(
+          Object.entries(TYPES_VEHICULE),
+          TYPES_VEHICULE[v.type_vehicule] ? v.type_vehicule : "autre"
+        )}</select>
+        <input data-vehicule="modele" value="${echapper(v.modele)}" placeholder="modèle (Hilux…)">
+        <input data-vehicule="prix_jour_ar" type="number" value="${
+          v.prix_jour_ar ?? ""
+        }" placeholder="Ar / jour">
+        <span class="rattache ${publiable(v) ? "" : "non bloquant"}">${
+          publiable(v) ? echapper(etat) : "ni prix ni modèle — ne partira pas"
+        }</span>
+        <button class="oter" data-oter-vehicule="${v.id}" title="Retirer">×</button>
+        <div class="details-vehicule">
+          <label>places <input data-vehicule="places" type="number" value="${
+            v.places ?? ""
+          }"></label>
+          <label>chauffeur <select data-vehicule="avec_chauffeur">${choix(
+            TRI_ETAT,
+            triEtat(v.avec_chauffeur)
+          )}</select></label>
+          <label>carburant <select data-vehicule="carburant_inclus">${choix(
+            TRI_ETAT,
+            triEtat(v.carburant_inclus)
+          )}</select></label>
+          <label>km / jour <input data-vehicule="km_par_jour" type="number" value="${
+            v.km_par_jour ?? ""
+          }"></label>
+          <label>caution Ar <input data-vehicule="caution_ar" type="number" value="${
+            v.caution_ar ?? ""
+          }"></label>
+          <label class="large">note <input data-vehicule="note_prix" value="${echapper(
+            v.note_prix
+          )}" placeholder="« hors carburant », « 3 jours minimum »…"></label>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  const partants = (t.lignes_vehicule || []).filter(publiable).length;
+  return `<p class="bloc-titre">Véhicules et tarifs — ${partants} publiable(s) sur ${
+    (t.lignes_vehicule || []).length
+  }</p>
+    <div class="carte-plats">${
+      lignes ||
+      '<p class="aide" style="padding:10px">Aucune grille de location lue ici — saisissez-la à la main ci-dessous.</p>'
+    }</div>
+    <div class="ajout-plat">
+      <select id="vehicule-type" style="width:120px">${choix(
+        Object.entries(TYPES_VEHICULE),
+        "4x4"
+      )}</select>
+      <input id="vehicule-modele" placeholder="Modèle (Hilux, Duster…)">
+      <input id="vehicule-prix" type="number" placeholder="Ar / jour" style="width:110px">
+      <select id="vehicule-chauffeur" style="width:135px">${choix(
+        [["", "chauffeur ?"], ["1", "avec chauffeur"], ["0", "sans chauffeur"]],
+        ""
+      )}</select>
+      <button class="bouton" id="btn-ajouter-vehicule">Ajouter</button>
+    </div>
+    <p class="aide" style="margin:8px 0 16px">
+      Ces quatre champs créent la ligne ; places, carburant, km/jour, caution et
+      note se saisissent ensuite <strong>directement sur la ligne</strong>.
+      Une offre part dès qu'elle porte <strong>un prix, un modèle ou une note</strong> —
+      <code>price_day_ar</code> est NULLABLE ici, contrairement aux chambres.
+      Et « chauffeur ? » n'est pas « sans chauffeur » : laissé vide, c'est la base
+      qui applique son défaut (<code>with_driver</code> = avec chauffeur).
     </p>`;
 }
 
@@ -1134,6 +1536,7 @@ function brancherPanneau() {
   brancherRapprochement(zone);
   brancherCarte(zone);
   brancherChambres(zone);
+  brancherVehicules(zone);
   brancherCircuits(zone);
 }
 
@@ -1188,6 +1591,61 @@ function brancherChambres(zone) {
       await api(`/api/trouvailles/${ouverte.id}/chambres`, {
         method: "POST",
         body: JSON.stringify({ nom, prix_ar: prix === "" ? null : Number(prix) }),
+      });
+      ouvrir(ouverte.id);
+    });
+}
+
+/* Mêmes gestes que les chambres : on corrige sur place, on retire, on ajoute.
+   Chaque changement repasse par `ouvrir()` pour que l'état affiché à droite de
+   la ligne (« ne partira pas ») suive la saisie sans recharger la page. */
+function brancherVehicules(zone) {
+  /* Les entiers passent en Number, jamais en chaîne : les colonnes sont INTEGER.
+     Un champ vidé redevient NULL — pas 0, qui voudrait dire « gratuit ». Et pour
+     chauffeur/carburant, NULL veut dire « le texte ne le dit pas » : c'est une
+     information, pas une absence de réponse. */
+  const ENTIERS = ["prix_jour_ar", "places", "km_par_jour", "caution_ar",
+                   "avec_chauffeur", "carburant_inclus"];
+
+  $$(".plat-ligne [data-vehicule]", zone).forEach((el) =>
+    el.addEventListener("change", async () => {
+      const vid = el.closest(".plat-ligne").dataset.vid;
+      const cle = el.dataset.vehicule;
+      let valeur = el.value;
+      if (ENTIERS.includes(cle)) valeur = valeur === "" ? null : Number(valeur);
+      await api(`/api/vehicules/${vid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ champs: { [cle]: valeur } }),
+      });
+      ouvrir(ouverte.id);
+    })
+  );
+
+  $$("[data-oter-vehicule]", zone).forEach((el) =>
+    el.addEventListener("click", async () => {
+      await api(`/api/vehicules/${el.dataset.oterVehicule}`, { method: "DELETE" });
+      ouvrir(ouverte.id);
+    })
+  );
+
+  const ajouter = $("#btn-ajouter-vehicule", zone);
+  if (ajouter)
+    ajouter.addEventListener("click", async () => {
+      const modele = $("#vehicule-modele", zone).value.trim();
+      const prix = $("#vehicule-prix", zone).value;
+      const chauffeur = $("#vehicule-chauffeur", zone).value;
+      // Une ligne sans prix NI modèle serait écartée à la publication : autant
+      // le dire ici plutôt que de la laisser croire enregistrée.
+      if (!modele && prix === "")
+        return toast("Donnez au moins un modèle ou un prix par jour.", "erreur");
+      await api(`/api/trouvailles/${ouverte.id}/vehicules`, {
+        method: "POST",
+        body: JSON.stringify({
+          type_vehicule: $("#vehicule-type", zone).value,
+          modele: modele || null,
+          prix_jour_ar: prix === "" ? null : Number(prix),
+          avec_chauffeur: chauffeur === "" ? null : chauffeur === "1",
+        }),
       });
       ouvrir(ouverte.id);
     });
@@ -1436,30 +1894,77 @@ function majFilVedette(sources) {
   };
 }
 
-async function chargerSources() {
-  const sources = await api("/api/sources");
-  majFilVedette(sources);
-  $("#table-sources tbody").innerHTML = sources
+/* Le filtre du tableau des sources : 409 lignes ne se parcourent pas à l'œil. */
+let filtreSources = { genre: "", texte: "" };
+let sourcesConnues = [];
+
+function resultatSource(s) {
+  const echecs = Number(s.echecs || 0);
+  if (s.genre !== "site") return { texte: "", classe: "" };
+  if (echecs >= 4) return { texte: `en pause : ${s.dernier_resultat || "échecs répétés"}`, classe: "pause" };
+  if (echecs > 0) return { texte: `${s.dernier_resultat || "échec"} (×${echecs})`, classe: "ko" };
+  if (s.dernier_resultat) return { texte: s.dernier_resultat, classe: "" };
+  return { texte: "", classe: "" };
+}
+
+function rendreTableSources() {
+  const q = filtreSources.texte.toLowerCase();
+  const visibles = sourcesConnues.filter((s) => {
+    if (filtreSources.genre === "pause") return Number(s.echecs || 0) >= 4;
+    if (filtreSources.genre && s.genre !== filtreSources.genre) return false;
+    if (q && !(`${s.nom} ${s.url}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  $("#compte-sources").textContent = `${visibles.length} sur ${sourcesConnues.length}`;
+  $("#table-sources tbody").innerHTML = visibles
     .map((s) => {
       const [classe, libelle] = ETIQUETTE_SOURCE[s.genre] || ["", s.genre];
-      return `<tr>
+      const r = resultatSource(s);
+      return `<tr class="${s.actif ? "" : "inactive"}">
         <td><input type="checkbox" data-actif="${s.id}" ${s.actif ? "checked" : ""}></td>
         <td><span class="badge ${classe}">${libelle}</span></td>
         <td><input class="nom-source" data-nom="${s.id}" value="${echapper(s.nom)}"></td>
         <td class="url">${echapper(s.url)}</td>
-        <td>${s.derniere_collecte ? new Date(s.derniere_collecte).toLocaleString("fr-FR") : "jamais"}</td>
+        <td>${s.derniere_collecte ? new Date(s.derniere_collecte).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "jamais"}</td>
+        <td class="resultat ${r.classe}">${echapper(r.texte)}</td>
         <td>${s.nb_trouvees}</td>
         <td><button class="bouton danger" data-suppr="${s.id}">Retirer</button></td>
       </tr>`;
     })
     .join("");
+  brancherTableSources();
+}
+
+$$("#filtres-genre-source .puce").forEach((b) =>
+  b.addEventListener("click", () => {
+    $$("#filtres-genre-source .puce").forEach((p) => p.classList.toggle("actif", p === b));
+    filtreSources.genre = b.dataset.genre;
+    rendreTableSources();
+  })
+);
+let minuteurSources;
+$("#recherche-source").addEventListener("input", (e) => {
+  clearTimeout(minuteurSources);
+  minuteurSources = setTimeout(() => {
+    filtreSources.texte = e.target.value.trim();
+    rendreTableSources();
+  }, 250);
+});
+
+async function chargerSources() {
+  const sources = await api("/api/sources");
+  majFilVedette(sources);
+  sourcesConnues = sources;
+  rendreTableSources();
 
   $("#filtre-source").innerHTML =
     `<option value="0">Toutes les sources</option>` +
     sources
       .map((s) => `<option value="${s.id}">${echapper(s.nom)}</option>`)
       .join("");
+}
 
+function brancherTableSources() {
   $$("[data-actif]").forEach((el) =>
     el.addEventListener("change", () =>
       api(`/api/sources/${el.dataset.actif}`, {
@@ -1851,9 +2356,12 @@ $("#btn-requetes").addEventListener("click", async () => {
     .map((l) => l.trim())
     .filter(Boolean);
   try {
-    await api("/api/config", {
-      method: "POST",
-      body: JSON.stringify({ prospection_requetes: requetes }),
+    // ⚠ La route est un PUT qui attend `{config: {...}}` : en POST avec le
+    //   corps nu, le serveur répondait 405 et les recherches n'étaient JAMAIS
+    //   enregistrées — le bouton disait pourtant « enregistrées ».
+    config = await api("/api/config", {
+      method: "PUT",
+      body: JSON.stringify({ config: { prospection_requetes: requetes } }),
     });
     $("#nb-requetes").textContent = requetes.length;
     toast(`${requetes.length} recherche(s) enregistrée(s).`);

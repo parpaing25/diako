@@ -3,38 +3,54 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bot de collecte — Diako</title>
+<title>Collecte Diako</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E7C86'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Segoe UI, sans-serif' font-size='18' font-weight='700' fill='white'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<header class="barre">
+<div class="coque">
+
+<!-- ══════════ RAIL ══════════ -->
+<aside class="rail">
   <div class="marque">
     <span class="pastille">D</span>
     <div>
-      <strong>Bot de collecte</strong>
-      <small>Facebook → Diako</small>
+      <strong>Collecte Diako</strong>
+      <small>Facebook et sites → annuaire</small>
     </div>
   </div>
-  <nav class="onglets">
+  <nav class="onglets" aria-label="Sections">
     <button class="onglet actif" data-vue="bord">Tableau de bord</button>
-    <button class="onglet" data-vue="trouvailles">Trouvailles <span id="pastille-trier" class="compteur">0</span></button>
+    <button class="onglet" data-vue="trouvailles">Trouvailles <span class="compteur pastille-trier">0</span></button>
     <button class="onglet" data-vue="sources">Sources</button>
-    <button class="onglet" data-vue="candidats">Nouvelles sources <span id="pastille-candidats" class="compteur">0</span></button>
+    <button class="onglet" data-vue="candidats">Nouvelles sources <span class="compteur pastille-candidats">0</span></button>
     <button class="onglet" data-vue="auto">Automatisation</button>
     <button class="onglet" data-vue="reglages">Réglages</button>
   </nav>
-  <button class="etat-fb" id="etat-fb" title="Compte Facebook utilisé pour la collecte">
-    <i></i><span id="etat-fb-texte">Facebook</span>
-  </button>
-</header>
+  <div class="voyants">
+    <div class="voyants-titre">Le bot, maintenant</div>
+    <div id="voyants"></div>
+    <button class="etat-fb" id="etat-fb" title="Compte Facebook utilisé pour la collecte">
+      <i></i><span id="etat-fb-texte">Facebook</span>
+    </button>
+  </div>
+</aside>
 
 <main>
+
+  <!-- En-tête visible seulement sur téléphone -->
+  <header class="entete-mobile">
+    <div class="marque">
+      <span class="pastille">D</span>
+      <div><strong>Collecte Diako</strong></div>
+    </div>
+    <button class="etat-fb" title="Compte Facebook"><i></i><span>Facebook</span></button>
+  </header>
 
   <!-- ══════════ TABLEAU DE BORD ══════════ -->
   <section class="vue active" id="vue-bord">
 
-    <!-- Barrage tant qu'aucun compte Facebook n'est branché -->
     <div class="banniere" id="banniere-fb" hidden>
       <div class="banniere-corps">
         <span class="banniere-icone">!</span>
@@ -42,9 +58,9 @@
           <strong class="banniere-titre">Connectez votre compte Facebook pour commencer</strong>
           <p>
             Le bot lit les groupes, les pages et votre fil avec <em>votre</em>
-            session, comme si vous les ouvriez vous-même — il n'y a ni mot de
-            passe à saisir ici, ni compte à créer. À faire <strong>une seule
-            fois</strong> : la session reste enregistrée sur ce PC.
+            session, comme si vous les ouvriez vous-même. Il n'y a ni mot de
+            passe à saisir ici, ni compte à créer. À faire une seule fois : la
+            session reste enregistrée sur ce PC.
           </p>
           <ol class="etapes">
             <li>Cliquez le bouton : une fenêtre Facebook s'ouvre.</li>
@@ -56,6 +72,40 @@
       <button class="bouton principal grand" id="btn-connexion-banniere">
         Connecter mon compte Facebook
       </button>
+    </div>
+
+    <div class="voyants-mobile" id="voyants-mobile"></div>
+
+    <!-- ⭐ La bande qui donne le cap : l'objectif du jour et les passages. -->
+    <div class="aujourdhui" id="aujourdhui">
+      <div class="jauge" aria-hidden="true">
+        <svg viewBox="0 0 132 132">
+          <circle class="piste" cx="66" cy="66" r="58"></circle>
+          <circle class="fait" id="jauge-fait" cx="66" cy="66" r="58"
+                  stroke-dasharray="364.4" stroke-dashoffset="364.4"></circle>
+        </svg>
+        <div class="jauge-centre">
+          <strong id="jauge-nombre">0<small>/0</small></strong>
+          <span>trouvailles</span>
+        </div>
+      </div>
+      <div class="aujourdhui-corps">
+        <h2 id="aujourdhui-titre">Aujourd'hui</h2>
+        <p class="phrase" id="aujourdhui-phrase">Le plan de la journée se charge…</p>
+        <div class="passages" id="passages"></div>
+        <div class="ligne-compte" id="ligne-compte"></div>
+        <div class="actions-collecte">
+          <button class="bouton principal" id="btn-collecte">Lancer la collecte</button>
+          <button class="bouton" id="btn-collecte-sans-ia"
+                  title="Même collecte, lecture par règles uniquement">Sans l'IA</button>
+          <button class="bouton" id="btn-arreter" disabled>Arrêter</button>
+        </div>
+        <p class="aide" id="aide-ia" style="margin:12px 0 0"></p>
+        <div class="progression" id="progression" hidden>
+          <div class="barre-progres"><i></i></div>
+          <span id="texte-progression"></span>
+        </div>
+      </div>
     </div>
 
     <div class="chiffres">
@@ -77,113 +127,87 @@
       <button class="chiffre lien-apport" data-apport="chambres" title="Voir les trouvailles qui portent des tarifs de chambre">
         <span class="valeur" id="n-chambres">0</span><span class="etiquette">tarifs de chambre</span>
       </button>
+      <button class="chiffre lien-apport" data-apport="chambres_sans_prix" title="Chambres lues sans prix : elles ne partiront pas tant que le prix n'est pas saisi">
+        <span class="valeur alerte" id="n-chambres-sans-prix">0</span><span class="etiquette">chambres sans prix</span>
+      </button>
+      <button class="chiffre lien-apport" data-apport="vehicules" title="Voir les trouvailles qui portent une grille de location">
+        <span class="valeur" id="n-vehicules">0</span><span class="etiquette">tarifs de véhicule</span>
+      </button>
     </div>
 
-    <!-- ⭐ La carte qui donne le cap : ce qui manque VRAIMENT au site. -->
-    <div class="carte">
-      <h2>Ce qui manque à Diako en ce moment</h2>
-      <p class="aide">
-        Mesuré sur la base, pas estimé. C'est ce tableau qui dit où porter
-        l'effort : <strong>le référentiel est plein, les fiches sont vides</strong>.
-      </p>
+    <section class="section">
+      <div class="section-tete">
+        <h2>Ce qui manque à Diako</h2>
+        <p class="aide">Mesuré sur la base, pas estimé. La barre montre ce qui est déjà comblé.</p>
+      </div>
       <div class="manques" id="manques"></div>
       <div class="ligne-compte" id="etat-referentiel"></div>
-    </div>
+    </section>
 
     <div class="grille-deux">
       <div class="carte">
-        <h2>Collecte</h2>
-        <p class="aide" id="aide-collecte">
-          Le bot ouvre Facebook avec votre session, parcourt les sources actives
-          et garde ce qui apporte quelque chose au site : un établissement, une
-          carte, un événement daté, un récit illustré.
-        </p>
-        <div class="ligne-compte" id="ligne-compte"></div>
-        <div class="actions-collecte">
-          <button class="bouton principal" id="btn-collecte">Lancer la collecte</button>
-          <button class="bouton" id="btn-collecte-sans-ia"
-                  title="Même collecte, lecture par règles uniquement">Sans l'IA</button>
-          <button class="bouton" id="btn-arreter" disabled>Arrêter</button>
-        </div>
-        <p class="aide" id="aide-ia" style="margin:12px 0 0"></p>
-        <div class="progression" id="progression" hidden>
-          <div class="barre-progres"><i></i></div>
-          <span id="texte-progression"></span>
-        </div>
-      </div>
-
-      <div class="carte">
         <h2>Publication</h2>
         <p class="aide">
-          Les trouvailles marquées « validée » partent sur diako.fonenako.mg :
-          la fiche se complète <strong>sans jamais écraser</strong> ce qui y est
-          déjà, les photos vont sur o2switch (1600 px, envoi espacé de 3 s).
+          Les trouvailles validées partent sur diako.fonenako.mg au nom du
+          compte Diako : la fiche se complète <strong>sans jamais écraser</strong>
+          ce qui y est déjà, les photos vont chez o2switch.
         </p>
-        <button class="bouton principal" id="btn-lot">Publier les trouvailles validées</button>
-        <p class="aide" style="margin:12px 0 8px">
-          <strong>Publier ne dépend pas de l'IA.</strong> Les textes sont déjà
-          écrits au moment de la collecte, la fiche part en SQL et les photos sur
-          o2switch : la passerelle peut être éteinte, la publication marche.
+        <div class="actions-collecte">
+          <button class="bouton principal" id="btn-lot">Publier les trouvailles validées</button>
+          <button class="bouton" id="btn-referentiel">Recharger le référentiel</button>
+        </div>
+        <p class="aide" style="margin:12px 0 0">
+          Publier ne dépend pas de l'IA : les textes sont écrits à la collecte.
+          Rechargez le référentiel après une grosse publication ou s'il date de
+          plus d'une demi-journée.
         </p>
-        <p class="aide" style="margin:12px 0 8px">
-          Le référentiel local sert au rapprochement. Rechargez-le après une
-          grosse publication, ou s'il date de plus d'une demi-journée.
+      </div>
+      <div class="carte">
+        <h2>Sites web des établissements</h2>
+        <p class="aide">
+          Facebook donne de la vie ; il donne mal les tarifs. La moisson cherche
+          les sites officiels dans l'annuaire Diako, OpenStreetMap et les liens
+          des publications, puis les lit lentement, robots.txt respecté.
         </p>
-        <button class="bouton" id="btn-referentiel">Recharger le référentiel</button>
+        <div class="actions-collecte">
+          <button class="bouton principal" id="btn-moisson">Trouver les sites web</button>
+        </div>
+        <p class="aide" style="margin:12px 0 0">
+          Aucun moteur de recherche, aucun agrégateur : Booking, TripAdvisor et
+          Google Maps interdisent la réutilisation de leurs données.
+        </p>
       </div>
     </div>
 
-    <div class="carte">
-      <h2>Sites web des établissements</h2>
-      <p class="aide">
-        Facebook donne de la vie ; il donne mal les <strong>tarifs</strong>. Un
-        hôtel met sa grille de chambres sur <em>son</em> site. La moisson va
-        chercher ces adresses à trois endroits — l'annuaire Diako lui-même,
-        <strong>OpenStreetMap</strong>, et les liens relevés dans les
-        publications déjà collectées — puis les inscrit comme sources,
-        rattachées à leur fiche quand c'est sûr.
-      </p>
-      <div class="actions-collecte">
-        <button class="bouton principal" id="btn-moisson">Trouver les sites web</button>
+    <section class="section">
+      <div class="section-tete">
+        <h2>Où chercher</h2>
+        <p class="aide">Des recherches Facebook déduites des trous. Un clic les ajoute aux sources.</p>
       </div>
-      <p class="aide" style="margin:12px 0 0">
-        <strong>Aucun moteur de recherche, aucun agrégateur.</strong> Booking,
-        TripAdvisor et Google Maps interdisent la réutilisation de leurs
-        données ; OpenStreetMap l'autorise (ODbL, avec attribution) — c'est déjà
-        la règle du dépôt. Les sites sont lus lentement, <code>robots.txt</code>
-        respecté, huit pages au maximum.
-      </p>
-    </div>
+      <div class="suggestions" id="suggestions"><p class="aide">Chargement…</p></div>
+    </section>
 
-    <div class="carte">
-      <h2>Où chercher — suggestions déduites des trous</h2>
-      <p class="aide">
-        Chaque ligne vient d'un compte en base. Un clic ajoute la recherche aux
-        sources ; elle sera parcourue à la prochaine collecte.
-      </p>
-      <div class="suggestions" id="suggestions">
-        <p class="aide">Chargement…</p>
-      </div>
-    </div>
-
-    <div class="carte">
-      <h2>Ce qui se passera sans vous</h2>
-      <p class="aide">
-        Le plan de la journée, tel qu'il est réglé en ce moment.
+    <section class="section">
+      <div class="section-tete">
+        <h2>Ce qui se passera sans vous</h2>
         <button class="lien-discret" data-vers-auto>Modifier dans Automatisation</button>
-      </p>
+      </div>
       <div class="plan" id="plan-auto"></div>
       <div class="ligne-compte" id="etat-planning" style="margin-top:14px"></div>
-    </div>
+    </section>
 
-    <div class="carte">
+    <section class="section">
       <h2>Journal</h2>
       <ul class="journal" id="journal"></ul>
-    </div>
+    </section>
   </section>
 
   <!-- ══════════ TROUVAILLES ══════════ -->
   <section class="vue" id="vue-trouvailles">
+    <div class="entete-vue">
+      <h1>Trouvailles</h1>
+      <p class="sous">Ouvrez une carte pour vérifier, corriger et publier. Touches : V valider, R rejeter, Échap fermer.</p>
+    </div>
     <div class="filtres">
       <div class="puces" id="filtres-statut">
         <button class="puce actif" data-statut="a_trier">À trier</button>
@@ -205,6 +229,8 @@
       <select id="filtre-apport">
         <option value="">Tout ce qui a été collecté</option>
         <option value="chambres">Porte des tarifs de chambre</option>
+        <option value="chambres_sans_prix">Chambres sans prix (non publiables)</option>
+        <option value="vehicules">Porte des tarifs de véhicule</option>
         <option value="plats">Porte des plats</option>
         <option value="circuits">Porte des circuits</option>
         <option value="photos">Porte des photos</option>
@@ -218,7 +244,7 @@
         <option value="score">Meilleur score d'abord</option>
         <option value="recent">Plus récentes d'abord</option>
       </select>
-      <input type="search" id="recherche" placeholder="Rechercher (nom, lieu, texte, téléphone)…">
+      <input type="search" id="recherche" placeholder="Nom, lieu, texte, téléphone…">
     </div>
     <div class="barre-choix" id="barre-choix" hidden>
       <span class="discret" id="choix-compte">0 sélectionnée(s)</span>
@@ -228,46 +254,41 @@
       <button class="bouton principal" id="choix-valider">Valider la sélection</button>
     </div>
     <div class="grille-annonces" id="grille"></div>
-    <p class="vide" id="vide" hidden>Rien ici pour l'instant.</p>
+    <p class="vide" id="vide" hidden>Rien ici pour l'instant. Lancez une collecte, ou changez de filtre.</p>
   </section>
 
   <!-- ══════════ AUTOMATISATION ══════════ -->
   <section class="vue" id="vue-auto">
+    <div class="entete-vue">
+      <h1>Automatisation</h1>
+      <p class="sous">Rien ici n'est irréversible sauf la publication. Réglez, puis essayez : le tri s'applique tout de suite sur la file réelle.</p>
+    </div>
 
-    <div class="carte">
+    <section class="section">
       <h2>Ce qui se passera sans vous</h2>
-      <p class="aide">
-        Rien ici n'est irréversible sauf la dernière règle. Réglez, puis
-        <strong>essayez</strong> : le bouton applique le tri tout de suite sur la
-        file réelle, pour que vous voyiez ce que ça donne avant de le laisser
-        tourner une semaine.
-      </p>
-      <div class="plan" id="plan-auto-2"></div>
+      <div class="plan" id="plan-auto-2" style="margin-top:8px"></div>
       <div class="actions-collecte" style="margin-top:16px">
         <button class="bouton principal" id="btn-auto-enregistrer">Enregistrer</button>
         <button class="bouton" id="btn-auto-essai">Essayer maintenant</button>
       </div>
       <div class="ligne-compte" id="etat-essai" hidden></div>
-    </div>
+    </section>
 
-    <div class="carte">
+    <section class="section">
       <h2>Les règles</h2>
-      <div class="regles">
+      <div class="regles" style="margin-top:12px">
 
-        <!-- ① Collecte -->
         <div class="regle" id="regle-collecte">
           <div class="regle-tete">
-            <label class="bascule">
-              <input type="checkbox" data-cfg="collecte_auto"><i></i>
-            </label>
+            <label class="bascule"><input type="checkbox" data-cfg="collecte_auto"><i></i></label>
             <span class="titre-regle">Collecter aux heures dites</span>
             <span class="marque-etat">éteint</span>
           </div>
           <p>
-            Passe sur toutes les sources actives. Le <strong>dernier passage de
-            la journée creuse plus loin</strong> dans les mêmes fils si
-            l'objectif n'est pas atteint — mêmes pauses, plus de défilements :
-            c'est la profondeur qui augmente, pas le rythme.
+            Passe sur toutes les sources actives. Le dernier passage de la
+            journée creuse plus loin dans les mêmes fils si l'objectif n'est pas
+            atteint : mêmes pauses, plus de défilements. Un passage manqué (PC
+            éteint, bot relancé) se rattrape jusqu'au passage suivant.
           </p>
           <div class="reglages-regle">
             <div class="champ">
@@ -281,20 +302,17 @@
           </div>
         </div>
 
-        <!-- ② Sites web -->
         <div class="regle" id="regle-moisson">
           <div class="regle-tete">
-            <label class="bascule">
-              <input type="checkbox" data-bascule="moisson_auto_jours"><i></i>
-            </label>
+            <label class="bascule"><input type="checkbox" data-bascule="moisson_auto_jours"><i></i></label>
             <span class="titre-regle">Chercher les sites web des établissements</span>
             <span class="marque-etat">éteint</span>
           </div>
           <p>
-            Interroge l'annuaire Diako, <strong>OpenStreetMap</strong> et les liens
-            relevés dans les publications, puis inscrit les sites trouvés comme
-            sources — rattachés à leur fiche quand c'est sûr. C'est de là que
-            viennent les <strong>tarifs de chambre</strong>.
+            Interroge l'annuaire Diako, OpenStreetMap et les liens relevés dans
+            les publications, puis inscrit les sites trouvés comme sources,
+            rattachés à leur fiche quand c'est sûr. C'est de là que viennent
+            les tarifs de chambre.
           </p>
           <div class="reglages-regle">
             <div class="champ">
@@ -309,20 +327,18 @@
           </div>
         </div>
 
-        <!-- ③ Relecture par l'IA -->
         <div class="regle" id="regle-ia">
           <div class="regle-tete">
-            <label class="bascule">
-              <input type="checkbox" data-cfg="llm_actif"><i></i>
-            </label>
+            <label class="bascule"><input type="checkbox" data-cfg="llm_actif"><i></i></label>
             <span class="titre-regle">Faire relire chaque trouvaille par l'IA</span>
             <span class="marque-etat">éteint</span>
           </div>
           <p>
-            Comprend le texte libre, structure les grilles de tarifs, et
-            <strong>transcrit les cartes photographiées</strong> — sans quoi les
-            1 858 restaurants sans carte le resteraient. Une panne du modèle ne
-            casse jamais la collecte : la trouvaille est marquée « non relue ».
+            Comprend le texte libre, structure les grilles de tarifs et
+            transcrit les cartes photographiées. Un montant ou une date que le
+            texte ne contient pas est écarté ; sous le seuil de confiance, les
+            chiffres restent aux règles. Une panne du modèle ne casse jamais la
+            collecte.
           </p>
           <div class="reglages-regle">
             <div class="champ">
@@ -331,27 +347,22 @@
                 <span class="libelle">oui</span></label>
             </div>
             <div class="champ">
-              <label>Repasser les incomplètes au modèle</label>
-              <label class="bascule">
-                <input type="checkbox" data-cfg="auto_relire_incompletes"><i></i>
-                <span class="libelle">oui</span></label>
+              <label>Confiance minimale (0-100)</label>
+              <input type="number" data-cfg="llm_confiance_min" min="0" max="100">
             </div>
           </div>
         </div>
 
-        <!-- ④ Validation -->
         <div class="regle" id="regle-valider">
           <div class="regle-tete">
-            <label class="bascule">
-              <input type="checkbox" data-cfg="auto_valider"><i></i>
-            </label>
+            <label class="bascule"><input type="checkbox" data-cfg="auto_valider"><i></i></label>
             <span class="titre-regle">Valider seule ce qui est manifestement bon</span>
             <span class="marque-etat">éteint</span>
           </div>
           <p>
-            Passe en « validée » ce qui dépasse le score choisi <em>et</em> à qui
-            il ne manque rien pour publier. <strong>Rien ne part en ligne</strong> :
-            la publication reste un geste à part.
+            Passe en « validée » ce qui dépasse le score choisi et à qui il ne
+            manque rien pour publier. Rien ne part en ligne : la publication
+            reste un geste à part.
           </p>
           <div class="reglages-regle">
             <div class="champ">
@@ -360,26 +371,22 @@
             </div>
             <div class="champ">
               <label>Exiger aucun manque</label>
-              <label class="bascule">
-                <input type="checkbox" data-cfg="auto_valider_sans_manque"><i></i>
+              <label class="bascule"><input type="checkbox" data-cfg="auto_valider_sans_manque"><i></i>
                 <span class="libelle">oui</span></label>
             </div>
           </div>
         </div>
 
-        <!-- ⑤ Rejet -->
         <div class="regle" id="regle-rejeter">
           <div class="regle-tete">
-            <label class="bascule">
-              <input type="checkbox" data-cfg="auto_rejeter"><i></i>
-            </label>
+            <label class="bascule"><input type="checkbox" data-cfg="auto_rejeter"><i></i></label>
             <span class="titre-regle">Écarter seule ce qui n'a aucune chance</span>
             <span class="marque-etat">éteint</span>
           </div>
           <p>
-            Passe en « rejetée » ce qui reste sous le score choisi. <strong>Rien
-            n'est supprimé</strong> : le statut se rechange d'un clic, et l'onglet
-            Rejetées reste consultable.
+            Passe en « rejetée » ce qui reste sous le score choisi. Rien n'est
+            supprimé : le statut se rechange d'un clic. Une trouvaille dont la
+            lecture n'est pas finie n'est jamais jugée.
           </p>
           <div class="reglages-regle">
             <div class="champ">
@@ -389,22 +396,18 @@
           </div>
         </div>
 
-        <!-- ⑥ Publication — la seule irréversible -->
         <div class="regle danger" id="regle-publier">
           <div class="regle-tete">
-            <label class="bascule danger">
-              <input type="checkbox" data-cfg="auto_publier"><i></i>
-            </label>
+            <label class="bascule danger"><input type="checkbox" data-cfg="auto_publier"><i></i></label>
             <span class="titre-regle">Publier seule les trouvailles validées</span>
             <span class="marque-etat">éteint</span>
           </div>
           <p>
-            ⚠ <strong>C'est la seule règle qui ne se rattrape pas.</strong> La
-            fiche est écrite sur diako.fonenako.mg et vue par les visiteurs ;
-            revenir en arrière est un retrait à la main. Le plafond quotidien
-            existe pour qu'une lecture qui part de travers se voie sur dix fiches,
-            pas sur deux cents. À laisser éteint tant que vous n'avez pas vu une
-            dizaine de publications partir correctement.
+            La seule règle qui ne se rattrape pas : la fiche est écrite sur
+            diako.fonenako.mg et vue par les visiteurs. Le plafond quotidien
+            existe pour qu'une lecture qui part de travers se voie sur dix
+            fiches, pas sur deux cents. À laisser éteinte tant que vous n'avez
+            pas vu une dizaine de publications partir correctement.
           </p>
           <div class="reglages-regle">
             <div class="champ">
@@ -412,48 +415,47 @@
               <input type="number" data-cfg="auto_publier_max_par_jour" min="1">
             </div>
             <div class="champ">
-              <label>Publier en ligne (sinon en attente)</label>
-              <label class="bascule">
-                <input type="checkbox" data-cfg="publier_directement"><i></i>
-                <span class="libelle">en ligne</span></label>
+              <label>Rendre visible sur le site (sinon masqué)</label>
+              <label class="bascule"><input type="checkbox" data-cfg="publier_directement"><i></i>
+                <span class="libelle">visible</span></label>
             </div>
           </div>
         </div>
 
-        <!-- ⑦ Ménage -->
         <div class="regle" id="regle-purger">
           <div class="regle-tete">
-            <label class="bascule">
-              <input type="checkbox" data-bascule="auto_purger_jours"><i></i>
-            </label>
+            <label class="bascule"><input type="checkbox" data-bascule="auto_purger_jours"><i></i></label>
             <span class="titre-regle">Faire le ménage dans la base locale</span>
             <span class="marque-etat">éteint</span>
           </div>
           <p>
-            Efface les trouvailles <strong>rejetées et les doublons</strong> passé
-            un certain âge, <strong>photos comprises</strong>. Sans ça,
-            <code>data/trouvailles/</code> gonfle indéfiniment : chaque trouvaille
-            garde ses photos en pleine taille.
+            Efface les trouvailles rejetées et les doublons passé un certain
+            âge, photos comprises. Libère aussi les photos locales des
+            trouvailles publiées : elles sont chez o2switch et l'interface
+            montre la copie en ligne.
           </p>
           <div class="reglages-regle">
             <div class="champ">
-              <label>Au-delà de (jours)</label>
+              <label>Rejetées et doublons au-delà de (jours)</label>
               <input type="number" data-cfg="auto_purger_jours" min="0">
+            </div>
+            <div class="champ">
+              <label>Photos des publiées au-delà de (jours, 0 = garder)</label>
+              <input type="number" data-cfg="purger_photos_publiees_jours" min="0">
             </div>
           </div>
         </div>
 
-        <!-- ⑧ Rattachement -->
         <div class="regle active" id="regle-rattacher">
           <div class="regle-tete">
             <span class="titre-regle">Rattacher seule à une fiche existante</span>
             <span class="marque-etat">toujours</span>
           </div>
           <p>
-            Au-dessus du seuil <em>et</em> sur un lieu concordant, la trouvaille
-            est rattachée sans rien demander. En dessous, les candidats sont
-            proposés et <strong>vous tranchez</strong> : poser une carte sur le
-            mauvais restaurant ne se rattrape pas.
+            Au-dessus du seuil et sur un lieu concordant, la trouvaille est
+            rattachée sans rien demander. En dessous, les candidats sont
+            proposés et vous tranchez : poser une carte sur le mauvais
+            restaurant ne se rattrape pas.
           </p>
           <div class="reglages-regle">
             <div class="champ">
@@ -475,63 +477,40 @@
       <div class="actions-collecte" style="margin-top:16px">
         <button class="bouton principal" id="btn-auto-enregistrer-2">Enregistrer</button>
       </div>
-    </div>
+    </section>
 
-    <div class="carte">
+    <section class="section">
       <h2>Ce que l'automatisation ne fera jamais</h2>
-      <ul class="notes">
-        <li><strong>Elle ne touche pas au milieu.</strong> Entre le seuil de rejet
-          et celui de validation, rien ne bouge : c'est la zone où l'automate n'a
-          pas d'avis, et prétendre le contraire ferait perdre de bonnes
-          trouvailles sans que personne ne s'en aperçoive.</li>
-        <li><strong>Elle ne défait pas vos décisions.</strong> Une trouvaille que
-          vous avez validée ou publiée n'est jamais rejetée automatiquement, même
-          si son score baisse après une correction.</li>
-        <li><strong>Elle ne publie rien d'incomplet.</strong> Les mêmes contrôles
-          qu'au clic s'appliquent : lieu, fiche, date, plats selon le genre.</li>
-        <li><strong>Elle ne tourne que si le bot tourne.</strong> L'horloge est
-          dans le bot, pas dans Windows — voir la tâche planifiée dans le
-          LISEZ-MOI.</li>
+      <ul class="notes" style="margin-top:10px">
+        <li><strong>Elle ne touche pas au milieu.</strong> Entre le seuil de rejet et celui de validation, rien ne bouge.</li>
+        <li><strong>Elle ne défait pas vos décisions.</strong> Une trouvaille validée ou publiée n'est jamais rejetée automatiquement.</li>
+        <li><strong>Elle ne publie rien d'incomplet.</strong> Les mêmes contrôles qu'au clic s'appliquent : lieu, fiche, date, plats selon le genre.</li>
+        <li><strong>Elle ne tourne que si le bot tourne.</strong> Le gardien Windows le relance toutes les dix minutes s'il est tombé.</li>
       </ul>
-    </div>
+    </section>
   </section>
 
-  <!-- ══════════ SOURCES ══════════ -->
+  <!-- ══════════ NOUVELLES SOURCES ══════════ -->
   <section class="vue" id="vue-candidats">
-    <div class="carte">
-      <h2>Trouver de nouvelles sources</h2>
-      <p class="aide">
-        Le bot cherche lui-même des <strong>groupes</strong> et des
-        <strong>pages</strong> qui parlent de voyage, d'hébergement et de sorties à Madagascar, relève leur
-        <strong>nombre de membres ou d'abonnés</strong> et leur rythme de
-        publication, puis les note. <strong>Vous décidez</strong> : rien n'est
-        ajouté sans votre accord, et un candidat écarté ne revient plus.
-      </p>
-      <p class="aide">
-        Le bot <strong>ne rejoint aucun groupe et ne suit aucune page</strong> —
-        ce sont des actes visibles depuis votre compte. Pour un groupe privé,
-        ouvrez son lien et demandez l'adhésion vous-même ; le bot ne saura le
-        lire qu'une fois que vous y serez admis.
-      </p>
+    <div class="entete-vue">
+      <h1>Nouvelles sources</h1>
+      <p class="sous">Le bot cherche des groupes et des pages, les note ; vous décidez. Il ne rejoint aucun groupe et ne suit aucune page.</p>
+    </div>
+
+    <section class="section">
       <div class="ligne-form">
-        <button class="bouton principal" id="btn-prospecter-sources">
-          Chercher de nouvelles sources
-        </button>
-        <span class="discret" id="etat-candidats"></span>
+        <button class="bouton principal" id="btn-prospecter-sources">Chercher de nouvelles sources</button>
+        <span class="discret" id="etat-candidats" style="align-self:center"></span>
       </div>
       <details class="repli">
         <summary>Ce que le bot recherche (<span id="nb-requetes">0</span> recherches)</summary>
-        <p class="aide">
-          Une recherche par ligne. C'est ce qui adapte le bot à votre métier —
-          ajoutez les mots que les voyageurs et les établissements emploient vraiment.
-        </p>
-        <textarea id="requetes-prospection" rows="8"
-                  placeholder="hôtel Nosy Be&#10;bons plans sortie Antananarivo"></textarea>
+        <p class="aide">Une recherche par ligne. C'est ce qui adapte le bot au métier : les mots que les voyageurs et les établissements emploient vraiment.</p>
+        <textarea id="requetes-prospection" rows="8" placeholder="hôtel Nosy Be&#10;bons plans sortie Antananarivo"></textarea>
         <button class="bouton" id="btn-requetes">Enregistrer les recherches</button>
       </details>
-    </div>
+    </section>
 
-    <div class="carte">
+    <section class="section">
       <div class="entete-carte">
         <h2>Candidats à trancher</h2>
         <div class="actions-carte">
@@ -548,107 +527,93 @@
         <button class="puce" data-origine="recherche">Trouvés par recherche</button>
       </div>
       <div id="liste-candidats" class="liste-candidats"></div>
-      <p class="aide" id="candidats-vide" hidden>
-        Aucun candidat en attente. Lancez une recherche pour en trouver.
-      </p>
-    </div>
+      <p class="aide" id="candidats-vide" hidden>Aucun candidat en attente. Lancez une recherche pour en trouver.</p>
+    </section>
   </section>
 
+  <!-- ══════════ SOURCES ══════════ -->
   <section class="vue" id="vue-sources">
+    <div class="entete-vue">
+      <h1>Sources</h1>
+      <p class="sous">Groupes, pages, votre fil, des recherches, et le site des établissements. La source la plus anciennement visitée passe d'abord.</p>
+    </div>
 
     <div class="fil-vedette" id="fil-vedette">
       <span class="icone-fil">📰</span>
       <div class="corps-fil">
         <strong>Votre fil d'actualité comme source</strong>
         <p id="fil-texte">
-          L'algorithme de Facebook vous sert déjà ce qui vous intéresse : les
-          publications des groupes et des pages que vous suivez, triées. Le fil
-          est déroulé <strong>plus loin</strong> que les autres sources — c'est
-          celle qui coûte le moins de pages chargées par trouvaille.
+          L'algorithme de Facebook vous sert déjà ce qui vous intéresse. Le fil
+          est déroulé plus loin que les autres sources : c'est celle qui coûte
+          le moins de pages chargées par trouvaille.
         </p>
       </div>
       <button class="bouton principal" id="btn-fil">Activer mon fil</button>
     </div>
 
-    <div class="carte">
-      <h2>Sources surveillées</h2>
-      <p class="aide">
-        Collez une adresse Facebook, ou <strong>tapez simplement ce que vous
-        cherchez</strong> — le bot en fait une recherche.<br>
-        Groupe : <code>facebook.com/groups/tourisme.mada</code> ·
-        Page : <code>facebook.com/SakamangaHotel</code> ·
-        Fil : <code>facebook.com</code> ·
-        Recherche : <code>menu restaurant Nosy Be</code> ·
-        Site web : <code>www.campcatta.com</code>
+    <section class="section">
+      <h2>Ajouter une source</h2>
+      <p class="aide" style="margin-top:6px">
+        Collez une adresse Facebook, un site web, ou tapez simplement ce que
+        vous cherchez : le bot en fait une recherche.
+        Groupe <code>facebook.com/groups/tourisme.mada</code>, page
+        <code>facebook.com/SakamangaHotel</code>, site <code>www.campcatta.com</code>,
+        recherche <code>menu restaurant Nosy Be</code>.
       </p>
       <form class="ligne-form" id="form-source">
         <input id="source-nom" placeholder="Nom court (facultatif)">
-        <input id="source-url" placeholder="Adresse Facebook, ou mots à chercher…" required>
+        <input id="source-url" placeholder="Adresse Facebook, site web, ou mots à chercher…" required>
         <button class="bouton principal" type="submit">Ajouter</button>
       </form>
+    </section>
+
+    <section class="section">
+      <h2>Sources surveillées</h2>
+      <div class="filtres-sources" style="margin-top:10px">
+        <div class="puces" id="filtres-genre-source">
+          <button class="puce actif" data-genre="">Toutes</button>
+          <button class="puce" data-genre="groupe">Groupes</button>
+          <button class="puce" data-genre="page">Pages</button>
+          <button class="puce" data-genre="recherche">Recherches</button>
+          <button class="puce" data-genre="site">Sites web</button>
+          <button class="puce" data-genre="pause">En pause (échecs)</button>
+        </div>
+        <input type="search" id="recherche-source" placeholder="Filtrer par nom ou adresse…" style="min-width:200px">
+        <span class="discret" id="compte-sources"></span>
+      </div>
+      <div style="overflow-x:auto">
       <table class="tableau" id="table-sources">
-        <thead><tr><th>Actif</th><th>Type</th><th>Nom</th><th>Adresse</th><th>Dernier passage</th><th>Trouvées</th><th></th></tr></thead>
+        <thead><tr><th>Actif</th><th>Type</th><th>Nom</th><th>Adresse</th><th>Dernier passage</th><th>Résultat</th><th>Trouvées</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
-    </div>
+      </div>
+    </section>
 
-    <div class="carte">
-      <h2>Les cinq natures de source</h2>
-      <ul class="notes">
-        <li><strong>Groupe</strong> — il faut en être membre. Ouvert en tri
-          <em>chronologique</em> : sans ça Facebook sert « les plus pertinents »,
-          c'est-à-dire des publications déjà vues.</li>
-        <li><strong>Page</strong> — le fil d'un établissement ou d'un office du
-          tourisme. Sur une page, <em>l'auteur est l'établissement</em> : c'est le
-          nom le plus sûr dont dispose le rapprochement.</li>
-        <li><strong>Fil d'actualité</strong> — ce que votre compte voit déjà.
-          Utile pour ne pas déclarer une à une les dizaines de pages suivies.</li>
-        <li><strong>Recherche</strong> — la seule façon d'atteindre ce que vous ne
-          suivez pas encore. C'est là que se trouvent les niches : un nouveau
-          restaurant, une carte publiée par un client, un festival de province.</li>
-        <li><strong>Site web</strong> — le site de l'établissement lui-même.
-          C'est le seul endroit où l'on trouve une <em>grille de tarifs</em> :
-          types de chambre, saisons, cartes complètes. Une source « site » sait
-          de quelle fiche elle parle, donc ses prix ne sont jamais rattachés au
-          jugé. Elle ne passe pas par Facebook et fonctionne même si la session
-          a expiré.</li>
-      </ul>
-    </div>
-
-    <div class="carte">
+    <section class="section">
       <h2>Ce que le bot écrit sur Diako</h2>
-      <ul class="notes">
-        <li><strong>Il ne remplace jamais rien.</strong> Sur une fiche existante,
-          seules les colonnes <em>vides</em> sont remplies. Une description écrite
-          par l'office du tourisme reste telle quelle.</li>
-        <li><strong>Le prix ne voyage jamais seul</strong> : montant, unité et
-          <em>date de relevé</em> partent ensemble. Un tarif sans date ment dès
-          qu'il vieillit.</li>
-        <li><strong>La provenance est écrite dans la base</strong> (colonne
-          <code>source</code>) et sous chaque récit : le nom de l'auteur d'origine
-          et le lien vers sa publication.</li>
-        <li><strong>Aucune donnée inventée.</strong> Un champ que la publication ne
-          dit pas reste vide, et se voit ici en badge <span class="badge manque">manque</span>.</li>
+      <ul class="notes" style="margin-top:10px">
+        <li><strong>Il ne remplace jamais rien.</strong> Sur une fiche existante, seules les colonnes vides sont remplies.</li>
+        <li><strong>Le prix ne voyage jamais seul</strong> : montant, unité et date de relevé partent ensemble.</li>
+        <li><strong>La provenance est écrite dans la base</strong> et sous chaque récit : le nom de l'auteur d'origine et le lien vers sa publication.</li>
+        <li><strong>Aucune donnée inventée.</strong> Un champ que la publication ne dit pas reste vide, et se voit ici en badge <span class="badge manque">manque</span>.</li>
+        <li><strong>L'immobilier est écarté.</strong> Une chambre ou un bungalow loués à la nuitée restent du tourisme ; un appartement au mois est le métier de Fonenako.</li>
       </ul>
-    </div>
+    </section>
   </section>
 
   <!-- ══════════ RÉGLAGES ══════════ -->
   <section class="vue" id="vue-reglages">
+    <div class="entete-vue">
+      <h1>Réglages</h1>
+      <p class="sous">Cadence, photos, fraîcheur et chemin de l'IA. Les interrupteurs de l'automatisation sont dans l'onglet voisin.</p>
+    </div>
 
-    <div class="carte">
+    <section class="section">
       <h2>Relecture et lecture des cartes par l'IA</h2>
-      <p class="aide">
-        Les règles lisent bien le mécanique (numéros, montants, dates). Le modèle
-        sert à deux choses qu'elles ne savent pas faire : comprendre un texte
-        libre (« la crevette au coco valait ses 18 000 »), et
-        <strong>transcrire une carte photographiée</strong> — à Madagascar une
-        carte se publie en photo, presque jamais tapée.
-      </p>
-      <p class="aide" style="margin:-8px 0 14px">
-        L'interrupteur de la relecture et celui des cartes en photo sont dans
-        <button class="lien-discret" data-vers-auto>Automatisation</button>.
-        Ici, seulement <em>par où</em> elle passe.
+      <p class="aide" style="margin-top:6px">
+        Les règles lisent bien le mécanique (numéros, montants, dates). Le
+        modèle sert à deux choses : comprendre un texte libre, et transcrire
+        une carte photographiée. Ici, seulement par où il passe.
       </p>
       <div class="grille-reglages">
         <div class="reglage">
@@ -675,33 +640,43 @@
         <span>Testez le chemin choisi avant de lancer une collecte.</span>
         <button class="lien-discret" id="btn-test-llm">Tester la relecture</button>
       </div>
-      <p class="aide" style="margin:0">
-        La lecture d'image ne part pas à chaque publication : seulement quand le
-        texte parle de carte ou de menu, ou quand l'établissement est un
-        restaurant — et seulement si les règles n'ont pas déjà trouvé les plats.
-      </p>
-    </div>
+    </section>
 
-    <div class="carte">
-      <h2>Réglages</h2>
+    <section class="section">
+      <h2>Collecte et photos</h2>
+      <p class="aide" style="margin-top:6px">
+        Année minimale d'une publication : Diako vit d'informations fraîches.
+        Quand Facebook ne livre aucune date lisible, la publication est gardée
+        et porte la mention <span class="sans-date">date de publication inconnue</span> ;
+        son prix n'est jamais daté d'aujourd'hui.
+      </p>
       <div class="grille-reglages" id="grille-reglages"></div>
       <button class="bouton principal" id="btn-reglages">Enregistrer</button>
-    </div>
+    </section>
 
-    <div class="carte">
+    <section class="section">
       <h2>Bon à savoir</h2>
-      <ul class="notes">
-        <li><strong>Allure lente volontaire.</strong> Les pauses imitent une lecture
-          humaine. Les raccourcir augmente le risque de blocage du compte Facebook.</li>
-        <li><strong>Rien n'est publié tout seul.</strong> Une trouvaille ne part sur
-          Diako que si vous la validez puis cliquez Publier.</li>
-        <li><strong>Ces contenus viennent de tiers.</strong> On les reprend avec
-          attribution ; si un auteur demande le retrait, on retire.</li>
+      <ul class="notes" style="margin-top:10px">
+        <li><strong>Allure lente volontaire.</strong> Les pauses imitent une lecture humaine ; les raccourcir expose le compte Facebook.</li>
+        <li><strong>Un seul navigateur à la fois sur ce PC.</strong> Les trois bots se partagent un verrou : celui qui arrive second saute sa partie Facebook et repasse au créneau suivant.</li>
+        <li><strong>Sous 900 Mo de mémoire libre, Chromium ne s'ouvre pas.</strong> Le bot lit quand même les sites web.</li>
+        <li><strong>Les plantages s'écrivent</strong> dans <code>data/bot-erreurs.log</code> ; le gardien relance le bot toutes les dix minutes.</li>
       </ul>
-    </div>
+    </section>
   </section>
 
 </main>
+</div>
+
+<!-- Barre du bas, téléphone -->
+<nav class="barre-mobile" aria-label="Sections">
+  <button class="onglet actif" data-vue="bord">Bord</button>
+  <button class="onglet" data-vue="trouvailles">Trouvailles <span class="compteur pastille-trier">0</span></button>
+  <button class="onglet" data-vue="sources">Sources</button>
+  <button class="onglet" data-vue="candidats">Nouvelles <span class="compteur pastille-candidats">0</span></button>
+  <button class="onglet" data-vue="auto">Auto</button>
+  <button class="onglet" data-vue="reglages">Réglages</button>
+</nav>
 
 <!-- ══════════ PANNEAU DE DÉTAIL ══════════ -->
 <aside class="panneau" id="panneau" hidden>
@@ -714,9 +689,7 @@
       </div>
       <button class="fermer" data-fermer aria-label="Fermer">×</button>
     </header>
-
     <div class="panneau-contenu" id="panneau-contenu"></div>
-
     <footer class="panneau-pied">
       <button class="bouton danger" id="p-rejeter">Rejeter</button>
       <button class="bouton" id="p-valider">Valider</button>

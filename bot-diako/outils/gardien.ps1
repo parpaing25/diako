@@ -32,7 +32,7 @@
 # (« Fonenako preprod\29031\Fonenako FinAL GITHUB\bot-annonces ») la faisait
 # deborder a lui seul. La table des trois bots vit donc ici.
 param(
-    [ValidateSet("fonenako", "diako", "akora")]
+    [ValidateSet("fonenako", "diako", "akora", "page")]
     [string] $Bot,
     [string] $Dossier,
     [int]    $Port,
@@ -50,6 +50,11 @@ if ($Bot) {
                       Dossier = Join-Path $bureau "Diako\bot-diako" }
         akora    = @{ Nom = "AKORA";    Port = 8758
                       Dossier = Join-Path $bureau "AKORA\akora\bot-fournisseurs" }
+        # Ajoute le 23/08/2026 : le bot de la PAGE Facebook Fonenako (8759)
+        # etait le seul des quatre sans gardien — il serait reste mort apres
+        # la prochaine saturation memoire, comme les trois autres le 23/08.
+        page     = @{ Nom = "Page Fonenako"; Port = 8759
+                      Dossier = Join-Path $bureau "Fonenako preprod\29031\Fonenako FinAL GITHUB\bot-page" }
     }
     $choisi = $table[$Bot]
     $Dossier = $choisi.Dossier

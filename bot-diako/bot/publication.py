@@ -180,7 +180,11 @@ def _txt(valeur) -> str:
 def _num(valeur) -> str:
     if valeur in (None, ""):
         return "NULL"
-    return str(int(valeur))
+    try:
+        return str(int(float(str(valeur).replace(" ", "").replace(" ", ""))))
+    except (TypeError, ValueError):
+        # Une valeur illisible ne fait pas échouer la publication entière.
+        return "NULL"
 
 
 def _bool(valeur) -> str:
@@ -330,16 +334,18 @@ def _sql_completer_page(t: dict, page_id: str, medias: list[dict]) -> str:
     if t.get("lieu_id"):
         morceaux.append(f"place_id = coalesce(place_id, {_txt(t['lieu_id'])}::uuid)")
 
-    # Une description de moins de 20 caractères ne compte pas comme remplie
-    # (c'est le seuil du barème de complétude, migration 0040).
+    # 🔴 SEULEMENT SI C'EST VIDE. L'ancien seuil « moins de 20 caractères »
+    #    REMPLAÇAIT une description courte posée à la main (« Chez Mariette »,
+    #    « Lodge d'Ampefy ») par le résumé du modèle, sans rien dire — c'est
+    #    exactement la perte silencieuse que le commentaire au-dessus interdit.
     if (t.get("resume") or "").strip():
         morceaux.append(
-            f"short_desc = CASE WHEN coalesce(length(short_desc), 0) < 20 "
+            f"short_desc = CASE WHEN coalesce(length(trim(short_desc)), 0) = 0 "
             f"THEN {_txt(t['resume'][:280])} ELSE short_desc END"
         )
     if (t.get("presentation") or "").strip():
         morceaux.append(
-            f"long_desc = CASE WHEN coalesce(length(long_desc), 0) < 80 "
+            f"long_desc = CASE WHEN coalesce(length(trim(long_desc)), 0) = 0 "
             f"THEN {_txt(t['presentation'])} ELSE long_desc END"
         )
 
@@ -418,8 +424,10 @@ def _sql_carte(page_id: str, lignes: list[dict], releve_le: str) -> str:
     for ordre, ligne in enumerate(sans_section, start=1):
         instructions.append(_insert_plat(ligne, "NULL", ordre, releve_le))
 
-    return ("DO $$\nDECLARE\n" + "\n".join(corps) + "\nBEGIN\n"
-            + "\n".join(instructions) + "\nEND $$;")
+    # Balise de bloc nommée : un « $$ » dans un nom de plat ou de chambre
+    # fermerait un bloc `DO $$` avant l'heure et perdrait tout le lot.
+    return ("DO $diako_bot$\nDECLARE\n" + "\n".join(corps) + "\nBEGIN\n"
+            + "\n".join(instructions) + "\nEND $diako_bot$;")
 
 
 def _insert_plat(ligne: dict, section_sql: str, ordre: int, releve_le: str) -> str:
@@ -479,8 +487,57 @@ def _sql_chambres(page_id: str, lignes: list[dict], releve_le: str) -> str:
                 f" {_txt(releve_le)}::timestamptz);"
             )
 
-    return ("DO $$\nDECLARE\n" + "\n".join(corps) + "\nBEGIN\n"
-            + "\n".join(instructions) + "\nEND $$;")
+    # Balise de bloc nommée : un « $$ » dans un nom de plat ou de chambre
+    # fermerait un bloc `DO $$` avant l'heure et perdrait tout le lot.
+    return ("DO $diako_bot$\nDECLARE\n" + "\n".join(corps) + "\nBEGIN\n"
+            + "\n".join(instructions) + "\nEND $diako_bot$;")
+
+
+# Les valeurs de la contrainte `vehicle_offers_vehicle_type` (migration 0114).
+# Un type hors liste ferait échouer l'INSERT ENTIER : on le ramène à 'autre'.
+TYPES_VEHICULE_SQL = {"4x4", "berline", "citadine", "minibus", "van", "moto",
+                      "quad", "bateau", "velo", "camion", "autre"}
+
+
+def _sql_vehicules(t: dict, page_id: str, lignes: list[dict], releve_le: str) -> str:
+    """La grille d'un loueur -> `public.vehicle_offers`.
+
+    ⚠ `price_day_ar` est NULLABLE en prod (contrairement aux chambres) : une
+      offre sans prix mais avec un modèle ou une note entre quand même — c'est
+      une fiche de flotte, pas un tarif inventé. `price_on` ne part QU'AVEC un
+      prix : dater un tarif absent ne veut rien dire.
+
+    ⚠ `with_driver` a un défaut en base (true). Quand le texte ne dit rien, on
+      écrit DEFAULT et on laisse la base trancher — écrire `true` nous-mêmes
+      serait affirmer ce qu'on n'a pas lu.
+    """
+    gardees = [l for l in lignes
+               if l.get("prix_jour_ar") or l.get("modele") or l.get("note_prix")]
+    if not gardees:
+        return ""
+    source = redaction.source_pour_base(t)
+    requetes = []
+    for rang, ligne in enumerate(gardees, start=1):
+        type_v = (ligne.get("type_vehicule") or "autre").strip().lower()
+        if type_v not in TYPES_VEHICULE_SQL:
+            type_v = "autre"
+        avec = ligne.get("avec_chauffeur")
+        carburant = ligne.get("carburant_inclus")
+        prix = ligne.get("prix_jour_ar")
+        requetes.append(
+            f"INSERT INTO public.vehicle_offers (page_id, vehicle_type, model,"
+            f" seats, with_driver, fuel_included, km_included_per_day,"
+            f" price_day_ar, price_note, deposit_ar, price_on, source,"
+            f" sort_order) VALUES ({_txt(page_id)}::uuid, {_txt(type_v)},"
+            f" {_txt(ligne.get('modele'))}, {_num(ligne.get('places'))},"
+            f" {'DEFAULT' if avec is None else _bool(avec)},"
+            f" {'NULL' if carburant is None else _bool(carburant)},"
+            f" {_num(ligne.get('km_par_jour'))}, {_num(prix)},"
+            f" {_txt(ligne.get('note_prix'))}, {_num(ligne.get('caution_ar'))},"
+            f" {(_txt(releve_le) + '::date') if prix else 'NULL'},"
+            f" {_txt(source)}, {rang});"
+        )
+    return "\n".join(requetes)
 
 
 def _sql_photos_de_carte(page_id: str, medias: list[dict]) -> str:
@@ -526,14 +583,17 @@ def _sql_evenement(t: dict, evt_id: str, slug: str, medias: list[dict]) -> str:
         "poster_licence": _txt("Publication Facebook — reprise avec attribution"),
         "poster_source": _txt(t.get("permalien")),
         "price_ar": _num(t.get("prix_ar")),
-        "price_unit": _txt(t.get("prix_unite") or ("personne" if t.get("prix_ar") else None)),
+        "price_unit": _txt(_unite_post(t.get("prix_unite"))
+                           or ("personne" if t.get("prix_ar") else None)),
         "organizer": _txt(t.get("organisateur")),
         "lieu_libre": _txt(t.get("lieu_texte")),
         "source": _txt(redaction.source_pour_base(t)),
-        # ⚠ « incertaine » par défaut : une date lue sur Facebook n'a pas la
-        #   valeur d'un calendrier officiel, et le site affiche cette nuance.
-        "confiance": _txt("certaine" if t.get("evt_fin") or t.get("evt_debut")
-                          else "incertaine"),
+        # ⚠ « incertaine » pour tout ce qui vient de Facebook : une date lue
+        #   dans une publication n'a pas la valeur d'un calendrier officiel, et
+        #   le site affiche cette nuance. Avant le 02/09/2026 le code écrivait
+        #   « certaine » dès qu'il y avait une date — c'est-à-dire toujours,
+        #   puisque la date est obligatoire pour publier.
+        "confiance": _txt("certaine" if t.get("source_genre") == "site" else "incertaine"),
         "is_published": _bool(charger().get("publier_directement", True)),
     }
     return (
@@ -573,7 +633,9 @@ def _sql_recit(t: dict, post_id: str, medias: list[dict]) -> str:
         "price_unit": _txt(unite),
         "price_on": f"{_txt(t.get('prix_vu_le'))}::date"
         if (t.get("prix_vu_le") and montant) else "NULL",
-        "status": _txt("published"),
+        # `publier_directement` gouverne aussi les récits : « hidden » (la
+        # contrainte n'a pas de brouillon) tant qu'on ne veut pas les voir.
+        "status": _txt("published" if charger().get("publier_directement", True) else "hidden"),
         "visibilite": _txt("public"),
     }
     sql = (
@@ -590,10 +652,56 @@ def _sql_recit(t: dict, post_id: str, medias: list[dict]) -> str:
 
 # ── Orchestration ───────────────────────────────────────────────────────────
 EXIGENCES = {
-    "carte": (("page_id", "fiche d'établissement"),),
+    # ⚠ Une carte SANS fiche rattachée peut désormais créer la sienne, comme
+    #   un établissement : 46 cartes lues (473 lignes) dormaient faute de
+    #   rattachement, alors que le nom et le lieu étaient là (02/09/2026).
+    "carte": (),
     "evenement": (("titre", "titre"), ("evt_debut", "date de début")),
     "recit": (("corps", "texte du récit"),),
 }
+
+
+def completer_lieu(t: dict) -> bool:
+    """Hérite le lieu du rattachement (fiche ou site) et l'ENREGISTRE.
+
+    ⭐ LE REPLI VAUT AUSSI POUR CE QUI EST DÉJÀ EN BASE. 85 trouvailles
+       collectées AVANT le repli dorment en « incomplète » avec pour seul
+       manque le lieu — alors que leur fiche ou leur parc rattaché le connaît.
+       Rejouer la collecte ne les rattraperait pas ; ce contrôle, appelé à
+       chaque vérification de publication, si.
+
+    Le lieu hérité est écrit dans la trouvaille (traçé dans le journal), le
+    badge « lieu ? » retiré, et une « incomplète » que plus rien ne bloque
+    redevient « à trier ». Rend True si un lieu a été hérité.
+    """
+    if t.get("lieu_id"):
+        return False
+    repli = diako.lieu_par_repli(t)
+    if not repli:
+        return False
+
+    t["lieu_id"], t["lieu_nom"], t["lieu_score"] = repli["id"], repli["nom"], None
+    champs = {"lieu_id": repli["id"], "lieu_nom": repli["nom"], "lieu_score": None}
+
+    # Le manque « lieu » n'en est plus un ; et si c'était le seul bloquant,
+    # le statut « incomplète » ne se justifie plus.
+    manques = [m for m in (t.get("manques") or []) if m != "lieu"]
+    if manques != (t.get("manques") or []):
+        t["manques"] = manques
+        champs["manques"] = manques
+        bloquants_restants = [m for m in manques
+                              if m in ("lieu", "établissement", "date", "photo")]
+        if t.get("statut") == "incomplete" and not bloquants_restants:
+            t["statut"] = "a_trier"
+            champs["statut"] = "a_trier"
+
+    if t.get("id"):
+        bdd.modifier(t["id"], champs)
+    bdd.logguer(
+        f"Lieu hérité de {repli['origine']} : « {repli['nom'] or repli['id']} » "
+        f"— trouvaille débloquée.", "info",
+    )
+    return True
 
 
 def manque_pour_publier(t: dict) -> list[str]:
@@ -604,19 +712,42 @@ def manque_pour_publier(t: dict) -> list[str]:
       existante avec une photo, alors que son lieu est déjà posé en base, ne
       l'est pas — l'exiger empêcherait le geste le plus utile du bot.
     """
+    # Le repli du lieu se tente AVANT de compter les manques : une trouvaille
+    # rattachée à une fiche ou à un parc connaît son lieu par héritage.
+    completer_lieu(t)
     genre = t.get("genre") or "recit"
     manques = [
         libelle for champ, libelle in EXIGENCES.get(genre, ()) if not t.get(champ)
     ]
-    if genre == "etablissement" and not t.get("page_id"):
+    if genre in ("etablissement", "carte") and not t.get("page_id"):
         if not t.get("nom_etab"):
             manques.append("nom de l'établissement")
         if not t.get("lieu_id"):
             manques.append("lieu du référentiel")
     if genre == "carte" and not bdd.lignes_a_publier(t["id"]):
         manques.append("au moins un plat")
-    if genre == "recit" and not bdd.photos_a_publier(t["id"]):
-        manques.append("au moins une photo")
+    if genre == "evenement":
+        debut = t.get("evt_debut") or ""
+        try:
+            jour_debut = date.fromisoformat(debut[:10])
+        except ValueError:
+            jour_debut = None
+            manques.append("date de début lisible")
+        fin = t.get("evt_fin") or ""
+        try:
+            jour_fin = date.fromisoformat(fin[:10]) if fin else None
+        except ValueError:
+            jour_fin = None
+        # Un événement passé ne se publie pas — sauf s'il revient chaque année.
+        dernier = jour_fin or jour_debut
+        if dernier and dernier < date.today() and not t.get("evt_recurrent"):
+            manques.append("date déjà passée (ou cochez « revient chaque année »)")
+    if genre == "recit":
+        # Même filtre qu'à l'envoi : une photo marquée « carte » ne part pas en
+        # galerie, donc ne compte pas comme photo du récit.
+        libres = [p for p in bdd.photos_a_publier(t["id"]) if not p.get("est_la_carte")]
+        if not libres:
+            manques.append("au moins une photo")
     return manques
 
 
@@ -626,8 +757,12 @@ def publier(tid: str, rappel=None) -> dict:
     t = bdd.trouvaille(tid)
     if not t:
         raise ErreurPublication("Trouvaille introuvable.")
-    if t.get("cible_id"):
-        raise ErreurPublication(f"Déjà publiée : {t.get('lien_diako')}")
+    # ⚠ « Déjà publiée » se juge sur le LIEN, pas sur `cible_id` seul : un
+    #   doublon d'événement portait l'identifiant de son jumeau dans
+    #   `cible_id`, et une fois requalifié à la main il rendait « Déjà
+    #   publiée : None » — sans issue depuis l'interface (14 lignes le 02/09/2026).
+    if t.get("lien_diako") or t.get("statut") == "publiee":
+        raise ErreurPublication(f"Déjà publiée : {t.get('lien_diako') or 'lien inconnu'}")
 
     manques = manque_pour_publier(t)
     if manques:
@@ -650,6 +785,32 @@ def publier(tid: str, rappel=None) -> dict:
         "lien_diako": resultat["lien"],
         "publie_a": bdd.maintenant(),
     })
+
+    # 🔴 ON RELIT CE QU'ON VIENT D'ÉCRIRE — sur TOUTES les voies (clic, lot,
+    #    automate), pas seulement sur la route du bouton. Et on regarde si la
+    #    ligne est VISIBLE : 333 fiches « publiées » étaient invisibles
+    #    (`is_published = false` forcé par un déclencheur) sans qu'aucune
+    #    vérification ne le dise.
+    try:
+        controle = verifier(resultat["table"], resultat["id"])
+    except Exception as e:
+        controle = {"trouve": None, "erreur": str(e)[:160]}
+    if controle.get("trouve") is False:
+        bdd.modifier(tid, {"note": "⚠ Écriture annoncée mais ligne introuvable en base."})
+        bdd.logguer(
+            f"⚠ Publication annoncée mais la ligne {resultat['table']}/{resultat['id'][:8]} "
+            "est introuvable en base — à vérifier à la main.", "erreur",
+        )
+    elif controle.get("trouve") and cfg.get("publier_directement", True):
+        visible = controle.get("is_published", controle.get("status") == "published")
+        if visible is False:
+            bdd.modifier(tid, {"note": "⚠ Écrite mais NON VISIBLE sur le site (is_published = false)."})
+            bdd.logguer(
+                f"⚠ {resultat['table']}/{resultat['id'][:8]} écrite mais non visible : "
+                "is_published est resté à false. Le compte propriétaire n'a pas été "
+                "reconnu par le déclencheur.", "erreur",
+            )
+    resultat["controle"] = controle
 
     # ⭐ ON NE PUBLIE PAS UNE FOIS, ON RANGE PARTOUT OÙ ÇA MANQUE. Un récit sur
     #   Nosy Komba partait sur le fil et laissait la destination sans photo ;
@@ -702,33 +863,69 @@ def _publier_etablissement(t: dict, cfg: dict, rappel) -> dict:
         lignes = [l for l in lignes if l["nom"] not in deja]
 
     chambres = bdd.chambres_a_publier(t["id"])
+    remplacements = []
     if not nouvelle and chambres:
         # Une grille de tarifs se remplace, elle ne s'empile pas : republier le
         # site six mois plus tard doit corriger les prix, pas créer « Bungalow
         # vue mer » une deuxième fois. On retire les types de même nom, et leurs
         # tarifs de saison partent avec (ON DELETE CASCADE).
-        noms = [c["nom"] for c in chambres]
-        avant = diako.executer_sql(
-            f"DELETE FROM public.room_types WHERE page_id = {_txt(page_id)}::uuid "
-            f"AND lower(name) = ANY({_tableau([n.strip().lower() for n in noms])}) "
-            f"RETURNING id"
-        )
-        if avant:
-            bdd.logguer(
-                f"{len(avant)} type(s) de chambre de même nom remplacé(s) par les "
-                "tarifs relevés aujourd'hui.", "info",
+        # 🔴 ON NE RETIRE QUE CE QU'ON VA REPOSER : une chambre relue SANS prix
+        #    n'est pas réinsérée (`_sql_chambres` l'écarte) — la supprimer
+        #    effaçait un tarif existant, peut-être saisi à la main, sans rien
+        #    remettre. 21 chambres sans prix étaient armées le 02/09/2026.
+        #    Et le DELETE part DANS LE MÊME LOT que l'INSERT : un échec du lot
+        #    ne laisse plus la fiche sans ses chambres.
+        noms = [c["nom"] for c in chambres if c.get("prix_ar")]
+        if noms:
+            remplacements.append(
+                f"DELETE FROM public.room_types WHERE page_id = {_txt(page_id)}::uuid "
+                f"AND lower(name) = ANY({_tableau([n.strip().lower() for n in noms])});"
             )
 
-    releve_le = t.get("prix_vu_le") or t.get("date_post") or date.today().isoformat()
+    vehicules = bdd.vehicules_a_publier(t["id"])
+    if not nouvelle and vehicules:
+        # Une grille de loueur se REMPLACE, comme celle des chambres : relire la
+        # même page six mois plus tard doit corriger le prix du « 4x4 Hilux »,
+        # pas en empiler un deuxième. Même type + même modèle = même offre.
+        # Même règle que les chambres : on ne retire que ce qu'on repose.
+        cles = [
+            f"{(v.get('type_vehicule') or 'autre').strip().lower()}"
+            f"|{(v.get('modele') or '').strip().lower()}"
+            for v in vehicules
+            if v.get("prix_jour_ar") or v.get("modele") or v.get("note_prix")
+        ]
+        if cles:
+            remplacements.append(
+                f"DELETE FROM public.vehicle_offers WHERE page_id = {_txt(page_id)}::uuid "
+                f"AND vehicle_type || '|' || lower(coalesce(model, '')) = "
+                f"ANY({_tableau(sorted(set(cles)))});"
+            )
+
+    # ⚠ LE DERNIER RECOURS EST LA DATE DE COLLECTE, PLUS CELLE DU JOUR. Les
+    #   colonnes `releve_le` de `menu_items`, `room_types` et `vehicle_offers`
+    #   n'acceptent pas NULL : il faut bien une date. Mais « aujourd'hui »
+    #   affirmait que le tarif venait d'être publié, alors que la publication
+    #   peut dater de 2019 ; `collecte_le` dit seulement « c'est le jour où le
+    #   bot a lu ce texte », ce qui est vrai. Depuis le 24/08/2026,
+    #   `date_post` est vide quand la date de publication est inconnue.
+    releve_le = (t.get("prix_vu_le") or t.get("date_post")
+                 or (t.get("collecte_le") or "")[:10] or date.today().isoformat())
     requetes = [
         _sql_creer_page(t, page_id, slug, medias) if nouvelle
         else _sql_completer_page(t, page_id, medias),
         _sql_equipements(page_id, t.get("equipements") or []),
         _sql_carte(page_id, lignes, releve_le),
+        *remplacements,
         _sql_chambres(page_id, chambres, releve_le),
+        _sql_vehicules(t, page_id, vehicules, releve_le),
         _sql_photos_de_carte(page_id, photos_carte),
     ]
-    diako.executer_sql("\n".join(r for r in requetes if r))
+    diako.executer_sql("\n".join(r for r in requetes if r), proprietaire=True)
+    if remplacements:
+        bdd.logguer(
+            "Grille de tarifs remplacée par les tarifs relevés aujourd'hui "
+            "(chambres et véhicules de même nom).", "info",
+        )
 
     if nouvelle:
         lien = f"{SITE}/pro/{slug}"
@@ -742,29 +939,43 @@ def _publier_etablissement(t: dict, cfg: dict, rappel) -> dict:
     bdd.logguer(
         ("Fiche créée" if nouvelle else "Fiche complétée")
         + f" : {len(medias)} photo(s), {len(lignes)} plat(s), "
-        + f"{len([c for c in chambres if c.get('prix_ar')])} chambre(s) tarifée(s).",
+        + f"{len([c for c in chambres if c.get('prix_ar')])} chambre(s) tarifée(s)"
+        + (f", {len(vehicules)} offre(s) de véhicule" if vehicules else "")
+        + ".",
         "succes",
     )
     return {"table": "pages", "id": page_id, "lien": lien, "photos": len(medias),
-            "plats": len(lignes), "chambres": len(chambres), "medias": medias}
+            "plats": len(lignes), "chambres": len(chambres),
+            "vehicules": len(vehicules), "medias": medias}
 
 
 def _publier_evenement(t: dict, rappel) -> dict:
+    # ⚠ LE CALENDRIER SE RELIT AU MOMENT DE PUBLIER, pas seulement à la
+    #   collecte : quatre trouvailles distinctes visaient le même « Tiakaly
+    #   Food Festival » — publiées à la suite, elles auraient fait quatre
+    #   événements (02/09/2026).
+    jumeau, comment = diako.evenement_deja_la(t.get("titre") or "", t.get("evt_debut"))
+    if jumeau:
+        bdd.modifier(t["id"], {"statut": "doublon", "doublon_de": f"events:{jumeau}",
+                               "note": f"Déjà au calendrier de Diako : {comment}."})
+        raise ErreurPublication(f"Déjà au calendrier de Diako : {comment} — classée doublon.")
     evt_id = str(uuid.uuid4())
     slug = _slug_libre("events", _slug(f"{t.get('titre')} {t.get('evt_debut') or ''}"))
     medias = envoyer_photos(t, "pages", f"evenements/{_slug(slug)}", rappel)
-    diako.executer_sql(_sql_evenement(t, evt_id, slug, medias))
+    diako.executer_sql(_sql_evenement(t, evt_id, slug, medias), proprietaire=True)
     return {"table": "events", "id": evt_id, "lien": f"{SITE}/evenements",
             "photos": len(medias), "medias": medias}
 
 
 def _publier_recit(t: dict, rappel) -> dict:
     post_id = str(uuid.uuid4())
-    horodatage = int(time.time())
-    medias = envoyer_photos(t, "posts", f"{AUTEUR_DIAKO}/{horodatage}", rappel)
+    # ⚠ PRÉFIXE STABLE, dérivé de la trouvaille : avec un horodatage, une
+    #   reprise après échec renvoyait toutes les photos sous un nouveau chemin
+    #   et laissait les précédentes orphelines sur o2switch.
+    medias = envoyer_photos(t, "posts", f"{AUTEUR_DIAKO}/{t['id'][:8]}", rappel)
     if not medias:
         raise ErreurPublication("Aucune photo n'a pu être envoyée — récit non publié.")
-    diako.executer_sql(_sql_recit(t, post_id, medias))
+    diako.executer_sql(_sql_recit(t, post_id, medias), proprietaire=True)
     return {"table": "posts", "id": post_id, "lien": f"{SITE}/post/{post_id}",
             "photos": len(medias), "medias": medias}
 

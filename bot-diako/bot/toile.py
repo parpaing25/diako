@@ -48,6 +48,27 @@ AGENT = (
     "Mozilla/5.0 (compatible; DiakoBot/1.0; +https://diako.fonenako.mg) "
     "collecte de tarifs publics pour l'annuaire Diako"
 )
+# En second recours, quand un pare-feu rend 403 à tout ce qui s'annonce comme
+# un robot — alors que robots.txt autorise. On reste lent et poli.
+AGENT_NAVIGATEUR = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+)
+EN_TETES = {"User-Agent": AGENT, "Accept-Language": "fr,en;q=0.8"}
+
+# Ce que « illisible » veut dire, en clair, pour le journal et l'onglet Sources.
+LIBELLES_ECHEC = {
+    "dns": "adresse introuvable (le domaine n'existe plus)",
+    "injoignable": "site injoignable",
+    "delai": "site injoignable (délai dépassé)",
+    "ssl": "certificat HTTPS invalide",
+    "403": "accès refusé par le site (HTTP 403)",
+    "404": "page absente (HTTP 404)",
+    "5xx": "erreur du serveur (HTTP 5xx)",
+    "robots": "robots.txt l'interdit",
+    "pas_html": "pas une page HTML",
+    "rendu": "rendu navigateur impossible",
+}
 
 # Un site d'hôtel malgache tient en quelques pages. Au-delà on ramasse des
 # archives de blog, pas des tarifs.
@@ -67,6 +88,10 @@ def _hote(url: str) -> str:
     return urlsplit(url).netloc.lower()
 
 
+def _sans_www(hote: str) -> str:
+    return hote[4:] if hote.startswith("www.") else hote
+
+
 def robots_autorise(url: str) -> bool:
     """robots.txt, lu une fois par hôte et gardé en mémoire.
 
@@ -75,35 +100,64 @@ def robots_autorise(url: str) -> bool:
       à ne rien collecter. Un robots.txt qui répond et qui interdit, en
       revanche, s'applique.
     """
-    hote = _hote(url)
+    decoupe = urlsplit(url)
+    cle = (decoupe.scheme, decoupe.netloc.lower())
     with _verrou_robots:
-        lecteur = _robots.get(hote)
-        if lecteur is None:
-            lecteur = urllib.robotparser.RobotFileParser()
-            decoupe = urlsplit(url)
-            lecteur.set_url(urlunsplit((decoupe.scheme, decoupe.netloc, "/robots.txt", "", "")))
-            try:
-                lecteur.read()
-            except Exception:
-                lecteur = False    # illisible : on considère que c'est ouvert
-            _robots[hote] = lecteur
+        lecteur = _robots.get(cle)
+    if lecteur is None:
+        # Hors du verrou : c'est un appel réseau, et six travailleurs passent ici.
+        lecteur = _lire_robots(decoupe.scheme, decoupe.netloc)
+        with _verrou_robots:
+            _robots[cle] = lecteur
     if lecteur is False:
         return True
     try:
-        return lecteur.can_fetch(AGENT, url)
+        # Le premier segment de l'agent, comme le fait la stdlib : « DiakoBot »,
+        # pas « Mozilla ».
+        return lecteur.can_fetch("DiakoBot", url)
     except Exception:
         return True
 
 
+def _lire_robots(scheme: str, hote: str):
+    """Lit /robots.txt avec `requests` et NOTRE agent, jamais avec urllib.
+
+    🔴 `RobotFileParser.read()` passe par urllib, agent « Python-urllib/3.12 »,
+       sans délai. Beaucoup d'hébergeurs répondent 403 à cet agent — et la
+       stdlib traduit alors 401/403 par « TOUT EST INTERDIT ». Résultat mesuré
+       le 02/09/2026 : 34 sites sur 41 « illisibles » se refusaient EUX-MÊMES,
+       dont cameleonhotel.com qui écrit `Allow: /`. Ici, un robots.txt qui ne
+       répond pas 200 vaut autorisation (401/403/404/5xx) — c'est la doctrine
+       écrite dans la docstring de `robots_autorise`, enfin appliquée.
+    """
+    adresse = f"{scheme}://{hote}/robots.txt"
+    try:
+        r = requests.get(adresse, headers=EN_TETES, timeout=10, allow_redirects=True)
+    except requests.RequestException:
+        return False
+    if r.status_code != 200:
+        return False
+    lecteur = urllib.robotparser.RobotFileParser()
+    try:
+        lecteur.parse(r.text[:200_000].splitlines())
+    except Exception:
+        return False
+    return lecteur
+
+
 def _patienter(url: str) -> None:
-    """Au moins DELAI_ENTRE_PAGES secondes entre deux pages du même hôte."""
+    """Au moins DELAI_ENTRE_PAGES secondes entre deux pages du même hôte.
+
+    Le calcul se fait sous verrou, l'attente EN DEHORS : dormir en tenant le
+    verrou faisait attendre tous les hôtes pour la cadence d'un seul.
+    """
     hote = _hote(url)
     with _verrou_cadence:
         precedent = _dernier_appel.get(hote, 0.0)
         attente = DELAI_ENTRE_PAGES - (time.time() - precedent)
-        if attente > 0:
-            time.sleep(attente)
-        _dernier_appel[hote] = time.time()
+        _dernier_appel[hote] = time.time() + max(attente, 0)
+    if attente > 0:
+        time.sleep(attente)
 
 
 # ── Récupération et mise à plat du HTML ─────────────────────────────────────
@@ -131,34 +185,68 @@ def _decoder(reponse: requests.Response) -> str:
 
 
 def recuperer(url: str, session: requests.Session | None = None,
-              rendu=None) -> tuple[str, str]:
-    """Rend (html, url_finale). Chaîne vide si ce n'est pas une page lisible.
+              rendu=None) -> tuple[str, str, str]:
+    """Rend (html, url_finale, raison). `html` vide si ce n'est pas une page lisible.
 
     `rendu` est une fonction url -> html fournie par le collecteur pour les
     sites qui ne rendent rien sans JavaScript. robots.txt et la cadence
     s'appliquent des deux côtés : passer par un navigateur ne dispense de rien.
+
+    ⚠ LA RAISON D'UN ÉCHEC EST RENDUE, PAS AVALÉE. « page d'accueil illisible »
+      recouvrait huit causes (DNS mort, 403, 404, certificat, délai, robots,
+      pas du HTML, rendu raté) et aucune n'était dite : impossible de
+      distinguer un domaine mort depuis deux ans d'un site qu'on se refusait.
     """
     if not robots_autorise(url):
-        return "", url
+        return "", url, "robots"
     _patienter(url)
     if rendu is not None:
         try:
             code = rendu(url)
         except Exception:
-            code = ""
-        return (code or ""), url
+            return "", url, "rendu"
+        return (code or ""), url, ("" if code else "rendu")
     session = session or requests
-    try:
-        r = session.get(url, headers={"User-Agent": AGENT,
-                                      "Accept-Language": "fr,en;q=0.8"},
-                        timeout=DELAI, allow_redirects=True)
-    except requests.RequestException:
-        return "", url
+    r = None
+    for agent in (AGENT, AGENT_NAVIGATEUR):
+        try:
+            r = session.get(url, headers={**EN_TETES, "User-Agent": agent},
+                            timeout=DELAI, allow_redirects=True)
+        except requests.exceptions.SSLError:
+            return "", url, "ssl"
+        except requests.exceptions.Timeout:
+            return "", url, "delai"
+        except requests.exceptions.ConnectionError as e:
+            texte = str(e)
+            if "NameResolution" in texte or "getaddrinfo" in texte or "Name or service" in texte:
+                return "", url, "dns"
+            return "", url, "injoignable"
+        except requests.RequestException:
+            return "", url, "injoignable"
+        if r.status_code in (429, 503):
+            # « Reviens dans un moment » n'est pas « ça n'existe pas ».
+            try:
+                pause = min(int(r.headers.get("Retry-After") or 5), 20)
+            except ValueError:
+                pause = 5
+            time.sleep(pause)
+            continue
+        if r.status_code in (401, 403) and agent == AGENT:
+            continue   # un pare-feu contre les robots : on réessaie en navigateur
+        break
+    if r is None:
+        return "", url, "injoignable"
     if not r.ok:
-        return "", r.url
+        if r.status_code in (401, 403):
+            return "", r.url, "403"
+        if r.status_code in (404, 410):
+            return "", r.url, "404"
+        if r.status_code >= 500 or r.status_code in (429, 503):
+            return "", r.url, "5xx"
+        return "", r.url, f"http_{r.status_code}"
     if "html" not in r.headers.get("Content-Type", "").lower():
-        return "", r.url
-    return _decoder(r), r.url
+        return "", r.url, "pas_html"
+    return _decoder(r), r.url, ""
 
 
 BLOCS = {"p", "div", "br", "li", "tr", "td", "th", "h1", "h2", "h3", "h4", "h5",
@@ -311,13 +399,15 @@ def _propre(url: str) -> str:
 
 def pages_a_visiter(liens, base_url: str, deja: set[str]) -> list[tuple[int, str]]:
     """Trie les liens internes par intérêt. Les PDF sont signalés, pas suivis."""
-    hote = _hote(base_url)
+    hote = _sans_www(_hote(base_url))
     notes: dict[str, int] = {}
     for href, libelle in liens:
         if not href or href.startswith(("mailto:", "tel:", "javascript:", "#")):
             continue
         absolu = _propre(urljoin(base_url, href))
-        if _hote(absolu) != hote or absolu in deja:
+        # `exemple.mg` et `www.exemple.mg` sont le même site : sans ça, un
+        # accueil sans www dont le menu pointe avec www perdait toutes ses pages.
+        if _sans_www(_hote(absolu)) != hote or absolu in deja:
             continue
         if EXTENSIONS_REFUSEES.search(absolu) or NAVIGATION.search(absolu):
             continue
@@ -360,15 +450,22 @@ def explorer(url: str, pages_max: int = PAGES_MAX, rendu=None) -> dict:
     session = requests.Session()
     depart = url if url.startswith(("http://", "https://")) else "https://" + url
 
-    code, finale = recuperer(depart, session, rendu)
+    code, finale, raison = recuperer(depart, session, rendu)
+    if not code and raison != "robots":
+        # Beaucoup de petits sites malgaches n'ont pas de HTTPS valide — et
+        # d'autres ont coupé le http. On essaie l'autre schéma, DANS LES DEUX
+        # SENS : 64 sources sur 250 sont en http:// (annuaire Wikipédia).
+        autre = ("http://" + depart[8:]) if depart.startswith("https://") \
+            else ("https://" + depart[7:])
+        code, finale, raison2 = recuperer(autre, session, rendu)
+        if code:
+            raison = ""
+        elif raison2 not in ("dns", "injoignable", "robots"):
+            raison = raison2
     if not code:
-        # Beaucoup de petits sites malgaches n'ont pas de HTTPS valide.
-        if depart.startswith("https://"):
-            code, finale = recuperer("http://" + depart[8:], session, rendu)
-        if not code:
-            return {"texte": "", "titre": "", "pages": [], "pdf": [], "images": [],
-                    "js_probable": False,
-                    "refuse": "page d'accueil illisible (ou robots.txt l'interdit)"}
+        return {"texte": "", "titre": "", "pages": [], "pdf": [], "images": [],
+                "js_probable": False, "raison": raison,
+                "refuse": LIBELLES_ECHEC.get(raison, raison or "page d'accueil illisible")}
 
     # ⚠ Mesuré ICI, sur l'accueil : `code` sera écrasé par les pages suivantes,
     #   et c'est bien l'accueil qui dit si le site a besoin de JavaScript.
@@ -386,12 +483,16 @@ def explorer(url: str, pages_max: int = PAGES_MAX, rendu=None) -> dict:
     visitees = [finale]
 
     file = pages_a_visiter(liens, finale, vues)
-    while file and len(visitees) < pages_max:
+    # Le budget compte les REQUÊTES, pas seulement les pages lues : un site à
+    # 150 liens « tarifs » dont la moitié échouent immobilisait la tournée.
+    requetes = 1
+    while file and len(visitees) < pages_max and requetes < 2 * pages_max:
         _, suivante = file.pop(0)
         if suivante in vues:
             continue
         vues.add(suivante)
-        code, reelle = recuperer(suivante, session, rendu)
+        requetes += 1
+        code, reelle, _raison = recuperer(suivante, session, rendu)
         if not code:
             continue
         texte_page, liens_page, images_page = mettre_a_plat(code)
@@ -583,26 +684,11 @@ def sites_des_trouvailles() -> list[dict]:
     ]
 
 
-HOTES_REFUSES = re.compile(
-    # Réseaux sociaux : ils se collectent déjà autrement.
-    r"(facebook|instagram|tiktok|youtube|twitter|x\.com|linkedin|wa\.me|whatsapp"
-    r"|messenger|telegram|snapchat|pinterest"
-    # Agrégateurs de réservation : leurs conditions interdisent la réutilisation.
-    r"|booking\.com|tripadvisor|expedia|airbnb|agoda|hotels\.com|trivago|kayak"
-    r"|hostelworld|makemytrip|viator|getyourguide"
-    # Moteurs de recherche et cartes.
-    r"|google\.|bing\.com|yandex\.|duckduckgo|qwant"
-    # 🔴 MESSAGERIES : `https://gmail.com` s'est retrouvé inscrit comme site
-    #    d'un restaurant, parce que l'adresse e-mail du gérant traînait dans sa
-    #    publication et que le domaine ressemble à une adresse de site. Lire
-    #    gmail.com ne rend évidemment aucun tarif — juste une page de connexion.
-    r"|gmail\.|yahoo\.|hotmail\.|outlook\.|live\.com|icloud\.|orange\.mg|moov\."
-    # Raccourcisseurs : on ne sait pas où ils mènent.
-    r"|bit\.ly|tinyurl|linktr\.ee|t\.co/|goo\.gl"
-    # Plateformes qui ne sont pas un site d'établissement.
-    r"|wikipedia\.|wikivoyage\.|paypal\.|gofundme)",
-    re.I,
-)
+# 🔴 LA LISTE DES HÔTES REFUSÉS VIT DANS `base` — à côté de `normaliser_site`,
+#    le point que TOUTES les adresses de site traversent. Ici elle ne filtrait
+#    que la moisson, et seulement les adresses qui avaient un schéma :
+#    `urlsplit("gmail.com").netloc` est vide, donc « gmail.com » passait.
+HOTES_REFUSES = base.HOTES_REFUSES
 
 
 def moissonner(avec_osm: bool = True, journal=None) -> dict:
@@ -625,15 +711,19 @@ def moissonner(avec_osm: bool = True, journal=None) -> dict:
 
     ajoutes, rattaches, ignores, deja = 0, 0, 0, 0
     vus: set[str] = set()
+    connues = {base._cle_site(u) for u in base.urls_sources()}
     for candidat in candidats:
-        site = candidat["site"]
-        if not site or site in vus:
-            continue
-        vus.add(site)
-        if HOTES_REFUSES.search(_hote(site)):
+        # Une seule normalisation pour les trois canaux : balisage wiki
+        # retiré, schéma posé, hôtes refusés, doublons http/https/www fondus.
+        site = base.normaliser_site(candidat.get("site") or "")
+        if not site:
             ignores += 1
             continue
-        if base.source_connue(site):
+        cle = base._cle_site(site)
+        if cle in vus:
+            continue
+        vus.add(cle)
+        if cle in connues or base.source_connue(site):
             deja += 1
             continue
 

@@ -64,6 +64,16 @@ DEFAUTS = {
     "photos_max_par_trouvaille": 12,
     "largeur_photo_min": 500,               # px — sous ce seuil c'est un avatar
     "jours_max": 45,                        # ignore les publications plus vieilles
+    # ⭐ ANNÉE MINIMALE D'UNE PUBLICATION. Diako vit d'informations FRAÎCHES :
+    #   un tarif de 2019, un hôtel fermé depuis, un festival passé six fois ne
+    #   valent rien pour quelqu'un qui prépare un voyage. Toute publication
+    #   d'une année antérieure est écartée, journalisée et comptée.
+    #
+    # ⚠⚠ CE FILTRE N'ÉCARTE QUE CE QU'ON SAIT ANCIEN. Quand la date est
+    #    illisible — c'est le cas de 2 215 des 2 217 trouvailles déjà en base —
+    #    on GARDE : refuser l'inconnu supprimerait 99 % de la collecte. Voir
+    #    `collecteur.annee_de_publication`.
+    "annee_minimum": 2026,
     # ── Le web ouvert ───────────────────────────────────────────────────────
     # Un site d'hôtel malgache tient en quelques pages ; au-delà on ramasse des
     # archives de blog, pas des tarifs.
@@ -98,6 +108,12 @@ DEFAUTS = {
     "llm_transport": "passerelle",          # 'passerelle' (LiteLLM local) | 'anthropic'
     "llm_passerelle": "http://127.0.0.1:4000",
     "llm_modele": "",                       # vide = claude-abo / claude-sonnet-5
+    # ⭐ MODÈLE DE SECOURS SUR LA MÊME PASSERELLE. `claude-abo` tombe par vagues
+    #   (16 × HTTP 500 et 15 × HTTP 429 relevés le 23/08/2026) : plutôt que de
+    #   perdre la relecture, on rejoue UNE fois l'appel sur ce modèle-ci.
+    #   Vide = ne jamais basculer. ⚠ gemini-flash rend parfois `content: null`
+    #   quand il dépasse — ce cas est traité comme un échec propre, pas un bug.
+    "llm_modele_secours": "gemini-flash",
     "llm_repli_anthropic": False,
     "llm_delai": 120,
     "llm_confiance_min": 55,
@@ -113,8 +129,8 @@ DEFAUTS = {
     "prospection_repoussoirs": [],
     "prospection_note_min": 60,
     "prospection_auto_jours": 0,        # 0 = jamais tout seul ; 7 = une fois par semaine
-    "prospection_auto_adopter": False,
-    "prospection_auto_seuil": 90,
+    # (`prospection_auto_adopter` et `prospection_auto_seuil` ont été retirés le
+    #  02/09/2026 : jamais lus, ils laissaient croire à une adoption automatique.)
     "collecte_auto": True,
     "heures_collecte": ["11:00", "18:00"],
     "objectif_par_jour": 40,
@@ -138,14 +154,35 @@ DEFAUTS = {
     "auto_publier_max_par_jour": 10,
     "auto_purger_jours": 30,              # 0 = ne rien purger
     "moisson_auto_jours": 7,              # 0 = jamais
-    "auto_relire_incompletes": False,     # repasser les incomplètes au modèle
+    # ⭐ EFFACER LES PHOTOS LOCALES DES TROUVAILLES PUBLIÉES au bout de ce
+    #   délai : elles sont chez o2switch, leur URL est en base, et 978
+    #   dossiers publiés pesaient 813 Mo sur les 2 Go de data/trouvailles
+    #   (02/09/2026). 0 = garder. L'interface montre alors la copie en ligne.
+    "purger_photos_publiees_jours": 7,
     # ── Publication ─────────────────────────────────────────────────────────
     "pause_entre_envois_photos": 3.0,       # o2switch part en 500 si on enchaîne
     "publier_directement": True,            # False = fiches et événements en attente
     "cote_photo_max": 1600,                 # au-delà, aucun écran visé ne voit la différence
     "cote_photo_min": 1000,                 # sous ce seuil, la variante 960 flouterait
     "qualite_photo": 86,
+    # ⭐ TAUX DE CONVERSION DES DEVISES. Beaucoup de lodges affichent en euros
+    #   et n'écrivent jamais un ariary ; `room_types.base_price_ar` étant NOT
+    #   NULL, leurs chambres ne partent alors JAMAIS. Le taux est relevé à la
+    #   main et le prix publié porte la mention du montant d'origine, pour
+    #   qu'on puisse toujours vérifier. {} = ne rien convertir.
+    "taux_ariary": {"EUR": 5046, "USD": 4286},
 }
+
+
+# ⭐ CLÉS QUI DOIVENT SE VOIR DANS LE FICHIER. `charger()` comble les clés
+#   manquantes en mémoire, donc le bot marche sans elles — mais un réglage
+#   absent de config.json est un réglage qu'on ne sait pas qu'on peut changer.
+#   Le seuil mémoire (celui qui a sauvé les bots le 23/08), la moisson
+#   automatique et le plafond de sites par tour méritent d'être sous les yeux.
+#   On n'écrit QUE celles-ci : recopier tout DEFAUTS dans le fichier figerait
+#   des valeurs par défaut qui doivent pouvoir évoluer avec le code.
+CLES_A_EXPOSER = ("memoire_mini_mo", "moisson_auto_jours",
+                  "sites_max_par_collecte", "taux_ariary", "annee_minimum")
 
 
 def charger() -> dict:
@@ -153,7 +190,17 @@ def charger() -> dict:
     DOSSIER_DONNEES.mkdir(parents=True, exist_ok=True)
     config = dict(DEFAUTS)
     if FICHIER_CONFIG.exists():
-        config.update(json.loads(FICHIER_CONFIG.read_text(encoding="utf-8")))
+        posees = json.loads(FICHIER_CONFIG.read_text(encoding="utf-8"))
+        # Les clés importantes absentes du fichier y sont écrites avec leur
+        # valeur par défaut — une seule fois, pour qu'elles soient modifiables.
+        manquantes = [c for c in CLES_A_EXPOSER if c not in posees]
+        if manquantes:
+            for cle in manquantes:
+                posees[cle] = DEFAUTS[cle]
+            FICHIER_CONFIG.write_text(
+                json.dumps(posees, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        config.update(posees)
     else:
         FICHIER_CONFIG.write_text(
             json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"

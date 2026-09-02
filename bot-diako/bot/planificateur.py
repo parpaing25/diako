@@ -11,7 +11,7 @@ fil, avec les mêmes pauses. Ce qui change, c'est la profondeur, pas le rythme.
 from __future__ import annotations
 
 import threading
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from . import automate, base
 from .config import charger
@@ -100,8 +100,12 @@ class Planificateur:
         while not self.arret.wait(VERIFICATION):
             try:
                 config = charger()
-                self._entretenir(config)
+                # ⚠ L'ENTRETIEN ATTEND LA FIN DE LA COLLECTE. Pendant qu'elle
+                #   tourne, une trouvaille est « à trier » quelques secondes
+                #   AVANT que son score ne soit écrit : le rejet automatique la
+                #   jugeait à 0/100 et l'écartait. Rien ne presse cinq minutes.
                 if not self.est_occupe():
+                    self._entretenir(config)
                     if self._publier_auto(config):
                         continue
                     if self._moissonner(config):
@@ -186,7 +190,7 @@ class Planificateur:
         base.logguer("Recherche automatique de nouvelles sources Facebook.", "info")
         return bool(self.lancer_tache("prospection_sources", travail))
 
-    def _verifier(self) -> None:
+    def _verifier(self, maintenant: datetime | None = None) -> None:
         config = charger()
         if not config.get("collecte_auto"):
             return
@@ -194,27 +198,31 @@ class Planificateur:
         if not heures:
             return
 
-        maintenant = datetime.now()
-        # Le créneau est « passé » dès son heure, et jusqu'à 30 min après : un PC
-        # en veille à 11 h pile ne doit pas faire sauter la collecte.
-        for heure in heures:
-            moment = datetime.combine(
-                maintenant.date(), datetime.strptime(heure, "%H:%M").time()
-            )
-            if not (moment <= maintenant < moment + timedelta(minutes=30)):
-                continue
+        maintenant = maintenant or datetime.now()
+        # 🔴 UN CRÉNEAU RESTE DÛ JUSQU'À L'ARRIVÉE DU SUIVANT. Avant le
+        #   02/09/2026, il n'était rattrapable que 30 minutes : le PC a redémarré
+        #   brutalement trois fois ce jour-là (11 h 11, 13 h 23, 19 h 01), et un
+        #   bot relevé à 11 h 48 laissait passer la collecte de 11 h. Un bot qui
+        #   revient rattrape ce qu'il a manqué ; il ne rattrape jamais deux
+        #   créneaux d'un coup, le suivant sera dû à son heure.
+        creneau = creneau_du(heures, maintenant)
+        if not creneau:
+            return  # avant le premier passage de la journée
 
-            marque = f"{date.today().isoformat()} {heure}"
-            if base.lire_etat(CLE_DERNIER) == marque:
-                return  # déjà fait
-            if self.est_occupe():
-                return  # on retentera dans 30 s, le créneau dure 30 min
+        marque = f"{maintenant.date().isoformat()} {creneau}"
+        if base.lire_etat(CLE_DERNIER) == marque:
+            return  # déjà fait
+        if self.est_occupe():
+            return  # on retentera dans 30 s
 
+        # ⚠ LA MARQUE APRÈS LE LANCEMENT, ET SEULEMENT S'IL A PRIS. `lancer_collecte`
+        #   rend False quand la ressource « navigateur » est déjà occupée
+        #   (prospection, fenêtre de connexion) ; marquer avant brûlait le
+        #   créneau sans rien collecter.
+        if self._declencher(config, creneau, heures):
             base.ecrire_etat(CLE_DERNIER, marque)
-            self._declencher(config, heure, heures)
-            return
 
-    def _declencher(self, config: dict, creneau: str, heures: list[str]) -> None:
+    def _declencher(self, config: dict, creneau: str, heures: list[str]) -> bool:
         deja = collectees_aujourdhui()
         objectif = int(config.get("objectif_par_jour") or 0)
         dernier_creneau = creneau == heures[-1]
@@ -236,10 +244,34 @@ class Planificateur:
                 f"Collecte automatique de {creneau} — {deja} trouvaille(s) déjà "
                 "aujourd'hui.", "info",
             )
-        self.lancer_collecte(reglages)
+        parti = bool(self.lancer_collecte(reglages))
+        if not parti:
+            base.logguer(
+                f"Collecte de {creneau} : le navigateur est occupé, nouvel essai "
+                "dans 30 s.", "avert",
+            )
+        return parti
 
     def fermer(self) -> None:
         self.arret.set()
+
+
+def creneau_du(heures: list[str], maintenant: datetime) -> str:
+    """Le créneau DÛ à cet instant : le dernier dont l'heure est passée aujourd'hui.
+
+    `heures` est triée (voir `_heures`). Avant le premier passage : `''`.
+    Un créneau reste dû jusqu'à l'arrivée du suivant, puis jusqu'à minuit pour
+    le dernier de la journée : c'est ce qui permet à un bot relevé à 14 h 48 de
+    faire la collecte de 11 h au lieu de l'abandonner.
+    """
+    du = ""
+    for heure in heures:
+        moment = datetime.combine(
+            maintenant.date(), datetime.strptime(heure, "%H:%M").time()
+        )
+        if moment <= maintenant:
+            du = heure
+    return du
 
 
 def bilan_du_jour(config: dict) -> dict:

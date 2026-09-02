@@ -30,7 +30,7 @@
 from __future__ import annotations
 
 from . import base as bdd
-from . import diako, redaction
+from . import diako, extraction, redaction
 from .config import SITE
 
 LICENCE = "Publication Facebook — reprise avec attribution"
@@ -74,6 +74,22 @@ def apports(t: dict) -> list[dict]:
             "quoi": "photo du site", "pret": True,
         })
 
+    # ②bis Les droits d'entrée du parc. Les colonnes existent depuis la
+    # migration 0114 (fee_resident_ar, fee_nonresident_ar, guide_*…) et sont
+    # TOUTES vides : un post qui dit « vazaha 55 000 Ar, guide obligatoire »
+    # doit les remplir, pas seulement passer sur le fil.
+    if site:
+        # ⚠ LE NOM DU SITE FAIT PARTIE DE LA LECTURE. Une publication qui liste
+        #   trois îles à trois tarifs ne dit lequel appartient au parc qu'à la
+        #   ligne qui le nomme.
+        tarifs = extraction.droits_entree(t.get("texte") or "", site.get("nom") or "")
+        quoi = _tarifs_lisibles(tarifs)
+        if quoi:
+            liste.append({
+                "cible": "attractions", "id": site["id"], "nom": site["nom"],
+                "quoi": quoi, "pret": True,
+            })
+
     # ③ Le plat. Seulement quand la trouvaille parle d'UN plat identifié :
     #    associer une photo au hasard à un plat serait pire que rien.
     if t.get("plat_id") and a_photo:
@@ -92,6 +108,20 @@ def apports(t: dict) -> list[dict]:
             "pret": bool(t.get("page_id")),
         })
     return liste
+
+
+def _tarifs_lisibles(tarifs: dict) -> str:
+    """La phrase du panneau : ce que les droits d'entrée lus vont remplir."""
+    morceaux = []
+    if tarifs.get("resident_ar"):
+        morceaux.append(f"entrée résidents {tarifs['resident_ar']:,} Ar".replace(",", " "))
+    if tarifs.get("nonresident_ar"):
+        morceaux.append(f"entrée étrangers {tarifs['nonresident_ar']:,} Ar".replace(",", " "))
+    if tarifs.get("guide_obligatoire"):
+        morceaux.append("guide obligatoire")
+    if tarifs.get("guide_groupe_ar"):
+        morceaux.append(f"guide {tarifs['guide_groupe_ar']:,} Ar".replace(",", " "))
+    return ", ".join(morceaux)
 
 
 # ── Ce qu'on écrit ──────────────────────────────────────────────────────────
@@ -165,6 +195,43 @@ def _slug_circuit(t: dict, circuit: dict) -> str:
     return _slug(" ".join(m for m in morceaux if m))[:60]
 
 
+def _sql_tarifs_site(site_id: str, tarifs: dict, releve_le: str) -> str:
+    """Les droits d'entrée d'un parc -> `attractions`, SANS RIEN ÉCRASER.
+
+    ⚠ Chaque colonne passe par `coalesce(existant, nouveau)` : un tarif posé à
+      la main (ou par une lecture précédente) reste. `rates_checked_at` suit la
+      même règle — elle date le PREMIER relevé, elle ne se rafraîchit pas tant
+      qu'on n'écrase pas les montants qui vont avec.
+    """
+    morceaux = []
+    if tarifs.get("resident_ar"):
+        morceaux.append(
+            f"fee_resident_ar = coalesce(fee_resident_ar, {int(tarifs['resident_ar'])})"
+        )
+    if tarifs.get("nonresident_ar"):
+        morceaux.append(
+            f"fee_nonresident_ar = coalesce(fee_nonresident_ar, "
+            f"{int(tarifs['nonresident_ar'])})"
+        )
+    if tarifs.get("guide_obligatoire") is not None:
+        morceaux.append(
+            f"guide_required = coalesce(guide_required, "
+            f"{'true' if tarifs['guide_obligatoire'] else 'false'})"
+        )
+    if tarifs.get("guide_groupe_ar"):
+        morceaux.append(
+            f"guide_fee_group_ar = coalesce(guide_fee_group_ar, "
+            f"{int(tarifs['guide_groupe_ar'])})"
+        )
+    if not morceaux:
+        return ""
+    morceaux.append(
+        f"rates_checked_at = coalesce(rates_checked_at, {_txt(releve_le)}::date)"
+    )
+    return (f"UPDATE public.attractions SET {', '.join(morceaux)} "
+            f"WHERE id = {_txt(site_id)}::uuid;")
+
+
 def appliquer(t: dict, medias: list[dict]) -> dict:
     """Écrit tout ce qui peut l'être ailleurs. Rend ce qui a été posé.
 
@@ -173,17 +240,21 @@ def appliquer(t: dict, medias: list[dict]) -> dict:
     adresses. Envoyer deux fois la même image doublerait l'espace disque pour
     rien.
     """
-    if not medias and not t.get("lignes_circuit"):
+    site = t.get("_site") or diako.rapprocher_site(
+        t.get("texte") or "", t.get("lieu_id")
+    )
+    # Les droits d'entrée ne demandent NI photo NI circuit : ils viennent du
+    # texte seul, et se relisent au moment d'écrire (pas de champ à stocker).
+    tarifs = (extraction.droits_entree(t.get("texte") or "", site.get("nom") or "")
+              if site else {})
+
+    if not medias and not t.get("lignes_circuit") and not _tarifs_lisibles(tarifs):
         return {}
 
     couverture = medias[0]["url"] if medias else None
     credit = (t.get("auteur") or t.get("source_nom") or "Facebook").strip()
     provenance = t.get("permalien") or t.get("site_web") or SITE
     requetes, poses = [], {}
-
-    site = t.get("_site") or diako.rapprocher_site(
-        t.get("texte") or "", t.get("lieu_id")
-    )
 
     if couverture and t.get("lieu_id"):
         requetes.append(_sql_photo("places", "cover_url", t["lieu_id"],
@@ -194,6 +265,19 @@ def appliquer(t: dict, medias: list[dict]) -> dict:
         requetes.append(_sql_photo("attractions", "cover_url", site["id"],
                                    couverture, credit, provenance))
         poses["site"] = site["nom"]
+
+    if site and _tarifs_lisibles(tarifs):
+        # ⚠ MÊME RÈGLE QUE `publication.py` : à défaut de date de publication,
+        #   on date le relevé du jour où le bot a LU le texte, pas du jour
+        #   présent. `date_post` est vide dès que Facebook n'a pas livré de
+        #   date (24/08/2026) ; dater d'aujourd'hui un droit d'entrée tiré d'un
+        #   post de 2019 le ferait passer pour vérifié ce matin.
+        releve = ((t.get("prix_vu_le") or t.get("date_post")
+                   or t.get("collecte_le") or "")[:10] or redaction.aujourdhui())
+        sql_tarifs = _sql_tarifs_site(site["id"], tarifs, releve)
+        if sql_tarifs:
+            requetes.append(sql_tarifs)
+            poses["tarifs du site"] = f"{site['nom']} ({_tarifs_lisibles(tarifs)})"
 
     if couverture and t.get("plat_id"):
         requetes.append(_sql_photo("dishes", "photo_url", t["plat_id"],
@@ -214,7 +298,7 @@ def appliquer(t: dict, medias: list[dict]) -> dict:
     #   on continue. L'inverse — perdre une fiche publiée à cause d'un
     #   enrichissement — serait absurde.
     try:
-        diako.executer_sql("\n".join(requetes))
+        diako.executer_sql("\n".join(requetes), proprietaire=True)
     except Exception as e:
         bdd.logguer(f"Enrichissement partiel ou raté : {e}", "avert")
         return {}

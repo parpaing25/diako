@@ -29,6 +29,15 @@ import unicodedata
 from . import base
 from .config import charger
 
+
+def _mot_entier(mot: str, texte: str) -> bool:
+    """`mot` apparaît-il comme un mot entier (ou un début de mot composé) ?
+
+    « bar » dans « bar-restaurant » oui ; dans « barbier » ou « barbecue » non.
+    « pari » dans « paris sportifs » oui ; dans « Vol Paris Antananarivo » non.
+    """
+    return re.search(rf"(?<![a-z0-9]){re.escape(mot)}(?![a-z0-9])", texte) is not None
+
 # Ce que le bot cherche. C'est LE point d'adaptation d'un bot à l'autre :
 # Fonenako cherche de l'immobilier, Diako du voyage, Akora des matériaux.
 REQUETES_DEFAUT = [
@@ -329,11 +338,11 @@ def noter(candidat: dict, requetes: list[str], mots_metier=MOTS_METIER,
     # notait 52, alors que sa catégorie dit « Coach personnel ».
     categorie = _sans_accents(candidat.get("categorie") or "")
     if categorie:
-        if any(c in categorie for c in CATEGORIES_BONNES):
+        if any(_mot_entier(c, categorie) for c in CATEGORIES_BONNES):
             points += 12
             details.append({"cle": "Catégorie", "points": 12, "sur": 12,
                             "motif": candidat["categorie"]})
-        elif any(c in categorie for c in CATEGORIES_MAUVAISES):
+        elif any(_mot_entier(c, categorie) for c in CATEGORIES_MAUVAISES):
             points -= 35
             alertes.append(
                 f"Catégorie Facebook « {candidat['categorie']} » — sans rapport "
@@ -341,7 +350,10 @@ def noter(candidat: dict, requetes: list[str], mots_metier=MOTS_METIER,
             )
 
     # Repoussoirs et accès : des retraits, pas des points.
-    gene = [m for m in repoussoirs if m in nom]
+    # ⚠ MOT ENTIER, pas sous-chaîne : « Vol Paris Antananarivo » contenait
+    #   « pari » et « Croissanterie » contenait « sante » — −40 chacun, pour
+    #   des sources qui sont exactement celles que Diako cherche.
+    gene = [m for m in repoussoirs if _mot_entier(m, nom)]
     if gene:
         points -= 40
         alertes.append("Hors sujet probable : " + ", ".join(gene[:3]))

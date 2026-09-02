@@ -2,6 +2,96 @@
 
 Mis à jour le 01/09/2026.
 
+## ⏳ 333 fiches créées par le bot sont INVISIBLES — à trancher, puis SQL
+
+Trouvé par l'audit du bot du 02/09/2026. Le déclencheur `pages_avant_ecriture`
+force `is_published := false` à toute insertion faite hors d'un compte
+administrateur ; sous l'API Management, `auth.uid()` est vide, donc
+`is_admin()` est faux. **Les 333 fiches d'établissement créées par le bot
+depuis le 23/08 ont toutes `is_published = false`** : le bot annonçait
+« Publiée sur Diako », le site ne les montre pas. Les événements (118) et les
+récits (418) ne sont pas concernés.
+
+Le bot est corrigé : chaque lot d'écriture commence désormais par
+`set_config('request.jwt.claims', …)` avec le compte `contact.diako@gmail.com`
+(`284aa922-…`), ce qui rend `is_admin()` vrai le temps de la transaction
+(vérifié le 02/09 : `auth.uid()` = le compte, `is_admin()` = true). Et la
+publication relit la ligne écrite et signale en erreur un `is_published` resté
+à false.
+
+**Avant de publier les 333 en bloc, une décision :** 76 d'entre elles
+ressemblent (similarité ≥ 0,6 sur le nom normalisé) à une fiche déjà publiée
+— le rapprochement était passé sous le seuil et la fiche a été créée à côté
+(« Shain Lodge » / « SHAIN LODGE », par exemple). 38 n'ont aucun contact.
+Publier tel quel mettrait des doublons dans l'annuaire.
+
+```sql
+-- 1. Voir les 333, doublons probables en tête
+select n.id, n.name, n.slug, n.created_at::date,
+       (select e.slug from pages e where e.is_published and e.id <> n.id
+          and e.norm % n.norm and similarity(e.norm, n.norm) >= 0.6
+          order by similarity(e.norm, n.norm) desc limit 1) as ressemble_a
+  from pages n
+ where n.source like 'Facebook ·%' and not n.is_published
+ order by ressemble_a nulls last, n.name;
+
+-- 2. Publier celles qui n'ont PAS de sosie (257), au nom du compte Diako
+select set_config('request.jwt.claims',
+  '{"sub":"284aa922-edf6-4773-bcee-c4f7cc074d67","role":"authenticated"}', true);
+update pages n set is_published = true
+ where n.source like 'Facebook ·%' and not n.is_published
+   and not exists (select 1 from pages e where e.is_published and e.id <> n.id
+                     and e.norm % n.norm and similarity(e.norm, n.norm) >= 0.6);
+
+-- 3. Les 76 sosies : fusionner à la main (photos, contact) puis supprimer,
+--    ou publier si ce sont bien deux établissements distincts.
+```
+
+Le `set_config` et l'`update` doivent être dans la **même** exécution (une
+seule requête dans l'éditeur SQL) : la revendication est locale à la
+transaction.
+
+## ⏳ Nettoyage des sites web écrits par le bot — à exécuter dans l'éditeur SQL
+
+Trouvé par l'audit du bot de collecte du 02/09/2026. Le classificateur a refusé
+l'écriture depuis la session : **à passer par l'éditeur SQL Supabase** (ou par
+le connecteur après accord, comme 0115 et 0117).
+
+- **23 fiches portent `https://gmail.com` comme site web**, toutes écrites par
+  le bot depuis une publication Facebook (« contact : xxx@gmail.com » lu comme
+  une adresse de site). Le garde-fou n'existait que dans la moisson des sites
+  (`toile.py`), pas dans l'extraction Facebook ni à la publication — corrigé
+  dans le bot le 02/09, mais les 23 lignes déjà en ligne restent.
+- **5 fiches portent un balisage Wikivoyage dans l'adresse** :
+  `http://www.renala.mg {{dead link|December 2020}}`. Elles viennent de
+  l'import, pas du bot ; le bot lisait ces adresses telles quelles.
+
+```sql
+-- Contrôle avant : 23 et 5 attendus
+select count(*) from pages where website = 'https://gmail.com';
+select count(*) from pages where website like '%{{dead link%';
+
+update pages set website = null where website = 'https://gmail.com';
+update pages
+   set website = regexp_replace(website, '\s*\{\{[^}]*\}\}\s*$', '')
+ where website like '%{{dead link%';
+
+-- Contrôle après : 0 et 0
+select count(*) from pages where website = 'https://gmail.com';
+select count(*) from pages where website like '%{{%';
+```
+
+Les 23 identifiants concernés (pour retour arrière) : Étoile Blanche Hotel,
+FRANCO MALGACHE TOURS, Frederico Walker, Hotel Mahamasina, Hotel Soalia
+Antsirabe, ID Dream Tours, Izzy Car Rental, Jet Ski Nosy Be, L'Arôme Lodge,
+Le Corto Maltèse, Lemuria Land Park, Léonard Tour, Madiro Hôtel, Madjid English
+Guide, Nosy - Be Record Excursion, Nosy Be Tour, Nosy-Be SIDO TOURS, Shain
+Lodge, SHAIN LODGE, SylKomba, Taj Hôtel, TL Rent Car, VITAIGNY CATAMARAN.
+
+À noter, hors périmètre du bot : **19 fiches de l'import OSM/Wikivoyage ont une
+adresse `facebook.com` dans `website`** au lieu de `facebook`. Rien de cassé,
+mais la colonne ne dit pas ce qu'elle annonce.
+
 ## ✅ `0117_destinations_emblematiques.sql` — appliquée le 01/09/2026
 
 Écrite avec la refonte de l'écran Destinations, refusée une première fois par

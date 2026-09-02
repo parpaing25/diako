@@ -28,6 +28,7 @@ QUATRE NATURES DE SOURCE, et la troisième est celle qui trouve des niches :
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import queue
@@ -39,14 +40,14 @@ import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 import requests
 from playwright.sync_api import sync_playwright
 
-from . import analyse_llm, base, diako, extraction, redaction, toile
+from . import analyse_llm, base, diako, extraction, redaction, toile, verrou_navigateur
 from . import score as notation
 from .config import DOSSIER_TROUVAILLES, PROFIL_NAVIGATEUR, charger
 
@@ -84,8 +85,16 @@ JS_EXTRAIRE_FIL = """
 
   return blocs.map(el => {
     const liens = [...el.querySelectorAll('a[href]')].map(a => a.href);
+    // 🔴 UN PERMALIEN PORTE UN IDENTIFIANT APRÈS /posts/, /permalink/ ou
+    //   /videos/, et n'est JAMAIS sous /search/. Sur une page de résultats de
+    //   recherche, le premier lien contenant « /posts/ » est l'adresse de la
+    //   recherche elle-même (facebook.com/search/posts/?q=…) : toutes les
+    //   publications de la page recevaient la même clé, la première seule
+    //   était gardée et la source était morte à la deuxième collecte —
+    //   2 trouvailles en dix jours pour deux recherches, mesuré le 02/09/2026.
+    const EST_PERMALIEN = /facebook\\.com\\/(?!search\\/)[^?#]*\\/(posts|permalink|videos)\\/[^/?#]+/;
     const permalien = liens.find(h =>
-      /\\/posts\\/|\\/permalink\\/|story_fbid=|multi_permalinks=|\\/videos\\//.test(h)) || '';
+      EST_PERMALIEN.test(h) || /[?&](story_fbid|multi_permalinks)=\\d/.test(h)) || '';
 
     const images = [...el.querySelectorAll('img')]
       .map(i => ({
@@ -99,8 +108,69 @@ JS_EXTRAIRE_FIL = """
       '[data-ad-preview="message"], [data-ad-comet-preview="message"]');
     const texte = nettoyer(message ? message.innerText : el.innerText);
 
-    const heure = el.querySelector(
-      'a[href*="/posts/"] span, a[href*="permalink"] span, abbr')?.innerText || '';
+    // ⭐ QUAND CETTE PUBLICATION A-T-ELLE ÉTÉ ÉCRITE ? C'est la question la
+    //   plus mal traitée du bot jusqu'ici : sur 2 217 trouvailles en base,
+    //   DEUX portaient une date (« 6 h », « 7 h »). L'ancien sélecteur ne
+    //   lisait que le texte d'un span à l'intérieur du lien ; Facebook met
+    //   aujourd'hui la date ailleurs, et le plus souvent dans un attribut.
+    //
+    // ⚠ LE DOM RÉEL N'A PAS PU ÊTRE INSPECTÉ LE 24/08/2026 (aucune session
+    //   Facebook ouverte, et on ne relance pas le bot). On tente donc PLUSIEURS
+    //   pistes, dans l'ordre du plus sûr au plus douteux, et on retient la
+    //   première qui RESSEMBLE à une date. Les pistes essayées :
+    //     ① <abbr data-utime="1565…">  — l'horodatage exact, ancien Facebook ;
+    //     ② le lien vers la publication : aria-label (« 12 août 2019 »),
+    //        title, data-tooltip-content, son texte, ses spans imbriqués ;
+    //     ③ les infobulles de l'en-tête, hors du corps du message.
+    //   Si aucune ne répond, `heure` vaut '' : c'est un cas prévu, pas un bug,
+    //   et Python sait le traiter (voir `date_de_publication`).
+    //
+    // ⚠ ON NE REGARDE JAMAIS DANS LE CORPS DU MESSAGE. Une affiche de concert
+    //   écrit « Vendredi 7 août » : ramassée ici, cette date deviendrait la
+    //   date de publication du post. D'où le filtre `horsDuMessage`.
+    const heure = (() => {
+      // ⚠ Les deux formes absolues exigent un NOM DE MOIS. Sans ça, « 1 réaction :
+      //   voir qui a réagi », « 2 commentaires » et « Les 3 Metis Hotel, voir
+      //   la story » passaient pour des dates SÛRES et éclipsaient la vraie
+      //   (34 horodatages sur 214 en base le 02/09/2026, soit 16 %).
+      const MOIS = '(?:jan|f[ée]v|mar|avr|apr|mai|may|juin|jun|juil|jul|ao[uû]|aug|sep|oct|nov|d[ée]c)\\\\p{L}*';
+      const SUR = new RegExp('^\\\\s*(?:il y a\\\\s+|about\\\\s+)?(?:\\\\d{1,3}\\\\s*(?:min|mn|h|hr|j|d|sem|w|mo|an|y)\\\\b|hier|yesterday|aujourd|just now|maintenant|\\\\d{4}-\\\\d{2}-\\\\d{2}|\\\\d{1,2}[\\\\/.-]\\\\d{1,2}[\\\\/.-]\\\\d{2,4}|\\\\d{1,2}(?:er)?\\\\s+' + MOIS + '|' + MOIS + '\\\\.?\\\\s+\\\\d{1,2})', 'iu');
+      const PROBABLE = /(\\d{1,3}\\s*(?:min|mn|h|j|d|sem|w|mois|an|y)\\b|hier|yesterday|\\d{1,2}[\\/.-]\\d{1,2}[\\/.-]\\d{2,4}|\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\s+\\p{L}{3,}\\s+\\d{4}|\\p{L}{3,}\\s+\\d{1,2},?\\s+\\d{4})/iu;
+      const dansLeMessage = (n) => !!n.closest(
+        '[data-ad-preview="message"], [data-ad-comet-preview="message"]');
+      const vus = [];
+      const pousser = (v) => {
+        const t = (v || '').replace(/\\s+/g, ' ').trim();
+        // Au-delà de 60 caractères ce n'est plus une date, c'est une phrase.
+        if (t && t.length <= 60) vus.push(t);
+      };
+      try {
+        for (const ab of el.querySelectorAll('abbr[data-utime]')) {
+          const s = Number(ab.getAttribute('data-utime'));
+          if (s > 0) pousser(new Date(s * 1000).toISOString().slice(0, 10));
+        }
+        const liens = el.querySelectorAll(
+          'a[href*="/posts/"], a[href*="permalink"], a[href*="story_fbid"],' +
+          ' a[href*="/videos/"], a[href*="/photos/"]');
+        for (const a of liens) {
+          if (dansLeMessage(a)) continue;
+          pousser(a.getAttribute('aria-label'));
+          pousser(a.getAttribute('title'));
+          pousser(a.getAttribute('data-tooltip-content'));
+          pousser(a.innerText);
+          for (const sp of a.querySelectorAll('span')) pousser(sp.innerText);
+        }
+        for (const n of el.querySelectorAll(
+            '[data-tooltip-content], abbr[title], abbr, [aria-label]')) {
+          if (dansLeMessage(n)) continue;
+          pousser(n.getAttribute('data-tooltip-content'));
+          pousser(n.getAttribute('title'));
+          pousser(n.getAttribute('aria-label'));
+          if (n.tagName === 'ABBR') pousser(n.innerText);
+        }
+      } catch (e) { /* un DOM qui change ne doit pas casser la collecte */ }
+      return vus.find(t => SUR.test(t)) || vus.find(t => PROBABLE.test(t)) || '';
+    })();
 
     // D'OÙ vient cette publication ? Dans le fil, un post de groupe porte DEUX
     // liens : /groups/{id}/ dont le texte est le NOM DU GROUPE, et
@@ -152,9 +222,25 @@ JS_EXTRAIRE_FIL = """
       .map(d => d.replace(/^www\\./, '').toLowerCase()))]
       .slice(0, 4);
 
+    // ⚠ On ne jette pas toute la chaîne de requête : `story.php?story_fbid=…`
+    //   sans son paramètre redevient une adresse commune à toute la page.
+    const permalienPropre = (() => {
+      if (!permalien) return '';
+      try {
+        const u = new URL(permalien);
+        const garde = new URLSearchParams();
+        for (const k of ['story_fbid', 'id', 'multi_permalinks']) {
+          if (u.searchParams.has(k)) garde.set(k, u.searchParams.get(k));
+        }
+        u.search = garde.toString() ? '?' + garde.toString() : '';
+        u.hash = '';
+        return u.toString();
+      } catch (e) { return permalien.split('?')[0]; }
+    })();
+
     return {
       texte,
-      permalien: permalien.split('?')[0],
+      permalien: permalienPropre,
       images,
       nb_images: images.length,
       heure,
@@ -268,47 +354,230 @@ def memoire_libre_mo() -> int | None:
         return None   # pas Windows, ou API indisponible : on ne bloque rien
 
 
+PERMALIEN_AVEC_ID = re.compile(r"/(posts|permalink|videos)/[^/?#]+|story_fbid=\d|multi_permalinks=\d")
+
+
 def empreinte(texte: str, permalien: str) -> str:
-    """Identifie une publication. Le permalien prime ; sinon le texte normalisé."""
-    if permalien:
+    """Identifie une publication. Le permalien prime ; sinon le texte normalisé.
+
+    ⚠ Un permalien SANS identifiant (« …/search/posts/ », « …/story.php ») est
+      l'adresse d'une page entière : s'en servir donnerait une clé unique à
+      toutes ses publications. On retombe alors sur le texte.
+    """
+    if permalien and PERMALIEN_AVEC_ID.search(permalien) and "/search/" not in permalien:
         return hashlib.sha1(permalien.encode()).hexdigest()
     reduit = re.sub(r"[^a-z0-9]", "", texte.lower())[:300]
+    if not reduit:
+        # Un émoji et une photo : rien à hacher. Une clé vide serait partagée
+        # par toutes les publications muettes ; on prend le permalien tel quel.
+        reduit = permalien or ""
     return hashlib.sha1(reduit.encode()).hexdigest()
 
 
-def _age_en_jours(heure: str) -> int | None:
-    """« 3 h », « Hier », « 2 j », « 5 sem. » -> âge approximatif, sinon None."""
-    n = heure.lower().strip()
+# ⭐ COMBIEN DE TEXTES SONT COLLECTÉS PLUSIEURS FOIS. Mesuré le 24/08/2026 sur
+#   les 2 217 trouvailles : 163 groupes de textes identiques, 179 trouvailles en
+#   trop — dont sept exemplaires du même « C'est l'heure du repas ! Pensez à
+#   Savanna ! » et quatre du même « Hotel La Bombonera … a actualisé son
+#   statut ». `empreinte()` ne les voit pas : elle s'appuie sur le permalien,
+#   qui diffère à chaque republication.
+LONGUEUR_SIGNATURE = 200
+# 🔴 EN DESSOUS DE CE SEUIL, ON NE DÉDOUBLONNE PAS SUR LE TEXTE. « Bonne
+#    journée à tous 🌞 » écrit par deux hôtels différents n'est pas un doublon,
+#    c'est une politesse. Il faut de la matière pour qu'une coïncidence devienne
+#    une preuve.
+LONGUEUR_MINIMALE_SIGNATURE = 120
+
+
+def empreinte_texte(texte: str) -> str:
+    """Signature du CONTENU d'une publication. '' quand le texte est trop court.
+
+    Normalisation volontairement brutale — minuscules, sans accent, sans
+    ponctuation, sans espace — parce que Facebook réécrit les mêmes textes avec
+    des espaces insécables, des majuscules décoratives et des émojis en plus.
+    """
+    reduit = re.sub(r"[^a-z0-9]", "", extraction.sans_accent(texte or ""))
+    if len(reduit) < LONGUEUR_MINIMALE_SIGNATURE:
+        return ""
+    return hashlib.sha1(reduit[:LONGUEUR_SIGNATURE].encode()).hexdigest()
+
+
+def _debut(texte: str, taille: int = 70) -> str:
+    """Le début d'un texte, sur une seule ligne — pour les messages du journal."""
+    propre = " ".join((texte or "").split())
+    return propre[:taille] + ("…" if len(propre) > taille else "")
+
+
+# ── Quand la publication a-t-elle été écrite ? ──────────────────────────────
+# Facebook affiche trois familles de dates, et le bot ne savait lire que la
+# première :
+#   ① relative     — « 6 h », « Hier », « 2 j », « 5 sem. »
+#   ② absolue      — « 12 août 2019 », « 12 août », « August 12, 2019 »
+#   ③ numérique    — « 12/08/2019 », « 2019-08-12 » (celle de `data-utime`)
+#
+# 🔴 L'ESPACE ENTRE LE NOMBRE ET L'UNITÉ EST INSÉCABLE (U+00A0). Les deux
+#    seules dates de la base valent littéralement '6\xa0h' et '7\xa0h'. `\s`
+#    en mode Unicode l'attrape ; `[ ]` ne l'aurait pas attrapé. On normalise
+#    quand même tous les espaces exotiques (fine, insécable étroite) en espace
+#    ordinaire avant de lire, pour ne pas dépendre de ce détail.
+_ESPACES_EXOTIQUES = str.maketrans({
+    " ": " ",   # insécable — celui des deux seules dates de la base
+    " ": " ",   # insécable étroite
+    " ": " ",   # fine
+    " ": " ",   # cadratin numérique
+    " ": " ",   # ultrafine
+    "​": "",    # largeur nulle : à supprimer, pas à remplacer
+})
+
+# Longueur d'abord : « annees » doit passer avant « an », « heures » avant
+# « h », sinon « 2 ans » se lit « 2 an » + un « s » orphelin et « 8 janvier »
+# se lisait « 8 j » — un article de janvier daté d'il y a huit jours.
+_UNITES_RELATIVES = (
+    ("minutes", 0), ("minute", 0), ("mins", 0), ("min", 0), ("mn", 0),
+    ("heures", 0), ("heure", 0), ("hrs", 0), ("hr", 0), ("h", 0),
+    ("jours", 1), ("jour", 1), ("days", 1), ("day", 1), ("j", 1), ("d", 1),
+    ("semaines", 7), ("semaine", 7), ("weeks", 7), ("week", 7), ("sem", 7), ("w", 7),
+    ("months", 30), ("month", 30), ("mois", 30), ("mo", 30),
+    ("annees", 365), ("annee", 365), ("ans", 365), ("an", 365),
+    ("years", 365), ("year", 365), ("yrs", 365), ("y", 365),
+)
+_JOURS_PAR_UNITE = dict(_UNITES_RELATIVES)
+# ⚠ `(?![a-z])` N'EST PAS DÉCORATIF : sans lui, « 8 janvier » correspond à
+#   « 8 j » (jours) et une publication de janvier passe pour vieille de huit
+#   jours. C'est la faute qui rendait le filtre de fraîcheur inopérant.
+MOTIF_AGE_RELATIF = re.compile(
+    r"(\d{1,4})\s*(" + "|".join(m for m, _ in _UNITES_RELATIVES) + r")(?![a-z])",
+    re.I,
+)
+
+# Les mois français et malgaches sont déjà connus d'`extraction` ; on ajoute
+# l'anglais, que Facebook sert dès que le compte est en anglais.
+MOIS_LUS = dict(extraction.MOIS)
+MOIS_LUS.update({
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11,
+    "december": 12,
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "jun": 6, "jul": 7, "aug": 8,
+    "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+})
+
+MOTIF_DATE_ISO = re.compile(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b")
+MOTIF_DATE_NUMERIQUE = re.compile(r"\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b")
+MOTIF_JOUR_MOIS = re.compile(r"\b(\d{1,2})\s*(?:er)?\s+([a-z]{3,12})\.?(?:\s*,?\s*(\d{4}))?")
+MOTIF_MOIS_JOUR = re.compile(r"\b([a-z]{3,12})\.?\s+(\d{1,2})(?:\s*,?\s*(\d{4}))?")
+
+
+def _annee_sans_annee(mois: int, jour: int, aujourdhui: date) -> int:
+    """Facebook omet l'année quand la date tombe dans les douze derniers mois.
+
+    Règle appliquée telle quelle : année en cours, SAUF si le jour obtenu est
+    dans le futur — « 12 décembre » lu un 24 août, c'est décembre DERNIER.
+    """
+    try:
+        candidate = date(aujourdhui.year, mois, jour)
+    except ValueError:            # 29 février d'une année non bissextile
+        return aujourdhui.year
+    return aujourdhui.year - 1 if candidate > aujourdhui else aujourdhui.year
+
+
+def _date_absolue(n: str, aujourdhui: date) -> date | None:
+    """« 12 août 2019 », « 12 août », « August 12, 2019 », « 12/08/2019 » -> date."""
+    trouve = MOTIF_DATE_ISO.search(n)
+    if trouve:
+        annee, mois, jour = (int(g) for g in trouve.groups())
+        try:
+            return date(annee, mois, jour)
+        except ValueError:
+            return None
+
+    trouve = MOTIF_DATE_NUMERIQUE.search(n)
+    if trouve:
+        # ⚠ JOUR/MOIS, jamais mois/jour : Facebook sert le format du compte, et
+        #   celui-ci est en français. « 12/08 » = 12 août.
+        jour, mois, annee = (int(g) for g in trouve.groups())
+        if annee < 100:
+            annee += 2000
+        try:
+            return date(annee, mois, jour)
+        except ValueError:
+            return None
+
+    for motif, ordre in ((MOTIF_JOUR_MOIS, "jm"), (MOTIF_MOIS_JOUR, "mj")):
+        for trouve in motif.finditer(n):
+            a, b, annee = trouve.groups()
+            jour, nom = (a, b) if ordre == "jm" else (b, a)
+            mois = MOIS_LUS.get(nom)
+            if not mois:
+                continue
+            jour = int(jour)
+            if not 1 <= jour <= 31:
+                continue
+            annee = int(annee) if annee else _annee_sans_annee(mois, jour, aujourdhui)
+            try:
+                return date(annee, mois, jour)
+            except ValueError:
+                continue
+    return None
+
+
+def _age_en_jours(heure: str, aujourdhui: date | None = None) -> int | None:
+    """Âge approximatif d'une publication, en jours. None = on ne sait pas.
+
+    Lit les trois familles : relative (« 3 h »), absolue (« 12 août 2019 »),
+    numérique (« 12/08/2019 »). L'ordre compte : le relatif d'abord, parce
+    qu'il est sans ambiguïté et de loin le plus fréquent dans le fil.
+    """
+    aujourdhui = aujourdhui or date.today()
+    n = extraction.sans_accent(heure.translate(_ESPACES_EXOTIQUES)).strip()
     if not n:
         return None
     if "hier" in n or "yesterday" in n:
         return 1
-    trouve = re.search(r"(\d+)\s*(min|mn|h|j|d|sem|w|mois|mo|an|y)", n)
-    if not trouve:
-        return None
-    valeur, unite = int(trouve.group(1)), trouve.group(2)
-    if unite in ("min", "mn", "h"):
+    if any(m in n for m in ("aujourd", "just now", "maintenant", "a l'instant",
+                            "il y a un instant")):
         return 0
-    if unite in ("j", "d"):
-        return valeur
-    if unite in ("sem", "w"):
-        return valeur * 7
-    if unite in ("mois", "mo"):
-        return valeur * 30
-    return valeur * 365
+
+    trouve = MOTIF_AGE_RELATIF.search(n)
+    if trouve:
+        return int(trouve.group(1)) * _JOURS_PAR_UNITE[trouve.group(2).lower()]
+
+    jour = _date_absolue(n, aujourdhui)
+    if jour is None:
+        return None
+    # Une date future (fuseau horaire, horloge décalée) vaut « aujourd'hui » :
+    # un âge négatif n'a aucun sens et ferait passer tous les filtres.
+    return max(0, (aujourdhui - jour).days)
 
 
-def date_de_publication(heure: str) -> str:
-    """Date estimée de la publication — c'est elle qui date les prix relevés.
+def date_de_publication(heure: str, aujourdhui: date | None = None) -> str:
+    """Date estimée de la publication. **Chaîne vide quand on ne sait pas.**
 
-    ⚠ Facebook n'affiche qu'un âge relatif dans le fil (« 3 j »). La date qu'on
-      en tire est approximative à un jour près, et c'est assez : elle sert à
-      dire « prix relevé le… », pas à horodater.
+    🔴 ELLE NE REND PLUS « AUJOURD'HUI » PAR DÉFAUT (24/08/2026). L'ancienne
+       version renvoyait la date du jour dès que l'âge était inconnu, c'est-à-
+       dire pour 2 215 des 2 217 trouvailles en base : une publication de 2019
+       était enregistrée comme publiée ce matin, et `prix_vu_le` — qui date les
+       tarifs publiés sur Diako — reprenait ce mensonge. 138 trouvailles
+       chiffrées portent aujourd'hui une date de relevé inventée.
+
+       Une case vide se voit et se corrige ; une date fausse ne se voit pas.
+       Les appelants doivent donc accepter '' : `prix_vu_le` reste vide, et
+       `posts.price_on` part alors à NULL côté Diako.
     """
-    age = _age_en_jours(heure)
+    age = _age_en_jours(heure, aujourdhui)
     if age is None:
-        return date.today().isoformat()
-    return (date.today() - timedelta(days=age)).isoformat()
+        return ""
+    return ((aujourdhui or date.today()) - timedelta(days=age)).isoformat()
+
+
+def annee_de_publication(heure: str, aujourdhui: date | None = None) -> int | None:
+    """L'année de la publication. None = indéterminable — et alors ON GARDE.
+
+    ⚠⚠ DÉCISION ASSUMÉE : l'inconnu passe. Refuser ce qu'on ne sait pas dater
+       supprimerait 99 % de la collecte (2 215 trouvailles sur 2 217 n'ont
+       aucune date lisible aujourd'hui). Le filtre `annee_minimum` n'écarte que
+       ce qu'on sait ANCIEN, jamais ce qu'on ignore.
+    """
+    iso = date_de_publication(heure, aujourdhui)
+    return int(iso[:4]) if iso else None
 
 
 # ── Sources ─────────────────────────────────────────────────────────────────
@@ -608,6 +877,17 @@ class Atelier:
                 self.travail(tache)
             except Exception as e:
                 base.logguer(f"Traitement d'une trouvaille abandonné : {e}", "erreur")
+                # ⚠ La ligne resterait « en lecture » pour toujours : aucun
+                #   écran ne la montre, et son empreinte bloque toute
+                #   recollecte. On la range en « incomplète » avec la raison,
+                #   pour qu'on puisse la relire ou la jeter en connaissance.
+                if tache.get("tid"):
+                    with contextlib.suppress(Exception):
+                        base.modifier(tache["tid"], {
+                            "statut": "incomplete",
+                            "manques": ["lecture interrompue"],
+                            "note": f"Lecture abandonnée sur une erreur : {str(e)[:200]}",
+                        })
             finally:
                 with self._verrou:
                     self.en_attente -= 1
@@ -629,8 +909,24 @@ class Collecteur:
     def __init__(self) -> None:
         self.config = charger()
         self.stop = threading.Event()
-        self.etat = {"actif": False, "source": None, "trouvees": 0, "examines": 0}
+        # ⭐ CE QUE LA COLLECTE A ÉCARTÉ, ET POURQUOI. Sans ces trois
+        #   compteurs, un filtre trop sévère est indiscernable d'une source
+        #   tarie : on verrait « 0 trouvaille » sans savoir si Facebook n'a
+        #   rien donné ou si le bot a tout jeté. Ils remontent tels quels
+        #   dans /api/etat, donc à l'écran.
+        self.etat = {"actif": False, "source": None, "trouvees": 0,
+                     "examines": 0, "ecartes_immobilier": 0,
+                     "ecartes_anciennes": 0, "ecartes_doublons": 0}
+        # ⚠ `ecartes_immobilier` est incrémenté depuis DEUX endroits : le fil du
+        #   navigateur (`_parcourir`) et les fils de l'atelier (`_finir`).
+        #   `d[c] += 1` n'est pas atomique — un chiffre affiché faux vaut mieux
+        #   que rien, mais un verrou coûte moins cher qu'une explication.
+        self._compteurs = threading.Lock()
         self._noms_de_lieux: list[str] = []
+
+    def _compter_ecart(self, cle: str) -> None:
+        with self._compteurs:
+            self.etat[cle] = self.etat.get(cle, 0) + 1
 
     # -- Session ------------------------------------------------------------
     def _contexte(self, pw, visible: bool):
@@ -654,33 +950,36 @@ class Collecteur:
         connecte = False
         with sync_playwright() as pw:
             ctx = self._contexte(pw, visible=True)
-            page = ctx.pages[0] if ctx.pages else ctx.new_page()
             try:
-                page.goto("https://www.facebook.com/", wait_until="domcontentloaded")
-            except Exception:
-                pass
-            base.logguer(
-                "Fenêtre Facebook ouverte — connectez-vous. "
-                "Elle se fermera toute seule une fois la session enregistrée.",
-                "info",
-            )
-            limite = time.time() + 300
-            while time.time() < limite:
-                if self.stop.is_set():
-                    break
+                page = ctx.pages[0] if ctx.pages else ctx.new_page()
                 try:
-                    if self._verifier_session(ctx):
-                        connecte = True
+                    page.goto("https://www.facebook.com/", wait_until="domcontentloaded")
+                except Exception as e:
+                    base.logguer(f"Facebook ne s'ouvre pas : {type(e).__name__}.", "avert")
+                base.logguer(
+                    "Fenêtre Facebook ouverte — connectez-vous. "
+                    "Elle se fermera toute seule une fois la session enregistrée.",
+                    "info",
+                )
+                limite = time.time() + 300
+                while time.time() < limite:
+                    if self.stop.is_set():
                         break
-                    if not ctx.pages:
+                    try:
+                        if self._verifier_session(ctx):
+                            connecte = True
+                            break
+                        if not ctx.pages:
+                            break
+                        page.wait_for_timeout(1000)
+                    except Exception as e:
+                        base.logguer(
+                            f"Fenêtre de connexion perdue ({type(e).__name__}).", "avert"
+                        )
                         break
-                    page.wait_for_timeout(1000)
-                except Exception:
-                    break
-            try:
-                ctx.close()
-            except Exception:
-                pass
+            finally:
+                with contextlib.suppress(Exception):
+                    ctx.close()
 
         base.ecrire_etat(CLE_SESSION, "1" if connecte else "0")
         if connecte:
@@ -742,7 +1041,9 @@ class Collecteur:
         self._noms_de_lieux = diako.lieux_connus()
 
         self.stop.clear()
-        self.etat.update({"actif": True, "trouvees": 0, "examines": 0})
+        self.etat.update({"actif": True, "trouvees": 0, "examines": 0,
+                          "ecartes_immobilier": 0, "ecartes_anciennes": 0,
+                          "ecartes_doublons": 0})
         self.atelier = Atelier(self._finir, int(cfg.get("travailleurs", 3)))
         par_genre = {}
         for s in sources:
@@ -778,76 +1079,51 @@ class Collecteur:
                 nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
             )
 
+        # ⚠ LES SITES EN JAVASCRIPT OUVRENT AUSSI CHROMIUM : mêmes garde-fous
+        #   (mémoire, verrou) que la partie Facebook. Avant le 02/09/2026 ce
+        #   passage s'ouvrait AVANT le contrôle mémoire, hors verrou.
         if self._sites_js and not self.stop.is_set():
-            self._relire_avec_navigateur(cfg)
+            if self._peut_ouvrir_chromium(cfg, "Relecture des sites en JavaScript"):
+                with verrou_navigateur.verrou_navigateur("diako") as pris:
+                    if pris:
+                        self._relire_avec_navigateur(cfg)
+                    else:
+                        base.logguer(
+                            "Relecture des sites en JavaScript sautée : un autre bot "
+                            "occupe le navigateur.", "avert",
+                        )
+            self._sites_js = []
 
         # ⚠ ON NE LANCE PAS CHROMIUM SUR UNE MACHINE PLEINE. Mieux vaut sauter
         #   la partie Facebook en le disant que se faire tuer au milieu — et
         #   emporter le bot avec. Les sources « site », elles, ont déjà tourné :
         #   la collecte n'est donc pas perdue, seulement amputée.
-        libre = memoire_libre_mo()
-        seuil = int(cfg.get("memoire_mini_mo", 900))
-        if facebook and libre is not None and libre < seuil:
-            base.logguer(
-                f"Partie Facebook sautée : il ne reste que {libre} Mo de mémoire "
-                f"disponible (il en faut {seuil} pour Chromium). Fermez des "
-                "applications, ou agrandissez le fichier d'échange — voir "
-                "LISEZ-MOI, § « Quand la machine est pleine ».",
-                "erreur",
-            )
+        if facebook and not self._peut_ouvrir_chromium(cfg, "Partie Facebook"):
             facebook = []
 
+        # ⚠ ET ON N'OUVRE PAS CHROMIUM SI UN AUTRE BOT L'A DÉJÀ OUVERT.
+        #   Le garde-fou mémoire ci-dessus regarde la machine à un instant t ;
+        #   il ne voit pas que les bots frères s'apprêtent à faire la même
+        #   chose. Le 24/08/2026, trois bots ont passé ce contrôle en même
+        #   temps — il restait 1,2 Go pour chacun — et la machine est tombée
+        #   à 187 Mo, le niveau exact où les bots sont morts la veille.
+        #   Le verrou vit hors des dépôts (~/bots-hub) : voir son en-tête.
+        #   🔴 C'EST LE RÉSULTAT DE `prendre()` QUI TRANCHE, pas un coup d'œil
+        #   préalable à `qui()` : entre le coup d'œil et l'ouverture, un bot
+        #   frère a le temps de prendre la place (vu le 24/08).
         if facebook and not self.stop.is_set():
-            with sync_playwright() as pw:
-                ctx = self._contexte(pw, visible=cfg["navigateur_visible"])
-                if not self._verifier_session(ctx):
-                    ctx.close()
+            with verrou_navigateur.verrou_navigateur("diako") as pris:
+                if not pris:
+                    occupant = verrou_navigateur.qui() or "un autre bot"
                     base.logguer(
-                        "Pas de session Facebook : les "
-                        f"{len(facebook)} source(s) Facebook sont sautées. "
-                        "Cliquez « Connecter mon compte Facebook ».",
-                        "erreur" if not web else "avert",
+                        f"Partie Facebook sautée : « {occupant} » occupe le "
+                        "navigateur. Une seule collecte à la fois sur cette machine — "
+                        "celle-ci repassera au prochain créneau.",
+                        "avert",
                     )
                     facebook = []
                 else:
-                    page = ctx.pages[0] if ctx.pages else ctx.new_page()
-                    for rang, source in enumerate(facebook):
-                        if self.stop.is_set():
-                            base.logguer("Collecte arrêtée à la demande.", "avert")
-                            break
-                        self.etat["source"] = f"{source['nom']} ({rang + 1}/{len(facebook)})"
-                        try:
-                            trouvees = self._parcourir(ctx, page, source)
-                        except Exception as e:  # une source qui casse ne tue pas la tournée
-                            base.logguer(f"« {source['nom']} » : {e}", "erreur")
-                            trouvees = 0
-                            # « Page crashed » : l'onglet est mort (souvent faute
-                            # de mémoire). Sans nouvel onglet, TOUTES les sources
-                            # suivantes échoueraient en cascade.
-                            if "crash" in str(e).lower() or page.is_closed():
-                                try:
-                                    if not page.is_closed():
-                                        page.close()
-                                    page = ctx.new_page()
-                                    base.logguer(
-                                        "Onglet relancé après un plantage — la tournée "
-                                        "continue. Si ça se répète, fermez des "
-                                        "applications : Chromium manque de mémoire.",
-                                        "avert",
-                                    )
-                                except Exception:
-                                    base.logguer(
-                                        "Navigateur perdu, collecte interrompue.", "erreur"
-                                    )
-                                    break
-                        base.modifier_source(
-                            source["id"],
-                            derniere_collecte=base.maintenant(),
-                            nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
-                        )
-                        if rang < len(facebook) - 1 and not self.stop.is_set():
-                            _pause(cfg["pause_entre_sources"])
-                    ctx.close()
+                    self._tournee_facebook(cfg, facebook, web)
 
         restant = self.atelier.en_attente
         if restant:
@@ -861,12 +1137,103 @@ class Collecteur:
         self.atelier.fermer()
 
         self.etat["source"] = None
+        # Ce qui a été écarté se dit à voix haute : un filtre muet qui se trompe
+        # ne se corrige jamais, faute qu'on sache qu'il a filtré.
+        ecarte = [
+            f"{self.etat['ecartes_immobilier']} annonce(s) immobilière(s)"
+            if self.etat["ecartes_immobilier"] else "",
+            f"{self.etat['ecartes_anciennes']} publication(s) trop ancienne(s)"
+            if self.etat["ecartes_anciennes"] else "",
+            f"{self.etat['ecartes_doublons']} texte(s) déjà collecté(s)"
+            if self.etat["ecartes_doublons"] else "",
+        ]
         base.logguer(
             f"Collecte terminée : {self.etat['trouvees']} trouvaille(s) retenue(s) "
-            f"sur {self.etat['examines']} publication(s) examinée(s).",
+            f"sur {self.etat['examines']} publication(s) examinée(s)."
+            + (" Écarté : " + ", ".join(m for m in ecarte if m) + "."
+               if any(ecarte) else ""),
             "succes",
         )
         return dict(self.etat)
+
+    def _peut_ouvrir_chromium(self, cfg: dict, quoi: str) -> bool:
+        """Le garde-fou mémoire, commun à TOUS les chemins qui ouvrent Chromium."""
+        libre = memoire_libre_mo()
+        seuil = int(cfg.get("memoire_mini_mo", 900))
+        if libre is not None and libre < seuil:
+            base.logguer(
+                f"{quoi} sautée : il ne reste que {libre} Mo de mémoire "
+                f"disponible (il en faut {seuil} pour Chromium). Fermez des "
+                "applications, ou agrandissez le fichier d'échange — voir "
+                "LISEZ-MOI, § « Quand la machine est pleine ».",
+                "erreur",
+            )
+            return False
+        return True
+
+    def _tournee_facebook(self, cfg: dict, facebook: list[dict], web: list[dict]) -> None:
+        """Le passage sur les sources Facebook, verrou navigateur déjà pris.
+
+        ⚠ `ctx.close()` DANS UN `finally`. Une exception échappée au milieu de
+          la tournée laissait Chromium se faire tuer par la sortie de
+          Playwright, brutalement, sur le profil persistant qui porte la
+          session Facebook.
+        """
+        with sync_playwright() as pw:
+            ctx = self._contexte(pw, visible=cfg["navigateur_visible"])
+            try:
+                if not self._verifier_session(ctx):
+                    base.logguer(
+                        "Pas de session Facebook : les "
+                        f"{len(facebook)} source(s) Facebook sont sautées. "
+                        "Cliquez « Connecter mon compte Facebook ».",
+                        "erreur" if not web else "avert",
+                    )
+                    return
+                page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                for rang, source in enumerate(facebook):
+                    if self.stop.is_set():
+                        base.logguer("Collecte arrêtée à la demande.", "avert")
+                        break
+                    # Le verrou se périme au bout d'un moment : on dit qu'on est
+                    # toujours là. Une tournée complète dure près de trois heures
+                    # (mesuré le 01/09/2026 : 2 h 44).
+                    verrou_navigateur.toucher("diako")
+                    self.etat["source"] = f"{source['nom']} ({rang + 1}/{len(facebook)})"
+                    try:
+                        trouvees = self._parcourir(ctx, page, source)
+                    except Exception as e:  # une source qui casse ne tue pas la tournée
+                        base.logguer(f"« {source['nom']} » : {e}", "erreur")
+                        trouvees = 0
+                        # « Page crashed » : l'onglet est mort (souvent faute
+                        # de mémoire). Sans nouvel onglet, TOUTES les sources
+                        # suivantes échoueraient en cascade.
+                        if "crash" in str(e).lower() or page.is_closed():
+                            try:
+                                if not page.is_closed():
+                                    page.close()
+                                page = ctx.new_page()
+                                base.logguer(
+                                    "Onglet relancé après un plantage — la tournée "
+                                    "continue. Si ça se répète, fermez des "
+                                    "applications : Chromium manque de mémoire.",
+                                    "avert",
+                                )
+                            except Exception:
+                                base.logguer(
+                                    "Navigateur perdu, collecte interrompue.", "erreur"
+                                )
+                                break
+                    base.modifier_source(
+                        source["id"],
+                        derniere_collecte=base.maintenant(),
+                        nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
+                    )
+                    if rang < len(facebook) - 1 and not self.stop.is_set():
+                        _pause(cfg["pause_entre_sources"])
+            finally:
+                with contextlib.suppress(Exception):
+                    ctx.close()
 
     def _adresse_de_visite(self, source: dict) -> str:
         genre = source.get("genre") or "groupe"
@@ -920,15 +1287,25 @@ class Collecteur:
 
             try:
                 lot = page.evaluate(JS_EXTRAIRE_FIL, int(cfg["largeur_photo_min"]))
-            except Exception:
+            except Exception as e:
+                # ⚠ NE PAS AVALER : « 0 publication » et « le script a levé » se
+                #   ressemblent dans le journal, et seul le second est une panne
+                #   (le DOM de Facebook change sans prévenir, voir le 22/08/2026).
+                base.logguer(
+                    f"Lecture du fil impossible sur « {source['nom']} » "
+                    f"({type(e).__name__}: {str(e)[:120]}) — le DOM Facebook a-t-il "
+                    "changé ? Voir outils/diagnostic_fb.py.", "erreur",
+                )
                 lot = []
 
-            neufs = 0
+            neufs = 0     # publications RETENUES (pour le plafond)
+            inedits = 0   # publications JAMAIS VUES (pour juger la stérilité)
             for publication in lot:
                 cle = empreinte(publication["texte"], publication["permalien"])
                 if cle in vus:
                     continue
                 vus.add(cle)
+                inedits += 1
                 # La vue se compte ICI, avant tout filtre : c'est le
                 # dénominateur du rendement. La compter plus bas, après le tri,
                 # donnerait 100 % à toutes les sources — le chiffre ne
@@ -938,10 +1315,58 @@ class Collecteur:
                     publication["texte"], publication["nb_images"]
                 ):
                     continue
+                # ⭐ L'IMMOBILIER EST LE MÉTIER DE FONENAKO, PAS CELUI DE DIAKO.
+                #   Une maison à vendre, un terrain titré, un appartement loué
+                #   au mois : on n'en veut pas, même publiés dans un groupe
+                #   « bons plans vacances ». Voir `extraction.raisons_immobilier`
+                #   pour le piège — un bungalow « à louer » reste du tourisme.
+                immo = extraction.raisons_immobilier(publication["texte"])
+                if immo:
+                    self._compter_ecart("ecartes_immobilier")
+                    base.logguer(
+                        f"Annonce immobilière écartée ({', '.join(immo)}) : "
+                        f"« {_debut(publication['texte'])} »", "info",
+                    )
+                    continue
+                # ⭐ ON NE COLLECTE QUE L'ANNÉE EN COURS. Un tarif de 2019 ou un
+                #   hôtel fermé depuis ne rendent service à personne.
+                #   ⚠ Quand l'année est indéterminable, on garde : voir
+                #     `annee_de_publication`, la décision y est écrite.
+                annee = annee_de_publication(publication.get("heure", ""))
+                annee_min = int(cfg.get("annee_minimum", 2026))
+                if annee is not None and annee < annee_min:
+                    self._compter_ecart("ecartes_anciennes")
+                    base.logguer(
+                        f"Publication de {annee} écartée (minimum {annee_min}) : "
+                        f"« {_debut(publication['texte'])} »", "info",
+                    )
+                    continue
                 age = _age_en_jours(publication.get("heure", ""))
                 if age is not None and age > int(cfg["jours_max"]):
+                    # Un filtre muet qui se trompe ne se corrige jamais : on
+                    # compte et on dit, comme pour le filtre de l'année.
+                    self._compter_ecart("ecartes_anciennes")
+                    base.logguer(
+                        f"Publication vieille de {age} jours écartée (maximum "
+                        f"{cfg['jours_max']}) : « {_debut(publication['texte'])} »",
+                        "info",
+                    )
                     continue
                 if base.existe(cle):
+                    continue
+                # ⭐ LE MÊME TEXTE, RECOLLECTÉ AILLEURS. L'empreinte ci-dessus
+                #   porte sur le PERMALIEN : deux copies du même menu publiées
+                #   sur deux pages sont deux publications distinctes pour elle,
+                #   et sept exemplaires de « C'est l'heure du repas ! Pensez à
+                #   Savanna ! » dorment aujourd'hui dans la base. Celle-ci porte
+                #   sur le contenu.
+                empreinte_du_texte = empreinte_texte(publication["texte"])
+                if empreinte_du_texte and base.texte_deja_vu(empreinte_du_texte):
+                    self._compter_ecart("ecartes_doublons")
+                    base.logguer(
+                        "Texte déjà collecté mot pour mot, ignoré : "
+                        f"« {_debut(publication['texte'])} »", "info",
+                    )
                     continue
 
                 neufs += 1
@@ -954,11 +1379,17 @@ class Collecteur:
 
             # Défilement adaptatif : inutile de dérouler 25 fois une source qui
             # ne donne plus rien, inutile de s'arrêter à 25 si elle donne encore.
-            steriles = steriles + 1 if neufs == 0 else 0
-            # Le fil mérite deux tours stériles de plus : il alterne des blocs
-            # sans intérêt (souvenirs, suggestions, publicités) et des blocs
-            # utiles. S'arrêter au premier creux le couperait au mauvais endroit.
-            if steriles >= (4 if genre == "fil" else 2) or retenues >= plafond:
+            # ⚠ STÉRILE = RIEN D'INÉDIT, pas « rien de retenu ». Un défilement
+            #   qui découvre dix publications neuves toutes écartées (hors
+            #   sujet, déjà vues) n'est pas un fil épuisé : c'est un fil qui
+            #   continue. Juger sur les retenues faisait abandonner une
+            #   recherche au 2ᵉ défilement, avant ses premiers résultats utiles.
+            steriles = steriles + 1 if inedits == 0 else 0
+            # Le fil et la recherche méritent deux tours stériles de plus : ils
+            # alternent des blocs de service (souvenirs, suggestions, conseils)
+            # et des blocs utiles. S'arrêter au premier creux les couperait au
+            # mauvais endroit.
+            if steriles >= (4 if genre in ("fil", "recherche") else 2) or retenues >= plafond:
                 break
 
             page.mouse.wheel(0, random.randint(700, 1400))
@@ -984,6 +1415,25 @@ class Collecteur:
         """
         if not web:
             return web
+        # ⭐ LES SITES MORTS SORTENT DE LA ROTATION. Quatre échecs de suite
+        #   (adresse introuvable, 404, pare-feu) = on n'y revient qu'au bout
+        #   d'un mois. Ils restent dans les sources, avec leur raison, pour
+        #   qu'on puisse corriger l'adresse ou les retirer.
+        limite = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(timespec="seconds")
+        en_pause = [
+            s for s in web
+            if int(s.get("echecs") or 0) >= 4 and (s.get("derniere_collecte") or "") > limite
+        ]
+        if en_pause:
+            base.logguer(
+                f"{len(en_pause)} site(s) laissé(s) de côté ce tour (quatre échecs de "
+                "suite) — ils seront retentés dans un mois. Voir l'onglet Sources.",
+                "info",
+            )
+            exclus = {s["id"] for s in en_pause}
+            web = [s for s in web if s["id"] not in exclus]
+            if not web:
+                return web
         fiches = {f["id"]: f for f in base.referentiel("ref_pages")}
 
         def manque(source: dict) -> int:
@@ -1052,24 +1502,24 @@ class Collecteur:
                 page.wait_for_timeout(1200)
                 return page.content()
 
-            for source in a_relire:
-                if self.stop.is_set():
-                    break
-                self.etat["source"] = f"{source['nom']} (rendu JavaScript)"
-                try:
-                    trouvees = self._parcourir_site(source, rendu=rendu)
-                except Exception as e:
-                    base.logguer(f"« {source['nom']} » (JavaScript) : {e}", "avert")
-                    trouvees = 0
-                base.modifier_source(
-                    source["id"], derniere_collecte=base.maintenant(),
-                    nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
-                )
             try:
-                contexte.close()
-                navigateur.close()
-            except Exception:
-                pass
+                for source in a_relire:
+                    if self.stop.is_set():
+                        break
+                    self.etat["source"] = f"{source['nom']} (rendu JavaScript)"
+                    try:
+                        trouvees = self._parcourir_site(source, rendu=rendu)
+                    except Exception as e:
+                        base.logguer(f"« {source['nom']} » (JavaScript) : {e}", "avert")
+                        trouvees = 0
+                    base.modifier_source(
+                        source["id"], derniere_collecte=base.maintenant(),
+                        nb_trouvees=(source.get("nb_trouvees") or 0) + trouvees,
+                    )
+            finally:
+                with contextlib.suppress(Exception):
+                    contexte.close()
+                    navigateur.close()
 
     def _parcourir_site(self, source: dict, rendu=None) -> int:
         """Lit le site d'un établissement et en fait une trouvaille.
@@ -1097,21 +1547,31 @@ class Collecteur:
             return 0
 
         if lecture.get("refuse") or not lecture["texte"]:
+            raison = lecture.get("refuse") or "aucun texte lisible"
+            echecs = int(source.get("echecs") or 0) + 1
             base.logguer(
-                f"« {source['nom']} » : {lecture.get('refuse') or 'aucun texte lisible'}.",
-                "avert",
+                f"« {source['nom']} » : {raison} (échec n° {echecs}).", "avert",
             )
+            # La raison et le compte d'échecs restent sur la source : au bout
+            # de quatre, le site sort de la rotation pour un mois (voir
+            # `_ordonner_sites`). 88 sites morts sur 250 mangeaient 35 % de
+            # chaque tournée, deux fois par jour (02/09/2026).
+            base.modifier_source(source["id"], dernier_resultat=raison, echecs=echecs)
             return 0
 
+        # ⚠ L'EMPREINTE PORTE SUR LE TEXTE SEUL, pas sur l'adresse : un même
+        #   site connu en http et en https produisait deux trouvailles.
         cle = "site:" + hashlib.sha1(
-            (source["url"] + re.sub(r"\s+", " ", lecture["texte"])).encode()
+            re.sub(r"\s+", " ", lecture["texte"]).encode()
         ).hexdigest()
         if base.existe(cle):
             base.logguer(
                 f"« {source['nom']} » : inchangé depuis le dernier passage "
                 f"({len(lecture['pages'])} page(s) relues).", "info",
             )
+            base.modifier_source(source["id"], dernier_resultat="inchangé", echecs=0)
             return 0
+        base.modifier_source(source["id"], dernier_resultat="lu", echecs=0)
 
         dossier = DOSSIER_TROUVAILLES / date.today().isoformat() / hashlib.sha1(
             cle.encode()
@@ -1131,6 +1591,10 @@ class Collecteur:
             "source_nom": source["nom"],
             "source_genre": "site",
             "auteur": lecture.get("titre") or source["nom"],
+            # ⚠ ICI, ET SEULEMENT ICI, « aujourd'hui » EST VRAI : un site web
+            #   affiche ses tarifs à l'instant où on le lit. C'est tout le
+            #   contraire d'une publication Facebook, qui peut dater de 2019 —
+            #   voir `date_de_publication`, qui rend '' dans ce cas.
             "date_post": date.today().isoformat(),
             "texte": lecture["texte"][:60_000],
             "dossier": str(dossier.relative_to(DOSSIER_TROUVAILLES.parent)),
@@ -1162,7 +1626,7 @@ class Collecteur:
 
         champs = extraction.analyser_site(
             texte, lecture.get("titre", ""), source.get("page_nom") or "",
-            self._noms_de_lieux,
+            self._noms_de_lieux, cfg.get("taux_ariary"),
         )
         if cfg.get("llm_actif"):
             try:
@@ -1206,10 +1670,23 @@ class Collecteur:
         else:
             rapprochement = self._rapprocher(champs, cfg)
 
+        # Le parc ou le site dont parle la page, et son lieu en repli : le
+        # chemin Facebook le faisait, le chemin « site web » l'oubliait.
+        if not rapprochement.get("lieu_id"):
+            site_cite = diako.rapprocher_site(texte, None)
+            if site_cite:
+                rapprochement["site_id"] = site_cite["id"]
+                rapprochement["site_nom"] = site_cite["nom"]
+                repli = diako.lieu_par_repli({"site_id": site_cite["id"]})
+                if repli:
+                    rapprochement.update({"lieu_id": repli["id"], "lieu_nom": repli["nom"],
+                                          "lieu_score": None})
+
         manques = self._manques(champs, rapprochement, gardees)
         chambres = champs.get("lignes_chambre") or []
         plats = champs.get("lignes_carte") or []
-        if not chambres and not plats and not champs.get("prix_ar"):
+        vehicules = champs.get("lignes_vehicule") or []
+        if not chambres and not plats and not vehicules and not champs.get("prix_ar"):
             manques.append("aucun tarif trouvé")
         bloquants = [m for m in manques if m in ("lieu", "établissement")]
         statut = "incomplete" if bloquants else "a_trier"
@@ -1234,6 +1711,8 @@ class Collecteur:
             "prix_unite": champs.get("prix_unite"),
             "prix_vu_le": date.today().isoformat(),
             "lieu_texte": champs.get("lieu_texte"),
+            "plat_id": champs.get("plat_id"),
+            "plat_nom": champs.get("plat_nom"),
             "lu_par_llm": int(bool(champs.get("lu_par_llm"))),
             "llm_confiance": champs.get("llm_confiance"),
             "llm_doute": champs.get("llm_doute"),
@@ -1249,6 +1728,16 @@ class Collecteur:
             base.ajouter_ligne_carte(tid, dict(
                 plat, plat_id=reference["id"] if reference else None,
                 plat_nom=reference["nom"] if reference else None), ordre=rang)
+        for rang, vehicule in enumerate(vehicules, start=1):
+            base.ajouter_ligne_vehicule(tid, vehicule, ordre=rang)
+        # Le site d'une agence vend les mêmes circuits que sa page Facebook :
+        # sans cette boucle, `analyser_site` les lisait et personne ne les
+        # écrivait.
+        for rang, circuit in enumerate(champs.get("lignes_circuit") or [], start=1):
+            for cote, cle in (("depart", "depart_id"), ("arrivee", "arrivee_id")):
+                lieu = diako.rapprocher_lieu(circuit.get(cote) or "")
+                circuit[cle] = lieu["id"] if lieu else None
+            base.ajouter_ligne_circuit(tid, circuit, ordre=rang)
 
         t = base.trouvaille(tid)
         if not t:
@@ -1271,6 +1760,7 @@ class Collecteur:
         base.logguer(
             f"Site lu — score {note['score']}/100 : {champs.get('nom_etab') or source['nom']} — "
             f"{len(chambres)} chambre(s), {len(plats)} plat(s), {gardees} photo(s)"
+            + (f", {len(vehicules)} véhicule(s)" if vehicules else "")
             + (f", {len(lecture['pdf'])} PDF signalé(s)" if lecture.get("pdf") else "")
             + ".",
             "succes",
@@ -1313,6 +1803,9 @@ class Collecteur:
             "origine_cle": ((publication.get("origine") or {}).get("cle") or None),
             "publie_le": publication.get("heure", ""),
             "date_post": date_de_publication(publication.get("heure", "")),
+            # La signature du contenu : c'est elle qui empêchera la prochaine
+            # collecte de rapporter une huitième fois le même menu.
+            "empreinte_texte": empreinte_texte(publication["texte"]),
             "texte": publication["texte"],
             "dossier": str(dossier.relative_to(DOSSIER_TROUVAILLES.parent)),
             "statut": "en_traitement",
@@ -1348,9 +1841,18 @@ class Collecteur:
 
         if cfg.get("llm_actif"):
             try:
-                champs = analyse_llm.fusionner(champs, analyse_llm.relire(texte, cfg))
+                champs = analyse_llm.fusionner(
+                    champs, analyse_llm.relire(texte, cfg), texte=texte, cfg=cfg
+                )
             except analyse_llm.LLMIndisponible as e:
                 base.logguer(f"Relecture IA indisponible ({e}) — lecture simple.", "avert")
+
+        # Le plat du référentiel cité (s'il n'y en a qu'un) : c'est ce lien qui
+        # laisse la photo d'un récit illustrer la fiche du plat.
+        if not champs.get("plat_id"):
+            plat_cite = diako.plat_dans_le_texte(texte)
+            if plat_cite:
+                champs["plat_id"], champs["plat_nom"] = plat_cite["id"], plat_cite["nom"]
 
         # -- Photos (le CDN, hors navigateur, en parallèle)
         gardees = _telecharger_photos(publication.get("images") or [], dossier, tid, cfg)
@@ -1361,6 +1863,21 @@ class Collecteur:
         if cfg.get("llm_actif") and cfg.get("llm_vision", True) and gardees:
             champs = self._lire_la_carte(tid, dossier, texte, champs, cfg)
 
+        # ⭐ DEUXIÈME PASSAGE DU FILTRE IMMOBILIER, et il n'est pas redondant.
+        #   Dans le fil, `_parcourir` juge un texte parfois coupé à « Voir plus »
+        #   quand le dépliage a échoué ; ici le texte est complet, et une vente
+        #   de terrain dont l'annonce commençait par « MAGNIFIQUE VUE SUR
+        #   SARODRANO » ne se démasque qu'à la ligne suivante.
+        immo = extraction.raisons_immobilier(texte)
+        if immo:
+            self._compter_ecart("ecartes_immobilier")
+            base.logguer(
+                f"Annonce immobilière écartée ({', '.join(immo)}) : "
+                f"« {_debut(texte)} »", "info",
+            )
+            base.supprimer(tid)
+            shutil.rmtree(dossier, ignore_errors=True)
+            return
         if champs.get("genre") == "rien":
             base.supprimer(tid)
             shutil.rmtree(dossier, ignore_errors=True)
@@ -1380,6 +1897,20 @@ class Collecteur:
         if site:
             rapprochement["site_id"] = site["id"]
             rapprochement["site_nom"] = site["nom"]
+            # ⭐ Deuxième repli du lieu : un récit sur les Tsingy sans nom de
+            #   ville hérite du lieu du parc. Sans ça, la trouvaille restait
+            #   « incomplète » alors que le référentiel savait où c'est.
+            if not rapprochement.get("lieu_id"):
+                repli = diako.lieu_par_repli({"site_id": site["id"]})
+                if repli:
+                    rapprochement.update({
+                        "lieu_id": repli["id"], "lieu_nom": repli["nom"],
+                        "lieu_score": None,
+                    })
+                    base.logguer(
+                        f"Lieu hérité de {repli['origine']} : "
+                        f"« {repli['nom'] or repli['id']} ».", "info",
+                    )
 
         # -- Ce qui manque pour publier
         manques = self._manques(champs, rapprochement, gardees)
@@ -1390,7 +1921,12 @@ class Collecteur:
             shutil.rmtree(dossier, ignore_errors=True)
             return
 
-        date_post = base.trouvaille(tid).get("date_post")
+        # ⚠ PEUT ÊTRE VIDE, ET C'EST VOULU. `date_post` ne vaut plus « ce
+        #   matin » par défaut : quand Facebook n'a pas livré de date, la
+        #   trouvaille n'en porte aucune, `prix_vu_le` reste vide et
+        #   `posts.price_on` part à NULL. Un tarif sans date de relevé se
+        #   remarque et se corrige ; un tarif de 2019 daté d'aujourd'hui, non.
+        date_post = base.trouvaille(tid).get("date_post") or ""
         base.modifier(tid, {
             "statut": statut,
             "manques": manques,
@@ -1417,6 +1953,8 @@ class Collecteur:
             "organisateur": champs.get("organisateur"),
             "post_genre": champs.get("post_genre"),
             "lieu_texte": champs.get("lieu_texte"),
+            "plat_id": champs.get("plat_id"),
+            "plat_nom": champs.get("plat_nom"),
             "lu_par_llm": int(bool(champs.get("lu_par_llm"))),
             "llm_confiance": champs.get("llm_confiance"),
             "llm_doute": champs.get("llm_doute"),
@@ -1439,6 +1977,12 @@ class Collecteur:
                 plat_nom=plat["nom"] if plat else None,
             ), ordre=rang)
 
+        # -- La grille d'un loueur de véhicules -> `vehicle_offers` à la
+        #    publication. Elle n'existait pas : 24 trouvailles location_vehicule
+        #    sans une seule ligne tarifaire.
+        for rang, vehicule in enumerate(champs.get("lignes_vehicule") or [], start=1):
+            base.ajouter_ligne_vehicule(tid, vehicule, ordre=rang)
+
         # -- Doublons : le même établissement reposté ailleurs
         jumelle = base.chercher_jumelle(
             tid, champs.get("telephone") or "", champs.get("nom_etab") or "",
@@ -1453,8 +1997,12 @@ class Collecteur:
                     champs.get("titre_evt") or "", champs.get("evt_debut")
                 )
                 if evt_id:
+                    # ⚠ `doublon_de`, PAS `cible_id`. `cible_id` veut dire « cette
+                    #   trouvaille a été publiée là » : rempli ici, il faisait
+                    #   refuser la publication d'un doublon requalifié à la main
+                    #   avec « Déjà publiée : None » (14 lignes le 02/09/2026).
                     base.modifier(tid, {
-                        "statut": "doublon", "cible_id": evt_id,
+                        "statut": "doublon", "doublon_de": f"events:{evt_id}",
                         "note": f"Déjà au calendrier de Diako : {comment}.",
                     })
                     statut = "doublon"
@@ -1585,8 +2133,25 @@ class Collecteur:
                     "_etat_fiche": {
                         "a_photo": meilleur["a_photo"], "a_tel": meilleur["a_tel"],
                         "nb_carte": meilleur["nb_carte"],
+                        # Sans lui, le score accordait 45 points « premiers
+                        # tarifs » à toute grille, même sur une fiche déjà tarifée.
+                        "nb_chambre": meilleur.get("nb_chambre") or 0,
                     },
                 })
+
+        # ⭐ REPLI DU LIEU : hériter de la fiche rattachée. Le texte ne cite pas
+        #   toujours la ville, mais la fiche de l'annuaire, elle, porte son
+        #   `place_id` — et si la fiche est la bonne, son lieu l'est aussi.
+        #   C'est ce qui manquait aux 85 trouvailles bloquées « sans lieu ».
+        if not sortie["lieu_id"] and sortie["page_id"]:
+            repli = diako.lieu_par_repli({"page_id": sortie["page_id"]})
+            if repli:
+                sortie.update({"lieu_id": repli["id"], "lieu_nom": repli["nom"],
+                               "lieu_score": None})
+                base.logguer(
+                    f"Lieu hérité de {repli['origine']} : "
+                    f"« {repli['nom'] or repli['id']} ».", "info",
+                )
         return sortie
 
     def _manques(self, champs: dict, rapprochement: dict, nb_photos: int) -> list[str]:
@@ -1594,7 +2159,13 @@ class Collecteur:
         manques = []
         genre = champs.get("genre")
 
-        if not rapprochement.get("lieu_id"):
+        # ⚠ LE LIEU NE BLOQUE QUE LA CRÉATION D'UNE FICHE. Un récit ou un
+        #   événement sans lieu se publie (la publication ne l'exige pas) ; le
+        #   score, lui, le pénalise. Exiger le lieu partout retenait 79
+        #   trouvailles publiables en « incomplète » (mesuré le 02/09/2026).
+        if not rapprochement.get("lieu_id") and (
+            genre == "etablissement" or (genre == "carte" and not rapprochement.get("page_id"))
+        ):
             manques.append("lieu")
         if genre in ("etablissement", "carte") and not (
             champs.get("nom_etab") or rapprochement.get("page_id")
@@ -1628,17 +2199,28 @@ class Collecteur:
         cfg = charger()
         if self.etat["actif"]:
             raise RuntimeError("Une collecte est déjà en cours.")
+        if not self._peut_ouvrir_chromium(cfg, "Prospection de sources"):
+            raise RuntimeError("Pas assez de mémoire pour ouvrir le navigateur.")
         self.etat.update(actif=True, source="prospection de sources", trouvees=0)
         try:
-            with sync_playwright() as pw:
-                ctx = self._contexte(pw, visible=cfg["navigateur_visible"])
-                page = ctx.pages[0] if ctx.pages else ctx.new_page()
-                try:
-                    candidats = prospection.prospecter(
-                        page, requetes=requetes, rappel=rappel, config=cfg
+            # Même verrou que la collecte : c'est le même Chromium, la même
+            # machine, et les mêmes bots frères qui pourraient l'ouvrir.
+            with verrou_navigateur.verrou_navigateur("diako") as pris:
+                if not pris:
+                    raise RuntimeError(
+                        f"Le bot « {verrou_navigateur.qui() or '?'} » occupe le "
+                        "navigateur — réessayez dans un moment."
                     )
-                finally:
-                    ctx.close()
+                with sync_playwright() as pw:
+                    ctx = self._contexte(pw, visible=cfg["navigateur_visible"])
+                    page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                    try:
+                        candidats = prospection.prospecter(
+                            page, requetes=requetes, rappel=rappel, config=cfg
+                        )
+                    finally:
+                        with contextlib.suppress(Exception):
+                            ctx.close()
             neufs = prospection.enregistrer(candidats)
             base.logguer(
                 f"Prospection de sources : {len(candidats)} candidat(s) examiné(s), "

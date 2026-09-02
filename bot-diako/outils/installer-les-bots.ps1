@@ -48,7 +48,12 @@ $bots = @(
        Tache = "Gardien bot Diako"; Ancienne = "Bot de collecte Diako"; Cle = "diako" },
     @{ Nom = "AKORA"; Port = 8758
        Dossier = Join-Path $bureau "AKORA\akora\bot-fournisseurs"
-       Tache = "Gardien bot AKORA"; Ancienne = "Bot fournisseurs AKORA"; Cle = "akora" }
+       Tache = "Gardien bot AKORA"; Ancienne = "Bot fournisseurs AKORA"; Cle = "akora" },
+    # Ajoute le 23/08/2026 : le bot de la PAGE Facebook Fonenako etait le seul
+    # des quatre sans gardien.
+    @{ Nom = "Page Fonenako"; Port = 8759
+       Dossier = Join-Path $bureau "Fonenako preprod\29031\Fonenako FinAL GITHUB\bot-page"
+       Tache = "Gardien bot Page Fonenako"; Ancienne = "Bot page Fonenako"; Cle = "page" }
 )
 
 if ($Retirer) {
@@ -94,9 +99,10 @@ foreach ($b in $bots) {
 
 Write-Host ""
 Write-Host ("{0} bot(s) sous surveillance. Adresses :" -f $installes)
-Write-Host "   Fonenako : http://127.0.0.1:8756"
-Write-Host "   Diako    : http://127.0.0.1:8757"
-Write-Host "   AKORA    : http://127.0.0.1:8758"
+Write-Host "   Fonenako      : http://127.0.0.1:8756"
+Write-Host "   Diako         : http://127.0.0.1:8757"
+Write-Host "   AKORA         : http://127.0.0.1:8758"
+Write-Host "   Page Fonenako : http://127.0.0.1:8759"
 Write-Host ""
 Write-Host "Le gardien note ses relances dans <dossier du bot>\data\gardien.log."
 Write-Host "Verifier : schtasks /Query /TN `"Gardien bot Diako`""

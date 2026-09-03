@@ -57,7 +57,7 @@ rejoué à blanc : **36 publications en ligne** à masquer —
 Lancé le 03/09 sur autorisation d'Andry : **41 récits masqués**, 72 trouvailles
 requalifiées. Il restait 213 récits visibles, contre 418 avant les deux passes.
 
-## ⏳ Le chrome de Facebook — 168 faits le 03/09, 41 restent (même commande)
+## ✅ Le chrome de Facebook dans les textes déjà publiés — FAIT le 03/09/2026 (1 récit écarté, à dessein)
 
 Mesuré le 03/09/2026 sur les récits en ligne : **106 des 213 visibles** (et 103
 masqués, 209 en tout) portent dans leur corps des morceaux de l'interface de
@@ -109,6 +109,11 @@ statut En ligne ». Les 323 `pages.long_desc` qui portent le même bruit ne sont
 **pas** touchées par cet outil : `trg_pages_avant` est un BEFORE INSERT **OR
 UPDATE**, et toute écriture sur une fiche sans le préfixe propriétaire la
 dépublierait.
+
+**Lancé deux fois par Andry le 03/09** (filtre élargi entre les deux) : il ne reste
+**1 récit sur 213** avec du bruit, et c'est celui que le garde-fou refuse à raison —
+son auteur s'appelle littéralement « Indicateur de statut En ligne » et son corps ne
+contient rien d'autre. Rien à faire de plus ici ; le bot ne produit plus ce bruit.
 
 ## ⏳ 333 fiches créées par le bot sont INVISIBLES — à trancher, puis SQL
 

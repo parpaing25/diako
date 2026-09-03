@@ -215,6 +215,22 @@ class Planificateur:
         if self.est_occupe():
             return  # on retentera dans 30 s
 
+        # 🔴 RÈGLE POSÉE PAR ANDRY LE 03/09/2026 : pas de tournée automatique
+        #   tant qu'une session Claude tourne sur ce PC — c'est Chromium qui
+        #   mange la RAM (événement Windows 2004 à 11 h 10, navigateur AKORA
+        #   perdu à 852 Mo libres). La marque n'est pas écrite : le créneau
+        #   reste dû, `creneau_du` le fait partir quand la session s'éteint.
+        from . import session_claude
+        session = session_claude.active()
+        if session:
+            if getattr(self, "_suspendu_pour", None) != marque:
+                self._suspendu_pour = marque
+                base.logguer(
+                    f"Collecte de {creneau} suspendue — {session}. Elle partira "
+                    "d'elle-même quand la session s'éteindra (règle du 03/09).",
+                    "info")
+            return
+
         # ⚠ LA MARQUE APRÈS LE LANCEMENT, ET SEULEMENT S'IL A PRIS. `lancer_collecte`
         #   rend False quand la ressource « navigateur » est déjà occupée
         #   (prospection, fenêtre de connexion) ; marquer avant brûlait le

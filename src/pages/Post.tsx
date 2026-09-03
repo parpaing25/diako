@@ -24,9 +24,14 @@ import { useReveal } from "@/hooks/useReveal";
  * pour LIRE un récit précis, pas pour faire défiler un fil.
  */
 export default function Post() {
-  useReveal();
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<TypePost | null>(null);
+  /* 🔴 LA DÉPENDANCE, PAS LE VIDE. Sans elle, l'effet tourne avant que le
+   *    récit soit là, `querySelectorAll('.dk-reveal')` ne trouve rien, et
+   *    aucun observateur n'est créé : la carte qui arrive ensuite reste à
+   *    `opacity: 0` POUR TOUJOURS. Vérifié le 03/09/2026 sur le build en
+   *    ligne — texte présent dans le DOM, écran vide, aucune erreur. */
+  useReveal(post);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absent" | "erreur">("chargement");
 
   /**
@@ -154,7 +159,7 @@ export default function Post() {
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Retour
         </button>
-        <PostCard post={post} onSupprime={() => setEtat("absent")} />
+        <PostCard post={post} surSaPage onSupprime={() => setEtat("absent")} />
       </div>
 
       <section

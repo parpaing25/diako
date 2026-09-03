@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { TagRow } from "@/components/TagRow";
 import { PartagerMenu } from "@/components/PartagerMenu";
 import { noterLieu } from "@/lib/affinites";
@@ -80,10 +80,19 @@ const SEUIL_TEXTE = 180;
 export function PostCard({
   post,
   onSupprime,
+  surSaPage = false,
 }: {
   post: Post;
   onSupprime?: (id: string) => void;
+  /**
+   * ⭐ VRAI QUAND LA CARTE EST DÉJÀ LA PAGE DU RÉCIT (`/post/<id>`).
+   *   Dans un fil, la carte entière mène au récit et la photo aussi ; sur sa
+   *   propre page, il n'y a plus nulle part où aller — la photo reprend son
+   *   geste d'agrandissement et la carte cesse d'être cliquable.
+   */
+  surSaPage?: boolean;
 }) {
+  const naviguer = useNavigate();
   const { user } = useAuth();
   const [reaction, setReaction] = useState<string | null>(post.ma_reaction);
   const [nbReactions, setNbReactions] = useState(post.reactions_count);
@@ -195,14 +204,52 @@ export function PostCard({
     setPartage(true);
   }
 
+  /**
+   * ⭐ OUVRIR LE RÉCIT — le geste qu'Andry a demandé le 03/09/2026 : « si je
+   *   clique sur une carte il s'ouvre en grand, et va dans la page de détails
+   *   du récit ». Jusqu'ici seul l'horodatage y menait : onze pixels de haut,
+   *   tout en bas de la carte.
+   */
+  function ouvrirLeRecit() {
+    interesse(2);
+    naviguer(`/post/${post.id}`);
+  }
+
+  /**
+   * ⚠ LE CLIC GLOBAL NE DOIT AVALER AUCUN GESTE. Une carte porte huit
+   *   commandes — réagir, commenter, partager, enregistrer, le menu, le lien
+   *   d'auteur, les puces de lieu et de plat, les flèches du carrousel — et un
+   *   lien qui envelopperait tout les rendrait toutes inatteignables.
+   *   On ne navigue donc QUE si le clic n'a atterri sur aucune commande.
+   * ⚠ Et jamais après une sélection de texte : on vient de lire, pas de
+   *   cliquer. Sans ce test, surligner une phrase changeait de page.
+   */
+  function clicSurLaCarte(e: React.MouseEvent<HTMLElement>) {
+    if (surSaPage) return;
+    const cible = e.target as HTMLElement;
+    if (cible.closest('a,button,input,textarea,select,video,[role="button"],[role="menu"]')) return;
+    if ((window.getSelection()?.toString() ?? "").length > 0) return;
+    ouvrirLeRecit();
+  }
+
   const estMien = user?.id === post.author.id;
   const texte = post.body ?? "";
-  const long = texte.length > SEUIL_TEXTE;
+  /* ⚠ SUR SA PROPRE PAGE, UN RÉCIT NE SE COUPE PAS. On y est venu POUR le
+       lire : le tronquer à 240 caractères et proposer « plus » y ajoute un
+       geste sans rien économiser — il n'y a pas de fil à ne pas perdre. */
+  const long = !surSaPage && texte.length > SEUIL_TEXTE;
   const visible = deplie || !long ? texte : texte.slice(0, SEUIL_TEXTE).trimEnd() + "…";
   const nom = post.author.name || "Membre Diako";
 
   return (
-    <article ref={racine} className="dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border">
+    <article
+      ref={racine}
+      onClick={clicSurLaCarte}
+      className={cn(
+        "dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border",
+        !surSaPage && "cursor-pointer"
+      )}
+    >
       {partage && (
         <PartagerMenu
           url={`${window.location.origin}/post/${post.id}`}
@@ -313,6 +360,10 @@ export function PostCard({
         <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
           <Carrousel
             images={post.media}
+            /* ⭐ DANS UN FIL, LA PHOTO MÈNE AU RÉCIT — pas à une visionneuse qui
+                 montrerait la même image sans son texte ni son lieu. Sur la
+                 page du récit (`surSaPage`), la visionneuse reprend la main. */
+            alClic={surSaPage ? null : ouvrirLeRecit}
             alt={post.place ? `${post.place}, Madagascar` : nom}
             /* ⚠ La carte du fil desktop vit dans une grille : une colonne sur
                écran large, deux à partir de 1280, trois à 1920. Sans cette

@@ -100,7 +100,6 @@ interface Recit {
 }
 
 export default function Recherche() {
-  useReveal();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
@@ -135,6 +134,8 @@ export default function Recherche() {
   const [lieu, setLieu] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [plat, setPlat] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [fiches, setFiches] = useState<ResultatPage[]>([]);
+  // Idem : les fiches arrivent en asynchrone.
+  useReveal(fiches);
   const [tables, setTables] = useState<
     Awaited<ReturnType<typeof restaurantsParPlat>>
   >([]);

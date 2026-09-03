@@ -210,14 +210,31 @@ export function PostImmersif({
                 </button>
               )}
             </p>
-            {deplie && (
-              <button
-                onClick={() => setDeplie(false)}
-                className="mt-1 text-xs font-semibold text-white/70"
+            {/* ⭐ OUVRIR LE RÉCIT — il n'existait AUCUN chemin vers `/post/<id>`
+                   depuis le téléphone : le fil immersif portait l'auteur, les
+                   quatre commandes et « plus », mais pas la publication
+                   elle-même. On ne pouvait donc lire un récit en entier, avec
+                   ses commentaires, que sur un ordinateur.
+                ⚠ Un libellé, pas un appui sur la photo : dans un fil qu'on
+                  parcourt au pouce, toucher l'image se confond avec le geste
+                  de défilement, et l'on ouvrirait un récit en voulant passer
+                  au suivant. */}
+            <div className="mt-1.5 flex items-center gap-3">
+              {deplie && (
+                <button
+                  onClick={() => setDeplie(false)}
+                  className="text-xs font-semibold text-white/70"
+                >
+                  reduire
+                </button>
+              )}
+              <Link
+                to={`/post/${post.id}`}
+                className="inline-flex min-h-9 items-center rounded-full bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-sm"
               >
-                reduire
-              </button>
-            )}
+                Ouvrir le récit
+              </Link>
+            </div>
           </div>
         </div>
       )}

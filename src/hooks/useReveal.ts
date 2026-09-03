@@ -86,7 +86,7 @@ export function useReveal(dependance?: unknown) {
  */
 export function useRevealFilet(cle: unknown) {
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const balayer = () => {
       document
         .querySelectorAll<HTMLElement>('.dk-reveal:not([data-vu="1"])')
         .forEach((el) => {
@@ -96,7 +96,46 @@ export function useRevealFilet(cle: unknown) {
           if (el.getBoundingClientRect().top < window.innerHeight * 1.2)
             el.setAttribute("data-vu", "1");
         });
-    }, 700);
-    return () => window.clearTimeout(t);
+    };
+
+    /* 🔴 UN SEUL BALAYAGE À 700 ms NE SUFFISAIT PAS, et le défaut était en
+     *    ligne : sur /post/<id>, la carte du récit arrivait APRÈS le filet et
+     *    restait à `opacity: 0` pour toujours — texte présent dans le DOM,
+     *    écran vide, aucune erreur. Vérifié le 03/09/2026 sur le build
+     *    déployé : `getComputedStyle(article).opacity === "0"`.
+     *
+     *    C'était une COURSE, gagnée sur une fibre et perdue sur une connexion
+     *    malgache : plus la donnée met de temps à venir, plus la page reste
+     *    blanche. Le filet surveille donc les ajouts au DOM pendant les
+     *    premières secondes qui suivent un changement d'adresse.
+     *
+     * ⚠ Le coût : une observation de mutations, bornée à 6 secondes et
+     *   regroupée par image (`requestAnimationFrame`). Sur un fil de 50
+     *   cartes, le balayage ne touche que ce qui n'a pas encore `data-vu`.
+     */
+    const premier = window.setTimeout(balayer, 700);
+
+    let prevu = 0;
+    const observateur =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(() => {
+            if (prevu) return;
+            prevu = window.requestAnimationFrame(() => {
+              prevu = 0;
+              balayer();
+            });
+          });
+    observateur?.observe(document.body, { childList: true, subtree: true });
+
+    // Six secondes couvrent une arrivée tardive sans surveiller la page à vie.
+    const fin = window.setTimeout(() => observateur?.disconnect(), 6000);
+
+    return () => {
+      window.clearTimeout(premier);
+      window.clearTimeout(fin);
+      if (prevu) window.cancelAnimationFrame(prevu);
+      observateur?.disconnect();
+    };
   }, [cle]);
 }

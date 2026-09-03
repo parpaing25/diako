@@ -51,6 +51,15 @@ export function Carrousel({
    *   le geste d'Instagram. Dans une carte, elle attend qu'on la lance.
    */
   videoAuto = false,
+  /**
+   * ⭐ CE QUE FAIT LE CLIC SUR L'IMAGE, quand ce n'est pas « ouvrir en grand ».
+   *   Dans un fil, toucher la photo doit mener au RÉCIT : la visionneuse y
+   *   montrerait la même image sans le texte, sans le lieu, sans les
+   *   commentaires. Sur la page du récit, en revanche, la visionneuse garde
+   *   tout son sens — d'où un réglage par appelant, et non une règle globale.
+   * ⚠ Prend le pas sur `agrandissable`.
+   */
+  alClic = null,
 }: {
   images: Media[];
   alt?: string;
@@ -58,6 +67,7 @@ export function Carrousel({
   ajustement?: "couvrir" | "contenir";
   largeurAffichee?: string;
   agrandissable?: boolean;
+  alClic?: (() => void) | null;
   credit?: string | null;
   videoAuto?: boolean;
 }) {
@@ -121,12 +131,15 @@ export function Carrousel({
               >
                 Votre navigateur ne lit pas cette vidéo.
               </video>
-            ) : agrandissable ? (
+            ) : alClic || agrandissable ? (
               <button
                 type="button"
-                onClick={() => setOuverte(i)}
-                aria-label="Voir la photo en grand"
-                className="block h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={() => (alClic ? alClic() : setOuverte(i))}
+                aria-label={alClic ? "Ouvrir le récit" : "Voir la photo en grand"}
+                className={cn(
+                  "block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  alClic ? "cursor-pointer" : "cursor-zoom-in"
+                )}
               >
                 <ImageProgressive
                   src={m.url}

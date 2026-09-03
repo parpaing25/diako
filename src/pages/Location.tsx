@@ -97,7 +97,6 @@ function SectionFiches({
 }
 
 export default function Location() {
-  useReveal();
   useSEO({
     titre: "Louer une voiture à Madagascar",
     description:
@@ -108,6 +107,8 @@ export default function Location() {
   });
 
   const [loueurs, setLoueurs] = useState<ResultatPage[]>([]);
+  // Idem : les loueurs arrivent en asynchrone.
+  useReveal(loueurs);
   const [transporteurs, setTransporteurs] = useState<ResultatPage[]>([]);
   const [grilles, setGrilles] = useState<Map<string, OffreVehicule[]>>(new Map());
   const [etat, setEtat] = useState<"chargement" | "ok" | "erreur">("chargement");

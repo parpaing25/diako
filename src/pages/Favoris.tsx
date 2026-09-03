@@ -31,7 +31,6 @@ type Onglet = "adresses" | "enregistres" | "aimes";
  *   que c'est ce qui sert à décider.
  */
 export default function Favoris() {
-  useReveal();
   useDocumentTitle("Mon carnet");
   const { user, loading } = useAuth();
   const [onglet, setOnglet] = useState<Onglet>("adresses");
@@ -39,6 +38,9 @@ export default function Favoris() {
   const [adresses, setAdresses] = useState<FicheGardee[] | null>(null);
   const [enregistres, setEnregistres] = useState<Post[] | null>(null);
   const [aimes, setAimes] = useState<PublicationAimee[] | null>(null);
+  // La dépendance, sinon les cartes arrivées après le montage restent
+  // invisibles (le piège est décrit dans useReveal.ts).
+  useReveal(adresses ?? enregistres ?? aimes);
 
   // Chaque onglet charge à sa première ouverture, pas au montage : sur une 3G,
   // trois requêtes pour une seule liste regardée, c'est deux de trop.

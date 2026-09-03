@@ -67,6 +67,26 @@ export interface Post {
   author: AuteurPost;
   ma_reaction: string | null;
   enregistre: boolean;
+  /**
+   * ⭐ L'IDENTIFIANT DU LIEU — il était sélectionné puis JETÉ. C'est lui qui
+   *   permet « Autres récits à <lieu> » : sans lui, la page d'un récit est un
+   *   cul-de-sac, alors que c'est l'écran où atterrissent les liens partagés.
+   */
+  place_id?: string | null;
+  /**
+   * ⭐ LE PRIX RELEVÉ, avec sa date. Les trois colonnes existent et le bot les
+   *   écrit ; aucune lecture ne les ramenait, donc un prix n'était visible
+   *   nulle part. `price_on` dit QUAND : un tarif sans date ne vaut rien.
+   *
+   * ⚠ FACULTATIFS, ET CE N'EST PAS UN DÉTAIL. Seul `chargerPost` les ramène ;
+   *   le fil passe par `get_feed`/`feed_filtre`, qui ne les rendent pas.
+   *   `undefined` veut donc dire « pas chargé », jamais « pas de prix » — un
+   *   écran qui les confondrait afficherait « prix inconnu » sur un récit qui
+   *   en porte un.
+   */
+  price_ar?: number | null;
+  price_unit?: string | null;
+  price_on?: string | null;
 }
 
 /* ── Le fil ────────────────────────────────────────────────────────────── */
@@ -207,7 +227,7 @@ export async function chargerPost(id: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from("posts")
     .select(
-      "id, kind, body, media, place, place_id, dish, page_name, created_at, author_id, reactions_count, comments_count, saves_count, status"
+      "id, kind, body, media, place, place_id, dish, page_name, created_at, author_id, reactions_count, comments_count, saves_count, status, price_ar, price_unit, price_on"
     )
     .eq("id", id)
     .maybeSingle();
@@ -270,6 +290,10 @@ export async function chargerPost(id: string): Promise<Post | null> {
     },
     ma_reaction,
     enregistre,
+    place_id: data.place_id ?? null,
+    price_ar: data.price_ar ?? null,
+    price_unit: data.price_unit ?? null,
+    price_on: data.price_on ?? null,
   };
 }
 

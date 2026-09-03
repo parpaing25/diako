@@ -367,6 +367,11 @@ MOTS_VENTE_OBJETS = (
     "ecran plat", "playstation", "console de jeu", "imprimante", "groupe electrogene",
     "panneau solaire", "destockage", "liquidation", "pieces detachees", "pneus",
     "carrelage", "ciment", "materiaux de construction", "friperie", "vente flash",
+    "kidoro", "matelas", "jardinage", "entretien du jardin", "creation du jardin",
+    "creations du jardin", "amenagement de jardin", "voiture d'occasion", "moto a vendre",
+    "mixeur", "blender", "robot de cuisine", "machine a laver", "lave-linge", "micro-onde",
+    "ventilateur", "tapis fourrure", "tapis de salon", "vetements", "tissu tsara",
+    "chaussures", "sac a main", "sonorisation", "location sono",
 )
 # ⚠ « à vendre », « je vends » ne suffisent pas seuls : un hôtel à vendre est de
 #   l'immobilier (déjà filtré), et « amidy »/« mivarotra » en malgache
@@ -402,11 +407,15 @@ MOTS_EVENEMENT_FORT = (
     "marathon", "championnat", "carnaval", "kermesse", "gala", "defile", "election miss",
     "trail", "regate", "rallye", "feria", "commemoration", "pelerinage", "olympiade",
     "semaine du", "journee du", "journees du", "fete du", "fete de la", "fete des",
+    # malgache : « hetsika » (événement), « lanonana » (cérémonie, fête),
+    # « fampirantiana » (exposition), « fampisehoana » (spectacle)
+    "hetsika", "lanonana", "fampirantiana", "fampisehoana",
 )
 MOTS_EVENEMENT_FAIBLE = (
     "edition", "programme", "live", "dj", "soiree", "after work", "afterwork", "atelier",
     "conference", "animation", "course", "competition", "rendez-vous", "billetterie",
     "entree libre", "projection", "cinema", "theatre", "danse", "nuit blanche", "match",
+    "fety", "mozika", "dihy", "fanokafana",
 )
 # Une offre : l'établissement parle de lui pour vendre.
 MOTS_OFFRE = (
@@ -419,6 +428,21 @@ MOTS_OFFRE = (
     "commandez", "sur commande", "ouvert 7j/7", "ouvert tous les jours", "horaires",
     "menu du jour", "plat du jour", "bienvenue", "nouveaute", "ouverture",
     "vient d'ouvrir", "tonga soa", "antsoy", "mandray anao", "afaka manao reservation",
+    "vous accueille", "vous propose", "vous attend", "viens decouvrir", "viens profiter",
+    "viens celebrer", "viens gouter", "after work", "afterwork", "happy hour", "en mp",
+    "par mp", "en inbox", "inbox", "sur commande", "commande", "livraison",
+    # ⚠ MALGACHE (03/09/2026) : 18 des 248 récits restés en ligne après le
+    #   premier nettoyage étaient des annonces en malgache — « ity tolotra ity »,
+    #   « misokatra foana izahay », « zahay mandray vahiny » — que ce vocabulaire
+    #   tout français laissait passer pour du vécu.
+    "tolotra", "manankery", "misokatra", "mandray vahiny", "mampanofa", "ahofa",
+    "hofaina", "hantsoina", "azo antsoina", "tongava", "mila alefa", "hafatra",
+    "vidiny", "saran-dalana", "monja", "mitatitra", "raiso", "misy toerana",
+    "toerana malalaka", "azo alaina", "andraso", "tongava maro", "ho anareo izay mitady",
+    # anglais des agences et des lodges
+    "book now", "booking", "contact us", "call us", "dm us", "we offer", "we welcome",
+    "escape to", "join us", "special offer", "per night", "per person", "available now",
+    "leave the ordinary", "your stay", "your holiday", "your next trip", "book your",
 )
 # Le vécu : quelqu'un y est allé. Les marqueurs FORTS suffisent seuls ; les
 # faibles se comptent à deux (« on a hâte de vous accueillir » n'est pas un vécu).
@@ -431,12 +455,16 @@ MOTS_VECU_FORT = (
     "je recommande", "je vous recommande", "je conseille", "je vous conseille",
     "decu", "deception", "mon avis", "notre avis", "retour d'experience", "premiere fois",
     "nahita", "nandeha", "nitsidika", "nihinana", "nanandrana", "nandry", "niala sasatra",
-    "nahafinaritra", "nankafy", "izahay", "zahay", "nifaly", "diso fanantenana",
+    "nahafinaritra", "nankafy", "nifaly", "diso fanantenana",
 )
+# ⚠ « izahay » / « zahay » (nous) étaient des marqueurs FORTS : « misokatra
+#   foana izahay » (nous sommes toujours ouverts) passait pour un vécu. Un
+#   établissement dit « nous » autant qu'un voyageur : marqueur faible.
 MOTS_VECU_FAIBLE = (
     "on a ", "on est ", "nous avons", "j'ai ", "hier", "ce week-end", "la semaine derniere",
     "le mois dernier", "enfin", "tsara be", "mahafinaritra", "faly", "tany ", "teny ", "tao ",
     "magnifique", "superbe", "paysage", "vue ", "coucher de soleil", "lever de soleil",
+    "zahay",  # couvre aussi « izahay » — ne pas lister les deux, ils se compteraient double
 )
 MOTS_MESAVENTURE = (
     "decu", "deception", "mauvais", "jamais plus", "arnaque", "trop cher", "attente",
@@ -482,9 +510,15 @@ def est_voyage_organise(texte: str) -> bool:
 
 
 def est_une_offre(texte: str, auteur_page: str | None = None) -> bool:
+    """L'établissement parle de lui pour vendre.
+
+    Un numéro de téléphone compte pour un marqueur : un voyageur raconte, il
+    ne donne pas le 034 de l'hôtel — et s'il le fait, son vécu l'emporte de
+    toute façon (voir `classer_avec_motif`).
+    """
     n = sans_accent(texte)
     seuil = 1 if auteur_page else 2
-    return _compte(MOTS_OFFRE, n) >= seuil
+    return _compte(MOTS_OFFRE, n) + (1 if MOTIF_TEL.search(texte) else 0) >= seuil
 
 
 def est_un_vecu(texte: str) -> bool:

@@ -140,3 +140,63 @@ def test_le_chrome_de_facebook_n_est_pas_un_nom_d_etablissement():
         "Indicateur de statut En ligne"
     assert ex.nom_etablissement("PRIX : 130.000 ARIARY\nBungalow vue mer") is None or \
         "PRIX" not in (ex.nom_etablissement("PRIX : 130.000 ARIARY\nBungalow vue mer") or "")
+
+
+# ── 03/09/2026, second nettoyage : le malgache et l'anglais des annonces ──────
+# 18 des 248 récits restés en ligne après le premier passage étaient des
+# annonces en malgache (« ity tolotra ity », « misokatra foana izahay ») ou en
+# anglais (« Escape to the paradise of Nosy Sakatia… book now »), que le
+# vocabulaire tout français d'`est_une_offre` laissait passer pour du vécu.
+
+from bot import extraction  # noqa: E402
+
+
+def _classer(texte, page=None, photos=1):
+    return extraction.classer_avec_motif(
+        texte, photos, extraction.lignes_de_carte(texte),
+        extraction.dates_evenement(texte), page)[0]
+
+
+def test_annonce_malgache_d_un_lodge_nourrit_sa_fiche():
+    texte = ("Manankery manomboka volana septembre indray ity tolotra ity : 10h00 à 16h00 : "
+             "40.000 Ar, 17h30 à 08h30 : 40.000 Ar. Bungalow Kollins Lodge Ramena. "
+             "Antsoy ny 034 12 345 67")
+    assert _classer(texte) == "etablissement"
+
+
+def test_nous_sommes_ouverts_n_est_pas_un_vecu():
+    texte = ("Salama tompoko o. Misokatra foana izahay na Alahady ary tongava manandrana "
+             "ireo sakafo matsiro. Resto Anjanahary, 033 11 222 33")
+    assert _classer(texte) == "etablissement"
+
+
+def test_un_recit_malgache_avec_izahay_reste_un_recit():
+    texte = ("Izahay nandeha tany Ranomafana, nahita gidro sy riandrano. "
+             "Tsara be ny lalana, mahafinaritra ny parc.")
+    assert _classer(texte) == "recit"
+
+
+def test_matelas_a_louer_n_a_rien_a_faire_ici():
+    texte = ("ho anareo izay mitady #KIDORO AHOFA ETO MAHAJANGA, izahay dia mampanofa "
+             "kidoro, TEL : 034 55 666 77")
+    assert _classer(texte) == "rien"
+
+
+def test_annonce_anglaise_d_une_agence_nourrit_sa_fiche():
+    texte = ("Discover Nosy Sakatia with Léonard Tour. Escape to the paradise of Nosy "
+             "Sakatia, where turquoise water meets white sand. Book now, contact us on "
+             "WhatsApp +261 32 12 345 67")
+    assert _classer(texte, page="Léonard Tour") == "etablissement"
+
+
+def test_evenement_annonce_en_malgache_reste_un_evenement():
+    texte = ("ONE GUITARE FOR BAKÀKA – ACTION SOCIALE. Amin'ity hetsika ity, dia "
+             "hanatanteraka asa soa izahay ny 27 août any Sarimanok Ambatoloaka. "
+             "Tongava maro !")
+    assert _classer(texte) == "evenement"
+
+
+def test_un_blender_est_une_vente_d_objets():
+    texte = ("BLENDER ULTRA PUISSANT SILVER CREST Professionnelle Mixeur, broyeur, "
+             "hachoir 4500W. 180000ar. Service de livraison Tana. 034 00 111 22")
+    assert _classer(texte) == "rien"

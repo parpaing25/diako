@@ -86,6 +86,11 @@ def decider(t: dict) -> dict | None:
 
 
 def main() -> None:
+    # Redirigé vers un fichier sous Windows, stdout est en cp1252 et la flèche
+    # « → » faisait planter le compte rendu.
+    for flux in (sys.stdout, sys.stderr):
+        if hasattr(flux, "reconfigure"):
+            flux.reconfigure(encoding="utf-8", errors="replace")
     analyseur = argparse.ArgumentParser(description="Rejouer le classement et nettoyer")
     analyseur.add_argument("--ecrire", action="store_true")
     analyseur.add_argument("--site", action="store_true")

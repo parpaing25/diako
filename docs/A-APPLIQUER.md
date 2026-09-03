@@ -35,6 +35,33 @@ python outils/reclasser.py --ecrire --site
 La commande écrit au nom du compte Diako (voir la section précédente), relit ce
 qu'elle a écrit, et le journal du bot en garde la trace.
 
+## ⏳ Second passage du nettoyage — 36 annonces en malgache et en anglais, UNE commande
+
+Après le premier nettoyage (03/09/2026), 248 récits restaient en ligne. En les
+relisant : 18 étaient encore des annonces, en malgache (« Manankery … ity
+tolotra ity », « misokatra foana izahay », « zahay mandray vahiny ») ou en
+anglais (« Escape to the paradise of Nosy Sakatia… book now »), plus des ventes
+d'objets (matelas à louer, blender, tapis, vêtements d'enfants, sono). Le
+vocabulaire d'`est_une_offre` était tout français, et « izahay » (nous)
+comptait comme un vécu alors qu'un établissement dit « nous » autant qu'un
+voyageur.
+
+Corrigé dans `bot-diako/bot/extraction.py` (7 tests de plus, 137 au total),
+rejoué à blanc : **36 publications en ligne** à masquer —
+
+| Ce qui est en ligne | Combien | Ce qui sera fait |
+|---|---|---|
+| annonces d'établissement en malgache ou en anglais, réécrites en récits | 28 | récit masqué, trouvaille requalifiée en fiche à trier |
+| ventes d'objets et services hors sujet (matelas, blender, tapis, vêtements, sono) | 8 | récit masqué, trouvaille rejetée |
+
+Le classificateur a refusé cette écriture depuis la session (deux fois). Depuis
+`Diakoot-diako` :
+
+```
+python outils/reclasser.py               # à blanc : la liste des 36
+python outils/reclasser.py --ecrire --site
+```
+
 ## ⏳ 333 fiches créées par le bot sont INVISIBLES — à trancher, puis SQL
 
 Trouvé par l'audit du bot du 02/09/2026. Le déclencheur `pages_avant_ecriture`

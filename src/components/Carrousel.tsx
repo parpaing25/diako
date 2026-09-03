@@ -5,6 +5,11 @@ import { Visionneuse } from "@/components/Visionneuse";
 import { cn } from "@/lib/utils";
 import type { Media } from "@/lib/api";
 
+/** Le réglage système « réduire les animations », lu une fois. */
+const MOUVEMENT_REDUIT =
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 /**
  * Carrousel d'images.
  *
@@ -116,10 +121,24 @@ export function Carrousel({
               <video
                 src={m.url}
                 poster={m.poster}
-                controls={!videoAuto}
-                autoPlay={videoAuto}
+                /* ⚠ UNE VIDÉO QUI TOURNE SEULE DOIT POUVOIR S'ARRÊTER. Dans le
+                   fil plein écran elle n'avait ni commandes ni geste : un appui
+                   la met en pause et la relance, comme partout ailleurs. Et
+                   sous « moins d'animations », elle ne démarre pas seule et
+                   montre ses commandes. */
+                controls={!videoAuto || MOUVEMENT_REDUIT}
+                autoPlay={videoAuto && !MOUVEMENT_REDUIT}
                 muted={videoAuto}
                 loop={videoAuto}
+                onClick={
+                  videoAuto && !MOUVEMENT_REDUIT
+                    ? (e) => {
+                        const v = e.currentTarget;
+                        if (v.paused) void v.play();
+                        else v.pause();
+                      }
+                    : undefined
+                }
                 playsInline
                 preload={videoAuto ? "auto" : "metadata"}
                 width={m.w}
@@ -186,7 +205,7 @@ export function Carrousel({
             <button
               onClick={() => allerA(index - 1)}
               aria-label="Image précédente"
-              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-foreground shadow md:grid"
+              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-card/85 text-card-foreground shadow md:grid"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -195,7 +214,7 @@ export function Carrousel({
             <button
               onClick={() => allerA(index + 1)}
               aria-label="Image suivante"
-              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-foreground shadow md:grid"
+              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-card/85 text-card-foreground shadow md:grid"
             >
               <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>

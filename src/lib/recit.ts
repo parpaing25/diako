@@ -60,7 +60,19 @@ function sansGuillemets(ligne: string): string {
     .trim();
 }
 
-export function decouperRecit(corps: string | null | undefined): BlocsRecit {
+export interface OptionsDecoupe {
+  /**
+   * ⚠ Vrai quand une COLONNE nomme déjà le lieu ou l'établissement. La ligne 📍
+   *   n'est jetée que dans ce cas : sans colonne, elle est le seul endroit de
+   *   la page qui dit où l'on est, et elle passe en prose.
+   */
+  lieuConnu?: boolean;
+}
+
+export function decouperRecit(
+  corps: string | null | undefined,
+  options: OptionsDecoupe = {},
+): BlocsRecit {
   const blocs: BlocsRecit = {
     citation: null,
     prose: [],
@@ -78,17 +90,30 @@ export function decouperRecit(corps: string | null | undefined): BlocsRecit {
     const ligne = brute.trim();
     if (!ligne) continue;
 
-    if (ligne.startsWith(PREFIXE_LIEU)) continue; // déjà dit par le titre
+    if (ligne.startsWith(PREFIXE_LIEU)) {
+      if (options.lieuConnu !== false) continue; // déjà dit par le titre
+      blocs.prose.push(ligne.slice(PREFIXE_LIEU.length).trim());
+      continue;
+    }
+    /* ⚠ UN SEUL BLOC PAR MARQUEUR, ET LE RESTE EN PROSE. Une deuxième ligne
+       🧭 ou 📞 était jetée en silence : ici, rien de ce que le bot a écrit ne
+       peut disparaître de l'écran. */
     if (ligne.startsWith(PREFIXE_REPERE)) {
-      blocs.repere ??= ligne.slice(PREFIXE_REPERE.length).trim();
+      const v = ligne.slice(PREFIXE_REPERE.length).trim();
+      if (blocs.repere === null) blocs.repere = v;
+      else blocs.prose.push(v);
       continue;
     }
     if (ligne.startsWith(PREFIXE_PRIX)) {
-      blocs.prix ??= ligne.slice(PREFIXE_PRIX.length).trim();
+      const v = ligne.slice(PREFIXE_PRIX.length).trim();
+      if (blocs.prix === null) blocs.prix = v;
+      else blocs.prose.push(v);
       continue;
     }
     if (ligne.startsWith(PREFIXE_TEL)) {
-      blocs.telephone ??= ligne.slice(PREFIXE_TEL.length).trim();
+      const v = ligne.slice(PREFIXE_TEL.length).trim();
+      if (blocs.telephone === null) blocs.telephone = v;
+      else blocs.prose.push(v);
       continue;
     }
     if (ligne.startsWith(DEBUT_SOURCE)) {
@@ -106,6 +131,16 @@ export function decouperRecit(corps: string | null | undefined): BlocsRecit {
   }
 
   return blocs;
+}
+
+/**
+ * La partie DATÉE de la ligne 💰 : « 20 000 Ar le plat — relevé le 24/08/2026 »
+ * → « relevé le 24/08/2026 ». Le montant, lui, est déjà porté par la colonne.
+ */
+export function dateDuReleve(prix: string | null): string | null {
+  if (!prix) return null;
+  const i = prix.indexOf(" — ");
+  return i >= 0 ? prix.slice(i + 3).trim() || null : null;
 }
 
 /** Les chiffres seuls, pour `tel:` — le texte affiché garde ses espaces. */

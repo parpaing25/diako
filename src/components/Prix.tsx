@@ -39,7 +39,9 @@ export type Unite =
   | "circuit"
   | "kg"
   | "part"
-  | "verre";
+  | "verre"
+  | "trajet"
+  | "entree";
 
 const LIBELLE_UNITE: Record<Unite, string> = {
   nuit: "la nuit",
@@ -54,9 +56,19 @@ const LIBELLE_UNITE: Record<Unite, string> = {
   kg: "le kilo",
   part: "la part",
   verre: "le verre",
+  trajet: "le trajet",
+  entree: "l\'entrée",
 };
 
 /** Le jour où les tarifs cessent d'être crédibles. TDR §8.2. */
+/**
+ * ⭐ LA LISTE QUE LES ÉCRANS DOIVENT CONSULTER, dérivée des libellés : une unité
+ *   absente d'ici ne se nomme pas, donc ne s'affiche pas seule. Tenir une copie
+ *   ailleurs, c'est la voir dériver (Post.tsx en avait une à 12 entrées quand
+ *   la base en écrivait 14).
+ */
+export const UNITES = Object.keys(LIBELLE_UNITE) as Unite[];
+
 const JOURS_AVANT_PEREMPTION = 183;
 
 /**
@@ -105,6 +117,7 @@ export function Prix({
   precisions,
   taxeSejourAr,
   confirmeLe,
+  releve,
   ancienMontant,
   taille = "normale",
   className,
@@ -120,12 +133,22 @@ export function Prix({
   taxeSejourAr?: number | null;
   /** Date ISO de dernière confirmation par le gérant. */
   confirmeLe?: string | null;
+  /**
+   * ⭐ UN RELEVÉ DATÉ, PAS UN TARIF EN VIGUEUR. Sur la page d'un récit, le prix
+   *   est ce qu'un voyageur a vu tel jour : « Relevé le 24 août 2026 ». Il ne
+   *   se périme jamais en « Nous consulter » (règle des FICHES, 183 jours), et
+   *   il ne se fait pas coiffer d'un « Tarif à confirmer » — la date dit déjà
+   *   ce qu'il vaut. Ce texte remplace la ligne de fraîcheur.
+   */
+  releve?: string | null;
   /** Prix barré d'une promo. */
   ancienMontant?: number | null;
   taille?: "normale" | "grande" | "compacte";
   className?: string;
 }) {
-  const { etat, texte } = fraicheur(confirmeLe);
+  const { etat, texte }: Fraicheur = releve
+    ? { etat: "confirme", texte: releve }
+    : fraicheur(confirmeLe);
 
   // Au-delà de six mois SANS AVOIR ÉTÉ RECONFIRMÉ, on n'affiche plus le
   // chiffre : un prix faux coûte plus cher qu'un prix absent. TDR §8.2.

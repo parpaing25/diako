@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decouperRecit, numeroAppelable } from "./recit";
+import { dateDuReleve, decouperRecit, numeroAppelable } from "./recit";
 
 /**
  * Les corps ci-dessous sont de VRAIS `posts.body` relevés le 03/09/2026 :
@@ -61,6 +61,20 @@ describe("decouperRecit", () => {
     expect(b.prose).toEqual(["On est partis à l'aube.", "La route était longue."]);
   });
 
+  it("garde la ligne 📍 en prose quand aucune colonne ne nomme le lieu", () => {
+    const b = decouperRecit("📍 Chez Olivia — Nosy Iranja\n\n« Bivouac magique. »", {
+      lieuConnu: false,
+    });
+    expect(b.prose).toEqual(["Chez Olivia — Nosy Iranja"]);
+  });
+
+  it("ne perd pas une deuxième ligne d'un même marqueur", () => {
+    const b = decouperRecit("🧭 face à la plage\n🧭 derrière le marché\n📞 034 00 000 00\n📞 032 11 111 11");
+    expect(b.repere).toBe("face à la plage");
+    expect(b.telephone).toBe("034 00 000 00");
+    expect(b.prose).toEqual(["derrière le marché", "032 11 111 11"]);
+  });
+
   it("ne rend que des blocs vides sur un corps absent", () => {
     const b = decouperRecit(null);
     expect(b).toEqual({
@@ -83,5 +97,16 @@ describe("numeroAppelable", () => {
   it("refuse ce qui n'est pas un numéro", () => {
     expect(numeroAppelable("sur demande")).toBeNull();
     expect(numeroAppelable(null)).toBeNull();
+  });
+});
+
+describe("dateDuReleve", () => {
+  it("garde la partie datée, pas le montant déjà porté par la colonne", () => {
+    expect(dateDuReleve("20 000 Ar le plat — relevé le 24/08/2026")).toBe("relevé le 24/08/2026");
+    expect(dateDuReleve("25 000 Ar la portion — lu le 24/08/2026 (date de publication inconnue)")).toBe(
+      "lu le 24/08/2026 (date de publication inconnue)",
+    );
+    expect(dateDuReleve("20 000 Ar")).toBeNull();
+    expect(dateDuReleve(null)).toBeNull();
   });
 });

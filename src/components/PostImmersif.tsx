@@ -51,14 +51,21 @@ export function PostImmersif({
   async function reagir() {
     if (!connecte("réagir aux récits")) return;
     const avant = reaction;
+    const delta = avant ? -1 : 1;
     setReaction(avant ? null : "utile"); // ⚠ « jaime » refuse en base depuis 0031
-    setNbReactions((n) => n + (avant ? -1 : 1));
+    setNbReactions((n) => n + delta);
     if (!avant) interesse(3);
     try {
-      setReaction(await basculerReaction(post.id));
+      /* ⚠ LE TYPE COURANT, PAS « utile » EN DUR. Un membre qui avait réagi
+         « Bon prix » depuis le fil et touchait le cœur pour RETIRER sa
+         réaction la voyait remplacée par « utile » : côté serveur, un autre
+         type fait un UPDATE, pas un DELETE — et le compteur restait faux. */
+      const nouvelle = await basculerReaction(post.id, avant ?? "utile");
+      setReaction(nouvelle);
+      setNbReactions((n) => n - delta + (avant ? (nouvelle ? 0 : -1) : nouvelle ? 1 : 0));
     } catch {
       setReaction(avant);
-      setNbReactions((n) => n + (avant ? 1 : -1));
+      setNbReactions((n) => n - delta);
     }
   }
 
@@ -119,6 +126,7 @@ export function PostImmersif({
       <header className="absolute inset-x-0 top-0 flex items-center gap-2.5 px-4 pt-3">
         <Link
           to={`/user/${post.author.id}`}
+          aria-label={`Profil de ${nom}`}
           className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/20 text-xs font-semibold text-white ring-1 ring-white/40"
         >
           {post.author.avatar ? (

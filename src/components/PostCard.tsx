@@ -134,8 +134,11 @@ export function PostCard({
     const avant = reaction;
     // Toucher la meme reaction la retire ; en toucher une autre la remplace.
     const vise = avant === type ? null : type;
+    // ⚠ Le rattrapage doit défaire EXACTEMENT ce delta : « remplacer » (0) puis
+    //   échec rendait +1 à un compteur qui n'avait pas bougé.
+    const delta = avant ? (vise ? 0 : -1) : 1;
     setReaction(vise);
-    setNbReactions((n) => n + (avant ? (vise ? 0 : -1) : 1));
+    setNbReactions((n) => n + delta);
     setChoixOuvert(false);
     if (vise) interesse(3);
     try {
@@ -147,7 +150,7 @@ export function PostCard({
       }
     } catch {
       setReaction(avant);
-      setNbReactions((n) => n + (avant ? 1 : -1));
+      setNbReactions((n) => n - delta);
       toast.error("La réaction n'a pas pu être enregistrée.");
     }
   }
@@ -224,12 +227,48 @@ export function PostCard({
    * ⚠ Et jamais après une sélection de texte : on vient de lire, pas de
    *   cliquer. Sans ce test, surligner une phrase changeait de page.
    */
+  const ouvertureDifferee = useRef<number | null>(null);
+
+  /**
+   * ⚠ DOUBLE-CLIC = SÉLECTIONNER UN MOT, PAS OUVRIR. Le premier clic d'un
+   *   double-clic part avant que la sélection existe : sans délai, on quittait
+   *   la carte en voulant surligner. L'ouverture attend donc 220 ms, et un
+   *   second clic l'annule. La photo, elle, ouvre tout de suite (Carrousel).
+   * ⚠ Ctrl/Cmd/Maj/clic milieu = un nouvel onglet, comme sur n'importe quel
+   *   lien : `navigate()` seul ne le sait pas.
+   */
   function clicSurLaCarte(e: React.MouseEvent<HTMLElement>) {
     if (surSaPage) return;
+    if (e.detail > 1) {
+      if (ouvertureDifferee.current) window.clearTimeout(ouvertureDifferee.current);
+      ouvertureDifferee.current = null;
+      return;
+    }
     const cible = e.target as HTMLElement;
-    if (cible.closest('a,button,input,textarea,select,video,[role="button"],[role="menu"]')) return;
+    if (
+      cible.closest(
+        'a,button,input,textarea,select,video,form,[role="button"],[role="menu"],[role="dialog"],[data-sans-ouverture]',
+      )
+    )
+      return;
     if ((window.getSelection()?.toString() ?? "").length > 0) return;
-    ouvrirLeRecit();
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+      window.open(`/post/${post.id}`, "_blank", "noopener");
+      return;
+    }
+    ouvertureDifferee.current = window.setTimeout(() => {
+      ouvertureDifferee.current = null;
+      if ((window.getSelection()?.toString() ?? "").length > 0) return;
+      ouvrirLeRecit();
+    }, 220);
+  }
+
+  function clicMilieuSurLaCarte(e: React.MouseEvent<HTMLElement>) {
+    if (surSaPage || e.button !== 1) return;
+    const cible = e.target as HTMLElement;
+    if (cible.closest('a,button,input,textarea,select,video,[role="dialog"]')) return;
+    e.preventDefault();
+    window.open(`/post/${post.id}`, "_blank", "noopener");
   }
 
   const estMien = user?.id === post.author.id;
@@ -245,6 +284,7 @@ export function PostCard({
     <article
       ref={racine}
       onClick={clicSurLaCarte}
+      onAuxClick={clicMilieuSurLaCarte}
       className={cn(
         "dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border",
         !surSaPage && "cursor-pointer"
@@ -261,7 +301,10 @@ export function PostCard({
       <header className="flex items-center gap-3 px-4 py-3">
         <Link
           to={`/user/${post.author.id}`}
-          className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-soft text-xs font-semibold text-primary-foreground"
+          aria-label={`Profil de ${nom}`}
+          /* ⚠ `primary-soft` est DÉCORATIF (2,9:1) : il ne porte pas de texte,
+             même une initiale. `primary` seul tient 4,95:1 sur blanc. */
+          className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-xs font-semibold text-primary-foreground"
         >
           {post.author.avatar ? (
             <img src={getThumbUrl(post.author.avatar)} alt="" width={36} height={36} className="h-9 w-9 object-cover" />
@@ -314,7 +357,13 @@ export function PostCard({
           </button>
           {menu && (
             <>
-              <button className="fixed inset-0 z-10 cursor-default" aria-hidden="true" onClick={() => setMenu(false)} />
+              <button
+                type="button"
+                tabIndex={-1}
+                className="fixed inset-0 z-10 cursor-default"
+                aria-hidden="true"
+                onClick={() => setMenu(false)}
+              />
               <div className="absolute right-0 top-9 z-20 w-48 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
                 {estMien ? (
                   <button
@@ -438,7 +487,7 @@ export function PostCard({
           boutons a tout le monde ralentirait le geste le plus frequent du
           site, alors que la nuance n'interesse qu'une partie des lecteurs. */}
       {choixOuvert && (
-        <div className="dk-scale-in flex flex-wrap gap-1.5 px-2 pt-2">
+        <div className="dk-scale-in flex flex-wrap gap-1.5 px-2 pt-2" data-sans-ouverture="">
           {REACTIONS.map((r) => (
             <button
               key={r.code}
@@ -514,12 +563,18 @@ export function PostCard({
             réponses sous les yeux vaut mieux qu'un changement d'écran : c'est
             le geste le plus fréquent, il doit rester le moins cher. La
             publication entière reste à un clic, par l'horodatage. */}
-        {nbCommentaires > 0 && !ouvert && (
+        {nbCommentaires > 0 && (
+          /* ⚠ LE BOUTON RESTE MONTÉ. Il disparaissait à l'ouverture : le focus
+             clavier tombait sur le corps du document, et le lecteur d'écran se
+             taisait. Il bascule maintenant, et le dit. */
           <button
-            onClick={ouvrirCommentaires}
+            onClick={() => (ouvert ? setOuvert(false) : ouvrirCommentaires())}
+            aria-expanded={ouvert}
             className="mt-1 block text-sm text-muted-foreground hover:underline"
           >
-            Voir les {nbCommentaires} commentaire{nbCommentaires > 1 ? "s" : ""}
+            {ouvert
+              ? "Masquer les commentaires"
+              : `Voir les ${nbCommentaires} commentaire${nbCommentaires > 1 ? "s" : ""}`}
           </button>
         )}
 
@@ -543,7 +598,9 @@ export function PostCard({
 
       {/* ── Commentaires ────────────────────────────────────────────────── */}
       {ouvert && (
-        <div className="mt-3 border-t border-border px-4 pt-3">
+        /* ⚠ LIRE UNE RÉPONSE NE QUITTE PAS LE FIL : ce bloc vit dans une carte
+           cliquable, et cliquer le texte d'un commentaire ouvrait le récit. */
+        <div className="mt-3 border-t border-border px-4 pt-3" data-sans-ouverture="">
           {commentaires.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Aucun commentaire. Soyez le premier à répondre.

@@ -234,28 +234,29 @@ export async function chargerPost(id: string): Promise<Post | null> {
   if (error) throw error;
   if (!data || data.status !== "published") return null;
 
-  const { data: profil } = await supabase
-    .from("profiles")
-    .select("id, display_name, avatar_url, verification, account_type")
-    .eq("id", data.author_id)
-    .maybeSingle();
-
-  /* ⚠ UNE REQUETE DE PLUS, ET SEULEMENT SI LE LIEU EXISTE. Cet ecran est celui
-   *  d'un lien partage : une lecture de plus y coute moins qu'une puce morte,
-   *  et elle ne part pas du tout quand la publication n'a pas de lieu. */
-  let lieuSlug: string | null = null;
-  if (data.place_id) {
-    const { data: lieu } = await supabase
-      .from("places")
-      .select("slug")
-      .eq("id", data.place_id)
-      .maybeSingle();
-    lieuSlug = lieu?.slug ?? null;
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  /* ⚠ EN PARALLÈLE, PAS EN SÉRIE. Auteur, slug du lieu et session partaient
+   *  l'un après l'autre : trois allers-retours avant le moindre pixel, sur
+   *  l'écran où l'on arrive par un lien reçu — sur une connexion malgache,
+   *  c'est le triple du temps d'attente pour rien.
+   *  ⚠ Le lieu ne se lit que s'il existe : une lecture de plus coûte moins
+   *  qu'une puce morte, et elle ne part pas quand la publication n'a pas de
+   *  lieu. */
+  const [{ data: profil }, lieuSlug, { data: { user } }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url, verification, account_type")
+      .eq("id", data.author_id)
+      .maybeSingle(),
+    data.place_id
+      ? supabase
+          .from("places")
+          .select("slug")
+          .eq("id", data.place_id)
+          .maybeSingle()
+          .then(({ data: lieu }) => lieu?.slug ?? null)
+      : Promise.resolve<string | null>(null),
+    supabase.auth.getUser(),
+  ]);
 
   let ma_reaction: string | null = null;
   let enregistre = false;

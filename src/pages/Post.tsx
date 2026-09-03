@@ -18,10 +18,10 @@ import { TagRow } from "@/components/TagRow";
 import { Commentaires } from "@/components/Commentaires";
 import { PartagerMenu } from "@/components/PartagerMenu";
 import { ImageProgressive } from "@/components/ImageProgressive";
-import { Prix, type Unite } from "@/components/Prix";
+import { Prix, UNITES, type Unite } from "@/components/Prix";
 import { noterLieu } from "@/lib/affinites";
 import { cn } from "@/lib/utils";
-import { dateLongue, decouperRecit, numeroAppelable } from "@/lib/recit";
+import { dateDuReleve, dateLongue, decouperRecit, numeroAppelable } from "@/lib/recit";
 import { recitsParLieu } from "@/lib/etablissements";
 import {
   basculerFavori,
@@ -30,12 +30,6 @@ import {
   type Media,
   type Post as TypePost,
 } from "@/lib/api";
-
-/** Les unités que `Prix` sait nommer. Le reste est ignoré, jamais affiché brut. */
-const UNITES: Unite[] = [
-  "nuit", "portion", "jour", "personne", "personne_nuit", "chambre",
-  "vehicule", "groupe", "circuit", "kg", "part", "verre",
-];
 
 /**
  * Une publication seule, à son adresse propre.
@@ -64,6 +58,11 @@ const UNITES: Unite[] = [
  *   l'établissement une fois sur deux et le lieu l'autre fois, sans rien qui
  *   dise laquelle.
  */
+/** L'image qu'un média peut montrer en vignette : la photo, ou l'affiche d'une vidéo. */
+function vignetteDe(m: Media): string | null {
+  return m.type === "video" ? m.poster ?? null : m.url;
+}
+
 export default function Post() {
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<TypePost | null>(null);
@@ -78,6 +77,7 @@ export default function Post() {
   const [reaction, setReaction] = useState<string | null>(null);
   const [nbReactions, setNbReactions] = useState(0);
   const [favori, setFavori] = useState(false);
+  const [nbReponses, setNbReponses] = useState(0);
   const [voisins, setVoisins] = useState<
     { id: string; place: string | null; media: Media[] }[]
   >([]);
@@ -112,6 +112,7 @@ export default function Post() {
       setReaction(p.ma_reaction);
       setNbReactions(p.reactions_count);
       setFavori(p.enregistre);
+      setNbReponses(p.comments_count);
       setEtat("ok");
       /* La mémoire du visiteur : ouvrir un récit dit que ce lieu l'intéresse.
          Trois points — plus qu'un simple passage dans le fil, qui en vaut deux. */
@@ -137,9 +138,11 @@ export default function Post() {
     void recitsParLieu(lieuId, 7)
       .then((liste) => {
         if (annule) return;
+        /* ⚠ Une vidéo sans affiche ne fait pas de vignette : on ne garde que
+             ce qui a une image à montrer. */
         setVoisins(
           (liste as unknown as { id: string; place: string | null; media: Media[] }[])
-            .filter((r) => r.id !== postId && (r.media?.length ?? 0) > 0)
+            .filter((r) => r.id !== postId && (r.media ?? []).some(vignetteDe))
             .slice(0, 4),
         );
       })
@@ -152,13 +155,23 @@ export default function Post() {
   async function reagir() {
     if (!post || !connecte("réagir aux récits")) return;
     const avant = reaction;
+    const delta = avant ? -1 : 1;
     setReaction(avant ? null : "utile");
-    setNbReactions((n) => Math.max(0, n + (avant ? -1 : 1)));
+    setNbReactions((n) => Math.max(0, n + delta));
     try {
-      setReaction(await basculerReaction(post.id, "utile"));
+      /* ⚠ LE TYPE COURANT, PAS « utile » EN DUR. Un membre qui avait réagi
+         « Bon prix » depuis le fil et touchait le cœur pour RETIRER sa
+         réaction la voyait remplacée par « utile » : côté serveur, un autre
+         type fait un UPDATE, pas un DELETE — et le compteur restait faux
+         jusqu'au rechargement. Le compteur se recalcule sur la RÉPONSE. */
+      const nouvelle = await basculerReaction(post.id, avant ?? "utile");
+      setReaction(nouvelle);
+      setNbReactions((n) =>
+        Math.max(0, n - delta + (avant ? (nouvelle ? 0 : -1) : nouvelle ? 1 : 0)),
+      );
     } catch {
       setReaction(avant);
-      setNbReactions((n) => Math.max(0, n + (avant ? 1 : -1)));
+      setNbReactions((n) => Math.max(0, n - delta));
     }
   }
 
@@ -175,11 +188,13 @@ export default function Post() {
 
   if (etat === "chargement") {
     return (
-      <div className="dk-colonne px-4 py-5" aria-busy="true">
-        <div className="dk-skeleton aspect-[4/5] w-full rounded-2xl md:aspect-[4/3]" />
-        <div className="dk-skeleton mt-4 h-7 w-40" />
-        <div className="dk-skeleton mt-2 h-3 w-56" />
-        <div className="dk-skeleton mt-4 h-24 w-full rounded-2xl" />
+      <div className="dk-colonne md:px-4 md:py-5" aria-busy="true">
+        <div className="dk-skeleton aspect-[4/5] max-h-[60dvh] w-full md:aspect-[4/3] md:max-h-none md:rounded-2xl" />
+        <div className="px-4 md:px-0">
+          <div className="dk-skeleton mt-4 h-7 w-40" />
+          <div className="dk-skeleton mt-2 h-3 w-56" />
+          <div className="dk-skeleton mt-4 h-24 w-full rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -226,7 +241,7 @@ export default function Post() {
     );
   }
 
-  const blocs = decouperRecit(post.body);
+  const blocs = decouperRecit(post.body, { lieuConnu: !!(post.place || post.page_name) });
   /* ⚠ `price_unit` EST UNE COLONNE TEXTE : la base accepte des valeurs que le
        composant Prix ne connaît pas. On ne force pas le type — une unité
        inconnue devient `undefined`, et le prix s'affiche sans elle plutôt que
@@ -308,10 +323,21 @@ export default function Post() {
                 dates, c'est un tarif faux. */}
           {post.price_ar ? (
             <div className="rounded-2xl bg-gold-soft px-4 py-3">
+              {/* ⚠ PAS `confirmeLe` : c'est la règle des FICHES (« Nous
+                  consulter » au-delà de 183 jours). Un récit est un RELEVÉ
+                  daté : le montant reste, sa date dit ce qu'il vaut.
+                  ⚠ Unité inconnue du composant : on la montre telle qu'écrite
+                  (`base`), jamais le montant nu — « 80 000 Ar » sans « le
+                  trajet » se lit « par personne ». */}
               <Prix
                 montant={post.price_ar}
                 unite={unite}
-                confirmeLe={post.price_on ?? undefined}
+                base={unite ? undefined : post.price_unit ?? undefined}
+                releve={
+                  post.price_on
+                    ? `Relevé le ${dateLongue(post.price_on)}`
+                    : dateDuReleve(blocs.prix) ?? "Date du relevé inconnue"
+                }
               />
             </div>
           ) : blocs.prix ? (
@@ -420,7 +446,7 @@ export default function Post() {
           className="flex h-14 min-w-11 items-center gap-1.5 px-3 font-semibold"
         >
           <Heart
-            className={cn("h-6 w-6", reaction && "fill-current text-accent-strong")}
+            className={cn("h-6 w-6", reaction && "fill-current text-accent")}
             aria-hidden="true"
           />
           {nbReactions > 0 && <span className="text-sm">{nbReactions}</span>}
@@ -431,7 +457,7 @@ export default function Post() {
           className="flex h-14 min-w-11 items-center gap-1.5 px-3 font-semibold"
         >
           <MessageCircle className="h-6 w-6" aria-hidden="true" />
-          {post.comments_count > 0 && <span className="text-sm">{post.comments_count}</span>}
+          {nbReponses > 0 && <span className="text-sm">{nbReponses}</span>}
           <span className="sr-only">Commenter</span>
         </a>
         <button onClick={() => setPartage(true)} className="grid h-14 w-11 place-items-center">
@@ -461,7 +487,7 @@ export default function Post() {
               className="flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold hover:bg-muted"
             >
               <Heart
-                className={cn("h-5 w-5", reaction && "fill-current text-accent-strong")}
+                className={cn("h-5 w-5", reaction && "fill-current text-accent")}
                 aria-hidden="true"
               />
               {nbReactions > 0 ? `${nbReactions} réaction${nbReactions > 1 ? "s" : ""}` : "Réagir"}
@@ -471,9 +497,7 @@ export default function Post() {
               className="flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold hover:bg-muted"
             >
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
-              {post.comments_count > 0
-                ? `${post.comments_count} réponse${post.comments_count > 1 ? "s" : ""}`
-                : "Répondre"}
+              {nbReponses > 0 ? `${nbReponses} réponse${nbReponses > 1 ? "s" : ""}` : "Répondre"}
             </a>
             <button
               onClick={() => setPartage(true)}
@@ -509,12 +533,10 @@ export default function Post() {
           className="rounded-2xl border border-border bg-card p-4"
         >
           <h2 id="titre-commentaires" className="dk-sous-titre">
-            {post.comments_count > 0
-              ? `${post.comments_count} réponse${post.comments_count > 1 ? "s" : ""}`
-              : "Commentaires"}
+            {nbReponses > 0 ? `${nbReponses} réponse${nbReponses > 1 ? "s" : ""}` : "Commentaires"}
           </h2>
           <div className="mt-3">
-            <Commentaires postId={post.id} />
+            <Commentaires postId={post.id} onNombre={setNbReponses} />
           </div>
         </section>
 
@@ -524,22 +546,25 @@ export default function Post() {
               Autres récits {post.place ? `à ${post.place}` : "du même lieu"}
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              {voisins.map((r) => (
-                <Link key={r.id} to={`/post/${r.id}`} className="dk-carte flex flex-col gap-2">
-                  <span className="dk-zoom block aspect-[4/3] w-full overflow-hidden rounded-2xl bg-muted">
-                    <ImageProgressive
-                      src={r.media[0].url}
-                      alt=""
-                      w={r.media[0].w}
-                      h={r.media[0].h}
-                      largeurAffichee="(min-width: 768px) 240px, 45vw"
-                    />
-                  </span>
-                  <span className="dk-secondaire truncate text-foreground">
-                    {r.place ?? "Madagascar"}
-                  </span>
-                </Link>
-              ))}
+              {voisins.map((r) => {
+                const m = r.media.find(vignetteDe)!;
+                return (
+                  <Link key={r.id} to={`/post/${r.id}`} className="dk-carte flex flex-col gap-2">
+                    <span className="dk-zoom block aspect-[4/3] w-full overflow-hidden rounded-2xl bg-muted">
+                      <ImageProgressive
+                        src={vignetteDe(m)!}
+                        alt=""
+                        w={m.w}
+                        h={m.h}
+                        largeurAffichee="(min-width: 768px) 240px, 45vw"
+                      />
+                    </span>
+                    {/* ⚠ Pas `dk-secondaire` ici : la classe impose sa couleur
+                        grise, et un `text-foreground` à côté ne gagne pas. */}
+                    <span className="truncate text-sm font-medium">{r.place ?? "Madagascar"}</span>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

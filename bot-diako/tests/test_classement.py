@@ -200,3 +200,37 @@ def test_un_blender_est_une_vente_d_objets():
     texte = ("BLENDER ULTRA PUISSANT SILVER CREST Professionnelle Mixeur, broyeur, "
              "hachoir 4500W. 180000ar. Service de livraison Tana. 034 00 111 22")
     assert _classer(texte) == "rien"
+
+
+# ── Le chrome de Facebook collé au texte (03/09/2026) ────────────────────────
+# 106 des 213 récits VISIBLES en ligne portaient « Voir moins… », « Contenu
+# IA », « · Suivre » ou « Indicateur de statut En ligne » dans leur corps :
+# BRUIT_FIL est ancré (^…$) et ne voyait que les lignes entières de bruit.
+
+def test_le_bruit_colle_au_texte_part_aussi():
+    from bot import redaction
+    texte = "Mbola ilay toerana antsoina hoe Lavanono. #voyage Voir moins\u2026"
+    assert redaction.nettoyer(texte) == "Mbola ilay toerana antsoina hoe Lavanono. #voyage"
+
+
+def test_le_texte_utile_survit_au_bruit_qui_le_precede():
+    """« Indicateur de statut … » avalait la LIGNE ENTIÈRE, texte compris."""
+    from bot import redaction
+    texte = "Indicateur de statut En ligne En ligne TL Voyage \u00b7 Contenu IA \u00b7 LOCATION DE VOITURE"
+    assert redaction.nettoyer(texte) == "TL Voyage \u00b7 LOCATION DE VOITURE"
+
+
+def test_la_provenance_ne_se_repete_pas():
+    """Le modèle rendait un corps finissant par la provenance ; le pied la rajoutait."""
+    from bot import redaction
+    corps = "Un beau r\u00e9cit.\n\nVu sur Facebook \u2014 Andri.matel le 23/08/2026"
+    rendu = redaction.corps_recit({"corps": corps, "auteur": "Andri.matel",
+                                   "date_post": "2026-08-23"})
+    assert rendu.count("Vu sur Facebook") == 1
+
+
+def test_un_bateau_vendu_n_est_pas_du_tourisme():
+    """« A. VENDRE » : le point coupait le motif « a vendre » en deux."""
+    texte = "Misy Bateaux A. VENDRE NOSY BE A CRAT\u00c8RE Bateau de p\u00eache mbola tsara mp prix"
+    assert extraction.est_vente_d_objets(texte)
+    assert _classer(texte) == "rien"

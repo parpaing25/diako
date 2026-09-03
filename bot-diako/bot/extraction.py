@@ -372,6 +372,7 @@ MOTS_VENTE_OBJETS = (
     "mixeur", "blender", "robot de cuisine", "machine a laver", "lave-linge", "micro-onde",
     "ventilateur", "tapis fourrure", "tapis de salon", "vetements", "tissu tsara",
     "chaussures", "sac a main", "sonorisation", "location sono",
+    "bateau de peche", "vedette a vendre", "terrain a vendre",
 )
 # ⚠ « à vendre », « je vends » ne suffisent pas seuls : un hôtel à vendre est de
 #   l'immobilier (déjà filtré), et « amidy »/« mivarotra » en malgache
@@ -481,8 +482,19 @@ MOTS_CULINAIRE = (
 )
 
 
+def _sans_ponctuation(n: str) -> str:
+    """« Misy Bateaux A. VENDRE » : le point coupait « a vendre » en deux.
+
+    On cherche dans les DEUX formes — la ponctuation est retirée ici, mais
+    certains motifs en contiennent (« /nuit », « ouvert 7j/7 », « % »), et
+    ceux-là continuent de se trouver dans le texte d'origine.
+    """
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]+", " ", n))
+
+
 def _compte(mots, n: str) -> int:
-    return sum(1 for m in mots if m in n)
+    plat = _sans_ponctuation(n)
+    return sum(1 for m in mots if m in n or m in plat)
 
 
 def est_vente_d_objets(texte: str) -> bool:
@@ -492,16 +504,16 @@ def est_vente_d_objets(texte: str) -> bool:
                         "plat", "circuit", "voyage", "excursion", "bungalow", "lodge",
                         "plage", "parc", "guide", "visite", "decouverte", "tsangatsangana",
                         "vakansy", "tourisme"), n)
-    if any(m in n for m in MOTS_VENTE_OBJETS):
+    if _compte(MOTS_VENTE_OBJETS, n):
         return tourisme < 2
-    if any(m in n for m in MOTS_VENTE_SEULE):
+    if _compte(MOTS_VENTE_SEULE, n):
         return tourisme == 0
     return False
 
 
 def est_fete_calendaire(texte: str) -> bool:
     n = sans_accent(texte)
-    return any(m in n for m in MOTS_FETES_CALENDAIRES)
+    return _compte(MOTS_FETES_CALENDAIRES, n) > 0
 
 
 def est_voyage_organise(texte: str) -> bool:
@@ -1467,10 +1479,38 @@ TRANSPORTS_CIRCUIT = (
 # Le fil Facebook insère ses propres lignes dans le texte copié. Aucune ne
 # peut être le titre d'un circuit.
 BRUIT_FIL = re.compile(
-    r"^(?:·|\+\d+|en ligne|indicateur de statut.*|contenu ia|voir moins|voir plus"
+    r"^(?:·|\+\d+|en ligne|indicateur de statut(?:\s+en ligne)*|contenu ia|voir moins|voir plus"
     r"|suivre|· suivre|ecrivez un commentaire public\.*|tous les commentaires"
     r"|.* · audio d[’']origine|\d+ (?:j|h|min|sem))$", re.I
 )
+
+
+# ⚠ LE CHROME DE FACEBOOK NE TIENT PAS TOUJOURS SA PROPRE LIGNE. `BRUIT_FIL`
+#   est ancré (`^…$`) et ne voyait pas « … #photograph #reportage Voir moins… »
+#   collé à la fin d'un récit : 105 des 213 récits visibles en ligne le
+#   03/09/2026 en portaient, dont « Indicateur de statut En ligne En ligne » en
+#   tête de deux d'entre eux. Celui-ci se retire PARTOUT dans le texte.
+BRUIT_INLINE = re.compile(
+    r"(?i)(?:indicateur de statut(?:\s+en ligne)*"
+    r"|contenu ia"
+    r"|voir (?:moins|plus)\s*(?:\u2026|\.{2,3})?"
+    r"|\u00b7\s*suivre\b"
+    r"|\u00e9crivez un commentaire public\s*(?:\u2026|\.{2,3})?"
+    r"|ecrivez un commentaire public\s*(?:\u2026|\.{2,3})?"
+    r"|tous les commentaires"
+    r"|\u00b7\s*audio d[\u2019']origine"
+    r"|afficher la traduction)"
+)
+
+
+def sans_bruit_de_fil(texte: str) -> str:
+    """Le texte sans le chrome de l'interface, où qu'il se trouve."""
+    propre = BRUIT_INLINE.sub(" ", texte or "")
+    # Le bruit retiré laisse ses séparateurs : « TL Voyage · · LOCATION ».
+    propre = re.sub(r"(?:\s*·\s*){2,}", " · ", propre)
+    propre = re.sub(r"[ \t]{2,}", " ", propre)
+    propre = re.sub(r"\s*·\s*$", "", propre, flags=re.M)
+    return re.sub(r" +\n", "\n", propre).strip()
 
 
 def duree_de_circuit(texte: str) -> tuple[int | None, int | None, int]:

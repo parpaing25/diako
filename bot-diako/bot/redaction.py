@@ -196,14 +196,18 @@ def corps_recit(t: dict) -> str:
     else:
         corps = _corps_de_secours(t)
 
+    # ⚠ NE PAS RÉPÉTER CE QUE LE CORPS PORTE DÉJÀ. Le récit de Lavanono
+    #   affichait deux fois « Vu sur Facebook — Andri.matel le 23/08/2026 » :
+    #   le modèle avait rendu un corps finissant par la provenance, et le pied
+    #   la rajoutait sans regarder.
     pied = []
     prix = bloc_prix(t)
-    if prix:
+    if prix and prix not in corps:
         pied.append(f"💰 {prix}")
-    if t.get("telephone"):
+    if t.get("telephone") and t["telephone"] not in corps:
         pied.append(f"📞 {t['telephone']}")
     source = ligne_source(t)
-    if source:
+    if source and source not in corps:
         pied.append(source)
     if pied:
         corps = corps.rstrip() + "\n\n" + "\n".join(pied)
@@ -297,11 +301,14 @@ def nettoyer(texte: str) -> str:
       plus », « Écrivez un commentaire public… » se retrouvaient dans le corps
       de récits publiés (vu en ligne le 03/09/2026 sur « Hôtel de la Mer »).
     """
-    from .extraction import BRUIT_FIL
+    from .extraction import BRUIT_FIL, sans_bruit_de_fil
 
     lignes = [l for l in (texte or "").split("\n") if not BRUIT_FIL.match(l.strip())]
     propre = MOTS_RESEAU.sub("", "\n".join(lignes))
-    propre = re.sub(r"(?i)indicateur de statut\s*(en ligne)?", "", propre)
+    # ⚠ ET EN MILIEU DE LIGNE : « … #reportage #voyage Voir moins… » terminait
+    #   105 des 213 récits visibles le 03/09/2026. Une ligne entière de bruit
+    #   part au-dessus ; ce qui est collé au texte part ici.
+    propre = sans_bruit_de_fil(propre)
     propre = re.sub(r"\n{3,}", "\n\n", propre)
     return propre.strip()
 

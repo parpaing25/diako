@@ -780,6 +780,34 @@ Le sous-genre d'un récit : `alerte` (danger, route coupée) › `avis` (mésave
 `outils/reclasser.py` rejoue ce classement sur la base et retire du site ce qui
 n'y a pas sa place (masqué, jamais supprimé) — voir `docs/A-APPLIQUER.md`.
 
+## Ce que le bot recopiait sans le voir (03/09/2026, second passage)
+
+Après le premier nettoyage, 248 récits restaient en ligne. En les relisant,
+deux défauts de plus :
+
+- **Les annonces en malgache et en anglais passaient pour du vécu.**
+  `MOTS_OFFRE` était tout français : « Manankery… ity tolotra ity »,
+  « misokatra foana izahay », « zahay mandray vahiny », « book now », « escape
+  to the paradise » ne déclenchaient rien. Pire, « izahay » (nous) était un
+  marqueur de vécu FORT — un hôtel dit « nous » autant qu'un voyageur — et
+  « zahay » étant contenu dans « izahay », le mot comptait double. Corrigé :
+  vocabulaire malgache et anglais, « izahay » redevenu faible, et **un numéro
+  de téléphone compte pour un marqueur d'offre** (un voyageur raconte, il ne
+  donne pas le 034 de l'hôtel). 41 récits retirés du fil.
+
+- **Le chrome de Facebook restait collé au texte.** « Voir moins… »,
+  « Contenu IA », « · Suivre », « Indicateur de statut En ligne » : 106 des 213
+  récits visibles en portaient. `BRUIT_FIL` est ancré (`^…$`) et ne voyait que
+  les lignes ENTIÈRES de bruit ; et sur « Indicateur de statut … » il faisait
+  l'inverse du bien, en avalant toute la ligne, texte utile compris.
+  `extraction.sans_bruit_de_fil` retire ce bruit où qu'il soit, et le pied de
+  `corps_recit` ne répète plus une provenance déjà présente dans le corps.
+  `outils/nettoyer_textes.py` répare les textes déjà publiés.
+
+Autre pièce du même passage : la ponctuation ne coupe plus les motifs
+cherchés — « Misy Bateaux **A. VENDRE** » échappait à « a vendre », le point
+séparant les deux mots.
+
 ---
 
 ## Audit du 02/09/2026 — ce qui a changé, et pourquoi

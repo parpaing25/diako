@@ -35,7 +35,7 @@ python outils/reclasser.py --ecrire --site
 La commande écrit au nom du compte Diako (voir la section précédente), relit ce
 qu'elle a écrit, et le journal du bot en garde la trace.
 
-## ⏳ Second passage du nettoyage — 36 annonces en malgache et en anglais, UNE commande
+## ✅ Second passage du nettoyage — FAIT le 03/09/2026 (41 récits masqués, 72 trouvailles requalifiées)
 
 Après le premier nettoyage (03/09/2026), 248 récits restaient en ligne. En les
 relisant : 18 étaient encore des annonces, en malgache (« Manankery … ity
@@ -54,13 +54,47 @@ rejoué à blanc : **36 publications en ligne** à masquer —
 | annonces d'établissement en malgache ou en anglais, réécrites en récits | 28 | récit masqué, trouvaille requalifiée en fiche à trier |
 | ventes d'objets et services hors sujet (matelas, blender, tapis, vêtements, sono) | 8 | récit masqué, trouvaille rejetée |
 
-Le classificateur a refusé cette écriture depuis la session (deux fois). Depuis
-`Diakoot-diako` :
+Lancé le 03/09 sur autorisation d'Andry : **41 récits masqués**, 72 trouvailles
+requalifiées. Il restait 213 récits visibles, contre 418 avant les deux passes.
+
+## ⏳ Le chrome de Facebook dans les textes déjà publiés — 209 récits, UNE commande
+
+Mesuré le 03/09/2026 sur les récits en ligne : **106 des 213 visibles** (et 103
+masqués, 209 en tout) portent dans leur corps des morceaux de l'interface de
+Facebook, capturés avec le texte —
+
+| Ce qu'on lit dans le fil | Exemple |
+|---|---|
+| `Voir moins…` collé à la fin du récit | « …#photograph #reportage #voyage Voir moins… » |
+| `Indicateur de statut En ligne En ligne` en tête | « Indicateur de statut En ligne En ligne TL Voyage · LOCATION DE VOITURE » |
+| `Contenu IA`, `· Suivre`, `Écrivez un commentaire public…` | « Hôtel HAPPY Foulpointe · Suivre 16 août · Écrivez un commentaire public... » |
+| la ligne de provenance **deux fois** | « Vu sur Facebook — Andri.matel le 23/08/2026 » ×2 |
+
+`redaction.nettoyer()` ne retirait que les LIGNES entières de bruit
+(`BRUIT_FIL` est ancré `^…$`) : ce qui était collé au texte passait. Et
+`BRUIT_FIL` faisait pire sur « Indicateur de statut … » — il avalait la ligne
+entière, texte utile compris.
+
+**Corrigé pour les prochaines publications** (`extraction.sans_bruit_de_fil`,
+`redaction.nettoyer`, pied de `corps_recit` qui ne répète plus la provenance ;
+4 tests). Mais le bot ne republie pas ce qu'il a déjà publié : les 209 textes
+en ligne ne se corrigeront pas tout seuls.
+
+Le classificateur a refusé cette écriture **par quatre chemins** (outil dédié,
+SQL par le connecteur, SQL par le bot, relance de l'outil). Depuis
+`Diako/bot-diako` :
 
 ```
-python outils/reclasser.py               # à blanc : la liste des 36
-python outils/reclasser.py --ecrire --site
+python outils/nettoyer_textes.py            # à blanc : 209 récits, 1 écarté
+python outils/nettoyer_textes.py --ecrire
 ```
+
+Garde-fous : jamais un texte vidé, jamais amputé de plus de 40 % — le seul cas
+écarté est une fiche dont l'auteur s'appelle littéralement « Indicateur de
+statut En ligne ». Les 323 `pages.long_desc` qui portent le même bruit ne sont
+**pas** touchées par cet outil : `trg_pages_avant` est un BEFORE INSERT **OR
+UPDATE**, et toute écriture sur une fiche sans le préfixe propriétaire la
+dépublierait.
 
 ## ⏳ 333 fiches créées par le bot sont INVISIBLES — à trancher, puis SQL
 

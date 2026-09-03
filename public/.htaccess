@@ -44,7 +44,7 @@ Options -Indexes
   # ⚠ LES ORIGINES AUTORISÉES SONT CELLES QUE LE SITE UTILISE VRAIMENT :
   #   Supabase (base + fonctions), o2switch (images), OpenStreetMap (tuiles de
   #   la carte). Rien d'autre — pas de CDN de police, le site n'en charge plus.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org https://*.googleusercontent.com https://*.fbcdn.net https://upload.wikimedia.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob: https://diako.fonenako.mg; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org https://*.googleusercontent.com https://*.fbcdn.net https://upload.wikimedia.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
 </IfModule>
 
 # Fichiers sensibles : jamais servis.

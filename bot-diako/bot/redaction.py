@@ -291,8 +291,17 @@ MOTS_RESEAU = re.compile(
 
 
 def nettoyer(texte: str) -> str:
-    """Retire ce qui n'appartient qu'à Facebook : appels au partage, forêts de mots-dièse."""
-    propre = MOTS_RESEAU.sub("", texte or "")
+    """Retire ce qui n'appartient qu'à Facebook : appels au partage, forêts de mots-dièse.
+
+    ⚠ Et le CHROME de l'interface : « Indicateur de statut En ligne », « Voir
+      plus », « Écrivez un commentaire public… » se retrouvaient dans le corps
+      de récits publiés (vu en ligne le 03/09/2026 sur « Hôtel de la Mer »).
+    """
+    from .extraction import BRUIT_FIL
+
+    lignes = [l for l in (texte or "").split("\n") if not BRUIT_FIL.match(l.strip())]
+    propre = MOTS_RESEAU.sub("", "\n".join(lignes))
+    propre = re.sub(r"(?i)indicateur de statut\s*(en ligne)?", "", propre)
     propre = re.sub(r"\n{3,}", "\n\n", propre)
     return propre.strip()
 

@@ -22,6 +22,11 @@ export interface Media {
   url: string;
   w?: number;
   h?: number;
+  /** ⭐ Depuis le 03/09/2026 une publication peut porter UNE vidéo (mp4/webm),
+   *  hébergée chez o2switch comme les photos. Absent = image. */
+  type?: "image" | "video";
+  /** L'image d'attente d'une vidéo (première image, fabriquée à l'envoi). */
+  poster?: string;
 }
 
 export interface AuteurPost {

@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { TagRow } from "@/components/TagRow";
+import { PartagerMenu } from "@/components/PartagerMenu";
+import { noterLieu } from "@/lib/affinites";
+import { useVu } from "@/hooks/useVu";
 import { toast } from "sonner";
 import { useConnexionRequise } from "@/hooks/useConnexionRequise";
 import {
@@ -92,6 +95,13 @@ export function PostCard({
   const [saisie, setSaisie] = useState("");
   const [menu, setMenu] = useState(false);
   const [envoi, setEnvoi] = useState(false);
+  const [partage, setPartage] = useState(false);
+  /* ⭐ La mémoire du visiteur : une carte restée à l'écran est « vue » (elle
+     reculera au prochain chargement), et chaque geste sur elle — réagir,
+     enregistrer, commenter — dit que ce lieu l'intéresse. */
+  const racine = useRef<HTMLElement>(null);
+  useVu(racine, post.id);
+  const interesse = (poids: number) => noterLieu(post.place_slug ?? post.place, poids);
 
   /* ⚠ Le crochet porte desormais l'ACTION vers l'inscription : le toast seul
      laissait le visiteur devant un bouton muet, a l'instant precis ou il avait
@@ -118,6 +128,7 @@ export function PostCard({
     setReaction(vise);
     setNbReactions((n) => n + (avant ? (vise ? 0 : -1) : 1));
     setChoixOuvert(false);
+    if (vise) interesse(3);
     try {
       const nouvelle = await basculerReaction(post.id, type);
       setReaction(nouvelle);
@@ -138,6 +149,7 @@ export function PostCard({
     if (!connecte("garder ce récit")) return;
     const avant = favori;
     setFavori(!avant);
+    if (!avant) interesse(3);
     try {
       setFavori(await basculerFavori(post.id, avant));
     } catch {
@@ -149,6 +161,7 @@ export function PostCard({
   async function ouvrirCommentaires() {
     const suivant = !ouvert;
     setOuvert(suivant);
+    if (suivant) interesse(1);
     if (suivant && commentaires.length === 0) {
       try {
         setCommentaires(await chargerCommentaires(post.id));
@@ -174,18 +187,12 @@ export function PostCard({
     }
   }
 
-  async function partager() {
-    const url = `${window.location.origin}/post/${post.id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Diako", text: post.body?.slice(0, 100) ?? "", url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Lien copié");
-      }
-    } catch {
-      /* partage annulé */
-    }
+  /* ⭐ Un menu — Facebook, WhatsApp, lien, Instagram — plutôt que le seul
+     partage natif : sur ordinateur il n'existe pas, et ici on partage avant
+     tout sur Facebook et WhatsApp. */
+  function partager() {
+    interesse(1);
+    setPartage(true);
   }
 
   const estMien = user?.id === post.author.id;
@@ -195,7 +202,14 @@ export function PostCard({
   const nom = post.author.name || "Membre Diako";
 
   return (
-    <article className="dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border">
+    <article ref={racine} className="dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border">
+      {partage && (
+        <PartagerMenu
+          url={`${window.location.origin}/post/${post.id}`}
+          texte={post.body ?? post.place ?? ""}
+          onFermer={() => setPartage(false)}
+        />
+      )}
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
       <header className="flex items-center gap-3 px-4 py-3">
         <Link
@@ -469,7 +483,8 @@ export function PostCard({
               d'ailleurs, jamais depuis le site lui-même. */}
         <Link
           to={`/post/${post.id}`}
-          className="mt-1 block text-[11px] uppercase tracking-wide text-muted-foreground hover:underline"
+          onClick={() => interesse(2)}
+          className="mt-1 block text-[11px] text-muted-foreground hover:underline"
         >
           {ilYA(post.created_at)}
         </Link>

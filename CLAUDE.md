@@ -98,3 +98,10 @@ aujourd'hui, et pourquoi.
 ## Le détail
 
 **18 règles** de plus, remontées des fiches mémoire, dans `REGLES-DETAIL.md` (même dossier). Elles ne sont pas chargées automatiquement : les ouvrir quand le sujet les concerne — le routeur les signale.
+
+## Ajouts en cours de route — à ranger
+
+*Écrites au fil des sessions. À replier dans les sections thématiques lors de la prochaine consolidation.*
+
+- 🟠 **Le fil de Diako porte le VECU des voyageurs : un recit exige un vecu (j'ai goute, on a dormi, nahita...). Une offre, un menu de fete ou des voeux venant d'un etablissement nourrissent SA FICHE (contact, plats, prix), jamais le fil. Un voyage organise date est une agence et ses circuits, pas un evenement ; Noel, reveillon, fete nationale ne sont jamais des evenements** *(03/09/2026)*
+  *03/09/2026 : 89 des 418 recits en ligne etaient des publicites d'hotel reecrites (FLASH PROMO -30 %, Vos cours de tennis au Carlton), 6 des voeux de fete, ~70 des 118 evenements des voyages organises d'agence, 13 fiches A vendre publiees*

@@ -750,6 +750,36 @@ bot-diako/
         └── trouvaille.json   champs extraits
 ```
 
+## Ce qui va au fil, au calendrier, à la fiche — ou nulle part (03/09/2026)
+
+Décision d'Andry, après lecture de ce que la collecte rapportait (ventes
+d'ordinateurs, « Joyeuse fête nationale », voyages organisés publiés comme
+événements, publicités réécrites en récits — 89 des 418 récits en ligne) :
+
+| Ce que dit la publication | Genre | Pourquoi |
+|---|---|---|
+| Le VÉCU d'un voyageur : un lieu visité, un parc, un plat goûté, une mésaventure, une belle photo | **récit** | c'est le fil |
+| Un ÉVÉNEMENT PUBLIC malgache daté et situé : festival des baleines, Donia, famadihana, salon, foire | **événement** | c'est le calendrier |
+| Une offre, un « réservez », un menu de fête, des vœux venant d'un établissement | **établissement** | on garde SA FICHE (contact, plats, prix) — jamais la publicité ni les vœux |
+| Un voyage organisé, un circuit, une excursion vendus par une agence | **établissement** (agence + circuits) | une date de départ n'est pas une date d'événement |
+| Un menu de réveillon chiffré | **carte** | les plats et les prix, pas les vœux |
+| Une vente d'objets, un vœu sans information, une publicité sans rien | **rien** | écarté, compté « hors sujet » au journal |
+
+Trois règles portent tout : `est_fete_calendaire` (Noël, réveillon, Saint-Valentin,
+fête nationale, Pâques…), `est_voyage_organise`, `est_une_offre` / `est_un_vecu`.
+Le récit n'est plus le cas par défaut : il exige un vécu. Une page
+d'établissement qui poste une belle photo sans rien vendre passe au fil
+(« ce qui est magnifique à voir »). Le modèle reçoit les mêmes consignes et
+rend `nature_recit` (voyage, parc, endroit, culinaire, mésaventure, photo, bon
+plan, alerte) qui devient `posts.kind` ; mais **les règles ont le dernier mot**
+sur ce qui ne va pas au fil.
+
+Le sous-genre d'un récit : `alerte` (danger, route coupée) › `avis` (mésaventure)
+› `assiette` (deux mots de cuisine) › `bon_plan` › `photo` (texte court) › `recit`.
+
+`outils/reclasser.py` rejoue ce classement sur la base et retire du site ce qui
+n'y a pas sa place (masqué, jamais supprimé) — voir `docs/A-APPLIQUER.md`.
+
 ---
 
 ## Audit du 02/09/2026 — ce qui a changé, et pourquoi

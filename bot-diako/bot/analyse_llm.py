@@ -50,17 +50,36 @@ Tu réponds UNIQUEMENT par un objet JSON, sans texte autour.
 Champs attendus :
 
 - genre : "etablissement" | "carte" | "evenement" | "recit" | "rien"
-    · "etablissement" : la publication présente un lieu qui accueille du public
-      (restaurant, hôtel, lodge, bar, agence, parc) — ouverture, présentation,
-      coordonnées, tarifs.
-    · "carte" : la publication montre ou liste des PLATS AVEC LEUR PRIX.
-    · "evenement" : quelque chose qui a lieu à une DATE (festival, concert,
-      soirée, marché, compétition). Sans date ni période, ce n'est pas un
-      événement.
-    · "recit" : une expérience vécue, un avis, une photo de voyage, un bon plan,
-      une mésaventure. C'est le cas par défaut.
-    · "rien" : publicité sans objet, recrutement, politique, vente d'objets,
-      condoléances, ou hors du champ voyage/goût.
+    · "etablissement" : la publication présente OU VEND un lieu qui accueille du
+      public (restaurant, hôtel, lodge, bar, agence, loueur, parc) — ouverture,
+      présentation, coordonnées, tarifs, promotion, menu de fête, voyage
+      organisé ou circuit proposé par une agence. ⚠ Une publicité, une offre,
+      un « réservez », un menu de Noël ou de Saint-Valentin, un « joyeuse fête
+      nationale » qui viennent d'un établissement sont des ÉTABLISSEMENTS : on
+      garde ses informations, ses plats et ses prix, jamais le texte de la
+      publicité ni les vœux.
+    · "carte" : la publication montre ou liste des PLATS AVEC LEUR PRIX — même
+      dans un menu de réveillon.
+    · "evenement" : un ÉVÉNEMENT PUBLIC MALGACHE qui a lieu à une DATE et dans
+      un LIEU — festival (baleines, Donia, Sômarôho…), fête traditionnelle
+      (famadihana, fitampoha, sambatra), concert, salon, foire, exposition,
+      compétition. ⚠ JAMAIS une fête du calendrier (Noël, réveillon, nouvel an,
+      Saint-Valentin, Pâques, fête nationale, fête des mères…), JAMAIS un
+      voyage organisé, un circuit ou une excursion vendus par une agence (c'est
+      un établissement avec ses circuits), JAMAIS la retransmission d'un match.
+    · "recit" : le VÉCU d'un voyageur — un lieu visité, un parc, un plat goûté,
+      une bonne ou une mauvaise expérience, une belle photo de ce qu'il a vu.
+      Écrit par quelqu'un qui y est allé, pas par l'établissement qui se vend.
+    · "rien" : vente d'objets (ordinateur, téléphone, meuble…), recrutement,
+      politique, condoléances, simples vœux de fête sans aucune information, ou
+      hors du champ voyage/goût.
+
+- nature_recit : si genre = "recit", l'une de : "voyage" (un déplacement, un
+  séjour), "parc" (un parc, une réserve, un site naturel), "endroit" (un lieu
+  visité, une ville, une plage), "culinaire" (un plat, un restaurant goûté),
+  "mesaventure" (une mauvaise expérience, un avis négatif), "photo" (surtout une
+  belle image, peu de texte), "bon_plan" (un conseil pratique vécu), "alerte"
+  (danger, fermeture, route coupée). Sinon null.
 
 - nom_etablissement : le nom exact de l'établissement, ou null. N'invente pas de
   nom à partir d'une description ("un petit resto sympa" -> null).
@@ -731,6 +750,23 @@ def fusionner(regles: dict, llm: dict, texte: str = "", cfg: dict | None = None)
     genre = llm.get("genre")
     if genre in ("etablissement", "carte", "evenement", "recit", "rien"):
         fusion["genre"] = genre
+    # 🔴 LES RÈGLES ONT LE DERNIER MOT SUR CE QUI NE VA PAS AU FIL NI AU
+    #    CALENDRIER : vente d'objets, vœux de fête, offre commerciale, voyage
+    #    organisé. Le modèle lit bien, mais « Joyeuse fête nationale » lui
+    #    ressemble à un récit et « Voyage organisé Tana-Tuléar » à un événement.
+    motif = regles.get("motif_classement") or ""
+    if fusion.get("genre") in ("recit", "evenement") and any(
+        m in motif for m in ("vente d'objets", "vœux", "calendaire", "offre", "voyage organisé")
+    ):
+        fusion["genre"] = regles.get("genre") or fusion["genre"]
+        doutes.append(f"genre tenu par les règles ({motif})")
+
+    NATURES = {"voyage": "recit", "parc": "recit", "endroit": "recit", "culinaire": "assiette",
+               "mesaventure": "avis", "photo": "photo", "bon_plan": "bon_plan",
+               "alerte": "alerte"}
+    nature = llm.get("nature_recit")
+    if fusion.get("genre") == "recit" and nature in NATURES:
+        fusion["post_genre"] = NATURES[nature]
 
     correspondances = {
         "nom_etablissement": "nom_etab", "lieu": "lieu_texte", "adresse": "adresse",

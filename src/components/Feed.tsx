@@ -20,6 +20,7 @@ import {
 import { THEMES, estTheme, libelleFiches, theme as trouveTheme } from "@/lib/themesFil";
 import { cn } from "@/lib/utils";
 import { useReveal } from "@/hooks/useReveal";
+import { reordonner } from "@/lib/affinites";
 
 /**
  * ⚠ RENDU A `PAR_PALIER()`. Un `const PAR_PAGE = 6` fige ici rendait mort le
@@ -210,6 +211,11 @@ export function Feed() {
   const [commentaires, setCommentaires] = useState<PostSitue | null>(null);
   const enVol = useRef(false);
   const sentinelle = useRef<HTMLDivElement>(null);
+  /* ⭐ LE CURSEUR EST LA DATE DU DERNIER REÇU, PAS DU DERNIER AFFICHÉ. Le fil
+     est réordonné à l'écran selon les lieux que le visiteur regarde
+     (`reordonner`) : lire le curseur sur la dernière carte affichée sauterait
+     ou répéterait des publications. */
+  const curseurRef = useRef<{ date: string | null; km: number | null }>({ date: null, km: null });
 
   const [mode, setMode] = useState<ModeFil>("tout");
   const [dispo, setDispo] = useState({ abonnements: false, assiettes: false });
@@ -249,10 +255,20 @@ export function Feed() {
         if (mien !== version.current) return;
         setErreur(false);
         if (page.length < palier) setFini(true);
+        const dernier = page[page.length - 1];
+        if (dernier) {
+          curseurRef.current = { date: dernier.created_at, km: dernier.distance_km ?? null };
+        }
+        // ⭐ « CE QU'IL REGARDE D'ABORD ». Chaque page arrivée est réordonnée
+        //   selon la mémoire du visiteur : lieux consultés en tête, déjà vu en
+        //   queue. Jamais en « près de moi » (l'ordre y EST l'information) ni
+        //   sous un thème (les fiches font l'ordre).
+        const personnaliser = mode === "tout" || mode === "abonnements";
+        const arrivee = personnaliser ? reordonner(page) : page;
         setPosts((avant) => {
-          if (!curseur && apresKm == null) return page;
+          if (!curseur && apresKm == null) return arrivee;
           const vus = new Set(avant.map((p) => p.id));
-          return [...avant, ...page.filter((p) => !vus.has(p.id))];
+          return [...avant, ...arrivee.filter((p) => !vus.has(p.id))];
         });
       } catch {
         if (mien === version.current) setErreur(true);
@@ -267,6 +283,7 @@ export function Feed() {
   useEffect(() => {
     setChargement(true);
     setFini(false);
+    curseurRef.current = { date: null, km: null };
     void charger(null, null);
   }, [charger]);
 
@@ -299,11 +316,10 @@ export function Feed() {
     const obs = new IntersectionObserver(
       (e) => {
         if (e[0]?.isIntersecting && posts.length > 0) {
-          const dernier = posts[posts.length - 1];
           // ⚠ Le curseur CHANGE DE NATURE selon le mode : « pres de moi » trie
           //   par distance, reprendre a une date y saute des recits.
-          if (mode === "pres_de_moi") void charger(null, dernier.distance_km ?? null);
-          else void charger(dernier.created_at, null);
+          if (mode === "pres_de_moi") void charger(null, curseurRef.current.km);
+          else void charger(curseurRef.current.date, null);
         }
       },
       { threshold: 0.1, rootMargin: "600px" }

@@ -341,6 +341,157 @@ MOTS_HORS_SUJET = (
 )
 
 
+# ── Ce qui n'a pas sa place, et ce qui n'est pas ce qu'il paraît ─────────────
+# ⭐ POURQUOI (03/09/2026, décision d'Andry). Le fil de Diako doit porter le
+#   VÉCU des voyageurs : un lieu visité, un parc, un plat goûté, une bonne ou
+#   mauvaise expérience, une belle photo. Le calendrier doit porter les
+#   ÉVÉNEMENTS MALGACHES qui ont un lieu (festival des baleines, Donia,
+#   famadihana, salon, foire). Or la collecte rapportait :
+#     · des ventes d'objets (« À vendre · Ambondrona », ordinateurs) — 13 fiches
+#       d'établissement publiées, 40 rejetées à la main ;
+#     · des vœux de fête (« Joyeuse fête nationale », « Joyeux Noël ») publiés
+#       comme récits (9) ou événements (4) ;
+#     · des voyages organisés d'agence publiés comme événements (« Voyage
+#       organisé Tana - Tuléar (8 jours) ») — ce sont des circuits, pas des
+#       fêtes ;
+#     · des publicités d'établissement (« FLASH PROMO -30 % », « Évadez-vous au
+#       Madiro Hôtel ») réécrites en récits : 89 des 418 récits en ligne.
+#   Règle : une publication de fête ou une offre venant d'un établissement
+#   nourrit SA FICHE (contact, plats, prix) — elle n'est jamais publiée telle
+#   quelle. Un vœu sans information ne vaut rien.
+
+MOTS_VENTE_OBJETS = (
+    "ordinateur", "laptop", "pc portable", "pc gamer", "iphone", "samsung galaxy",
+    "smartphone", "telephone portable", "tablette", "meuble", "canape", "frigo",
+    "refrigerateur", "congelateur", "climatiseur", "television", "smart tv",
+    "ecran plat", "playstation", "console de jeu", "imprimante", "groupe electrogene",
+    "panneau solaire", "destockage", "liquidation", "pieces detachees", "pneus",
+    "carrelage", "ciment", "materiaux de construction", "friperie", "vente flash",
+)
+# ⚠ « à vendre », « je vends » ne suffisent pas seuls : un hôtel à vendre est de
+#   l'immobilier (déjà filtré), et « amidy »/« mivarotra » en malgache
+#   apparaissent dans des récits (« TSY NISY ANTANANARIVO… » passait pour une
+#   vente). Ces mots ne comptent qu'en l'absence de tout vocabulaire de voyage.
+MOTS_VENTE_SEULE = ("a vendre", "je vends", "on vend", "vends ", "vente flash")
+# Les fêtes du calendrier : jamais un événement de Diako. Un restaurant qui
+# annonce son menu de réveillon nourrit sa fiche, pas le calendrier.
+MOTS_FETES_CALENDAIRES = (
+    "noel", "reveillon", "nouvel an", "new year", "saint-valentin", "saint valentin",
+    "st valentin", "st-valentin", "paques", "fete nationale", "26 juin", "fete des meres",
+    "fete des peres", "halloween", "ramadan", "aid el", "aid-el", "toussaint", "1er mai",
+    "8 mars", "journee de la femme", "black friday", "bonne annee", "bonne et heureuse",
+    "fetes de fin d'annee", "fin d'annee", "fete de l'independance", "independance",
+    "asaramanitra", "krismasy", "taom-baovao", "taombaovao", "arahaba tratry",
+    "tratry ny", "joyeuses fetes", "joyeux noel", "meilleurs voeux", "joyeuse fete",
+)
+# Un voyage organisé a une date de départ, pas une date d'événement : c'est
+# une agence qui vend un circuit.
+MOTS_VOYAGE_ORGANISE = (
+    "voyage organise", "voyages organises", "circuit", "sejour organise", "excursion",
+    "evasion", "escapade", "depart le", "depart :", "depart prevu", "places limitees",
+    "inscription", "programme du voyage", "itineraire", "jours /", "j /", " j/",
+    "pension complete", "demi-pension", "transport aller", "aller-retour", "vakansy",
+    "dia miaraka", "fitsangatsanganana", "trekking en groupe", "randonnee en groupe",
+    "voyage en groupe", "sortie en groupe", "day trip", "package", "forfait",
+)
+# Ce qui a lieu en public, à une date, et qui vaut une entrée au calendrier.
+MOTS_EVENEMENT_FORT = (
+    "festival", "concert", "spectacle", "ceremonie", "fete traditionnelle", "famadihana",
+    "fitampoha", "sambatra", "donia", "somaroho", "hira gasy", "hiragasy", "baleine",
+    "salon ", "foire", "marche artisanal", "exposition", "vernissage", "tournoi",
+    "marathon", "championnat", "carnaval", "kermesse", "gala", "defile", "election miss",
+    "trail", "regate", "rallye", "feria", "commemoration", "pelerinage", "olympiade",
+    "semaine du", "journee du", "journees du", "fete du", "fete de la", "fete des",
+)
+MOTS_EVENEMENT_FAIBLE = (
+    "edition", "programme", "live", "dj", "soiree", "after work", "afterwork", "atelier",
+    "conference", "animation", "course", "competition", "rendez-vous", "billetterie",
+    "entree libre", "projection", "cinema", "theatre", "danse", "nuit blanche", "match",
+)
+# Une offre : l'établissement parle de lui pour vendre.
+MOTS_OFFRE = (
+    "reservez", "reservation", "offre speciale", "offre", "promo", "promotion",
+    "a partir de", "profitez", "contactez", "appelez", "nous contacter", "infoline",
+    "nous vous accueillons", "nous vous proposons", "venez decouvrir", "venez profiter",
+    "venez", "notre hotel", "notre restaurant", "notre etablissement", "nos chambres",
+    "nos bungalows", "notre equipe", "disponible", "disponibilites", "tarif", "nuitee",
+    "par nuit", "/nuit", "par personne", "/pers", "reduction", "remise", "%",
+    "commandez", "sur commande", "ouvert 7j/7", "ouvert tous les jours", "horaires",
+    "menu du jour", "plat du jour", "bienvenue", "nouveaute", "ouverture",
+    "vient d'ouvrir", "tonga soa", "antsoy", "mandray anao", "afaka manao reservation",
+)
+# Le vécu : quelqu'un y est allé. Les marqueurs FORTS suffisent seuls ; les
+# faibles se comptent à deux (« on a hâte de vous accueillir » n'est pas un vécu).
+MOTS_VECU_FORT = (
+    "j'ai goute", "j'ai teste", "j'ai dormi", "j'ai visite", "j'ai adore", "j'ai passe",
+    "je suis alle", "on a mange", "on a goute", "on a teste", "on a dormi", "on a visite",
+    "on a passe", "on est alle", "nous avons mange", "nous avons dormi", "nous avons visite",
+    "nous sommes alle", "mon sejour", "notre sejour", "mon week-end", "notre week-end",
+    "mes vacances", "nos vacances", "notre passage", "souvenir", "coup de coeur",
+    "je recommande", "je vous recommande", "je conseille", "je vous conseille",
+    "decu", "deception", "mon avis", "notre avis", "retour d'experience", "premiere fois",
+    "nahita", "nandeha", "nitsidika", "nihinana", "nanandrana", "nandry", "niala sasatra",
+    "nahafinaritra", "nankafy", "izahay", "zahay", "nifaly", "diso fanantenana",
+)
+MOTS_VECU_FAIBLE = (
+    "on a ", "on est ", "nous avons", "j'ai ", "hier", "ce week-end", "la semaine derniere",
+    "le mois dernier", "enfin", "tsara be", "mahafinaritra", "faly", "tany ", "teny ", "tao ",
+    "magnifique", "superbe", "paysage", "vue ", "coucher de soleil", "lever de soleil",
+)
+MOTS_MESAVENTURE = (
+    "decu", "deception", "mauvais", "jamais plus", "arnaque", "trop cher", "attente",
+    "attendu", "froid", "sale", "insalubre", "pas recommande", "a eviter", "mauvaise surprise",
+    "honteux", "inadmissible", "catastrophe", "nul", "degueulasse", "diso fanantenana",
+    "ratsy", "tsy mety", "nampalahelo", "malahelo", "lafo be", "maloto",
+)
+MOTS_CULINAIRE = (
+    "plat", "assiette", "sakafo", "menu", "cuisine", "delicieux", "miam", "gouter",
+    "goute", "degustation", "deguste", "ravitoto", "romazava", "mofo", "laoka", "resto",
+    "restaurant", "dejeuner", "diner", "petit dejeuner", "brochette", "poisson grille",
+    "crabe", "crevette", "zebu", "fruits de mer", "cafe", "glace", "gateau", "koba",
+    "recette", "saveur", "gout", "table", "on a mange", "nihinana", "matsiro", "hena",
+)
+
+
+def _compte(mots, n: str) -> int:
+    return sum(1 for m in mots if m in n)
+
+
+def est_vente_d_objets(texte: str) -> bool:
+    """Une petite annonce d'objet — sauf si le texte parle nettement de tourisme."""
+    n = sans_accent(texte)
+    tourisme = _compte(("hotel", "restaurant", "sejour", "nuitee", "chambre", "menu",
+                        "plat", "circuit", "voyage", "excursion", "bungalow", "lodge",
+                        "plage", "parc", "guide", "visite", "decouverte", "tsangatsangana",
+                        "vakansy", "tourisme"), n)
+    if any(m in n for m in MOTS_VENTE_OBJETS):
+        return tourisme < 2
+    if any(m in n for m in MOTS_VENTE_SEULE):
+        return tourisme == 0
+    return False
+
+
+def est_fete_calendaire(texte: str) -> bool:
+    n = sans_accent(texte)
+    return any(m in n for m in MOTS_FETES_CALENDAIRES)
+
+
+def est_voyage_organise(texte: str) -> bool:
+    n = sans_accent(texte)
+    return _compte(MOTS_VOYAGE_ORGANISE, n) >= 1
+
+
+def est_une_offre(texte: str, auteur_page: str | None = None) -> bool:
+    n = sans_accent(texte)
+    seuil = 1 if auteur_page else 2
+    return _compte(MOTS_OFFRE, n) >= seuil
+
+
+def est_un_vecu(texte: str) -> bool:
+    n = sans_accent(texte)
+    return _compte(MOTS_VECU_FORT, n) >= 1 or _compte(MOTS_VECU_FAIBLE, n) >= 2
+
+
 def parle_de_tourisme(texte: str, nb_photos: int = 0) -> bool:
     """Pré-filtre du fil, volontairement large.
 
@@ -351,6 +502,8 @@ def parle_de_tourisme(texte: str, nb_photos: int = 0) -> bool:
     """
     n = sans_accent(texte)
     if any(mot in n for mot in MOTS_HORS_SUJET):
+        return False
+    if est_vente_d_objets(texte):
         return False
     trouves = sum(1 for mot in MOTS_TOURISME if mot in n)
     return trouves >= 2 or (trouves >= 1 and nb_photos >= 1)
@@ -487,31 +640,62 @@ def categories(texte: str) -> list[str]:
     return trouvees
 
 
-def classer(texte: str, nb_photos: int, lignes_carte: list, dates: dict) -> str:
-    """Nature de la trouvaille : etablissement | carte | evenement | recit.
+def classer(texte: str, nb_photos: int, lignes_carte: list, dates: dict,
+            auteur_page: str | None = None) -> str:
+    """Nature de la trouvaille : etablissement | carte | evenement | recit | rien."""
+    return classer_avec_motif(texte, nb_photos, lignes_carte, dates, auteur_page)[0]
+
+
+CATEGORIES_QUI_ACCUEILLENT = {"hotel", "restaurant", "agence_voyage", "location_vehicule",
+                              "guide", "site_attraction", "transporteur"}
+
+
+def classer_avec_motif(texte: str, nb_photos: int, lignes_carte: list, dates: dict,
+                       auteur_page: str | None = None) -> tuple[str, str]:
+    """Nature de la trouvaille, et POURQUOI — pour le journal et pour l'écran.
 
     L'ordre des tests n'est pas cosmétique. Une carte de restaurant est
     d'abord une carte, même si elle nomme l'établissement ; un événement est
-    d'abord un événement, même s'il se tient dans un hôtel. Le récit est le
-    cas par défaut : c'est celui qui n'exige rien.
+    d'abord un événement, même s'il se tient dans un hôtel. Le récit n'est plus
+    le cas par défaut : il exige un VÉCU. Ce qu'un établissement dit de lui
+    pour vendre nourrit sa fiche ; ce qui n'apprend rien ne va nulle part.
     """
     n = sans_accent(texte)
     cats = categories(texte)
     a_tel = bool(telephones(texte))
+    a_info = a_tel or bool(lignes_carte) or bool(liens(texte)["site_web"]) \
+        or bool(montants(texte))
+    calendaire = est_fete_calendaire(texte)
+    accueille = bool(CATEGORIES_QUI_ACCUEILLENT & set(cats))
 
-    # ① Une carte, c'est plusieurs plats CHIFFRÉS. Un seul prix ne fait pas
-    #    une carte : c'est une promo, donc un récit ou une fiche.
-    if len(lignes_carte) >= 3:
-        return "carte"
-    if len(lignes_carte) >= 2 and any(sans_accent(m) in n for m in MOTS_CARTE):
-        return "carte"
+    # ⓪ Une petite annonce d'objet n'a rien à faire ici.
+    if est_vente_d_objets(texte) and not (accueille and a_info):
+        return "rien", "vente d'objets"
 
-    # ② Un événement a une DATE. Sans date, « festival » n'est qu'un souvenir.
-    points_evt = sum(1 for m in MOTS_EVENEMENT if sans_accent(m) in n)
-    if dates.get("debut") and points_evt >= 1:
-        return "evenement"
-    if points_evt >= 3 and dates.get("periode"):
-        return "evenement"
+    # ① Une carte, c'est plusieurs plats CHIFFRÉS. Un menu de réveillon chiffré
+    #    reste une carte : on prend les plats et les prix, pas les vœux.
+    #    ⚠ Le programme chiffré d'une excursion (« TARIF 160 000 », « SI
+    #      ÉTRANGERS + 50 000 ») n'est pas une carte : sans mot de cuisine, un
+    #      voyage organisé garde son genre.
+    voyage = est_voyage_organise(texte)
+    cuisine = any(m in n for m in ("menu", "plat", "sakafo", "notre carte", "au menu",
+                                   "formule", "entree", "dessert", "boisson"))
+    if not voyage or cuisine:
+        if len(lignes_carte) >= 3:
+            return "carte", "plats chiffrés" + (" (menu de fête)" if calendaire else "")
+        if len(lignes_carte) >= 2 and any(sans_accent(m) in n for m in MOTS_CARTE):
+            return "carte", "plats chiffrés" + (" (menu de fête)" if calendaire else "")
+
+    # ② Un ÉVÉNEMENT PUBLIC a une date — jamais une fête du calendrier, jamais
+    #    un voyage organisé (c'est une agence qui vend un circuit).
+    fort = _compte(MOTS_EVENEMENT_FORT, n)
+    faible = _compte(MOTS_EVENEMENT_FAIBLE, n)
+    date_ou_periode = bool(dates.get("debut") or dates.get("periode"))
+    if not calendaire:
+        if fort >= 1 and date_ou_periode and not (voyage and fort < 2):
+            return "evenement", "événement public daté"
+        if not voyage and faible >= 2 and dates.get("debut"):
+            return "evenement", "soirée ou animation datée"
 
     # ③ Un établissement se reconnaît à ce qu'il propose : une catégorie, un
     #    moyen de le joindre, et de quoi le situer.
@@ -520,13 +704,41 @@ def classer(texte: str, nb_photos: int, lignes_carte: list, dates: dict) -> str:
                                   "situe", "situé", "contact", "infoline", "chambre",
                                   "nuitee", "nuitée", "disponible")
                       if sans_accent(m) in n)
+    if voyage and (accueille or a_info or auteur_page):
+        return "etablissement", "voyage organisé : c'est l'agence et ses circuits"
+    suffixe = " (fête calendaire)" if calendaire else ""
     if cats and a_tel and points_etab >= 1:
-        return "etablissement"
+        return "etablissement", "fiche d'établissement" + suffixe
     if cats and points_etab >= 3:
-        return "etablissement"
+        return "etablissement", "fiche d'établissement" + suffixe
 
-    # ④ Le reste est un récit : une photo, un avis, une mésaventure, un bon plan.
-    return "recit"
+    vecu = est_un_vecu(texte)
+    offre = est_une_offre(texte, auteur_page)
+
+    # Vœux de fête : on garde l'établissement s'il y a de quoi remplir sa
+    # fiche ; sinon ça ne vaut rien.
+    if calendaire and not vecu:
+        if accueille or a_info or auteur_page:
+            return "etablissement", "fête calendaire : on garde l'établissement, pas les vœux"
+        return "rien", "vœux de fête calendaire sans information"
+
+    # Une offre (l'établissement parle de lui pour vendre) nourrit sa fiche.
+    if offre and not vecu:
+        if accueille or a_info or auteur_page:
+            return "etablissement", "offre commerciale : on garde la fiche, pas la publicité"
+        return "rien", "offre commerciale sans information"
+
+    # Une page qui parle d'elle sans rien vendre ni raconter : une belle photo
+    # passe (« ce qui est magnifique à voir »), un discours non.
+    if auteur_page and not vecu:
+        if nb_photos >= 1 and len(texte.strip()) < 300:
+            return "recit", "photo d'une page"
+        if accueille or a_info:
+            return "etablissement", "page d'établissement sans vécu"
+        return "rien", "publication de page sans vécu ni information"
+
+    # ④ Le vécu d'un voyageur : un lieu, un parc, un plat, une mésaventure.
+    return "recit", "vécu" if vecu else "récit"
 
 
 def genre_de_post(texte: str) -> str:
@@ -536,21 +748,23 @@ def genre_de_post(texte: str) -> str:
       fait échouer l'INSERT entier, pas seulement le champ.
     """
     n = sans_accent(texte)
-    if any(m in n for m in ("attention", "prudence", "fermé", "ferme definitivement",
-                            "annule", "annulé", "route coupee", "cyclone")):
+    # Dans l'ordre : ce qui prévient, ce qui déçoit, ce qui se mange, ce qui
+    # conseille, ce qui se regarde — et le voyage raconté, cas général.
+    if any(m in n for m in ("attention", "prudence", "ferme definitivement", "annule",
+                            "route coupee", "cyclone", "danger", "vol a", "agression")):
         return "alerte"
-    if any(m in n for m in ("bon plan", "promo", "reduction", "réduction", "moins cher",
-                            "pas cher", "gratuit")):
+    if _compte(MOTS_MESAVENTURE, n) >= 1:
+        return "avis"
+    if _compte(MOTS_CULINAIRE, n) >= 2 or (len(texte.strip()) < 140
+                                           and _compte(MOTS_CULINAIRE, n) >= 1):
+        return "assiette"
+    if any(m in n for m in ("bon plan", "astuce", "conseil", "pas cher", "moins cher",
+                            "gratuit", "bon a savoir")):
         return "bon_plan"
-    if any(m in n for m in ("mon avis", "notre avis", "je recommande", "decu", "déçu",
-                            "deception", "note", "service", "accueil")):
+    if any(m in n for m in ("mon avis", "notre avis", "je recommande", "note ", "service",
+                            "accueil")):
         return "avis"
     if len(texte.strip()) < 140:
-        # Une photo de plat a sa propre catégorie sur Diako : c'est le cœur du
-        # « goût » dans « voyage, goût et exploration ».
-        if any(m in n for m in ("plat", "assiette", "sakafo", "menu", "cuisine",
-                                "delicieux", "miam", "gouter", "degustation")):
-            return "assiette"
         return "photo"
     return "recit"
 
@@ -600,6 +814,11 @@ def nom_etablissement(texte: str, auteur_page: str | None = None) -> str | None:
         return trouve.group(0).strip(" .,:;–-")
 
     premiere = BRUIT_NOM.sub("", texte.strip().split("\n")[0]).strip(" .,:;–-—…")
+    # ⚠ Le chrome de Facebook (« Indicateur de statut En ligne », « Gmail ») et
+    #   les lignes de prix (« PRIX : 130.000 ARIARY ») ne sont pas des noms.
+    if BRUIT_FIL.match(premiere) or MOTIF_MONTANT.search(premiere) \
+            or re.search(r"\b(prix|tarif|gmail|whatsapp)\b", premiere, re.I):
+        return None
     if 2 < len(premiere) <= 55 and not re.search(
         r"\b(je|nous|on|vous|il|elle|c'est|voici|venez|regardez)\b", premiere, re.I
     ):
@@ -2099,7 +2318,7 @@ def analyser(texte: str, nb_photos: int = 0, auteur_page: str | None = None,
     cats = categories(texte)
     plats = lignes_de_carte(texte)
     dates = dates_evenement(texte)
-    genre = classer(texte, nb_photos, plats, dates)
+    genre, motif = classer_avec_motif(texte, nb_photos, plats, dates, auteur_page)
 
     tels = telephones(texte)
     adresses = liens(texte)
@@ -2121,6 +2340,7 @@ def analyser(texte: str, nb_photos: int = 0, auteur_page: str | None = None,
 
     return {
         "genre": genre,
+        "motif_classement": motif,
         "categories": cats,
         "nom_etab": nom_etablissement(texte, auteur_page),
         "lieu_texte": lieu_dans_le_texte(texte, noms_de_lieux or []),

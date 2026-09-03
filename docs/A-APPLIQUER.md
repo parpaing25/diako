@@ -2,6 +2,39 @@
 
 Mis à jour le 01/09/2026.
 
+## ⏳ Nettoyer le fil et le calendrier — UNE commande, à lancer depuis le PC
+
+Décision d'Andry du 03/09/2026 : le fil porte le vécu des voyageurs, le
+calendrier porte les événements malgaches qui ont un lieu, et ce qu'un
+établissement dit de lui pour vendre (offres, menus de fête, vœux) nourrit sa
+fiche — jamais le fil. Le bot classe désormais ainsi (`bot-diako/bot/extraction.py`,
+`classer_avec_motif`, 17 tests dans `tests/test_classement.py`).
+
+Rejoué à blanc sur la base du bot le 03/09 (`python outils/reclasser.py`) :
+**253 publications en ligne** n'ont pas leur place —
+
+| Ce qui est en ligne | Combien | Ce qui sera fait |
+|---|---|---|
+| publicités d'établissement réécrites en récits (« Vos cours de tennis au Carlton », « FLASH PROMO -30 % ») | 163 | récit masqué (`posts.status = 'hidden'`), trouvaille requalifiée en fiche à trier |
+| voyages organisés d'agence publiés comme événements (« Voyage organisé Tana - Tuléar (8 jours) ») | 69 | événement dépublié (`is_published = false`), trouvaille requalifiée en fiche à trier |
+| hors sujet (bijouterie, vente, offre sans information) | 15 | récit masqué, trouvaille rejetée |
+| programmes d'excursion lus comme des cartes | 4 | événement dépublié |
+| récits dont le sous-genre change (assiette, avis…) | 35 | `posts.kind` mis à jour |
+
+**Rien n'est supprimé** : un récit masqué se remontre par un `UPDATE`, un
+événement dépublié aussi.
+
+Le classificateur de sécurité a refusé cette écriture depuis une session
+Claude. À lancer à la main, depuis `Diako\bot-diako` :
+
+```
+python outils/reclasser.py               # à blanc : montre la liste
+python outils/reclasser.py --ecrire --site
+```
+
+La commande écrit au nom du compte Diako (voir la section précédente), relit ce
+qu'elle a écrit, et le journal du bot en garde la trace.
+
 ## ⏳ 333 fiches créées par le bot sont INVISIBLES — à trancher, puis SQL
 
 Trouvé par l'audit du bot du 02/09/2026. Le déclencheur `pages_avant_ecriture`

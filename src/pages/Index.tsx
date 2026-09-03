@@ -86,57 +86,35 @@ export default function Index() {
               254 orthographes, 42 acces releves, 5 saisonnalites sur 12 mois.
               Ceux qui bougent souvent passent par `useStats()` ; ceux ecrits
               ici sont stables. Aucun n'est arrondi vers le haut. */}
+        {/* ⭐ MOINS DE TEXTE (03/09/2026, décision d'Andry : « moins d'écriture,
+            pour ne pas trop remplir les yeux »). Les trois entrées du
+            référentiel gardent un titre et une ligne : c'est un menu, pas un
+            argumentaire. Les raisons vivent sur leurs pages. */}
         <section className="mt-10" aria-labelledby="titre-savoir">
           <h2 id="titre-savoir" className="text-lg font-semibold">
-            Ce que Diako sait déjà
+            Préparer le voyage
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Le référentiel du pays, saisi lieu par lieu. C'est ce qu'on ne
-            trouve nulle part ailleurs.
-          </p>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 large:grid-cols-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <Link
               to="/quand-partir"
-              className="dk-carte dk-reveal rounded-2xl border border-primary/25 bg-primary/[0.05] p-4"
+              className="dk-carte dk-reveal rounded-2xl border border-primary/25 bg-primary/[0.05] px-4 py-3"
             >
-              <p className="dk-etiquette text-primary">Quand partir où</p>
-              <p className="mt-1.5 font-bold leading-tight">
-                Cinq destinations, douze mois, et la raison
-              </p>
-              <p className="dk-secondaire mt-1.5 leading-relaxed">
-                Savoir qu'un mois est déconseillé ne sert à rien si on ignore
-                que ce sont les pistes qui sont coupées — ou les baleines qu'on
-                va rater.
-              </p>
+              <p className="font-bold leading-tight">Quand partir</p>
+              <p className="dk-secondaire mt-1">Cinq destinations, mois par mois.</p>
             </Link>
-
             <Link
               to="/y-aller"
-              className="dk-carte dk-reveal rounded-2xl border border-border bg-card p-4"
+              className="dk-carte dk-reveal rounded-2xl border border-border bg-card px-4 py-3"
             >
-              <p className="dk-etiquette">Y aller</p>
-              <p className="mt-1.5 font-bold leading-tight">
-                46 km/h sur goudron, pas 90
-              </p>
-              <p className="dk-secondaire mt-1.5 leading-relaxed">
-                42 trajets chronométrés sur le terrain. Divisez vos kilomètres
-                par ces chiffres-là, et vous arriverez avant la nuit.
-              </p>
+              <p className="font-bold leading-tight">Y aller</p>
+              <p className="dk-secondaire mt-1">42 trajets chronométrés sur le terrain.</p>
             </Link>
-
             <Link
               to="/plats"
-              className="dk-carte dk-reveal rounded-2xl border border-accent-strong/25 bg-accent/[0.06] p-4"
+              className="dk-carte dk-reveal rounded-2xl border border-accent-strong/25 bg-accent/[0.06] px-4 py-3"
             >
-              <p className="dk-etiquette text-accent-strong">Atlas des plats</p>
-              <p className="mt-1.5 font-bold leading-tight">
-                95 plats, 254 façons de les écrire
-              </p>
-              <p className="dk-secondaire mt-1.5 leading-relaxed">
-                C'est ce référentiel qui fait que «&nbsp;ravi-toto&nbsp;» trouve
-                ce que les cartes appellent autrement.
-              </p>
+              <p className="font-bold leading-tight">Atlas des plats</p>
+              <p className="dk-secondaire mt-1">95 plats, et où les manger.</p>
             </Link>
           </div>
         </section>
@@ -147,9 +125,6 @@ export default function Index() {
               <h2 id="titre-etabs" className="text-lg font-semibold">
                 Hôtels, restaurants et agences
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Chaque établissement a sa page, ses tarifs et sa carte.
-              </p>
             </div>
             <Link
               to="/explorer"
@@ -192,10 +167,16 @@ export default function Index() {
             1242 px est illisible. La regle « on n'elargit pas le texte » ne
             disparait pas avec l'elargissement de la coque — elle s'applique
             juste la ou on lit, et plus la ou on parcourt. */}
-        <section className="mt-10 max-w-[68ch]" aria-labelledby="titre-apropos">
-          <h2 id="titre-apropos" className="text-lg font-semibold">
+        {/* ⚠ Replié, pas retiré : le texte reste dans la page (Google le lit, et le
+            squelette statique de index.html le porte aussi). Un visiteur qui
+            veut savoir qui édite le site l'ouvre d'un clic. */}
+        <details className="mt-10 max-w-[68ch]" aria-labelledby="titre-apropos">
+          <summary
+            id="titre-apropos"
+            className="cursor-pointer text-lg font-semibold [&::-webkit-details-marker]:hidden"
+          >
             À propos de Diako
-          </h2>
+          </summary>
           <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               <strong className="text-foreground">Diako</strong> est un annuaire
@@ -225,7 +206,7 @@ export default function Index() {
               </Link>
             </p>
           </div>
-        </section>
+        </details>
       </div>
     </div>
   );

@@ -260,6 +260,7 @@ async function rafraichirEtat() {
       [e.collecte.ecartes_immobilier || 0, "immobilier"],
       [e.collecte.ecartes_anciennes || 0, "trop ancienne(s)"],
       [e.collecte.ecartes_doublons || 0, "déjà collecté(s)"],
+      [e.collecte.ecartes_hors_sujet || 0, "hors sujet (ventes, vœux, pubs)"],
     ].filter(([n]) => n > 0).map(([n, quoi]) => `${n} ${quoi}`);
     const libelles = {
       collecte: `Collecte${e.collecte.source ? " — " + e.collecte.source : ""} · ${e.collecte.trouvees} retenue(s)${c.en_traitement ? ` · ${c.en_traitement} en lecture` : ""}${ecartes.length ? ` · écarté : ${ecartes.join(", ")}` : ""}`,

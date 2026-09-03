@@ -916,7 +916,8 @@ class Collecteur:
         #   dans /api/etat, donc à l'écran.
         self.etat = {"actif": False, "source": None, "trouvees": 0,
                      "examines": 0, "ecartes_immobilier": 0,
-                     "ecartes_anciennes": 0, "ecartes_doublons": 0}
+                     "ecartes_anciennes": 0, "ecartes_doublons": 0,
+                     "ecartes_hors_sujet": 0}
         # ⚠ `ecartes_immobilier` est incrémenté depuis DEUX endroits : le fil du
         #   navigateur (`_parcourir`) et les fils de l'atelier (`_finir`).
         #   `d[c] += 1` n'est pas atomique — un chiffre affiché faux vaut mieux
@@ -1043,7 +1044,7 @@ class Collecteur:
         self.stop.clear()
         self.etat.update({"actif": True, "trouvees": 0, "examines": 0,
                           "ecartes_immobilier": 0, "ecartes_anciennes": 0,
-                          "ecartes_doublons": 0})
+                          "ecartes_doublons": 0, "ecartes_hors_sujet": 0})
         self.atelier = Atelier(self._finir, int(cfg.get("travailleurs", 3)))
         par_genre = {}
         for s in sources:
@@ -1146,6 +1147,8 @@ class Collecteur:
             if self.etat["ecartes_anciennes"] else "",
             f"{self.etat['ecartes_doublons']} texte(s) déjà collecté(s)"
             if self.etat["ecartes_doublons"] else "",
+            f"{self.etat.get('ecartes_hors_sujet', 0)} hors sujet (ventes, vœux, publicités)"
+            if self.etat.get("ecartes_hors_sujet") else "",
         ]
         base.logguer(
             f"Collecte terminée : {self.etat['trouvees']} trouvaille(s) retenue(s) "
@@ -1879,6 +1882,13 @@ class Collecteur:
             shutil.rmtree(dossier, ignore_errors=True)
             return
         if champs.get("genre") == "rien":
+            # Se dit à voix haute, comme l'immobilier : un filtre muet qui se
+            # trompe ne se corrige jamais.
+            self._compter_ecart("ecartes_hors_sujet")
+            base.logguer(
+                f"Hors sujet ({champs.get('motif_classement') or 'rien à en tirer'}) : "
+                f"« {_debut(texte)} »", "info",
+            )
             base.supprimer(tid)
             shutil.rmtree(dossier, ignore_errors=True)
             return
@@ -2017,10 +2027,17 @@ class Collecteur:
             t["titre"] = champs["titre_evt"]
         t["_etat_fiche"] = rapprochement.get("_etat_fiche", {})
         note = notation.calculer(t)
+        # ⚠ Une fiche nourrie par une publicité ou des vœux de fête ne reçoit
+        #   PAS ce texte en présentation : « Réveillon 2025, menu à 150 000 Ar »
+        #   n'est pas la description d'un restaurant. Le contact, les plats et
+        #   les prix, oui ; le discours, non.
+        motif = champs.get("motif_classement") or ""
+        texte_publicitaire = any(m in motif for m in ("calendaire", "offre", "voyage organisé"))
         base.modifier(tid, {
             "titre": champs.get("titre_evt") or redaction.titre(t),
             "resume": t.get("resume") or redaction.resume_fiche(t),
-            "presentation": redaction.presentation(t) if t["genre"] == "etablissement" else None,
+            "presentation": redaction.presentation(t)
+            if t["genre"] == "etablissement" and not texte_publicitaire else None,
             "corps": redaction.corps_recit(t) if t["genre"] == "recit" else t.get("corps"),
             "score": note["score"],
             "niveau": note["niveau"],

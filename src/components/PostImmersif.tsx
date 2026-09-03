@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { useConnexionRequise } from "@/hooks/useConnexionRequise";
+import { PartagerMenu } from "@/components/PartagerMenu";
+import { noterLieu } from "@/lib/affinites";
+import { useVu } from "@/hooks/useVu";
 import { Bookmark, Heart, MapPin, MessageCircle, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getThumbUrl } from "@/lib/imageThumb";
@@ -36,6 +38,10 @@ export function PostImmersif({
   const [nbReactions, setNbReactions] = useState(post.reactions_count);
   const [favori, setFavori] = useState(post.enregistre);
   const [deplie, setDeplie] = useState(false);
+  const [partage, setPartage] = useState(false);
+  const racine = useRef<HTMLElement>(null);
+  useVu(racine, post.id);
+  const interesse = (poids: number) => noterLieu(post.place_slug ?? post.place, poids);
 
   /* ⚠ Le crochet porte desormais l'ACTION vers l'inscription : le toast seul
      laissait le visiteur devant un bouton muet, a l'instant precis ou il avait
@@ -47,6 +53,7 @@ export function PostImmersif({
     const avant = reaction;
     setReaction(avant ? null : "utile"); // ⚠ « jaime » refuse en base depuis 0031
     setNbReactions((n) => n + (avant ? -1 : 1));
+    if (!avant) interesse(3);
     try {
       setReaction(await basculerReaction(post.id));
     } catch {
@@ -59,6 +66,7 @@ export function PostImmersif({
     if (!connecte("garder ce récit")) return;
     const avant = favori;
     setFavori(!avant);
+    if (!avant) interesse(3);
     try {
       setFavori(await basculerFavori(post.id, avant));
     } catch {
@@ -66,17 +74,9 @@ export function PostImmersif({
     }
   }
 
-  async function partager() {
-    const url = `${window.location.origin}/post/${post.id}`;
-    try {
-      if (navigator.share) await navigator.share({ title: "Diako", text: post.place ?? "", url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Lien copié");
-      }
-    } catch {
-      /* annulé */
-    }
+  function partager() {
+    interesse(1);
+    setPartage(true);
   }
 
   const texte = post.body ?? "";
@@ -85,12 +85,20 @@ export function PostImmersif({
   const nom = post.author.name || "Membre Diako";
 
   return (
-    <article className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
+    <article ref={racine} className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
+      {partage && (
+        <PartagerMenu
+          url={`${window.location.origin}/post/${post.id}`}
+          texte={post.body ?? post.place ?? ""}
+          onFermer={() => setPartage(false)}
+        />
+      )}
       {post.media?.length > 0 ? (
         <Carrousel
           images={post.media}
           alt={post.place ? `${post.place}, Madagascar` : nom}
           prioritaire={prioritaire}
+          videoAuto
         />
       ) : (
         /* ⚠ SEUL ENDROIT DE CE FICHIER OU LE JETON S'APPLIQUE : ici le fond est
@@ -157,7 +165,7 @@ export function PostImmersif({
         </span>
 
         <button
-          onClick={() => void partager()}
+          onClick={partager}
           aria-label="Partager"
           className="mt-2 grid h-12 w-12 place-items-center rounded-full text-white drop-shadow-lg"
         >

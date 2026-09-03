@@ -46,6 +46,11 @@ export function Carrousel({
   agrandissable = true,
   /** Le crédit de la photo, affiché en bas de la visionneuse. */
   credit = null,
+  /**
+   * ⭐ Une vidéo dans le fil plein écran démarre seule, muette, en boucle —
+   *   le geste d'Instagram. Dans une carte, elle attend qu'on la lance.
+   */
+  videoAuto = false,
 }: {
   images: Media[];
   alt?: string;
@@ -54,6 +59,7 @@ export function Carrousel({
   largeurAffichee?: string;
   agrandissable?: boolean;
   credit?: string | null;
+  videoAuto?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [ouverte, setOuverte] = useState<number | null>(null);
@@ -92,7 +98,30 @@ export function Carrousel({
              ⚠ `type="button"` : ce carrousel peut vivre dans un formulaire
              (l'aperçu de /publier), où un bouton sans type SOUMET la page. */
           <div key={m.url + i} className="h-full w-full shrink-0 snap-center">
-            {agrandissable ? (
+            {m.type === "video" ? (
+              /* ⚠ Pas de bouton autour d'une vidéo : ses commandes ont besoin du
+                 clic. `playsInline` : sans lui, iOS ouvre le lecteur plein
+                 écran et sort du fil. `preload="metadata"` : on ne télécharge
+                 pas une vidéo qu'on n'a pas lancée — c'est le forfait qui paie. */
+              <video
+                src={m.url}
+                poster={m.poster}
+                controls={!videoAuto}
+                autoPlay={videoAuto}
+                muted={videoAuto}
+                loop={videoAuto}
+                playsInline
+                preload={videoAuto ? "auto" : "metadata"}
+                width={m.w}
+                height={m.h}
+                className={cn(
+                  "h-full w-full bg-black",
+                  ajustement === "couvrir" ? "object-cover" : "object-contain"
+                )}
+              >
+                Votre navigateur ne lit pas cette vidéo.
+              </video>
+            ) : agrandissable ? (
               <button
                 type="button"
                 onClick={() => setOuverte(i)}

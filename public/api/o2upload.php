@@ -166,8 +166,16 @@ if (!preg_match('#^[A-Za-z0-9._/-]+$#', $filename)) {
   respond(400, ['error' => 'Invalid filename characters']);
 }
 // 2) Whitelist d'extension sur le dernier segment.
-if (!preg_match('/\.(jpe?g|png|webp)$/i', $filename)) {
-  respond(400, ['error' => 'Only jpg, jpeg, png, webp images are allowed']);
+//    ⭐ Depuis le 03/09/2026, une VIDÉO (mp4, webm, mov) est acceptée dans
+//      `posts` : le fil de Diako peut en porter une par publication. Elle est
+//      contrôlée par ses octets de tête comme les images (§3), jamais
+//      transformée, et plafonnée à 50 Mo.
+$estVideo = (bool) preg_match('/\.(mp4|webm|mov)$/i', $filename);
+if (!preg_match('/\.(jpe?g|png|webp|mp4|webm|mov)$/i', $filename)) {
+  respond(400, ['error' => 'Only jpg, jpeg, png, webp images or mp4, webm, mov videos are allowed']);
+}
+if ($estVideo && $folder !== 'posts') {
+  respond(400, ['error' => 'Videos are only accepted in posts']);
 }
 // 2bis) ANTI-IDOR : un utilisateur authentifié par JWT ne peut écrire QUE dans
 // SON dossier (le client envoie déjà filename = "<user_id>/<nom>.jpg" —
@@ -178,15 +186,27 @@ if ($jwtUserId !== null && strpos($filename, $jwtUserId . '/') !== 0) {
 }
 // 3) Le CONTENU doit vraiment être une image du bon type (magic bytes),
 //    pas seulement l'extension — empêche l'upload de .js/.html déguisés.
-$info = @getimagesizefromstring($binary);
-$allowedTypes = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP];
-if ($info === false || !in_array($info[2], $allowedTypes, true)) {
-  respond(400, ['error' => 'File content is not a valid image']);
-}
+if ($estVideo) {
+  // MP4/MOV : la boîte « ftyp » aux octets 4-7. WebM : l'en-tête EBML.
+  $ftyp = substr($binary, 4, 4) === 'ftyp';
+  $ebml = substr($binary, 0, 4) === "\x1A\x45\xDF\xA3";
+  if (!$ftyp && !$ebml) {
+    respond(400, ['error' => 'File content is not a valid video']);
+  }
+  if (strlen($binary) > 50 * 1024 * 1024) {
+    respond(400, ['error' => 'Video too large (max 50MB)']);
+  }
+} else {
+  $info = @getimagesizefromstring($binary);
+  $allowedTypes = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP];
+  if ($info === false || !in_array($info[2], $allowedTypes, true)) {
+    respond(400, ['error' => 'File content is not a valid image']);
+  }
 
-// Vérifier la taille (max 10MB)
-if (strlen($binary) > 10 * 1024 * 1024) {
-  respond(400, ['error' => 'File too large (max 10MB)']);
+  // Vérifier la taille (max 10MB)
+  if (strlen($binary) > 10 * 1024 * 1024) {
+    respond(400, ['error' => 'File too large (max 10MB)']);
+  }
 }
 
 // ── Écriture du fichier ──

@@ -2,7 +2,7 @@
 
 Mis à jour le 01/09/2026.
 
-## ⏳ Nettoyer le fil et le calendrier — UNE commande, à lancer depuis le PC
+## ✅ Nettoyer le fil et le calendrier — FAIT le 03/09/2026 (179 récits masqués, 72 événements dépubliés, 35 sous-genres, 441 trouvailles requalifiées)
 
 Décision d'Andry du 03/09/2026 : le fil porte le vécu des voyageurs, le
 calendrier porte les événements malgaches qui ont un lieu, et ce qu'un

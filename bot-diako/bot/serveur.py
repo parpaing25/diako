@@ -237,6 +237,10 @@ def lancer_prospection_sources(entree: RequetesEntree | None = None):
     requetes = (entree.requetes if entree and entree.requetes else None)
 
     def travail():
+        # Un « Arrêter » antérieur laisse le drapeau levé jusqu'à la collecte
+        # suivante ; depuis que la prospection l'écoute, on repart propre.
+        collecteur.stop.clear()
+
         def progression(fait, total, requete):
             tache["detail"] = f"{fait}/{total} · {requete}"
         r = collecteur.prospecter_sources(requetes, rappel=progression)

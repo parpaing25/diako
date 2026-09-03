@@ -11,7 +11,7 @@ fil, avec les mêmes pauses. Ce qui change, c'est la profondeur, pas le rythme.
 from __future__ import annotations
 
 import threading
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from . import automate, base
 from .config import charger
@@ -179,6 +179,22 @@ class Planificateur:
         coûte le même temps qu'une bonne.
         """
         if not self.lancer_tache or not automate.prospection_sources_due(config):
+            return False
+
+        # 🔴 RÈGLE DU 03/09/2026 : cette recherche ouvre Chromium, exactement
+        #   comme la tournée — donc même garde. Rien n'est noté : elle reste
+        #   due et partira d'elle-même quand la session s'éteindra. Dite une
+        #   fois par jour, pas à chaque tour d'horloge.
+        from . import session_claude
+        session = session_claude.active()
+        if session:
+            jour = date.today().isoformat()
+            if getattr(self, "_prospection_suspendue", None) != jour:
+                self._prospection_suspendue = jour
+                base.logguer(
+                    f"Recherche automatique de sources reportée — {session} "
+                    "(règle du 03/09). Elle partira quand la session s'éteindra.",
+                    "info")
             return False
 
         from . import collecteur as col

@@ -449,11 +449,17 @@ def _categorie(bloc: str) -> str:
 
 # -- Parcours ---------------------------------------------------------------
 def prospecter(page, requetes: list[str] | None = None, genres=("groupe", "page"),
-               par_requete: int = 25, rappel=None, config: dict | None = None) -> list[dict]:
+               par_requete: int = 25, rappel=None, config: dict | None = None,
+               arreter=None) -> list[dict]:
     """Cherche des candidats. `page` est un onglet Playwright déjà connecté.
 
     Les pauses ne sont pas de la décoration : une recherche toutes les deux
     secondes ressemble à un robot, et c'est le compte d'Andry qui en pâtirait.
+
+    `arreter` : fonction sans argument qui dit si l'ordre d'arrêt est donné
+    (le `stop` du collecteur). Avant le 03/09/2026, « Arrêter » ne coupait que
+    la tournée : une prospection déroulait ses recherches Facebook jusqu'au
+    bout. Ce qui a été trouvé est rendu.
     """
     cfg = config or charger()
     requetes = requetes or cfg.get("prospection_requetes") or REQUETES_DEFAUT
@@ -470,6 +476,12 @@ def prospecter(page, requetes: list[str] | None = None, genres=("groupe", "page"
 
     for requete in requetes:
         for genre in genres:
+            if arreter and arreter():
+                base.logguer(
+                    "Prospection de sources interrompue à la demande — "
+                    f"{len(trouves)} candidat(s) déjà trouvé(s) gardé(s).", "avert",
+                )
+                return sorted(trouves.values(), key=lambda c: -c["note_brute"])
             fait += 1
             if rappel:
                 rappel(fait, total, requete)

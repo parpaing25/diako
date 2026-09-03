@@ -2233,7 +2233,8 @@ class Collecteur:
                     page = ctx.pages[0] if ctx.pages else ctx.new_page()
                     try:
                         candidats = prospection.prospecter(
-                            page, requetes=requetes, rappel=rappel, config=cfg
+                            page, requetes=requetes, rappel=rappel, config=cfg,
+                            arreter=self.stop.is_set,   # « Arrêter » la coupe aussi
                         )
                     finally:
                         with contextlib.suppress(Exception):

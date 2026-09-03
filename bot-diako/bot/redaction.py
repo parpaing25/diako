@@ -287,9 +287,18 @@ def source_pour_base(t: dict) -> str:
     return " · ".join(morceaux)[:400]
 
 
+# ⚠ « J'AIME » N'EST PAS TOUJOURS UN BOUTON. Cette expression retirait la LIGNE
+#   ENTIÈRE dès qu'elle commençait par « j'aime » : « J'aime beaucoup ce petit
+#   lodge, on y a dormi deux nuits. » disparaissait en entier. Le chrome de
+#   Facebook (« J'aime · Commenter · Partager ») est COURT ; la phrase d'un
+#   voyageur ne l'est pas. Les appels au partage, eux, gardent leur `.*$` :
+#   « Abonnez-vous à notre page pour plus d'offres » est publicitaire quelle
+#   que soit sa longueur.
 MOTS_RESEAU = re.compile(
-    r"^\s*(?:#\w+\s*)+$|^\s*(?:j'aime|like|partagez?|abonnez[- ]vous|suivez[- ]nous|"
-    r"taguez|tag |commentez|mp |dm |inbox)\b.*$",
+    r"^\s*(?:#\w+\s*)+$"
+    r"|^\s*(?:partagez?|abonnez[- ]vous|suivez[- ]nous|taguez|tag |commentez|"
+    r"mp |dm |inbox)\b.*$"
+    r"|^\s*(?:j['\u2019]aime|like)\b[^\n]{0,40}$",
     re.I | re.M,
 )
 

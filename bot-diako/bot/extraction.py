@@ -1495,9 +1495,9 @@ BRUIT_INLINE = re.compile(
     r"|contenu ia"
     r"|voir (?:moins|plus)\s*(?:\u2026|\.{2,3})?"
     r"|\u00b7\s*suivre\b"
-    r"|\u00e9crivez un commentaire public\s*(?:\u2026|\.{2,3})?"
-    r"|ecrivez un commentaire public\s*(?:\u2026|\.{2,3})?"
+    r"|[\u00e9e]crivez un commentaire(?: public)?\s*(?:\u2026|\.{2,3})*"
     r"|tous les commentaires"
+    r"|\d+\s*(?:an|ans|mois|sem|j|h|min)\s+j['\u2019]aime\b"
     r"|\u00b7\s*audio d[\u2019']origine"
     r"|afficher la traduction)"
 )

@@ -234,3 +234,22 @@ def test_un_bateau_vendu_n_est_pas_du_tourisme():
     texte = "Misy Bateaux A. VENDRE NOSY BE A CRAT\u00c8RE Bateau de p\u00eache mbola tsara mp prix"
     assert extraction.est_vente_d_objets(texte)
     assert _classer(texte) == "rien"
+
+
+def test_un_vrai_j_aime_de_voyageur_n_est_pas_un_bouton():
+    """MOTS_RESEAU retirait la LIGNE ENTIÈRE dès qu'elle commençait par « j'aime »."""
+    from bot import redaction
+    texte = "J'aime beaucoup ce petit lodge, on y a dormi deux nuits."
+    assert redaction.nettoyer(texte) == texte
+
+
+def test_le_bouton_j_aime_de_facebook_part():
+    from bot import redaction
+    assert redaction.nettoyer("J'aime \u00b7 Commenter \u00b7 Partager") == ""
+
+
+def test_ecrivez_un_commentaire_sans_le_mot_public():
+    """32 récits en portaient encore : le filtre exigeait « public »."""
+    from bot import redaction
+    texte = "Madiro H\u00f4tel - Nosy Be \u00b7 4 \u00c9crivez un commentaire\u2026\u2026"
+    assert "commentaire" not in redaction.nettoyer(texte)

@@ -57,7 +57,7 @@ rejoué à blanc : **36 publications en ligne** à masquer —
 Lancé le 03/09 sur autorisation d'Andry : **41 récits masqués**, 72 trouvailles
 requalifiées. Il restait 213 récits visibles, contre 418 avant les deux passes.
 
-## ⏳ Le chrome de Facebook dans les textes déjà publiés — 209 récits, UNE commande
+## ⏳ Le chrome de Facebook — 168 faits le 03/09, 41 restent (même commande)
 
 Mesuré le 03/09/2026 sur les récits en ligne : **106 des 213 visibles** (et 103
 masqués, 209 en tout) portent dans leur corps des morceaux de l'interface de
@@ -88,6 +88,20 @@ SQL par le connecteur, SQL par le bot, relance de l'outil). Depuis
 python outils/nettoyer_textes.py            # à blanc : 209 récits, 1 écarté
 python outils/nettoyer_textes.py --ecrire
 ```
+
+**Premier passage lancé par Andry le 03/09** : la provenance en double a
+disparu (0 cas), et le bruit est tombé de 106 à 32 récits visibles. Les 32
+restants portaient tous « Écrivez un commentaire…… » **sans** le mot
+« public », que le filtre exigeait ; s'y ajoutait le chrome des réactions
+(« 3 ans J'aime », le compteur « · 4 »). Filtre élargi → **41 récits à
+reprendre**, même commande.
+
+En écrivant le test de ce filtre, un bug ANTÉRIEUR est apparu : `MOTS_RESEAU`
+retirait la LIGNE ENTIÈRE dès qu'elle commençait par « j'aime », si bien que
+« J'aime beaucoup ce petit lodge, on y a dormi deux nuits. » disparaissait en
+entier. Corrigé (le chrome est court, la phrase d'un voyageur ne l'est pas).
+Une seule trouvaille était concernée, et c'était un vrai appel au like en
+allemand : aucun récit n'a été perdu.
 
 Garde-fous : jamais un texte vidé, jamais amputé de plus de 40 % — le seul cas
 écarté est une fiche dont l'auteur s'appelle littéralement « Indicateur de

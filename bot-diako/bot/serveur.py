@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import threading
 import webbrowser
+from datetime import date
 from pathlib import Path
 
 import uvicorn
@@ -402,7 +403,20 @@ def trier_la_selection(entree: ChoixTriEntree):
                 refuses.append({"id": aid, "titre": a.get("titre") or "",
                                 "manques": manques})
                 continue
-        base.modifier(aid, {"statut": nouveau})
+        # 🔴 UN REJET DIT TOUJOURS POURQUOI, ET QUAND. Sans cette note, la
+        #    trouvaille tombe dans un silence dont personne ne revient : au
+        #    04/09/2026, 1 380 des 1 420 rejets de `data/bot.db` n'avaient
+        #    aucun motif — dont 318 notés 51/100 ou plus, donc écartés malgré
+        #    une bonne note, sans qu'on sache par qui ni pour quelle raison.
+        #    Un rejet muet ne s'examine pas, ne se conteste pas, ne s'améliore
+        #    pas ; il fait seulement croire que le bot travaille mal.
+        champs = {"statut": nouveau}
+        if not (base.trouvaille(aid) or {}).get("note"):
+            champs["note"] = (
+                ("Écartée à la main" if nouveau == "rejetee" else "Validée à la main")
+                + f" le {date.today().strftime('%d/%m/%Y')}, depuis la file de tri."
+            )
+        base.modifier(aid, champs)
         faits += 1
 
     base.logguer(

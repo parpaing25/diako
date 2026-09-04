@@ -928,6 +928,30 @@ def _publier_etablissement(t: dict, cfg: dict, rappel) -> dict:
         )
 
     if nouvelle:
+        # 🔴 LA FICHE ENTRE AU RÉFÉRENTIEL TOUT DE SUITE. Sans cette ligne, le
+        #    cache local ne la connaît qu'au prochain rechargement, douze heures
+        #    plus tard : la publication suivante du même établissement ne la
+        #    trouve pas et en crée une deuxième. Mesuré le 04/09/2026 sur les
+        #    334 fiches écrites depuis le 16/08 — 250 noms distincts seulement,
+        #    « Hotel Restaurant Dera » 25 fois, « Hôtel de la Mer » 17 fois.
+        bdd.ajouter_au_referentiel("ref_pages", {
+            "id": page_id,
+            "nom": t.get("nom_etab") or "",
+            "jeu": diako.jeu(t.get("nom_etab") or ""),
+            "slug": slug,
+            # Même écriture que le chargement en masse (`p.categories::text`),
+            # pour que le cache ne porte pas deux formats : « {hotel,restaurant} ».
+            # Les huit catégories admises sont des identifiants sans virgule ni
+            # espace, la jointure simple suffit.
+            "categories": "{" + ",".join(t.get("categories") or []) + "}",
+            "lieu_id": t.get("lieu_id"),
+            "lieu_nom": t.get("lieu_nom"),
+            "telephone": t.get("telephone"),
+            "cover_url": medias[0]["url"] if medias else None,
+            "site_web": t.get("site_web"),
+            "nb_carte": len(lignes),
+            "nb_chambre": len(chambres),
+        })
         lien = f"{SITE}/pro/{slug}"
     else:
         lignes_slug = diako.executer_sql(

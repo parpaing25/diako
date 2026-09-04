@@ -1429,6 +1429,33 @@ def remplacer_referentiel(table: str, lignes: list[dict]) -> None:
         )
 
 
+def ajouter_au_referentiel(table: str, ligne: dict) -> None:
+    """Ajoute UNE fiche au cache, sans attendre le rechargement de douze heures.
+
+    🔴 POURQUOI CETTE FONCTION EXISTE. Le cache ne se remplissait qu'en bloc,
+       toutes les douze heures. Une fiche que le bot venait de créer n'y entrait
+       donc pas : la publication suivante du même établissement ne la trouvait
+       pas, et en créait une deuxième, puis une troisième. Mesuré le 04/09/2026
+       sur les 334 fiches écrites depuis le 16/08 : 250 noms distincts
+       seulement — « Hotel Restaurant Dera » 25 fois, « Hôtel de la Mer » 17.
+
+    Le cache n'est pas la vérité, la base l'est ; mais c'est lui que le
+    rapprochement interroge. Une fiche qui existe et n'y figure pas est, pour
+    le bot, une fiche qui n'existe pas.
+    """
+    if table not in ("ref_pages", "ref_lieux", "ref_plats", "ref_sites"):
+        raise ValueError(table)
+    if not ligne.get("id"):
+        return
+    colonnes = list(ligne.keys())
+    trous = ", ".join("?" for _ in colonnes)
+    with _verrou, connexion() as cx:
+        cx.execute(
+            f"INSERT OR REPLACE INTO {table} ({', '.join(colonnes)}) VALUES ({trous})",
+            tuple(ligne[c] for c in colonnes),
+        )
+
+
 def referentiel(table: str) -> list[dict]:
     with _verrou, connexion() as cx:
         return [dict(l) for l in cx.execute(f"SELECT * FROM {table}").fetchall()]

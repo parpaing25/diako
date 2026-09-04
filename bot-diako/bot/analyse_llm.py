@@ -662,8 +662,36 @@ def lire_carte(chemins: list[Path], cfg: dict) -> dict:
     return _appeler(SYSTEME_CARTE, contenu_anthropic, contenu_passerelle, cfg)
 
 
+# ── Ce qui n'est pas un plat ────────────────────────────────────────────────
+# Un mot qui étiquette un prix sur une affiche, pris pour le nom du plat qu'il
+# annonce. Mesuré le 04/09/2026 : quatre lignes de carte de Diako s'appellent
+# « Prix », dont une à 400 000 Ar sur la fiche « Tragno afondro ».
+ETIQUETTES_DE_PRIX = {
+    "prix", "tarif", "tarifs", "prix unitaire", "montant", "total", "pack",
+    "adult rate", "child rate", "journee", "journée", "demi journee",
+    "demi-journée", "forfait", "menu", "offre", "promo",
+}
+
+# 🔴 LE PLAFOND D'UN PLAT, MESURÉ ET NON SUPPOSÉ. Sur les 72 lignes de carte
+#    tarifées de Diako au 04/09/2026 : médiane 25 000 Ar, et le plus cher plat
+#    RÉEL est un « Grand Buffet Complet » à 80 000 Ar. Tout ce qui dépassait
+#    était une erreur de lecture — « frites » à 250 000 Ar chez Airtchiry Mada
+#    Tech, « Adult rate » à 300 000 Ar (le forfait journée d'un hôtel-spa, pas
+#    une assiette). L'ancien plafond de 500 000 Ar laissait tout passer, et la
+#    base promouvait ensuite ce montant en prix d'appel de la fiche : le site
+#    affichait « Vanila Hotel & Spa — à partir de 300 000 Ar le plat ».
+#    120 000 Ar laisse la marge d'un banquet au-dessus du maximum observé.
+PRIX_PLAT_MAX = 120_000
+PRIX_PLAT_MIN = 500
+
+
 def plats_depuis_carte(lecture: dict) -> list[dict]:
-    """Aplatit la transcription d'une carte en lignes prêtes pour la base."""
+    """Aplatit la transcription d'une carte en lignes prêtes pour la base.
+
+    Un montant hors des bornes n'emporte pas le plat : le nom reste, le prix
+    tombe. Le prix ne voyage jamais seul, et un plat sans prix vaut mieux qu'un
+    plat au prix faux.
+    """
     if not lecture.get("est_une_carte"):
         return []
     if (lecture.get("devise") or "Ar") != "Ar":
@@ -675,10 +703,14 @@ def plats_depuis_carte(lecture: dict) -> list[dict]:
             nom = (plat.get("nom") or "").strip()
             if not nom:
                 continue
+            # « Prix » n'est pas un plat : c'est l'étiquette du montant voisin.
+            if nom.lower().strip(" :.-") in ETIQUETTES_DE_PRIX:
+                continue
             prix = plat.get("prix_ar")
-            prix = int(prix) if isinstance(prix, (int, float)) and 500 <= prix <= 500_000 else None
+            plausible = (isinstance(prix, (int, float))
+                         and PRIX_PLAT_MIN <= prix <= PRIX_PLAT_MAX)
             lignes.append({
-                "nom": nom[:120], "prix_ar": prix,
+                "nom": nom[:120], "prix_ar": int(prix) if plausible else None,
                 "description": (plat.get("description") or "").strip()[:280] or None,
                 "unite": "portion", "section": nom_section,
             })

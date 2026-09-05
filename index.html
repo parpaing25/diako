@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
+    <!-- ⚠ CONNEXION ANTICIPÉE À SUPABASE. Mesuré le 05/09/2026 : la première
+         requête de données partait à 1,5 s et payait DNS + TCP + TLS sur un
+         domaine encore inconnu du navigateur. `crossorigin` est obligatoire :
+         les appels de supabase-js sont en mode CORS, une connexion ouverte sans
+         lui ne serait pas réutilisée. -->
+    <link rel="preconnect" href="https://eifrwecaszzqrdwjjjbu.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://eifrwecaszzqrdwjjjbu.supabase.co" />
+
     <!-- Les deux thèmes sont supportés : sans color-scheme, le navigateur peint
          les zones natives en clair et l'écran clignote sur un appareil en sombre. -->
     <meta name="color-scheme" content="light dark" />

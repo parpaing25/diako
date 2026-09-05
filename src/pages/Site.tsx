@@ -117,6 +117,8 @@ export default function Site() {
 
   useSEO({
     titre: s ? `${s.name} — tarifs, guide et fady` : "Site à visiter",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absent",
     description:
       s?.summary ??
       (s ? `${s.name} : entrée résident et non-résident, guide, meilleurs mois et fady.` : undefined),

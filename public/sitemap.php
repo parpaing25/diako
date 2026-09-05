@@ -75,7 +75,7 @@ $jour = fn(?string $iso) => $iso ? substr($iso, 0, 10) : date('Y-m-d');
 
 /* ── Pages fixes ─────────────────────────────────────────────────────────── */
 $fixes = [
-    ['/',                 '1.0', 'daily',   '2026-08-01'],
+    ['/',                 '1.0', 'daily',   date('Y-m-d')],   // le fil change chaque jour
     /* /explorer est devenu la vitrine des 61 lieux emblematiques (01/09) ;
        la descente regions › villes vit desormais sur /villes. */
     ['/explorer',         '0.9', 'weekly',  '2026-09-01'],
@@ -95,7 +95,7 @@ $fixes = [
        autant de portes d'entree sur « ou manger du X ». */
     ['/plats',            '0.9', 'weekly',  '2026-08-15'],
 
-    ['/recherche',        '0.8', 'weekly',  '2026-08-01'],
+    ['/recherche',        '0.5', 'monthly', '2026-08-01'],   // page nue ; les résultats sont noindex
     ['/carte',            '0.7', 'weekly',  '2026-08-15'],
 
     /* La page des loueurs : branchée sur la grille vehicle_offers (0114),
@@ -105,15 +105,17 @@ $fixes = [
     /* ⚠ CES QUATRE-LA SONT VIDES AUJOURD'HUI et gardent une priorite BASSE.
          Les declarer a 0.8 apprendrait a Google que nos priorites ne veulent
          rien dire. Elles remonteront quand elles auront du contenu. */
-    ['/circuits',         '0.4', 'monthly', '2026-08-15'],
+    // ['/circuits' ...]  ← à remettre quand nav.ts passe Circuits en pret: true (05/09/2026 : vide, « bientôt »)
     ['/sites',            '0.4', 'monthly', '2026-08-15'],
     ['/evenements',       '0.4', 'monthly', '2026-08-15'],
-    ['/guides',           '0.4', 'monthly', '2026-08-15'],
+    // ['/guides' ...]    ← idem : 0 guide en base le 05/09/2026
 
-    ['/pro',              '0.6', 'monthly', '2026-08-01'],
+    // ['/pro' ...]       ← écran privé (mur de connexion) ; la vitrine pro est /aide#pro
     ['/mentions',         '0.2', 'yearly',  '2026-07-31'],
     ['/cgu',              '0.2', 'yearly',  '2026-07-31'],
-    ['/confidentialite',  '0.2', 'yearly',  '2026-07-31'],
+    ['/confidentialite',  '0.2', 'yearly',  '2026-09-05'],
+    ['/a-propos',         '0.6', 'monthly', '2026-09-05'],
+    ['/aide',             '0.6', 'monthly', '2026-09-05'],
 ];
 
 /* ── Données réelles ─────────────────────────────────────────────────────── */

@@ -93,6 +93,8 @@ export default function Post() {
 
   useSEO({
     titre: post?.place ? `Récit à ${post.place}` : "Récit de voyage",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absent",
     description: post?.body?.slice(0, 180) ?? undefined,
     image: post?.media?.[0]?.url ?? undefined,
     url: id ? `/post/${id}` : undefined,

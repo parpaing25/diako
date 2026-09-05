@@ -57,7 +57,7 @@ const LIBELLE_UNITE: Record<Unite, string> = {
   part: "la part",
   verre: "le verre",
   trajet: "le trajet",
-  entree: "l\'entrée",
+  entree: "l'entrée",
 };
 
 /** Le jour où les tarifs cessent d'être crédibles. TDR §8.2. */

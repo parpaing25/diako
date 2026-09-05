@@ -33,10 +33,25 @@ export default function Index() {
     void chercherPages({ limite: 6 }).then(setEtabs).catch(() => undefined);
   }, [mobile]);
 
-  if (mobile) return <Feed />;
+  /* Un h1 par page : l'accueil n'en avait aucun (audit du 05/09/2026). Visuellement
+     absent (`sr-only`) — le fil occupe tout l'écran sur téléphone et le bandeau
+     porte déjà le nom sur ordinateur — mais présent pour Google et les lecteurs
+     d'écran. */
+  const h1 = (
+    <h1 className="sr-only">Diako — où dormir, où manger et avec qui partir à Madagascar</h1>
+  );
+
+  if (mobile)
+    return (
+      <>
+        {h1}
+        <Feed />
+      </>
+    );
 
   return (
     <div className="pb-6">
+      {h1}
       <DiakoHero categorie={cat} onCategorie={setCat} />
 
       {/* ⚠ PLUS DE `dk-colonne` ICI. L'accueil était bridé à 620 px : c'est de

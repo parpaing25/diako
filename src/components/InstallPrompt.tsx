@@ -44,6 +44,17 @@ export function InstallPrompt() {
 
   useEffect(() => {
     if (refusRecent()) return;
+    /* ⚠ JAMAIS À LA PREMIÈRE VISITE, ni sur l'écran de connexion. Capture du
+       05/09/2026 à 390 px : l'invite couvrait le texte du premier récit avant
+       même que le visiteur sache ce qu'est Diako. On compte les visites ;
+       l'invite attend la deuxième. */
+    try {
+      const n = Number(localStorage.getItem("dk-visites") ?? 0) + 1;
+      localStorage.setItem("dk-visites", String(n));
+      if (n < 2 || window.location.pathname.startsWith("/auth")) return;
+    } catch {
+      return;
+    }
     // Déjà installée : le navigateur l'ouvre en mode autonome.
     if (window.matchMedia?.("(display-mode: standalone)").matches) return;
 

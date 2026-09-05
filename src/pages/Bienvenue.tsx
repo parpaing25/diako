@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { METIERS_PRO } from "@/lib/metiersPro";
 
 /**
@@ -26,7 +26,7 @@ export default function Bienvenue() {
   //   codé en dur survit à la disparition du métier qu'il désigne.
   const [metier, setMetier] = useState<string>(METIERS_PRO[0].cle);
   const [busy, setBusy] = useState(false);
-  useDocumentTitle("Bienvenue");
+  useSEO({ titre: "Bienvenue", noindex: true });
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });

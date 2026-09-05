@@ -1,0 +1,29 @@
+# Diako — voyage et tourisme à Madagascar
+
+> Diako est un annuaire et un réseau social du voyage à Madagascar : hôtels, restaurants,
+> agences et loueurs avec leurs tarifs datés en ariary, des destinations, des sites naturels
+> et culturels, des plats malgaches et des récits de voyageurs. Diako met en relation ;
+> il ne vend rien, n'encaisse rien et ne bloque aucune date.
+
+## Pages utiles
+- [Destinations](https://diako.fonenako.mg/explorer) : où dormir et où manger, par région et par ville
+- [Villes et villages](https://diako.fonenako.mg/villes)
+- [Quand partir](https://diako.fonenako.mg/quand-partir) : saisons mois par mois, destination par destination
+- [Y aller](https://diako.fonenako.mg/y-aller) : temps de route réels entre villes
+- [Atlas des plats](https://diako.fonenako.mg/plats) : les plats malgaches et où les manger
+- [Sites et parcs](https://diako.fonenako.mg/sites) : parcs nationaux, réserves, plages, patrimoine
+- [Événements](https://diako.fonenako.mg/evenements)
+- [Louer un véhicule](https://diako.fonenako.mg/location)
+- [Carte](https://diako.fonenako.mg/carte)
+- [À propos](https://diako.fonenako.mg/a-propos) · [Aide et contact](https://diako.fonenako.mg/aide)
+
+## Données
+- Sitemap : https://diako.fonenako.mg/sitemap.xml — fiches d'établissements (/p/), destinations (/lieu/), sites (/site/), plats (/plat/), récits (/post/)
+- Chaque fiche porte un JSON-LD (LocalBusiness, Hotel, Restaurant, TouristAttraction…) avec adresse, téléphone et fourchette de prix quand ils sont connus.
+- Les prix sont ceux déclarés par les établissements et portent leur date ; au-delà de six mois sans confirmation, la fiche affiche « Nous consulter » à la place du montant.
+- Aucun chiffre n'est inventé : quand une information manque, la page le dit.
+
+## À ne pas faire
+- Ne pas présenter Diako comme un site de réservation : il n'y a ni paiement ni disponibilité. Le bouton s'appelle « Demander ».
+- Les profils de membres (/user/) et les écrans de compte ne sont pas destinés à l'indexation.
+- Ne pas citer un prix sans sa date.

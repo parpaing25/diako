@@ -10,7 +10,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
@@ -92,7 +92,7 @@ async function imageDAttente(fichier: File): Promise<{ blob: Blob; w: number; h:
  * génère une vignette WebP à côté de l'original.
  */
 export default function Publier() {
-  useDocumentTitle("Publier");
+  useSEO({ titre: "Publier", noindex: true });
   const navigate = useNavigate();
   const { user } = useAuth();
 

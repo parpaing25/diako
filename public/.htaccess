@@ -10,12 +10,21 @@
 # ── Sécurité ────────────────────────────────────────────────────────────────
 Options -Indexes
 
+# 403 / 500 / 503 : une page neutre à la charte (la page hors-ligne), pas la
+# page Apache brute d'o2switch.
+ErrorDocument 403 /offline.html
+ErrorDocument 500 /offline.html
+ErrorDocument 503 /offline.html
+
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()"
-  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  # `preload` : la directive seule est sans effet tant que le domaine n'est pas
+  # SOUMIS à hstspreload.org — soumission = décision d'Andry (elle engage tous
+  # les sous-domaines de fonenako.mg, longtemps).
+  Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 
   # ── Content-Security-Policy ───────────────────────────────────────────
   # 🔴 `img-src` A CASSÉ TOUTES LES PHOTOS DE PROFIL GOOGLE. La connexion
@@ -63,6 +72,12 @@ Options -Indexes
 
   RewriteCond %{HTTPS} !=on
   RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+  # Un seul hôte. `www.diako.fonenako.mg` répondait 200 avec le même contenu
+  # (vérifié le 05/09/2026) : contenu dupliqué pour Google, HSTS et session par
+  # hôte. Le certificat couvre les deux, la redirection est sûre.
+  RewriteCond %{HTTP_HOST} ^www\.diako\.fonenako\.mg$ [NC]
+  RewriteRule ^(.*)$ https://diako.fonenako.mg/$1 [R=301,L]
 
   # Le sitemap est GENERE depuis la base : /sitemap.xml sert sitemap.php.
   # Le fichier statique ne listait que quatre URL — ni les 178 destinations,

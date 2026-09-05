@@ -32,8 +32,9 @@ function removeShell() {
 const CLE_RECHARGE = "dk-recharge-module";
 
 function surModuleAbsent(e: Event) {
-  e.preventDefault();
   try {
+    // 2e échec de la session : on laisse l'erreur remonter — c'est
+    // l'ErrorBoundary qui prend la main, avec quelque chose à cliquer.
     if (sessionStorage.getItem(CLE_RECHARGE)) return;
     sessionStorage.setItem(CLE_RECHARGE, "1");
   } catch {
@@ -41,6 +42,15 @@ function surModuleAbsent(e: Event) {
     // une boucle qu'on ne saurait plus arrêter.
     return;
   }
+  /* 🔴 `preventDefault` SEULEMENT quand on recharge. Pour Vite, neutraliser
+     `vite:preloadError` veut dire « ne lève pas l'erreur » : l'`import()`
+     résout alors `undefined`, et React.lazy plantait en lisant `.default` —
+     « Cannot read properties of undefined (reading 'default') », vu cinq fois
+     en deux minutes chez un visiteur Android le 05/09/2026 (journal_erreurs
+     #10-14), à chaque morceau refusé par le limiteur o2switch APRÈS le seul
+     rechargement autorisé. Sans neutralisation l'erreur est franche, et
+     `chargerPage` (src/lib/chargerPage.ts) a déjà réessayé une fois avant. */
+  e.preventDefault();
   window.location.reload();
 }
 

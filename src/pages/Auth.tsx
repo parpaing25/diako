@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { flagActif } from "@/lib/flags";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 
 type Mode = "connexion" | "inscription";
 
@@ -49,7 +49,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleOuvert, setGoogleOuvert] = useState(false);
-  useDocumentTitle(mode === "connexion" ? "Connexion" : "Inscription");
+  useSEO({ titre: mode === "connexion" ? "Connexion" : "Inscription", noindex: true });
 
   useEffect(() => {
     if (!loading && user) navigate("/", { replace: true });

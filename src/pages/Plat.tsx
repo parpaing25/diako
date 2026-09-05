@@ -100,6 +100,8 @@ export default function Plat() {
 
   useSEO({
     titre: f ? `${f.plat.name_fr} — où en manger à Madagascar` : "Plat",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absente",
     description: f
       ? f.plat.description ??
         `${f.plat.name_fr} : où en manger à Madagascar, avec le prix chez chacun.`

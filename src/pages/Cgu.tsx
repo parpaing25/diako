@@ -1,8 +1,8 @@
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { PageLegale } from "@/components/PageLegale";
 
 export default function Cgu() {
-  useDocumentTitle("Conditions d'utilisation");
+  useSEO({ titre: "Conditions d'utilisation", description: "Les règles d'usage de Diako : publier un récit, revendiquer une fiche, signaler un contenu.", url: "/cgu" });
   return (
     <PageLegale titre="Conditions d'utilisation" majLe="31 juillet 2026">
       

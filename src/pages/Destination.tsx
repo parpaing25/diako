@@ -130,6 +130,8 @@ export default function Destination() {
 
   useSEO({
     titre: f ? `${f.lieu.name_fr} — où dormir et où manger` : "Destination",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absente",
     description: f
       ? f.lieu.summary ??
         `${f.lieu.name_fr}${f.lieu.region ? ` (${f.lieu.region})` : ""} : ${f.nb_ou_dormir} hébergements, ${f.nb_ou_manger} tables${f.prix_des ? `, à partir de ${ariary(f.prix_des)}` : ""}.`

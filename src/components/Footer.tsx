@@ -44,13 +44,18 @@ export function Footer() {
         <div>
           <h2 className="text-sm font-semibold">Contact et informations</h2>
           <ul className="mt-3 space-y-2 text-sm">
+            {/* ⚠ Plus de mailto vers la boîte de FONENAKO : le contact de Diako
+                passe par /aide (dix questions + l'adresse contact.diako@gmail.com).
+                Audit de lancement du 05/09/2026, constat T8. */}
             <li>
-              <a
-                href="mailto:contact.fonenako@gmail.com"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Nous écrire
-              </a>
+              <Link to="/aide#contact" className="text-muted-foreground hover:text-foreground">
+                Aide et contact
+              </Link>
+            </li>
+            <li>
+              <Link to="/a-propos" className="text-muted-foreground hover:text-foreground">
+                À propos de Diako
+              </Link>
             </li>
             <li>
               <Link to="/mentions" className="text-muted-foreground hover:text-foreground">

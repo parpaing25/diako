@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Search, SlidersHorizontal, Star, UtensilsCrossed, X } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { SearchBar } from "@/components/SearchBar";
 import { FicheCard } from "@/components/FicheCard";
@@ -123,13 +123,18 @@ export default function Recherche() {
     return { sud: n[0], ouest: n[1], nord: n[2], est: n[3] };
   }, [params]);
 
-  useDocumentTitle(
-    q
+  /* ⚠ La page nue est indexable (canonique /recherche) ; un résultat ne l'est
+     pas — robots.txt interdit déjà `/recherche?`, `noindex` ferme l'indexation
+     des URL qui y arriveraient par un lien. Audit du 05/09/2026. */
+  useSEO({
+    titre: q
       ? `« ${q} »`
       : categorie
         ? (CATEGORIES.find((c) => c.code === categorie)?.pluriel ?? "Rechercher")
-        : "Rechercher"
-  );
+        : "Rechercher",
+    url: "/recherche",
+    noindex: Boolean(q || categorie),
+  });
 
   const [lieu, setLieu] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [plat, setPlat] = useState<{ id: string; slug: string; name_fr: string } | null>(null);

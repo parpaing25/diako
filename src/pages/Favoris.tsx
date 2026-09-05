@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bookmark, Heart, MapPin, Star, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { PostCard } from "@/components/PostCard";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { mesFavoris, type Post } from "@/lib/api";
@@ -31,7 +31,7 @@ type Onglet = "adresses" | "enregistres" | "aimes";
  *   que c'est ce qui sert à décider.
  */
 export default function Favoris() {
-  useDocumentTitle("Mon carnet");
+  useSEO({ titre: "Mon carnet", noindex: true });
   const { user, loading } = useAuth();
   const [onglet, setOnglet] = useState<Onglet>("adresses");
 

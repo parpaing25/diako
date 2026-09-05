@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, Check, Heart, MessageCircle, UserPlus } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { chargerNotifications, toutMarquerLu } from "@/lib/api";
 import type { Tables } from "@/integrations/supabase/types";
@@ -33,7 +33,7 @@ function destination(n: Notif): string {
 }
 
 export default function Notifications() {
-  useDocumentTitle("Notifications");
+  useSEO({ titre: "Notifications", noindex: true });
   const { user, loading: authLoading } = useAuth();
   const [liste, setListe] = useState<Notif[]>([]);
   const [chargement, setChargement] = useState(true);

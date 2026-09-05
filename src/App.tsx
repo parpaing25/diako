@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { chargerPage } from "@/lib/chargerPage";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
@@ -18,36 +19,38 @@ import { trackView } from "@/lib/pageviews";
 
 import Index from "./pages/Index";
 import { useRevealFilet } from "@/hooks/useReveal";
-const Auth = lazy(() => import("./pages/Auth"));
-const Bienvenue = lazy(() => import("./pages/Bienvenue"));
-const Compte = lazy(() => import("./pages/Compte"));
-const Explorer = lazy(() => import("./pages/Explorer"));
+const Auth = chargerPage(() => import("./pages/Auth"));
+const Bienvenue = chargerPage(() => import("./pages/Bienvenue"));
+const Compte = chargerPage(() => import("./pages/Compte"));
+const Explorer = chargerPage(() => import("./pages/Explorer"));
 /* ⚠ La descente régions › villes vivait sur /explorer sous le nom
      « Destinations » — un contresens nommé par le propriétaire. /explorer
      montre désormais les 61 lieux emblématiques ; la géographie habitée vit
      ici, et les anciennes adresses `?region=`/`?ville=` y sont redirigées. */
-const Villes = lazy(() => import("./pages/Villes"));
-const Recherche = lazy(() => import("./pages/Recherche"));
-const Publier = lazy(() => import("./pages/Publier"));
-const PagePro = lazy(() => import("./pages/PagePro"));
-const EspacePro = lazy(() => import("./pages/EspacePro"));
-const ProConsole = lazy(() => import("./pages/ProConsole"));
-const Parametres = lazy(() => import("./pages/Parametres"));
-const Favoris = lazy(() => import("./pages/Favoris"));
-const Carte = lazy(() => import("./pages/Carte"));
+const Villes = chargerPage(() => import("./pages/Villes"));
+const Recherche = chargerPage(() => import("./pages/Recherche"));
+const Publier = chargerPage(() => import("./pages/Publier"));
+const PagePro = chargerPage(() => import("./pages/PagePro"));
+const EspacePro = chargerPage(() => import("./pages/EspacePro"));
+const ProConsole = chargerPage(() => import("./pages/ProConsole"));
+const Parametres = chargerPage(() => import("./pages/Parametres"));
+const Favoris = chargerPage(() => import("./pages/Favoris"));
+const Carte = chargerPage(() => import("./pages/Carte"));
 /* ⚠ AUCUNE ENTRÉE DE NAVIGATION NE MÈNE ICI, ET C'EST VOULU. Cet écran répond
      « réservé » à 100 % des visiteurs sauf un : l'afficher dans le rail serait
      un lien qui ne mène nulle part pour tout le monde. On y va par l'adresse. */
-const Admin = lazy(() => import("./pages/Admin"));
-const Destination = lazy(() => import("./pages/Destination"));
-const Plat = lazy(() => import("./pages/Plat"));
-const Messages = lazy(() => import("./pages/Messages"));
-const Notifications = lazy(() => import("./pages/Notifications"));
-const Profil = lazy(() => import("./pages/Profil"));
-const Post = lazy(() => import("./pages/Post"));
-const Mentions = lazy(() => import("./pages/Mentions"));
-const Confidentialite = lazy(() => import("./pages/Confidentialite"));
-const Cgu = lazy(() => import("./pages/Cgu"));
+const Admin = chargerPage(() => import("./pages/Admin"));
+const Destination = chargerPage(() => import("./pages/Destination"));
+const Plat = chargerPage(() => import("./pages/Plat"));
+const Messages = chargerPage(() => import("./pages/Messages"));
+const Notifications = chargerPage(() => import("./pages/Notifications"));
+const Profil = chargerPage(() => import("./pages/Profil"));
+const Post = chargerPage(() => import("./pages/Post"));
+const Mentions = chargerPage(() => import("./pages/Mentions"));
+const APropos = chargerPage(() => import("./pages/APropos"));
+const Aide = chargerPage(() => import("./pages/Aide"));
+const Confidentialite = chargerPage(() => import("./pages/Confidentialite"));
+const Cgu = chargerPage(() => import("./pages/Cgu"));
 /* ═══ LES ECRANS DU DESIGN FINAL ════════════════════════════════════════
    ⚠ TOUS EN `lazy()`. Ce sont neuf routes de plus : chargees d'emblee, elles
      alourdiraient le paquet initial que tout le monde telecharge, y compris
@@ -55,21 +58,21 @@ const Cgu = lazy(() => import("./pages/Cgu"));
    ⚠ CHACUNE EST BRANCHEE SUR UNE VRAIE TABLE (migrations 0032/0033). La regle
      du projet interdit une entree de navigation vers un ecran mort : ce qu'on
      y ecrit se garde, meme si les listes sont vides aujourd'hui. */
-const Plats = lazy(() => import("./pages/Plats"));
-const Gouts = lazy(() => import("./pages/Gouts"));
-const Circuits = lazy(() => import("./pages/Circuits"));
-const Circuit = lazy(() => import("./pages/Circuit"));
-const Sites = lazy(() => import("./pages/Sites"));
+const Plats = chargerPage(() => import("./pages/Plats"));
+const Gouts = chargerPage(() => import("./pages/Gouts"));
+const Circuits = chargerPage(() => import("./pages/Circuits"));
+const Circuit = chargerPage(() => import("./pages/Circuit"));
+const Sites = chargerPage(() => import("./pages/Sites"));
 /* ⚠ Branchée sur la grille tarifaire des loueurs (vehicle_offers, 0114) :
      18 loueurs publiés — l'écran ouvre sur du réel, pas sur une promesse. */
-const Location = lazy(() => import("./pages/Location"));
-const Site = lazy(() => import("./pages/Site"));
-const Evenements = lazy(() => import("./pages/Evenements"));
-const Projet = lazy(() => import("./pages/Projet"));
-const Guides = lazy(() => import("./pages/Guides"));
-const QuandPartir = lazy(() => import("./pages/QuandPartir"));
-const YAller = lazy(() => import("./pages/YAller"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const Location = chargerPage(() => import("./pages/Location"));
+const Site = chargerPage(() => import("./pages/Site"));
+const Evenements = chargerPage(() => import("./pages/Evenements"));
+const Projet = chargerPage(() => import("./pages/Projet"));
+const Guides = chargerPage(() => import("./pages/Guides"));
+const QuandPartir = chargerPage(() => import("./pages/QuandPartir"));
+const YAller = chargerPage(() => import("./pages/YAller"));
+const NotFound = chargerPage(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -169,6 +172,8 @@ function Shell() {
       {/* Adresse propre d'une publication : partage et notifications en dependent. */}
       <Route path="/post/:id" element={<Post />} />
       <Route path="/mentions" element={<Mentions />} />
+      <Route path="/a-propos" element={<APropos />} />
+      <Route path="/aide" element={<Aide />} />
       <Route path="/confidentialite" element={<Confidentialite />} />
       <Route path="/cgu" element={<Cgu />} />
       <Route path="*" element={<NotFound />} />

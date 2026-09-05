@@ -149,6 +149,8 @@ export default function PagePro() {
   // l'accueil : sur ce marché, c'est le canal d'acquisition n°1.
   useSEO({
     titre: fiche ? `${fiche.name}${fiche.place ? ` — ${fiche.place.name}` : ""}` : "Établissement",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absente",
     description:
       fiche?.short_desc ??
       (fiche

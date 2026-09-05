@@ -15,6 +15,7 @@ Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
 Disallow: /parametres
+Disallow: /admin
 Disallow: /messages
 Disallow: /notifications
 # 🔴 LES PAGES DE MEMBRE NE S'INDEXENT PAS. Un profil porte ce qu'une personne
@@ -39,6 +40,7 @@ Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
 Disallow: /parametres
+Disallow: /admin
 Disallow: /messages
 Disallow: /notifications
 Disallow: /user/
@@ -50,6 +52,7 @@ Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
 Disallow: /parametres
+Disallow: /admin
 Disallow: /messages
 Disallow: /notifications
 Disallow: /user/
@@ -61,6 +64,7 @@ Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
 Disallow: /parametres
+Disallow: /admin
 Disallow: /messages
 Disallow: /notifications
 Disallow: /user/
@@ -72,6 +76,7 @@ Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
 Disallow: /parametres
+Disallow: /admin
 Disallow: /messages
 Disallow: /notifications
 Disallow: /user/
@@ -84,6 +89,7 @@ Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
 Disallow: /parametres
+Disallow: /admin
 Disallow: /messages
 Disallow: /notifications
 Disallow: /user/
@@ -94,6 +100,7 @@ Disallow: /compte
 Disallow: /auth
 Disallow: /bienvenue
 Disallow: /parametres
+Disallow: /admin
 Disallow: /messages
 Disallow: /notifications
 Disallow: /user/

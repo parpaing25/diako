@@ -52,3 +52,22 @@
 ## En une phrase
 
 Diako est prêt sur le fond et fragile sur la façade : une semaine de travail ciblé — hébergement, authentification, indexation, poids des images, pages de confiance, alertes — le fait passer de 72 à 86, et de NO-GO à GO.
+
+---
+
+## Journal d'exécution de la session d'audit (05/09/2026, après-midi)
+
+Ce qui a été **fait et vérifié** sur la branche `feat/bot-collecte-diako` (deux commits : `docs(audit)` et `fix(lancement)`) :
+
+| Étape | Résultat |
+|---|---|
+| Corrections appliquées | 36 fichiers modifiés, 4 créés (`chargerPage.ts`, `APropos.tsx`, `Aide.tsx`, `llms.txt`) — détail dans `03-corrections/README.md` |
+| `npm run typecheck` | 0 erreur |
+| `npm run lint` | **0 erreur** (12 avertissements `react-refresh` préexistants) — la CI redevient verte |
+| `npm test` | 72 tests, 5 fichiers, tous verts |
+| `npm run build` | `dist/assets/index-DMJprdwR.js`, 76 morceaux, 8 entrées précachées |
+| Contrôle local du build (Chrome piloté, 23 URL) | canonique propre sur `/mentions` `/cgu` `/confidentialite` `/recherche` ; `noindex` sur `/auth` `/compte` 404 `/recherche?q=` et les 7 écrans « introuvable » ; h1 sur `/` ; `/a-propos` et `/aide` rendues ; `/circuit/nosy-iranja-…` s'affiche (plus de RPC 400) ; `/quand-partir` combobox nommé « Destination » ; 0 débordement à 390 px |
+| Morceau JS bloqué (`Gouts-*.js`) | réessai, puis écran « Quelque chose s'est mal passé / Recharger » — **plus d'erreur `reading 'default'`** ; débloqué : la page revient |
+| **Déploiement** | ⏳ **refusé par le classificateur de la session** (écriture de production). À lancer par Andry : `bash ~/.deploy-sites/redeploy.sh diako && python scripts/verifier_deploiement.py` (le hash attendu en ligne est `index-DMJprdwR.js`), puis `curl -sI https://www.diako.fonenako.mg/` → 301, `curl -s https://diako.fonenako.mg/llms.txt \| head -2`. |
+
+**Ce qui n'est pas dans le code et attend un ordre** : configuration d'authentification (`python scripts/appliquer_config_auth.py` après complément 03-05 §1), captcha Turnstile, migrations 0120–0121, DMARC, limiteur o2switch / Cloudflare, fusion dans `main`.

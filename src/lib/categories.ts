@@ -94,7 +94,14 @@ export const CATEGORIES: Categorie[] = [
     icon: Mountain,
     color: "from-lime-600 to-green-700",
     quoi: "Parcs nationaux, réserves et sites naturels",
-    vers: "/sites?type=parc", // 122 parcs, plus 127 réserves
+    /* 🔴 PAS `type=parc`. Dans le référentiel des sites, `parc` porte les
+       squares urbains — « Jardin Fusilier Marin », parc Tsarasaotra : 122
+       fiches — tandis que `reserve` (133 fiches) porte l'Isalo,
+       l'Ankarafantsika et les parcs nationaux. Le piège est documenté dans
+       src/lib/sites.ts (LIBELLE_TYPE) : branchée sur `parc`, cette pastille
+       servait des jardins de quartier à qui cherchait un parc national,
+       sans qu'aucune erreur ne le signale. */
+    vers: "/sites?type=reserve", // 133 réserves et parcs nationaux
   },
   {
     key: "culture",
@@ -110,7 +117,11 @@ export const CATEGORIES: Categorie[] = [
     icon: Bus,
     color: "from-slate-500 to-slate-700",
     quoi: "Location de 4x4 et de véhicules avec chauffeur",
-    vers: "/recherche?cat=location_vehicule", // 18 fiches publiées
+    /* ⚠ Vers la page dédiée /location, pas vers la recherche brute : elle
+       ajoute les transporteurs en seconde section et résume les types de
+       véhicules de chaque loueur (grille vehicle_offers, migration 0114) —
+       ce que /recherche?cat=… ne sait pas faire. */
+    vers: "/location", // 18 loueurs publiés + 5 transporteurs
   },
 ];
 

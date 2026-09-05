@@ -36,11 +36,14 @@ import {
   ficheEstGardee,
   deposerAvis,
   ecrireALEtablissement,
+  LIBELLE_VEHICULE,
   recitsMentionnant,
   revendiquer,
   unite,
+  vehiculesDe,
   type Avis,
   type Fiche,
+  type OffreVehicule,
 } from "@/lib/etablissements";
 import { signaler } from "@/lib/api";
 import { Revendication } from "@/components/Revendication";
@@ -57,7 +60,7 @@ const PENSION: Record<string, string> = {
   all_in: "tout compris",
 };
 
-type Onglet = "chambres" | "carte" | "activites" | "circuits" | "avis" | "infos";
+type Onglet = "chambres" | "vehicules" | "carte" | "activites" | "circuits" | "avis" | "infos";
 
 /**
  * La fiche publique d'un établissement.
@@ -125,6 +128,8 @@ export default function PagePro() {
   const [envoi, setEnvoi] = useState(false);
   const [revendicationOuverte, setRevendicationOuverte] = useState(false);
   const [gardee, setGardee] = useState(false);
+  /** La grille du loueur (0114) — chargée à part, voir `charger()`. */
+  const [vehicules, setVehicules] = useState<OffreVehicule[]>([]);
 
   /**
    * ⚠ LE REPLI N'EST PAS L'ACCUEIL. Cette fiche est ce qui se partage le plus
@@ -144,6 +149,8 @@ export default function PagePro() {
   // l'accueil : sur ce marché, c'est le canal d'acquisition n°1.
   useSEO({
     titre: fiche ? `${fiche.name}${fiche.place ? ` — ${fiche.place.name}` : ""}` : "Établissement",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absente",
     description:
       fiche?.short_desc ??
       (fiche
@@ -202,17 +209,32 @@ export default function PagePro() {
       setEtat("ok");
       // L'onglet ouvert par défaut suit ce que l'établissement propose, au
       // lieu d'être « Chambres » pour tout le monde y compris une agence.
-      setOnglet(
-        f.rooms.length
-          ? "chambres"
-          : f.menu_items.length || f.menu_photos.length
-            ? "carte"
-            : f.tours.length
-              ? "circuits"
-              : f.activities.length
-                ? "activites"
-                : "infos"
-      );
+      const ongletDefaut: Onglet = f.rooms.length
+        ? "chambres"
+        : f.menu_items.length || f.menu_photos.length
+          ? "carte"
+          : f.tours.length
+            ? "circuits"
+            : f.activities.length
+              ? "activites"
+              : "infos";
+      setOnglet(ongletDefaut);
+      /* ⚠ LA GRILLE DES VÉHICULES (0114) N'EST PAS DANS get_page_by_slug —
+         la RPC n'a pas été retouchée la veille du lancement. On ne paie
+         l'aller-retour que pour les catégories qui peuvent en avoir une, et
+         son échec est silencieux : la fiche vit très bien sans sa grille,
+         l'inverse n'est pas vrai. */
+      setVehicules([]);
+      if (f.categories.includes("location_vehicule") || f.categories.includes("transporteur")) {
+        void vehiculesDe(f.id)
+          .then((v) => {
+            setVehicules(v);
+            // Un loueur n'a ni chambres ni carte : sans ceci, sa fiche
+            // ouvrirait sur « Infos » alors que sa grille est LE contenu.
+            if (v.length && ongletDefaut === "infos") setOnglet("vehicules");
+          })
+          .catch(() => undefined);
+      }
       void avisDe(f.id).then(setAvis).catch(() => undefined);
       void ficheEstGardee(f.id).then(setGardee).catch(() => undefined);
       void recitsMentionnant(f.id).then(setRecits).catch(() => undefined);
@@ -392,6 +414,7 @@ export default function PagePro() {
 
   const onglets: { cle: Onglet; label: string; visible: boolean }[] = [
     { cle: "chambres", label: "Chambres", visible: fiche.rooms.length > 0 },
+    { cle: "vehicules", label: "Véhicules et tarifs", visible: vehicules.length > 0 },
     {
       cle: "carte",
       label: "Carte",
@@ -658,6 +681,81 @@ export default function PagePro() {
                         </li>
                       ))}
                     </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* ── LA GRILLE TARIFAIRE DU LOUEUR (0114) ─────────────────────
+              Même gabarit que les chambres : un type de véhicule par carte,
+              le prix à droite. « Prix sur demande » quand price_day_ar est
+              nul — une grille sans prix vaut mieux que pas de grille, mais
+              JAMAIS un montant inventé. */}
+          {onglet === "vehicules" && (
+            <ul className="space-y-3">
+              {vehicules.map((v) => (
+                <li key={v.id} className="rounded-2xl border border-border p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold">
+                        {LIBELLE_VEHICULE[v.vehicle_type] ?? v.vehicle_type}
+                        {v.model ? ` — ${v.model}` : ""}
+                      </h3>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {[
+                          v.seats && `${v.seats} place${v.seats > 1 ? "s" : ""}`,
+                          v.with_driver ? "avec chauffeur" : "sans chauffeur",
+                          /* ⚠ `null` = non précisé : on se TAIT. Écrire
+                             « en sus » sur un carburant jamais renseigné
+                             serait une donnée inventée. */
+                          v.fuel_included === true
+                            ? "carburant inclus"
+                            : v.fuel_included === false
+                              ? "carburant en sus"
+                              : null,
+                          v.km_included_per_day != null &&
+                            `${v.km_included_per_day} km/jour inclus`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-right">
+                      {v.price_day_ar != null ? (
+                        <>
+                          <span className="font-semibold text-primary">
+                            {ariary(v.price_day_ar)}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            par jour
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Prix sur demande
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {v.price_note && (
+                    <p className="mt-2 text-sm text-muted-foreground">{v.price_note}</p>
+                  )}
+
+                  {(v.deposit_ar != null || v.price_on) && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {[
+                        v.deposit_ar != null && `Caution : ${ariary(v.deposit_ar)}`,
+                        /* La date du relevé, comme partout où le site montre
+                           un prix : un tarif daté se juge, un tarif nu se
+                           croit à tort. */
+                        v.price_on &&
+                          `Relevé le ${new Date(v.price_on).toLocaleDateString("fr-FR")}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
                   )}
                 </li>
               ))}

@@ -142,17 +142,31 @@ export function Visionneuse({
 
       {/* ⚠ `max-h-[88dvh]` et non `100vh` : sur mobile, `vh` compte la barre
           d'adresse qui n'est pas là — le bas de la photo passait sous l'écran. */}
-      <img
-        key={media.url}
-        src={echoue ? media.url : grandeTaille(media.url)}
-        alt={alt}
-        /* ⚠ Un repli sur l'ORIGINAL si la grande variante manque. Une variante
-           absente ne rend pas 404 sur cet hébergeur : le `.htaccess` renvoie
-           `index.html` avec un « 200 OK », et le navigateur affiche une image
-           cassée. `onError` est le seul signal fiable. */
-        onError={() => setEchoue(true)}
-        className="max-h-[88dvh] max-w-[96vw] object-contain"
-      />
+      {media.type === "video" ? (
+        <video
+          key={media.url}
+          src={media.url}
+          poster={media.poster}
+          controls
+          autoPlay
+          playsInline
+          className="max-h-[88dvh] max-w-[96vw] bg-black object-contain"
+        >
+          Votre navigateur ne lit pas cette vidéo.
+        </video>
+      ) : (
+        <img
+          key={media.url}
+          src={echoue ? media.url : grandeTaille(media.url)}
+          alt={alt}
+          /* ⚠ Un repli sur l'ORIGINAL si la grande variante manque. Une variante
+             absente ne rend pas 404 sur cet hébergeur : le `.htaccess` renvoie
+             `index.html` avec un « 200 OK », et le navigateur affiche une image
+             cassée. `onError` est le seul signal fiable. */
+          onError={() => setEchoue(true)}
+          className="max-h-[88dvh] max-w-[96vw] object-contain"
+        />
+      )}
 
       {credit && (
         <p

@@ -23,7 +23,7 @@ import { useUserData } from "@/contexts/UserDataContext";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
 import { getAvatarUrl } from "@/lib/supabaseImage";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import {
   changerVisibilite,
   mesPublications,
@@ -82,7 +82,7 @@ export default function Compte() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading, refresh } = useUserData();
   const [params, setParams] = useSearchParams();
-  useDocumentTitle("Mon compte");
+  useSEO({ titre: "Mon compte", noindex: true });
 
   const estPro = profile?.account_type === "pro";
   const demande = params.get("onglet") as Onglet | null;

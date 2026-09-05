@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn>=0.27
+pydantic>=2.5
+requests>=2.31
+Pillow>=10.0
+playwright>=1.40
+
+# Optionnel — relecture et lecture des cartes via l API Claude officielle.
+# Inutile si vous passez par la passerelle locale.
+anthropic>=1.0

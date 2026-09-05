@@ -4,16 +4,23 @@ import { X } from "lucide-react";
 import { PostCard } from "@/components/PostCard";
 import { PostImmersif } from "@/components/PostImmersif";
 import { Commentaires } from "@/components/Commentaires";
+import { BandeauTheme } from "@/components/BandeauTheme";
+import { EmptyState } from "@/components/Etats";
 import { useEstMobile } from "@/hooks/useEstMobile";
 import {
   PAR_PALIER,
   chargerFilFiltre,
+  comptesThemes,
   modesFilDisponibles,
+  type ComptesThemes,
+  type ModeClassique,
   type ModeFil,
   type PostSitue,
 } from "@/lib/api";
+import { THEMES, estTheme, libelleFiches, theme as trouveTheme } from "@/lib/themesFil";
 import { cn } from "@/lib/utils";
 import { useReveal } from "@/hooks/useReveal";
+import { reordonner } from "@/lib/affinites";
 
 /**
  * ⚠ RENDU A `PAR_PALIER()`. Un `const PAR_PAGE = 6` fige ici rendait mort le
@@ -24,56 +31,153 @@ import { useReveal } from "@/hooks/useReveal";
 const PAR_PAGE = PAR_PALIER;
 
 /**
- * LES QUATRE ENTREES DU FIL (maquette D1).
+ * LES ENTRÉES CLASSIQUES DU FIL (maquette D1).
  *
- * ⚠ ON N'AFFICHE QUE CE QUI REPOND. « Abonnements » quand on ne suit personne,
- *   « Assiettes » quand aucun plat n'est tague : l'onglet ouvrirait sur un
- *   ecran vide, ce qui se lit comme une panne et non comme une absence de
- *   contenu. La barre se remplit d'elle-meme a mesure que le site vit.
+ * ⚠ ON N'AFFICHE QUE CE QUI REPOND. « Abonnements » quand on ne suit personne :
+ *   l'onglet ouvrirait sur un ecran vide, ce qui se lit comme une panne et non
+ *   comme une absence de contenu. La barre se remplit d'elle-meme a mesure que
+ *   le site vit.
+ *
+ * 🔴 « ASSIETTES » A QUITTE CETTE LISTE, et ce n'est pas une suppression : le
+ *    theme « Plats » le REMPLACE en plus large. L'ancien onglet ne montrait que
+ *    les publications portant un `dish_id` ; le theme montre les memes, plus
+ *    les publications de type « assiette », plus les 95 plats de l'atlas.
+ *    Garder les deux aurait donne deux onglets voisins dont l'un est un
+ *    sous-ensemble strict de l'autre — et il n'apparaissait de toute facon
+ *    jamais, aucune publication ne portant de `dish_id` (mesure du 01/09/2026).
+ *    Le mode `assiettes` reste servi par `feed_filtre` : c'est l'ENTREE
+ *    d'ecran qui disparait, pas la capacite.
  */
-const MODES: { cle: ModeFil; label: string }[] = [
+const MODES: { cle: ModeClassique; label: string }[] = [
   { cle: "tout", label: "Découvrir" },
   { cle: "abonnements", label: "Abonnements" },
   { cle: "pres_de_moi", label: "Près de moi" },
-  { cle: "assiettes", label: "Assiettes" },
 ];
 
+/**
+ * LA BARRE DES FILTRES.
+ *
+ * 🔴 LES THEMES N'APPARAISSENT QUE SI LE SERVEUR LES CONNAIT (`comptes`). Ce
+ *    n'est pas de la prudence decorative. Tant que la migration 0115 n'est pas
+ *    passee, `feed_filtre` ignore les modes `th_*` et retombe sur son
+ *    `else true` : demander « th_hotels » sert alors le fil ENTIER sous
+ *    l'etiquette « Hotels ». Rien ne planterait, rien ne serait vide, et
+ *    l'ecran montrerait des recits de Tulear comme des recits d'hotel. Le
+ *    compteur `fil_themes_comptes` n'existe que dans 0115 : sa reponse PROUVE
+ *    que le fil sait filtrer.
+ *
+ * ⚠ DEFILEMENT HORIZONTAL SUR TELEPHONE, retour a la ligne au-dela. Neuf
+ *   pastilles qui s'enroulent sur un ecran de 390 px mangent quatre lignes
+ *   avant la premiere publication.
+ */
 function BarreFil({
   mode,
   dispo,
+  comptes,
   onChoisir,
+  flottante,
 }: {
   mode: ModeFil;
   dispo: { abonnements: boolean; assiettes: boolean };
+  comptes: ComptesThemes | null;
   onChoisir: (m: ModeFil) => void;
+  /** Posée par-dessus le fil plein écran du téléphone. */
+  flottante?: boolean;
 }) {
   const visibles = MODES.filter((m) => {
     if (m.cle === "abonnements") return dispo.abonnements;
-    if (m.cle === "assiettes") return dispo.assiettes;
     if (m.cle === "pres_de_moi")
       return typeof navigator !== "undefined" && "geolocation" in navigator;
     return true;
   });
+  const themes = comptes ? THEMES : [];
+
   // Un seul onglet n'est pas un filtre, c'est du décor.
-  if (visibles.length < 2) return null;
+  if (visibles.length + themes.length < 2) return null;
+
+  const pastille = (actif: boolean) =>
+    cn(
+      "min-h-9 shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition",
+      actif
+        ? "border-primary bg-primary text-primary-foreground"
+        : flottante
+          ? "border-white/25 bg-black/45 text-white backdrop-blur hover:border-white/60"
+          : "border-border bg-card hover:border-primary hover:text-primary"
+    );
 
   return (
-    <div className="mb-4 flex flex-wrap gap-1.5 px-4 md:px-0">
+    <div
+      className={cn(
+        "flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        flottante
+          ? "fixed inset-x-0 top-14 z-30 bg-gradient-to-b from-black/60 to-transparent px-3 py-2"
+          : "mb-4 px-4 pb-1 md:flex-wrap md:overflow-visible md:px-0"
+      )}
+      role="group"
+      aria-label="Filtrer le fil"
+    >
       {visibles.map((m) => (
         <button
           key={m.cle}
           onClick={() => onChoisir(m.cle)}
           aria-pressed={mode === m.cle}
-          className={cn(
-            "min-h-9 rounded-full border px-4 text-sm font-semibold transition",
-            mode === m.cle
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card hover:border-primary hover:text-primary"
-          )}
+          className={pastille(mode === m.cle)}
         >
           {m.label}
         </button>
       ))}
+
+      {/* ⚠ UN SÉPARATEUR, PAS UN SAUT DE LIGNE. Les trois premières entrées
+          disent COMMENT on lit le fil (tout, ceux que je suis, autour de moi) ;
+          les six suivantes disent DE QUOI il parle. Ce sont deux natures de
+          filtre, et rien ne le distinguait. */}
+      {visibles.length > 0 && themes.length > 0 && (
+        <span
+          aria-hidden="true"
+          className={cn("my-1 w-px shrink-0", flottante ? "bg-white/25" : "bg-border")}
+        />
+      )}
+
+      {themes.map((t) => (
+        <button
+          key={t.cle}
+          onClick={() => onChoisir(t.cle)}
+          aria-pressed={mode === t.cle}
+          className={pastille(mode === t.cle)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * ⚠ ON DIT QUEL FIL EST VIDE. « Le fil est vide » sous l'onglet « Près de moi »
+ *   laisse croire que le site entier l'est.
+ */
+function FilVide({ mode }: { mode: ModeFil }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center">
+      <p className="font-medium">
+        {mode === "pres_de_moi"
+          ? "Aucun récit près de vous"
+          : mode === "abonnements"
+            ? "Rien de neuf chez ceux que vous suivez"
+            : mode === "assiettes"
+              ? "Aucune assiette publiée pour l'instant"
+              : "Le fil est vide"}
+      </p>
+      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+        Soyez le premier à raconter un voyage, partager une adresse ou signaler
+        un bon plan.
+      </p>
+      <Link
+        to="/publier"
+        className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground"
+      >
+        Publier
+      </Link>
     </div>
   );
 }
@@ -87,7 +191,13 @@ function BarreFil({
  *    glisse vers le haut. Accroche verticale obligatoire (snap-mandatory),
  *    sinon on s'arrête entre deux publications.
  *
- * Pagination par CURSEUR dans les deux cas. L'offset décale tout dès qu'une
+ * ⚠ …SAUF SOUS UN THÈME. Un onglet thématique montre d'abord les FICHES du
+ *   thème (hôtels, plats, destinations), et une grille de fiches n'a aucun sens
+ *   en plein écran défilant photo par photo. Le plein écran est donc réservé
+ *   aux trois entrées classiques ; les six thèmes s'affichent en page normale,
+ *   sur téléphone comme sur ordinateur.
+ *
+ * Pagination par CURSEUR dans tous les cas. L'offset décale tout dès qu'une
  * publication arrive pendant le défilement : doublons et lignes sautées.
  */
 export function Feed() {
@@ -101,9 +211,15 @@ export function Feed() {
   const [commentaires, setCommentaires] = useState<PostSitue | null>(null);
   const enVol = useRef(false);
   const sentinelle = useRef<HTMLDivElement>(null);
+  /* ⭐ LE CURSEUR EST LA DATE DU DERNIER REÇU, PAS DU DERNIER AFFICHÉ. Le fil
+     est réordonné à l'écran selon les lieux que le visiteur regarde
+     (`reordonner`) : lire le curseur sur la dernière carte affichée sauterait
+     ou répéterait des publications. */
+  const curseurRef = useRef<{ date: string | null; km: number | null }>({ date: null, km: null });
 
   const [mode, setMode] = useState<ModeFil>("tout");
   const [dispo, setDispo] = useState({ abonnements: false, assiettes: false });
+  const [comptes, setComptes] = useState<ComptesThemes | null>(null);
   const [ici, setIci] = useState<{ lat: number; lng: number } | null>(null);
   // ⚠ Garde-fou de concurrence : changer d'onglet pendant un chargement
   //   affichait la reponse de l'ANCIEN mode par-dessus le nouveau.
@@ -111,6 +227,9 @@ export function Feed() {
 
   useEffect(() => {
     modesFilDisponibles().then(setDispo).catch(() => undefined);
+    // ⚠ `comptesThemes` avale ses propres erreurs et rend `null` : un serveur
+    //   sans la migration 0115 laisse simplement le fil tel qu'il etait.
+    void comptesThemes().then(setComptes);
   }, []);
 
   const charger = useCallback(
@@ -136,10 +255,20 @@ export function Feed() {
         if (mien !== version.current) return;
         setErreur(false);
         if (page.length < palier) setFini(true);
+        const dernier = page[page.length - 1];
+        if (dernier) {
+          curseurRef.current = { date: dernier.created_at, km: dernier.distance_km ?? null };
+        }
+        // ⭐ « CE QU'IL REGARDE D'ABORD ». Chaque page arrivée est réordonnée
+        //   selon la mémoire du visiteur : lieux consultés en tête, déjà vu en
+        //   queue. Jamais en « près de moi » (l'ordre y EST l'information) ni
+        //   sous un thème (les fiches font l'ordre).
+        const personnaliser = mode === "tout" || mode === "abonnements";
+        const arrivee = personnaliser ? reordonner(page) : page;
         setPosts((avant) => {
-          if (!curseur && apresKm == null) return page;
+          if (!curseur && apresKm == null) return arrivee;
           const vus = new Set(avant.map((p) => p.id));
-          return [...avant, ...page.filter((p) => !vus.has(p.id))];
+          return [...avant, ...arrivee.filter((p) => !vus.has(p.id))];
         });
       } catch {
         if (mien === version.current) setErreur(true);
@@ -154,6 +283,7 @@ export function Feed() {
   useEffect(() => {
     setChargement(true);
     setFini(false);
+    curseurRef.current = { date: null, km: null };
     void charger(null, null);
   }, [charger]);
 
@@ -186,11 +316,10 @@ export function Feed() {
     const obs = new IntersectionObserver(
       (e) => {
         if (e[0]?.isIntersecting && posts.length > 0) {
-          const dernier = posts[posts.length - 1];
           // ⚠ Le curseur CHANGE DE NATURE selon le mode : « pres de moi » trie
           //   par distance, reprendre a une date y saute des recits.
-          if (mode === "pres_de_moi") void charger(null, dernier.distance_km ?? null);
-          else void charger(dernier.created_at, null);
+          if (mode === "pres_de_moi") void charger(null, curseurRef.current.km);
+          else void charger(curseurRef.current.date, null);
         }
       },
       { threshold: 0.1, rootMargin: "600px" }
@@ -199,80 +328,177 @@ export function Feed() {
     return () => obs.disconnect();
   }, [posts, fini, chargement, charger, mode]);
 
-  if (chargement) {
-    return mobile ? (
-      <div className="dk-skeleton fixed inset-x-0 bottom-0 top-14 w-full rounded-none" />
-    ) : (
-      <div className="space-y-4 px-4 md:px-0">
-        {[0, 1].map((i) => (
-          <div key={i} className="rounded-2xl border border-border p-4">
-            <div className="flex items-center gap-3">
-              <div className="dk-skeleton h-10 w-10 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="dk-skeleton h-3 w-32" />
-                <div className="dk-skeleton h-2.5 w-20" />
-              </div>
+  const themeActif = estTheme(mode) ? trouveTheme(mode) : undefined;
+
+  /* ⚠ LA BARRE EST RENDUE DANS TOUS LES ETATS, squelette compris. Avant, l'etat
+     de chargement retournait tot, SANS la barre : changer d'onglet la faisait
+     disparaitre puis revenir a chaque clic. Avec trois entrees c'etait un
+     clignotement ; avec neuf, l'ecran saute. */
+  const barre = (flottante?: boolean) => (
+    <BarreFil
+      mode={mode}
+      dispo={dispo}
+      comptes={comptes}
+      onChoisir={choisirMode}
+      flottante={flottante}
+    />
+  );
+
+  const squelette = (
+    <div className="space-y-4">
+      {[0, 1].map((i) => (
+        <div key={i} className="rounded-2xl border border-border p-4">
+          <div className="flex items-center gap-3">
+            <div className="dk-skeleton h-10 w-10 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="dk-skeleton h-3 w-32" />
+              <div className="dk-skeleton h-2.5 w-20" />
             </div>
-            <div className="dk-skeleton mt-3 h-4 w-3/4" />
-            <div className="dk-skeleton mt-3 aspect-video w-full rounded-xl" />
           </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (erreur && posts.length === 0) {
-    return (
-      <div className="mx-4 rounded-2xl border border-border p-6 text-center md:mx-0">
-        <p className="font-medium">Le fil n'a pas pu être chargé</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Votre connexion est peut-être instable.
-        </p>
-        <button
-          onClick={() => void charger(null)}
-          className="mt-4 min-h-10 rounded-full border border-input px-5 text-sm font-medium"
-        >
-          Réessayer
-        </button>
-      </div>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <div className="px-4 md:px-0">
-        <BarreFil mode={mode} dispo={dispo} onChoisir={choisirMode} />
-        <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center">
-          {/* ⚠ ON DIT QUEL FIL EST VIDE. « Le fil est vide » sous l'onglet
-              « Près de moi » laisse croire que le site entier l'est. */}
-          <p className="font-medium">
-            {mode === "pres_de_moi"
-              ? "Aucun récit près de vous"
-              : mode === "abonnements"
-                ? "Rien de neuf chez ceux que vous suivez"
-                : mode === "assiettes"
-                  ? "Aucune assiette publiée pour l'instant"
-                  : "Le fil est vide"}
-          </p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Soyez le premier à raconter un voyage, partager une adresse ou
-            signaler un bon plan.
-          </p>
-          <Link
-            to="/publier"
-            className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground"
-          >
-            Publier
-          </Link>
+          <div className="dk-skeleton mt-3 h-4 w-3/4" />
+          <div className="dk-skeleton mt-3 aspect-video w-full rounded-xl" />
         </div>
+      ))}
+    </div>
+  );
+
+  const blocErreur = (
+    <div className="rounded-2xl border border-border p-6 text-center">
+      <p className="font-medium">Le fil n'a pas pu être chargé</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Votre connexion est peut-être instable.
+      </p>
+      <button
+        onClick={() => void charger(null)}
+        className="mt-4 min-h-10 rounded-full border border-input px-5 text-sm font-medium"
+      >
+        Réessayer
+      </button>
+    </div>
+  );
+
+  // ── UN THÈME : les fiches d'abord, les récits ensuite ───────────────────
+  //
+  // 🔴 CE N'EST PAS UN FILTRE DU FIL, C'EST UN THEME A DEUX SOURCES. Mesure du
+  //    01/09/2026 : les recits seuls donnent 1 publication pour
+  //    « Restaurants », 3 pour « Plats », 0 pour « Location » et 0 pour
+  //    « Voyages organises ». Six onglets branches sur les seules publications
+  //    auraient donc ouvert sur du vide — ce que la charte du depot interdit.
+  //    Le bloc de fiches n'est pas un ornement : c'est ce qui rend ces onglets
+  //    legitimes, avec 1 428 hotels, 1 872 restaurants, 95 plats et
+  //    508 destinations a montrer.
+  if (themeActif) {
+    const compte = comptes?.[themeActif.cle];
+    return (
+      <div className="px-4 pt-3 md:px-0">
+        {barre()}
+        <BandeauTheme theme={themeActif} compte={compte} />
+
+        <section aria-labelledby="titre-recits-theme" className="border-t border-border pt-5">
+          <div className="flex items-end justify-between gap-3">
+            <h2 id="titre-recits-theme" className="text-lg font-semibold">
+              Ce qu'on en raconte
+            </h2>
+            {/* ⚠ LE CHIFFRE VIENT DU SERVEUR, et il est compte par la MEME
+                fonction que celle qui filtre le fil (`post_du_theme`). C'est ce
+                qui interdit d'annoncer « 45 recits » puis d'en montrer 12. */}
+            {compte != null && (
+              <p className="shrink-0 text-sm text-muted-foreground">
+                {compte.recits.toLocaleString("fr-FR")}{" "}
+                {compte.recits <= 1 ? "publication" : "publications"}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-3">
+            {chargement ? (
+              squelette
+            ) : erreur && posts.length === 0 ? (
+              blocErreur
+            ) : posts.length === 0 ? (
+              /* ⚠ LES TROIS OBLIGATIONS DE L'ETAT VIDE, jamais deux sur trois :
+                 dire ce qui manque, offrir une action, proposer du contenu reel
+                 a parcourir. Le contenu reel est juste au-dessus — les fiches du
+                 theme — et on le NOMME avec son vrai compte. */
+              <EmptyState
+                icone={themeActif.icone}
+                manque={themeActif.videManque}
+                action={themeActif.videAction}
+                contenuReel={
+                  <p className="text-sm text-muted-foreground">
+                    En attendant,{" "}
+                    {compte != null
+                      ? libelleFiches(themeActif, compte.fiches)
+                      : "les fiches de ce thème"}{" "}
+                    {compte != null && compte.fiches <= 1 ? "est" : "sont"} juste
+                    au-dessus.{" "}
+                    <Link
+                      to={themeActif.vers}
+                      className="underline underline-offset-4 hover:text-foreground"
+                    >
+                      Tout parcourir
+                    </Link>
+                  </p>
+                }
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 large:grid-cols-3">
+                {posts.map((p) => (
+                  <PostCard
+                    key={p.id}
+                    post={p}
+                    onSupprime={(id) => setPosts((l) => l.filter((x) => x.id !== id))}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div ref={sentinelle} className="h-10" aria-hidden="true" />
+          {fini && posts.length > 0 && (
+            <p className="pb-4 text-center text-sm text-muted-foreground">
+              Vous avez tout vu.
+            </p>
+          )}
+        </section>
       </div>
     );
   }
 
   // ── TÉLÉPHONE : plein écran, glissement vertical ────────────────────────
   if (mobile) {
+    if (chargement) {
+      return (
+        <>
+          {barre(true)}
+          <div className="dk-skeleton fixed inset-x-0 bottom-0 top-14 w-full rounded-none" />
+        </>
+      );
+    }
+    if (erreur && posts.length === 0) {
+      return (
+        <>
+          {barre(true)}
+          <div className="mx-4 mt-16">{blocErreur}</div>
+        </>
+      );
+    }
+    if (posts.length === 0) {
+      return (
+        <>
+          {barre(true)}
+          <div className="mx-4 mt-16">
+            <FilVide mode={mode} />
+          </div>
+        </>
+      );
+    }
     return (
       <>
+        {/* ⚠ LA BARRE FLOTTE PAR-DESSUS LA PHOTO, elle ne pousse rien : le fil
+            du téléphone est un conteneur `fixed` plein écran, il n'y a pas de
+            flux au-dessus de lui où poser quoi que ce soit. */}
+        {barre(true)}
         <div className="fixed inset-x-0 bottom-0 top-14 snap-y snap-mandatory overflow-y-auto overscroll-y-contain bg-black">
           {posts.map((p, i) => (
             <PostImmersif
@@ -352,18 +578,26 @@ export function Feed() {
   // occuperait une cellule et créerait un trou en fin de rangée.
   return (
     <div>
-      <BarreFil mode={mode} dispo={dispo} onChoisir={choisirMode} />
-      <div className="grid gap-4 lg:grid-cols-2 large:grid-cols-3">
-        {posts.map((p) => (
-          <PostCard
-            key={p.id}
-            post={p}
-            onSupprime={(id) => setPosts((l) => l.filter((x) => x.id !== id))}
-          />
-        ))}
-      </div>
+      {barre()}
+      {chargement ? (
+        squelette
+      ) : erreur && posts.length === 0 ? (
+        blocErreur
+      ) : posts.length === 0 ? (
+        <FilVide mode={mode} />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2 large:grid-cols-3">
+          {posts.map((p) => (
+            <PostCard
+              key={p.id}
+              post={p}
+              onSupprime={(id) => setPosts((l) => l.filter((x) => x.id !== id))}
+            />
+          ))}
+        </div>
+      )}
       <div ref={sentinelle} className="h-10" aria-hidden="true" />
-      {fini && (
+      {fini && posts.length > 0 && (
         <p className="py-4 text-center text-sm text-muted-foreground">Vous avez tout vu.</p>
       )}
     </div>

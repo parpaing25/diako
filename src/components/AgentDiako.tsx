@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Loader2, MapPin, MessageCircleQuestion, Send, Sparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ariary } from "@/lib/etablissements";
@@ -61,6 +61,7 @@ function idAnonyme(): string {
 }
 
 export function AgentDiako() {
+  const surUnRecit = useLocation().pathname.startsWith("/post/");
   const [ouvert, setOuvert] = useState(false);
   const [bulles, setBulles] = useState<Bulle[]>([]);
   const [saisie, setSaisie] = useState("");
@@ -132,7 +133,13 @@ export function AgentDiako() {
       <button
         onClick={() => setOuvert(true)}
         aria-label="Demander à l'agent Diako"
-        className="fixed bottom-20 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105 lg:bottom-6"
+        /* ⚠ SUR LA PAGE D'UN RÉCIT, la barre d'actions est collée au-dessus de
+           la navigation basse (64 → 120 px du bas) : à `bottom-20` ce bouton
+           recouvrait le signet. Il monte d'un cran là-bas, et seulement là. */
+        className={cn(
+          "fixed right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105 lg:bottom-6",
+          surUnRecit ? "bottom-36" : "bottom-20",
+        )}
       >
         <Sparkles className="h-6 w-6" aria-hidden="true" />
       </button>

@@ -49,13 +49,30 @@ La spécification de mise en œuvre est dans `DESIGN-HANDOFF.md`.
   la première image du fil, qui prend `fetchpriority="high"`.
 - **`auth.uid()` enveloppé dans un sous-`SELECT`** dans les policies RLS, `search_path` fixé sur
   toutes les fonctions `SECURITY DEFINER`.
+- 🔴 **Toute RPC appelée par le site se chronomètre SOUS LE RÔLE `anon`** (`statement_timeout`
+  3 s ; `authenticated` 8 s). Un contrôle de migration exécuté par le connecteur tourne avec un rôle
+  privilégié et ne prouve rien : mettre `set local role anon` + `set local statement_timeout` dans
+  le bloc de contrôle. *Migration 0115 du fil par thème : quatre contrôles verts, et le vrai appel
+  REST anon rendait 57014 (timeout), soit HTTP 500 pour tout visiteur non connecté — 4 842 ms par
+  page, corrigé en 0116 à 22 ms en partant des liens de la publication.*
 - **Une seule source de vérité de schéma** : `supabase/migrations/`, numéros croissants,
   `types.ts` régénéré après chaque migration.
 - **Build** : `tsc --noEmit && vite build`. Conserver le `manualChunk` radix-vendor (sans lui,
   page blanche sous Firefox) et `skipWaiting()` + `clientsClaim()` dans le service worker.
   Ne précacher que la coquille.
 
-## Chiffres réels au 15/08/2026 — à ne pas embellir
+## ⚠️ Chiffres PÉRIMÉS — à recompter avant tout usage
+
+**Le bloc ci-dessous date du 15/08/2026 et n'est plus vrai.** Vérifié le 30/08 : les migrations
+sont allées jusqu'à `0114`, et `0113` parle d'« un import de 3 254 fiches » quand ce bloc annonce
+54 établissements « tous à Ampefy ». `0108` signale en plus que le compteur « 2 469 sites »
+annonce plus que ce qui existe.
+
+**Je ne mets pas de chiffre à la place : aucun de ceux-là n'est un décompte vérifié.** Toute
+question de volumétrie se recompte dans la base avant de dimensionner un écran. La règle « à ne
+pas embellir » reste entière — elle s'applique maintenant à ces chiffres-ci.
+
+## ~~Chiffres réels au 15/08/2026~~ (conservés pour mémoire, NE PLUS UTILISER)
 
 178 destinations · 5 avec saisonnalité · 41 avec accès · 95 plats + 254 variantes ·
 54 établissements publiés, tous à Ampefy · 9 avec GPS propre · 1 chambre saisie ·
@@ -77,3 +94,20 @@ aujourd'hui, et pourquoi.
   où elle existera ; d'ici là, ne pas afficher de ligne inventée.
 - **Secrets :** le dépôt `parpaing25/diako` est PUBLIC. Aucune clé ni mot de passe dans l'arbre.
   Ils vivent dans `~/.diako-secrets` et `~/.fonenako-secrets`.
+
+## Le détail
+
+**18 règles** de plus, remontées des fiches mémoire, dans `REGLES-DETAIL.md` (même dossier). Elles ne sont pas chargées automatiquement : les ouvrir quand le sujet les concerne — le routeur les signale.
+
+## Ajouts en cours de route — à ranger
+
+*Écrites au fil des sessions. À replier dans les sections thématiques lors de la prochaine consolidation.*
+
+- 🟠 **Le fil de Diako porte le VECU des voyageurs : un recit exige un vecu (j'ai goute, on a dormi, nahita...). Une offre, un menu de fete ou des voeux venant d'un etablissement nourrissent SA FICHE (contact, plats, prix), jamais le fil. Un voyage organise date est une agence et ses circuits, pas un evenement ; Noel, reveillon, fete nationale ne sont jamais des evenements** *(03/09/2026)*
+  *03/09/2026 : 89 des 418 recits en ligne etaient des publicites d'hotel reecrites (FLASH PROMO -30 %, Vos cours de tennis au Carlton), 6 des voeux de fete, ~70 des 118 evenements des voyages organises d'agence, 13 fiches A vendre publiees*
+- 🟠 **Un filtre de bruit ancre (^...$) ne voit que les lignes ENTIERES : le meme bruit colle au texte passe, et un motif en .* avale la ligne avec le texte utile. Filtrer le bruit d'interface en INLINE, et mesurer combien de lignes deja publiees en portent** *(03/09/2026)*
+  *106 des 213 recits visibles de Diako affichaient « Voir moins... », « Contenu IA », « Indicateur de statut En ligne » ; et BRUIT_FIL supprimait toute la ligne « Indicateur de statut En ligne TL Voyage LOCATION DE VOITURE », texte compris*
+- 🔴 **Une page qui charge ses donnees en asynchrone DOIT passer ces donnees en dependance a useReveal : sans elle l'observateur est cree avant l'arrivee du contenu, ne trouve aucun .dk-reveal et n'observe jamais ce qui arrive apres — la page reste a opacity 0 pour toujours, sans erreur** *(03/09/2026)*
+  *La page /post/<id> de Diako etait VIDE en production : la carte du recit etait dans le DOM avec son texte, opacity 0, et personne ne l'avait vu ; le filet de securite ne balayait qu'une fois a 700 ms, donc le defaut n'apparaissait que sur connexion lente*
+- 🟠 **Un compteur optimiste se recalcule sur la REPONSE du serveur, et une bascule de reaction envoie le TYPE COURANT, jamais une constante : un autre type fait un UPDATE cote serveur, pas un DELETE** *(03/09/2026)*
+  *Sur la page d'un recit, retirer une reaction « Bon prix » posee depuis le fil la remplacait par « utile » et le compteur restait faux jusqu'au rechargement — le coeur envoyait utile en dur*

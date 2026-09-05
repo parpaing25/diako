@@ -37,6 +37,10 @@ export interface MetaSEO {
   /** Chemin ou URL absolue. Par défaut : l'adresse courante. */
   url?: string;
   type?: "website" | "article" | "profile";
+  /** Écran privé, résultats de recherche, page « introuvable » : ne pas indexer.
+   *  ⚠ Sur cet hébergement toute route rend HTTP 200 (repli SPA) : sans ce
+   *    drapeau, Google indexait les écrans « n'existe pas » et « Connectez-vous ». */
+  noindex?: boolean;
 }
 
 /** Pose la balise si elle existe, la crée sinon. */
@@ -51,7 +55,7 @@ function poser(cle: string, valeur: string) {
   el.setAttribute("content", valeur);
 }
 
-export function useSEO({ titre, description, image, url, type = "website" }: MetaSEO) {
+export function useSEO({ titre, description, image, url, type = "website", noindex = false }: MetaSEO) {
   useEffect(() => {
     const titreComplet = titre ? `${titre} — Diako` : TITRE_BASE;
     const desc = description?.trim() || DESC_BASE;
@@ -90,7 +94,22 @@ export function useSEO({ titre, description, image, url, type = "website" }: Met
     }
     canonique.href = adresse;
 
+    // ⚠ Posé ET retiré : sans le retrait, un écran privé visité avant une fiche
+    //   laisserait la fiche non indexable.
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (noindex) {
+      if (!robots) {
+        robots = document.createElement("meta");
+        robots.name = "robots";
+        document.head.appendChild(robots);
+      }
+      robots.content = "noindex, follow";
+    } else if (robots) {
+      robots.remove();
+    }
+
     return () => {
+      document.querySelector('meta[name="robots"]')?.remove();
       // Restauration : sans elle, le titre d'une fiche resterait affiché sur
       // la page suivante, et l'aperçu de partage serait celui de la page
       // d'avant — un défaut invisible en navigation, flagrant au partage.
@@ -110,5 +129,5 @@ export function useSEO({ titre, description, image, url, type = "website" }: Met
       const can = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
       if (can) can.href = SITE;
     };
-  }, [titre, description, image, url, type]);
+  }, [titre, description, image, url, type, noindex]);
 }

@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRetour } from "@/hooks/useRetour";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ArrowLeft, LocateFixed, MapPin, Star, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Info, LocateFixed, MapPin, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { useSEO } from "@/hooks/useSEO";
 import { ariary, CATEGORIES, unite, type Categorie } from "@/lib/etablissements";
+import {
+  composition,
+  degradeGrappe,
+  FAMILLES,
+  habillage,
+  resumeComposition,
+  svgFamille,
+  totalComposition,
+  type Composition,
+  type Famille,
+} from "@/lib/carte";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,15 +27,33 @@ import { cn } from "@/lib/utils";
  *
  * OpenStreetMap via Leaflet : gratuit, sans clé, sans compte à surveiller.
  *
- * ⚠ CE QUE J'AI TROUVÉ EN LA CONSTRUISANT. Sur les 54 fiches publiées, AUCUNE
- *   n'a de coordonnées propres : toutes retombent sur le centroïde de leur
- *   lieu. Les décaler « pour faire joli » reviendrait à dire au voyageur qu'un
- *   hôtel est là où il n'est pas. On les REGROUPE donc par position, la
- *   pastille porte le nombre, et le panneau les liste toutes — et chaque fiche
- *   dit franchement si son point est exact ou seulement celui de la commune.
+ * 🔴 CE QUE CETTE VERSION CORRIGE (signalé par le propriétaire, capture à
+ *    l'appui : « la carte n'est pas belle à voir du tout »).
+ *
+ *    ① LES FILTRES DISPARAISSAIENT À L'OUVERTURE. Ils comptaient leurs points
+ *      dans `points`, VIDE en vue d'ensemble puisqu'on y sert des grappes, et
+ *      la ligne « si 0, ne pas afficher » les effaçait donc tous. Au niveau du
+ *      pays — la vue par défaut — il ne restait aucun filtre. Ils comptent
+ *      maintenant dans `familles_zone`, que le serveur calcule pour la zone
+ *      regardée, à tous les niveaux de zoom.
+ *
+ *    ② LE FILTRE NE FILTRAIT QUE LES 800 POINTS DÉJÀ REÇUS. `p_categorie`
+ *      existait côté serveur depuis toujours et n'était jamais passé : cocher
+ *      « Restaurants » cherchait parmi 800 points arbitraires sur 5 705. On
+ *      passe désormais `p_familles`, et c'est Postgres qui filtre.
+ *
+ *    ③ TOUT AVAIT LA MÊME PASTILLE TURQUOISE. Une grappe ne disait pas ce
+ *      qu'elle contenait, une épingle ne disait pas ce qu'elle était. Les
+ *      grappes sont maintenant des ANNEAUX DE COMPOSITION, les épingles portent
+ *      l'icône et la couleur de leur famille, et la légende les nomme.
+ *
+ * ⚠ CE QUI N'A PAS CHANGÉ, ET NE DOIT PAS. Sur les fiches sans coordonnées
+ *   propres, le point reste celui du lieu : le panneau le dit en toutes lettres
+ *   plutôt que de laisser croire que c'est la porte d'entrée.
  *
  * ⚠ 3G. Le morceau Leaflet (~150 Ko) n'est chargé que par cette route, qui est
- *   en lazy(). Une seule requête, colonnes explicites, jamais select=*.
+ *   en lazy(). UNE seule requête par déplacement — la légende voyage avec les
+ *   points, elle ne coûte pas d'aller-retour de plus.
  */
 
 interface PointCarte {
@@ -46,9 +75,20 @@ interface PointCarte {
   /** Combien de points existent DANS LA ZONE, avant la troncature. Sert a
    *  ecrire « 800 sur 1 240 ici », jamais a laisser croire que c'est tout. */
   total_zone: number;
+  /** Décidée par le serveur (`dk_famille_carte`), jamais recalculée ici. */
+  famille: Famille;
+  familles_zone: unknown;
 }
 
-const CENTRE_MADAGASCAR: [number, number] = [-18.9, 46.9];
+/**
+ * ⚠ LE CADRE DU PAYS, PAS UN CENTRE ET UN ZOOM. « centre + zoom 6 » dépend de
+ *   la hauteur du conteneur : la barre de filtres ayant pris une deuxième
+ *   ligne, le Sud de Madagascar passait sous la barre de navigation — le pays
+ *   était coupé à l'ouverture, et le compteur annonçait 5 270 points au lieu
+ *   des 5 705 puisque le reste était hors cadre. `fitBounds` s'adapte à la
+ *   place réellement disponible, sur téléphone comme sur grand écran.
+ */
+const CADRE_MADAGASCAR = L.latLngBounds([-25.8, 43.0], [-11.7, 50.8]);
 
 /** ⚠ Le niveau à partir duquel on montre les adresses une par une. En dessous,
  *  ce sont des GRAPPES : à l'échelle d'une région, un chiffre est lisible,
@@ -62,10 +102,12 @@ interface Grappe {
   n_sites: number;
   exemple: string;
   total_zone: number;
+  familles: unknown;
+  familles_zone: unknown;
 }
 
-/** ⚠ Les genres de SITES ont leurs propres pictos : une plage et un hotel sur
- *  la meme epingle « 📍 » rendraient la carte illisible. */
+/** Les pictos du panneau de détail, par code brut — plus fins que la famille
+ *  quand on regarde UNE fiche : on y lit « cascade », pas « nature ». */
 const EMOJI: Record<string, string> = {
   reserve: "🌿",
   parc: "🌳",
@@ -91,15 +133,27 @@ const EMOJI: Record<string, string> = {
   organisateur_evenement: "🎉",
 };
 
+const nombre = (n: number) => n.toLocaleString("fr-FR");
+
+/**
+ * « autour d'Antananarivo », et non « autour de Antananarivo ».
+ *
+ * ⚠ ON N'ÉLIDE PAS DEVANT UN H. En français la règle dépend du h muet ou
+ *   aspiré, qu'aucune règle mécanique ne tranche sur un nom propre — et en
+ *   malgache le h se PRONONCE : « de Hell-Ville » est juste, « d'Hell-Ville »
+ *   ne l'est pas. Devant une voyelle, en revanche, l'élision est obligatoire.
+ */
+const autourDe = (lieu: string): string =>
+  /^[aeiouyàâäéèêëîïôöùûü]/i.test(lieu) ? `autour d'${lieu}` : `autour de ${lieu}`;
+
 export default function Carte() {
   useSEO({
-    titre: "Carte des hôtels et restaurants de Madagascar",
+    titre: "Carte des hôtels, restaurants et sites de Madagascar",
     description:
-      "Trouvez sur la carte les hôtels, restaurants, agences et sites à visiter de Madagascar, avec leurs tarifs en ariary.",
+      "Trouvez sur la carte les hôtels, restaurants, plages, parcs et sites à visiter de Madagascar, avec leurs tarifs en ariary.",
     url: "https://diako.fonenako.mg/carte",
   });
 
-  const navigate = useNavigate();
   const retour = useRetour("/");
   const [params] = useSearchParams();
   const divCarte = useRef<HTMLDivElement>(null);
@@ -109,16 +163,63 @@ export default function Carte() {
 
   const [points, setPoints] = useState<PointCarte[]>([]);
   const [chargement, setChargement] = useState(true);
-  const [filtre, setFiltre] = useState<Categorie | "tout">(
-    (params.get("cat") as Categorie) || "tout"
-  );
   const [choisis, setChoisis] = useState<PointCarte[] | null>(null);
+  /** La grappe dont on regarde la composition — voir `FeuilleGrappe`. */
+  const [grappeChoisie, setGrappeChoisie] = useState<Grappe | null>(null);
+  const [legendeOuverte, setLegendeOuverte] = useState(false);
+
+  /**
+   * Les familles cochées. Vide = tout.
+   *
+   * ⚠ C'EST UN ENSEMBLE, PAS UN CHOIX UNIQUE. « Où dormir » et « Où manger »
+   *   ensemble est la question la plus courante d'un voyageur qui prépare une
+   *   étape ; l'ancien filtre à choix unique l'obligeait à regarder deux fois.
+   */
+  const [actives, setActives] = useState<Set<Famille>>(() => {
+    const c = params.get("familles");
+    const connues = new Set(FAMILLES.map((f) => f.code as string));
+    return new Set(
+      (c ? c.split(",") : []).filter((x) => connues.has(x)) as Famille[]
+    );
+  });
 
   const [totalZone, setTotalZone] = useState(0);
   const [grappes, setGrappes] = useState<Grappe[]>([]);
+  /** Ce que la zone contient par famille, AVANT filtrage — la légende. */
+  const [zone, setZone] = useState<Composition>({});
   // ⚠ Garde-fou de concurrence : deux deplacements rapides rendaient parfois
   //   l'ancienne zone PAR-DESSUS la nouvelle. On ne garde que la derniere.
   const versionZone = useRef(0);
+  /** Le diamètre maximal d'une pastille, déduit de la case de la grille au
+   *  moment de la requête — voir `chargerZone`. */
+  const tailleMax = useRef(52);
+  /** Le côté d'une case de la grille, en degrés, tel qu'il a servi au dernier
+   *  chargement. Sert à recadrer sur une grappe — voir `cadreGrappe`. */
+  const pasGrille = useRef(1);
+  /**
+   * ⚠ POSÉ QUAND LE FILTRE ET LE CADRAGE CHANGENT ENSEMBLE (ouvrir une famille
+   *   depuis une grappe). Sans lui, DEUX requêtes partent : celle de l'effet du
+   *   filtre, sur le cadre d'AVANT le zoom, et celle de `moveend` sur le bon
+   *   cadre. Le garde-fou de version fait gagner la bonne, mais la première a
+   *   coûté ~800 ms de 3G pour rien.
+   * ⚠ C'EST SÛR PARCE QUE `moveend` EST GARANTI DE SUIVRE : une grappe n'existe
+   *   qu'en dessous de `ZOOM_DETAIL`, et on zoome toujours à `max(zoom+3,
+   *   ZOOM_DETAIL)` — la vue change donc forcément. Sauter la requête sans
+   *   cette garantie laisserait la carte sur des données périmées, en silence.
+   */
+  const zoomEnCours = useRef(false);
+
+  /**
+   * ⚠ UNE RÉFÉRENCE, PAS UNE DÉPENDANCE. `chargerZone` est branchée sur
+   *   `moveend` UNE FOIS, à l'initialisation ; si elle changeait à chaque
+   *   cochage de filtre, il faudrait redémonter la carte entière pour
+   *   rebrancher l'écouteur — l'écran clignoterait et perdrait son cadrage.
+   *   On lit donc le filtre courant dans une ref au moment de la requête.
+   */
+  const activesRef = useRef(actives);
+  useEffect(() => {
+    activesRef.current = actives;
+  }, [actives]);
 
   /**
    * 🔴 LA CARTE CHARGE CE QU'ON REGARDE.
@@ -138,6 +239,18 @@ export default function Carte() {
     const mien = ++versionZone.current;
     const b = m.getBounds();
     const zoom = m.getZoom();
+    const choix = [...activesRef.current];
+    /**
+     * ⚠ ON OMET L'ARGUMENT, ON NE PASSE PAS `null`. Côté base, `p_familles`
+     *   vaut `DEFAULT NULL` et `null` veut dire « toutes les familles » — mais
+     *   `types.ts` est GÉNÉRÉ, et le générateur déclare un argument à défaut
+     *   `p_familles?: string[]` : optionnel, jamais nullable. Lui passer `null`
+     *   ne compile pas. C'est le correctif déjà acté pour les 53 arguments
+     *   concernés (docs/A-APPLIQUER.md) : omettre plutôt que forcer un type.
+     * ⚠ ET SURTOUT PAS UN TABLEAU VIDE : `famille = any('{}')` ne correspond à
+     *   AUCUNE famille et rendrait une carte vide, sans rien pour l'expliquer.
+     */
+    const filtre = choix.length > 0 ? { p_familles: choix } : {};
 
     // 🔴 EN DESSOUS DE ZOOM_DETAIL, ON NE DESSINE PAS DES ÉPINGLES. À
     //    l'ouverture la carte cadre tout Madagascar : elle posait 800 `divIcon`
@@ -146,15 +259,44 @@ export default function Carte() {
     //    Elle chargeait, elle peinait. Et 800 épingles sur 1 600 km se
     //    superposent en bouillie : personne ne lit ça.
     if (zoom < ZOOM_DETAIL) {
-      // ⚠ La grille suit le zoom : ~40 grappes en travers quel que soit le
-      //   niveau. Un pas fixe donnerait une seule grappe pour le pays.
-      const pas = Math.max((b.getEast() - b.getWest()) / 40, 0.02);
+      /**
+       * 🔴 LA GRILLE SE COMPTE EN PIXELS D'ÉCRAN, PAS EN CASES FIXES. Elle
+       *    était à « 40 cases en travers » quelle que soit la largeur : sur
+       *    1 173 px, une case faisait 29 px pour des pastilles de 30 à 64 —
+       *    elles se recouvraient donc TOUJOURS, et Madagascar disparaissait
+       *    sous un mur de pastilles collées. Vérifié en capture.
+       *
+       * ⚠ 58 PX PAR CASE, POUR UNE PASTILLE PLAFONNÉE À 52. Réglé en regardant
+       *   le rendu, pas au jugé : à 78 px le pays n'avait plus que quatorze
+       *   pastilles et la géographie disparaissait — on ne voyait plus que le
+       *   pays est peuplé le long des routes. À 58, l'axe Tana-Antsirabe et
+       *   les côtes se lisent, et rien ne se touche encore.
+       * ⚠ LE PLANCHER ET LE PLAFOND COMPTENT AUTANT. Sur un téléphone de
+       *   390 px la division donnerait 7 cases, et c'est bien le minimum : en
+       *   dessous, le pays entier tomberait dans trois pastilles géantes qui ne
+       *   disent plus où sont les choses. Au-delà de 26, on repart vers le mur
+       *   de pastilles collées sur un très grand écran.
+       */
+      const largeurPx = Math.max(m.getSize().x, 320);
+      const cases = Math.min(26, Math.max(7, Math.round(largeurPx / 58)));
+      const pas = Math.max((b.getEast() - b.getWest()) / cases, 0.02);
+      /**
+       * 🔴 LA PASTILLE NE PEUT PLUS DÉPASSER SA CASE. Le plafond était un
+       *    nombre écrit à part (52) que rien ne reliait à la largeur d'une
+       *    case : sur un téléphone de 390 px, la case tombe à 56 px et les plus
+       *    grosses pastilles se touchaient — vu en capture. Déduit de la case,
+       *    l'écart est garanti à toutes les tailles d'écran, et il n'y a plus
+       *    deux nombres à garder d'accord.
+       */
+      tailleMax.current = Math.min(52, Math.floor(largeurPx / cases) - 7);
+      pasGrille.current = pas;
       const { data, error } = await supabase.rpc("carte_grappes", {
         p_sud: b.getSouth(),
         p_ouest: b.getWest(),
         p_nord: b.getNorth(),
         p_est: b.getEast(),
         p_pas: pas,
+        ...filtre,
       });
       if (mien !== versionZone.current) return;
       if (error) {
@@ -166,6 +308,10 @@ export default function Carte() {
       setGrappes(g);
       setPoints([]);
       setTotalZone(g[0]?.total_zone ?? 0);
+      // ⚠ La légende vient du serveur, PAS d'une somme des grappes reçues :
+      //   celles-ci sont plafonnées à 400 cases, et la somme mentirait dès
+      //   qu'une zone dense en compte davantage.
+      setZone(composition(g[0]?.familles_zone));
       setChargement(false);
       return;
     }
@@ -176,6 +322,7 @@ export default function Carte() {
       p_nord: b.getNorth(),
       p_est: b.getEast(),
       p_limite: 800,
+      ...filtre,
     });
     if (mien !== versionZone.current) return;
     if (error) {
@@ -187,28 +334,18 @@ export default function Carte() {
     setGrappes([]);
     setPoints(l);
     setTotalZone(l[0]?.total_zone ?? 0);
+    setZone(composition(l[0]?.familles_zone));
     setChargement(false);
   }, []);
-
-  const visibles = useMemo(() => {
-    if (filtre === "tout") return points;
-    // ⚠ « Sites » n'est pas une categorie d'etablissement mais un GENRE de
-    //   point : le filtre doit trancher sur `genre`, sinon l'onglet rend vide
-    //   alors que 2 429 sites sont sous les yeux du visiteur.
-    if (filtre === "site_attraction")
-      return points.filter((p) => p.genre === "site" || p.categories.includes(filtre));
-    return points.filter((p) => p.genre === "page" && p.categories.includes(filtre));
-  }, [points, filtre]);
 
   // ── Initialisation, une seule fois ────────────────────────────────────
   useEffect(() => {
     if (!divCarte.current || carte.current) return;
     const m = L.map(divCarte.current, {
-      center: CENTRE_MADAGASCAR,
-      zoom: 6,
       zoomControl: false,
       attributionControl: true,
     });
+    m.fitBounds(CADRE_MADAGASCAR, { padding: [12, 12] });
     L.control.zoom({ position: "bottomright" }).addTo(m);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
@@ -236,7 +373,106 @@ export default function Carte() {
       carte.current = null;
       couche.current = null;
     };
+  }, [chargerZone]);
+
+  /**
+   * 🔴 COCHER UN FILTRE REDEMANDE AU SERVEUR. C'est tout le point du correctif :
+   *    filtrer les 800 points déjà reçus laissait 1 072 restaurants hors de vue
+   *    sans que rien ne le dise. On saute le tout premier passage, que
+   *    l'initialisation a déjà lancé.
+   */
+  const premierRendu = useRef(true);
+  useEffect(() => {
+    if (premierRendu.current) {
+      premierRendu.current = false;
+      return;
+    }
+    // ⚠ Le zoom qui vient d'être demandé va déclencher `moveend`, donc une
+    //   requête sur le BON cadre : celle-ci ferait double emploi.
+    if (zoomEnCours.current) {
+      zoomEnCours.current = false;
+      return;
+    }
+    setChoisis(null);
+    setChargement(true);
+    void chargerZone();
+  }, [actives, chargerZone]);
+
+  const basculer = (code: Famille) =>
+    setActives((avant) => {
+      const suite = new Set(avant);
+      if (suite.has(code)) suite.delete(code);
+      else suite.add(code);
+      return suite;
+    });
+
+  /**
+   * LE CADRE D'UNE GRAPPE — sa case de la grille, exactement.
+   *
+   * 🔴 CE QUE ÇA CORRIGE, ET C'EST UN DÉFAUT D'ORIGINE. Le clic faisait
+   *    `setView(centre de la case, max(zoom+3, 11))`. Or à l'échelle du pays la
+   *    case mesure ~1,5° de côté, soit 165 km, et son CENTRE GÉOMÉTRIQUE n'est
+   *    pas là où sont les points : la case d'Antananarivo est centrée sur
+   *    (-18,75 ; 47,25), à une trentaine de kilomètres à l'ouest de la ville.
+   *    Sauter directement au zoom 11 — dont le champ fait 0,15° — posait donc
+   *    le visiteur en pleine campagne : la feuille annonçait « 1 780 points
+   *    ici », on atterrissait sur 14. Vu en capture.
+   *
+   * ⚠ ON RECADRE SUR LA CASE ENTIÈRE : tous les points comptés par la pastille
+   *   sont dedans, par construction. Le zoom obtenu est celui qui les contient,
+   *   pas un palier choisi d'avance — sur une grosse case on retombe donc sur
+   *   des sous-grappes, et un second clic descend d'un cran. C'est la descente
+   *   normale d'une carte à grappes, et elle ne ment jamais sur ce qu'elle
+   *   montre.
+   */
+  const cadreGrappe = useCallback((g: Grappe) => {
+    const demi = pasGrille.current / 2;
+    return L.latLngBounds(
+      [g.lat - demi, g.lng - demi],
+      [g.lat + demi, g.lng + demi]
+    );
   }, []);
+
+  /** Rapprocher sur une grappe : le geste de base, sans toucher au filtre. */
+  const zoomerSurGrappe = useCallback(
+    (g: Grappe) => {
+      const m = carte.current;
+      if (!m) return;
+      setGrappeChoisie(null);
+      m.fitBounds(cadreGrappe(g), { padding: [24, 24] });
+    },
+    [cadreGrappe]
+  );
+
+  /**
+   * Ouvrir UNE famille d'une grappe : on s'y rapproche ET on n'y garde que
+   * cette famille.
+   *
+   * 🔴 ON REMPLACE LE FILTRE, ON NE L'AJOUTE PAS. Ajouter « Où manger » à un
+   *    filtre « Où dormir » déjà coché rendrait les deux, alors que le geste
+   *    demandait les restaurants de cette grappe-là. Et le remplacement se VOIT
+   *    immédiatement dans la barre de cases, donc rien ne se décide en douce.
+   *
+   * ⚠ ON MET LA RÉFÉRENCE À JOUR AVANT DE ZOOMER. `chargerZone` lit
+   *   `activesRef`, pas l'état React : la requête de `moveend` part quelques
+   *   centaines de millisecondes plus tard, mais l'effet qui synchronise la
+   *   référence ne passera qu'au rendu suivant. Sans cette ligne, la carte
+   *   reviendrait avec l'ANCIEN filtre — et les cases afficheraient le nouveau.
+   */
+  const ouvrirFamille = useCallback(
+    (g: Grappe, code: Famille) => {
+      const m = carte.current;
+      if (!m) return;
+      const suite = new Set<Famille>([code]);
+      activesRef.current = suite;
+      zoomEnCours.current = true;
+      setActives(suite);
+      setGrappeChoisie(null);
+      setChoisis(null);
+      m.fitBounds(cadreGrappe(g), { padding: [24, 24] });
+    },
+    [cadreGrappe]
+  );
 
   // ── Les marqueurs, regroupés par position ─────────────────────────────
   useEffect(() => {
@@ -244,33 +480,61 @@ export default function Carte() {
     const m = carte.current;
     if (!l || !m) return;
     l.clearLayers();
+    /* ⚠ LES MARQUEURS VIENNENT D'ÊTRE REMPLACÉS : la grappe ouverte n'existe
+       plus. Garder sa feuille laisserait un panneau qui décrit un anneau
+       disparu de l'écran, et dont les boutons rapprocheraient sur un point que
+       plus rien ne montre. Cet effet ne se rejoue pas quand on OUVRE une
+       feuille (il ne dépend que des données), donc elle ne se referme pas
+       toute seule sous le doigt. */
+    setGrappeChoisie(null);
 
-    // ── Vue d'ensemble : des GRAPPES, pas des adresses ──────────────────
+    // ── Vue d'ensemble : des GRAPPES qui disent ce qu'elles contiennent ──
     if (grappes.length) {
-      const cadre: [number, number][] = [];
       grappes.forEach((g) => {
-        cadre.push([g.lat, g.lng]);
+        const compo = composition(g.familles);
         // ⚠ La pastille grossit avec le nombre, mais en RACINE : proportionnelle,
         //   une grappe de 1 163 ferait 40 fois le diamètre d'une grappe de 1 et
         //   masquerait la moitié du pays.
-        const d = Math.round(30 + Math.sqrt(g.n) * 2.2);
-        const taille = Math.min(d, 64);
+        // ⚠ LE PLAFOND VIENT DE LA GRILLE (`tailleMax`), il n'est pas écrit
+        //   ici : c'est ce qui garantit qu'une pastille ne déborde jamais sur
+        //   sa voisine, du téléphone au grand écran.
+        const taille = Math.min(Math.round(26 + Math.sqrt(g.n) * 1.9), tailleMax.current);
+        const texte = g.n > 999 ? `${Math.round(g.n / 100) / 10}k` : `${g.n}`;
+        const resume = resumeComposition(compo);
         const icone = L.divIcon({
           className: "",
-          html: `<div class="dk-grappe" style="width:${taille}px;height:${taille}px">${
-            g.n > 999 ? Math.round(g.n / 100) / 10 + "k" : g.n
-          }</div>`,
+          // ⚠ L'ANNEAU EST LE FOND, LE CŒUR EST UN DISQUE CLAIR PAR-DESSUS :
+          //   le nombre reste lisible quelle que soit la composition, alors
+          //   qu'écrit à même le dégradé il tomberait tantôt sur du corail,
+          //   tantôt sur du bleu foncé.
+          html:
+            `<div class="dk-grappe" style="width:${taille}px;height:${taille}px;` +
+            `background:${degradeGrappe(compo)}">` +
+            `<span class="dk-grappe__coeur">${texte}</span></div>`,
           iconSize: [taille, taille],
           iconAnchor: [taille / 2, taille / 2],
         });
         L.marker([g.lat, g.lng], {
           icon: icone,
-          title: `${g.n} adresses — ${g.exemple}`,
+          title: resume ? `${nombre(g.n)} ici — ${resume}` : `${nombre(g.n)} ici`,
         })
           .on("click", () => {
-            // Un clic sur une grappe RAPPROCHE : c'est le seul geste qui a du
-            // sens, l'ouvrir en liste afficherait mille lignes.
-            m.setView([g.lat, g.lng], Math.max(m.getZoom() + 3, ZOOM_DETAIL));
+            /**
+             * 🔴 LE CLIC S'ADAPTE À CE QUE LA PASTILLE MONTRE, et c'est la
+             *    règle la plus importante de ce geste : un anneau de PLUSIEURS
+             *    couleurs pose un choix, donc il ouvre le choix ; un anneau
+             *    d'UNE couleur n'en pose aucun, donc il rapproche tout de
+             *    suite. La forme annonce le comportement — on ne demande pas à
+             *    l'utilisateur de deviner lequel des deux il va obtenir.
+             *
+             * ⚠ ET C'EST CE QUI PRÉSERVE LE GESTE RAPIDE. Faire passer TOUTES
+             *   les grappes par un menu ajouterait une frappe au geste le plus
+             *   courant de la carte — se rapprocher d'une région. Quand un
+             *   filtre est actif, les grappes n'ont plus qu'une famille : le
+             *   zoom redevient donc immédiat, exactement quand il le faut.
+             */
+            if (Object.keys(compo).length > 1) setGrappeChoisie(g);
+            else zoomerSurGrappe(g);
           })
           .addTo(l);
       });
@@ -278,7 +542,7 @@ export default function Carte() {
     }
 
     const groupes = new Map<string, PointCarte[]>();
-    visibles.forEach((p) => {
+    points.forEach((p) => {
       const cle = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
       groupes.set(cle, [...(groupes.get(cle) ?? []), p]);
     });
@@ -288,16 +552,38 @@ export default function Carte() {
       const { lat, lng } = items[0];
       cadre.push([lat, lng]);
       const n = items.length;
+      // ⚠ LA COULEUR D'UN GROUPE EST CELLE DE SA FAMILLE MAJORITAIRE, et le
+      //   compte est écrit dessus. Prendre celle du premier élément ferait
+      //   changer la couleur au gré de l'ordre de tri du serveur.
+      const compo = composition(
+        items.reduce<Record<string, number>>((acc, p) => {
+          acc[p.famille] = (acc[p.famille] ?? 0) + 1;
+          return acc;
+        }, {})
+      );
+      const dominante =
+        FAMILLES.filter((f) => (compo[f.code] ?? 0) > 0).sort(
+          (a, b) => (compo[b.code] ?? 0) - (compo[a.code] ?? 0)
+        )[0] ?? habillage(items[0].famille);
+
       const icone = L.divIcon({
         className: "",
         html:
-          n > 1
-            ? `<div class="dk-pin dk-pin--groupe">${n}</div>`
-            : `<div class="dk-pin">${EMOJI[items[0].categories[0]] ?? "📍"}</div>`,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
+          `<div class="dk-pin dk-pin--famille" style="--dk-pin:${dominante.couleur}">` +
+          (n > 1
+            ? `<span class="dk-pin__n">${n}</span>`
+            : `<span class="dk-pin__i">${svgFamille(items[0].famille, 17)}</span>`) +
+          `</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
       });
-      L.marker([lat, lng], { icon: icone, title: n > 1 ? `${n} adresses` : items[0].name })
+      L.marker([lat, lng], {
+        icon: icone,
+        title:
+          n > 1
+            ? `${n} ici — ${resumeComposition(compo, 2)}`
+            : `${items[0].name} · ${dominante.label.toLowerCase()}`,
+      })
         .addTo(l)
         .on("click", () => setChoisis(items));
     });
@@ -305,18 +591,14 @@ export default function Carte() {
     // /carte?focus=<slug> depuis une fiche : on se pose dessus, panneau ouvert.
     const cible = cibleRef.current;
     if (cible) {
-      const p = visibles.find((x) => x.slug === cible);
+      const p = points.find((x) => x.slug === cible);
       if (p) {
         cibleRef.current = null;
         m.setView([p.lat, p.lng], 14);
         setChoisis(groupes.get(`${p.lat.toFixed(4)},${p.lng.toFixed(4)}`) ?? [p]);
-        return;
       }
     }
-    if (cadre.length > 1)
-      m.fitBounds(L.latLngBounds(cadre), { padding: [40, 40], maxZoom: 12 });
-    else if (cadre.length === 1) m.setView(cadre[0], 12);
-  }, [visibles, grappes]);
+  }, [points, grappes, zoomerSurGrappe]);
 
   const meLocaliser = () => {
     if (!navigator.geolocation) return toast.error("Géolocalisation indisponible.");
@@ -339,63 +621,110 @@ export default function Carte() {
     );
   };
 
+  const totalLegende = useMemo(() => totalComposition(zone), [zone]);
+
   return (
     <div className="fixed inset-0 z-10 flex flex-col bg-background pt-[var(--header-h,3.5rem)]">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
-        <button
-          onClick={retour}
-          aria-label="Retour"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-muted"
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-        </button>
-        <h1 className="mr-1 inline-flex items-center gap-1.5 font-semibold">
-          <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
-          Carte
-        </h1>
-        <button
-          onClick={meLocaliser}
-          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-full border border-input px-3 text-sm"
-        >
-          <LocateFixed className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Autour de moi</span>
-        </button>
+      <div className="border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={retour}
+            aria-label="Retour"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-muted"
+          >
+            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <h1 className="inline-flex items-center gap-1.5 font-semibold">
+            <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
+            Carte
+          </h1>
+          {totalLegende > 0 && (
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              {nombre(totalLegende)} points dans cette vue
+            </p>
+          )}
 
-        <div className="-mx-3 w-[calc(100%+1.5rem)] overflow-x-auto px-3 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex w-max gap-1.5">
-            {(["tout", ...CATEGORIES.map((c) => c.code)] as const).map((c) => {
-              const actif = filtre === c;
-              // ⚠ Le compte doit suivre la MEME regle que `visibles`, sinon
-              //   l'onglet annonce « 40 » et ouvre sur une carte vide.
-              const n =
-                c === "tout"
-                  ? points.length
-                  : c === "site_attraction"
-                    ? points.filter(
-                        (p) => p.genre === "site" || p.categories.includes(c as Categorie)
-                      ).length
-                    : points.filter(
-                        (p) => p.genre === "page" && p.categories.includes(c as Categorie)
-                      ).length;
-              if (c !== "tout" && n === 0) return null;
+          <button
+            onClick={() => setLegendeOuverte((x) => !x)}
+            aria-expanded={legendeOuverte}
+            className={cn(
+              "ml-auto inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm transition",
+              legendeOuverte
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-input hover:border-primary hover:text-primary"
+            )}
+          >
+            <Info className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Légende</span>
+          </button>
+          <button
+            onClick={meLocaliser}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-input px-3 text-sm hover:border-primary hover:text-primary"
+          >
+            <LocateFixed className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Autour de moi</span>
+          </button>
+        </div>
+
+        {/* ── LES FILTRES, QUI SONT AUSSI LA LÉGENDE ─────────────────────
+            🔴 ILS NE DISPARAISSENT PLUS. Leurs compteurs viennent de
+               `familles_zone`, calculé par le serveur pour la zone regardée —
+               à tous les niveaux de zoom, y compris celui de l'ouverture où
+               `points` est vide. C'est le défaut qui rendait la carte muette.
+            ⚠ CHAQUE CASE PORTE SA COULEUR ET SON ICÔNE : c'est ce qui permet
+              de relier une épingle bleue à « Où dormir » sans autre explication.
+            ⚠ UNE FAMILLE ABSENTE DE LA VUE RESTE AFFICHÉE, GRISÉE ET DÉSACTIVÉE,
+              plutôt que retirée : une case qui s'évapore quand on déplace la
+              carte fait douter de ce qu'on vient de lire. */}
+        <div className="-mx-3 mt-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max items-center gap-1.5">
+            <button
+              onClick={() => setActives(new Set())}
+              aria-pressed={actives.size === 0}
+              className={cn(
+                "h-8 shrink-0 rounded-full px-3 text-xs font-semibold transition",
+                actives.size === 0
+                  ? "bg-foreground text-background"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70"
+              )}
+            >
+              Tout
+              {totalLegende > 0 && (
+                <span className="ml-1 opacity-70">{nombre(totalLegende)}</span>
+              )}
+            </button>
+
+            {FAMILLES.map((f) => {
+              const n = zone[f.code] ?? 0;
+              const actif = actives.has(f.code);
+              const vide = n === 0;
               return (
                 <button
-                  key={c}
-                  onClick={() => {
-                    setFiltre(c as Categorie | "tout");
-                    setChoisis(null);
-                  }}
+                  key={f.code}
+                  onClick={() => basculer(f.code)}
+                  disabled={vide && !actif}
+                  aria-pressed={actif}
+                  title={vide ? `${f.label} — rien dans cette vue` : f.detail}
                   className={cn(
-                    "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition",
+                    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border pl-1 pr-3 text-xs font-semibold transition",
                     actif
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/70"
+                      ? "border-transparent text-white shadow-sm"
+                      : vide
+                        ? "border-border text-muted-foreground/50"
+                        : "border-border bg-card hover:border-foreground/30"
                   )}
+                  style={actif ? { backgroundColor: f.couleur } : undefined}
                 >
-                  {c === "tout"
-                    ? "Tout"
-                    : CATEGORIES.find((x) => x.code === c)?.pluriel ?? c}
-                  <span className="ml-1 opacity-70">{n}</span>
+                  <span
+                    className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-white"
+                    style={{ backgroundColor: actif ? "rgba(0,0,0,.22)" : f.couleur }}
+                    aria-hidden="true"
+                    dangerouslySetInnerHTML={{ __html: svgFamille(f.code, 14) }}
+                  />
+                  {f.label}
+                  <span className={cn("tabular-nums", actif ? "opacity-80" : "opacity-60")}>
+                    {nombre(n)}
+                  </span>
                 </button>
               );
             })}
@@ -413,9 +742,24 @@ export default function Carte() {
             </p>
           </div>
         )}
-        {!chargement && visibles.length === 0 && grappes.length === 0 && (
-          <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm shadow">
-            {totalZone > 0 ? "Rien de ce type dans cette zone" : "Aucune adresse dans cette zone"}
+
+        {/* ⚠ « Rien ici » DOIT DISTINGUER une zone vide d'un filtre trop
+            étroit : le second se répare en un clic, et il faut le dire. */}
+        {!chargement && points.length === 0 && grappes.length === 0 && (
+          <div className="absolute left-1/2 top-3 z-[500] w-max max-w-[92%] -translate-x-1/2 rounded-2xl border border-border bg-card px-4 py-2 text-center text-sm shadow">
+            {actives.size > 0 && totalLegende > 0 ? (
+              <>
+                <p className="font-semibold">Rien de ce type dans cette vue</p>
+                <button
+                  onClick={() => setActives(new Set())}
+                  className="mt-1 text-xs font-semibold text-primary underline underline-offset-4"
+                >
+                  Afficher les {nombre(totalLegende)} points de la zone
+                </button>
+              </>
+            ) : (
+              <p>Aucune adresse dans cette zone</p>
+            )}
           </div>
         )}
 
@@ -423,27 +767,119 @@ export default function Carte() {
             pour tout Madagascar — sur 5 731 points publiés — et rien ne le
             signalait : un visiteur en concluait qu'il n'y a rien à Morondava.
             Une troncature muette se lit comme une absence.
-            ⚠ Le message n'apparaît QUE quand il y a vraiment plus à voir : une
-              bannière permanente deviendrait du décor qu'on ne lit plus. */}
-        {/* ⚠ DEUX MESSAGES, PARCE QUE LES DEUX VUES NE CACHENT PAS LA MEME
-            CHOSE. En grappes, RIEN n'est caché — tout est compté, simplement
-            regroupé ; dire « 0 affichés sur 5 731 » serait faux et alarmant.
-            En vue détaillée, la troncature est réelle et doit être annoncée. */}
+            ⚠ DEUX MESSAGES, PARCE QUE LES DEUX VUES NE CACHENT PAS LA MEME
+              CHOSE. En grappes, RIEN n'est caché — tout est compté, simplement
+              regroupé ; dire « 0 affichés sur 5 731 » serait faux et alarmant.
+              En vue détaillée, la troncature est réelle et doit être annoncée. */}
         {!chargement && grappes.length > 0 && (
-          <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-center text-xs shadow">
-            {totalZone.toLocaleString("fr-FR")} adresses et sites ici — zoomez
-            pour les voir un par un
+          <div className="absolute left-1/2 top-3 z-[500] max-w-[92%] -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-center text-xs shadow backdrop-blur">
+            {nombre(totalZone)} {actives.size > 0 ? "points filtrés" : "adresses et sites"} ici —
+            zoomez pour les voir un par un
           </div>
         )}
         {!chargement && grappes.length === 0 && totalZone > points.length && (
-          <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-center text-xs shadow">
-            {points.length.toLocaleString("fr-FR")} affichés sur{" "}
-            {totalZone.toLocaleString("fr-FR")} ici — zoomez pour voir les autres
+          <div className="absolute left-1/2 top-3 z-[500] max-w-[92%] -translate-x-1/2 rounded-full border border-border bg-card/95 px-4 py-1.5 text-center text-xs shadow backdrop-blur">
+            {nombre(points.length)} affichés sur {nombre(totalZone)} ici — zoomez pour voir
+            les autres
           </div>
         )}
 
+        {/* ── LA LÉGENDE DÉPLIÉE ────────────────────────────────────────
+            ⚠ ELLE EXPLIQUE CE QUE LES FILTRES NE PEUVENT PAS DIRE : ce que
+              recouvre chaque famille, et surtout ce que signifie l'anneau
+              d'une grappe. Repliée par défaut — dépliée, elle mangerait le
+              tiers d'un écran de 390 px. */}
+        {legendeOuverte && (
+          /* ⚠ `xl:bottom-3` ET NON `md:` : la barre de navigation du bas est
+              `xl:hidden`, donc PRÉSENTE jusqu'à 1 280 px. Se caler sur `md`
+              ferait passer le bas de la légende dessous entre 768 et 1 280 —
+              exactement ce qui se voyait en capture. */
+          <div className="absolute bottom-[calc(4.5rem+var(--safe-b,0px))] left-3 z-[600] max-h-[calc(100%-6.5rem)] w-[min(20rem,calc(100%-1.5rem))] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/97 p-4 shadow-2xl backdrop-blur xl:bottom-3 xl:max-h-[calc(100%-1.5rem)]">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold">Lire la carte</p>
+                <p className="dk-secondaire mt-0.5">
+                  {nombre(totalLegende)} points dans la vue actuelle.
+                </p>
+              </div>
+              <button
+                onClick={() => setLegendeOuverte(false)}
+                aria-label="Fermer la légende"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full hover:bg-muted"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <ul className="mt-3 space-y-2">
+              {FAMILLES.map((f) => (
+                <li key={f.code} className="flex items-start gap-2.5">
+                  <span
+                    className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-white"
+                    style={{ backgroundColor: f.couleur }}
+                    aria-hidden="true"
+                    dangerouslySetInnerHTML={{ __html: svgFamille(f.code, 14) }}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold">{f.label}</span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {nombre(zone[f.code] ?? 0)}
+                      </span>
+                    </span>
+                    <span className="dk-secondaire block leading-snug">{f.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-3 flex items-center gap-3 border-t border-border pt-3">
+              <span
+                className="dk-grappe shrink-0"
+                style={{
+                  width: 42,
+                  height: 42,
+                  background: degradeGrappe({ manger: 6, dormir: 3, nature: 2, plage: 1 }),
+                }}
+                aria-hidden="true"
+              >
+                <span className="dk-grappe__coeur">12</span>
+              </span>
+              <p className="dk-secondaire leading-snug">
+                Une pastille regroupe les points trop proches pour être
+                distingués. <strong className="font-semibold">Son anneau montre
+                ce qu'elle contient</strong> — cliquez pour vous rapprocher.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── CE QU'IL Y A DANS UNE GRAPPE, ET COMMENT Y ENTRER ──────────
+            🔴 CE QUE ÇA REMPLACE. Cliquer une grappe ne faisait que rapprocher :
+               l'anneau disait qu'Antananarivo est aux deux tiers des
+               restaurants, mais il fallait ensuite zoomer, attendre, puis
+               cocher « Où manger » pour les voir seuls. Trois gestes pour une
+               intention qui tenait en un.
+            ⚠ ON PROPOSE, ON N'IMPOSE PAS. Appliquer d'office la famille
+              dominante aurait masqué les 197 hôtels de la même grappe sans
+              rien dire — un filtre posé par un geste de zoom est un filtre
+              qu'on ne pense pas à retirer. */}
+        {grappeChoisie && (
+          <FeuilleGrappe
+            grappe={grappeChoisie}
+            onFamille={(code) => ouvrirFamille(grappeChoisie, code)}
+            onTout={() => zoomerSurGrappe(grappeChoisie)}
+            onFermer={() => setGrappeChoisie(null)}
+          />
+        )}
+
         {choisis && (
-          <div className="absolute inset-x-0 bottom-[calc(4rem+var(--safe-b,0px))] z-[600] flex max-h-[58%] flex-col rounded-t-2xl border-t border-border bg-card shadow-2xl md:bottom-0">
+          /* 🔴 `xl:bottom-0`, ET C'EST UNE CORRECTION. Ce panneau était en
+              `md:bottom-0` alors que la barre de navigation est `xl:hidden` :
+              entre 768 et 1 280 px, ses quatre premiers centimètres passaient
+              DERRIÈRE la barre — le premier établissement de la liste était
+              masqué, sur toute une plage de tailles de fenêtre. */
+          <div className="absolute inset-x-0 bottom-[calc(4rem+var(--safe-b,0px))] z-[600] flex max-h-[58%] flex-col rounded-t-2xl border-t border-border bg-card shadow-2xl xl:bottom-0">
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
               <p className="text-sm font-semibold">
                 {choisis.length} adresse{choisis.length > 1 ? "s" : ""}
@@ -466,8 +902,6 @@ export default function Carte() {
                 l'établissement.
               </p>
             ) : (
-              /* D'où vient le point : un relevé OpenStreetMap ne se discute pas
-                 comme une épingle posée par le gérant. */
               /* ⚠ La provenance exacte du releve n'est plus remontee par
                  `carte_zone` (elle melange etablissements et sites, qui n'ont
                  pas la meme colonne). On dit ce qu'on sait : le point est
@@ -478,56 +912,180 @@ export default function Carte() {
             )}
 
             <ul className="divide-y divide-border overflow-y-auto overscroll-contain">
-              {choisis.map((p) => (
-                <li key={p.id}>
-                  <Link
-                    to={`/p/${p.slug}`}
-                    className="flex items-center gap-3 p-3 hover:bg-muted/40"
-                  >
-                    <span className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
-                      {p.cover_url ? (
-                        <ImageProgressive src={p.cover_url} alt="" ajustement="cover" />
-                      ) : (
-                        <span className="grid h-full w-full place-items-center text-lg">
-                          {EMOJI[p.categories[0]] ?? "📍"}
-                        </span>
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{p.name}</span>
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        {p.categories
-                          .map((c) => CATEGORIES.find((x) => x.code === c)?.label ?? c)
-                          .join(" · ")}
-                      </span>
-                      <span className="mt-0.5 flex items-center gap-2 text-sm">
-                        {p.price_min_ar != null ? (
-                          <span className="font-semibold text-primary">
-                            {ariary(p.price_min_ar)}{" "}
-                            <span className="text-xs font-normal text-muted-foreground">
-                              {unite(p.price_min_unit)}
-                            </span>
-                          </span>
+              {choisis.map((p) => {
+                const h = habillage(p.famille);
+                return (
+                  <li key={p.id}>
+                    <Link
+                      to={p.genre === "site" ? `/site/${p.slug}` : `/p/${p.slug}`}
+                      className="flex items-center gap-3 p-3 hover:bg-muted/40"
+                    >
+                      <span className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
+                        {p.cover_url ? (
+                          <ImageProgressive src={p.cover_url} alt="" ajustement="cover" />
                         ) : (
-                          <span className="text-xs text-muted-foreground">Tarif non communiqué</span>
-                        )}
-                        {(p.rating_count ?? 0) > 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
-                            <Star
-                              className="h-3 w-3 fill-amber-400 text-amber-400"
-                              aria-hidden="true"
-                            />
-                            {(p.rating_avg ?? 0).toFixed(1)}
+                          <span className="grid h-full w-full place-items-center text-lg">
+                            {EMOJI[p.categories[0]] ?? "📍"}
                           </span>
                         )}
+                        {/* La pastille de famille relie la ligne à l'épingle
+                            qu'on vient de toucher sur la carte. */}
+                        <span
+                          className="absolute bottom-1 left-1 grid h-5 w-5 place-items-center rounded-full text-white ring-2 ring-card"
+                          style={{ backgroundColor: h.couleur }}
+                          aria-hidden="true"
+                          dangerouslySetInnerHTML={{ __html: svgFamille(p.famille, 12) }}
+                        />
                       </span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">{p.name}</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {p.genre === "site"
+                            ? h.label
+                            : p.categories
+                                .map((c) => CATEGORIES.find((x) => x.code === c)?.label ?? c)
+                                .join(" · ")}
+                        </span>
+                        <span className="mt-0.5 flex items-center gap-2 text-sm">
+                          {p.price_min_ar != null ? (
+                            <span className="font-semibold text-primary">
+                              {ariary(p.price_min_ar)}{" "}
+                              <span className="text-xs font-normal text-muted-foreground">
+                                {unite(p.price_min_unit)}
+                              </span>
+                            </span>
+                          ) : (
+                            p.genre === "page" && (
+                              <span className="text-xs text-muted-foreground">
+                                Tarif non communiqué
+                              </span>
+                            )
+                          )}
+                          {(p.rating_count ?? 0) > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+                              <Star
+                                className="h-3 w-3 fill-amber-400 text-amber-400"
+                                aria-hidden="true"
+                              />
+                              {(p.rating_avg ?? 0).toFixed(1)}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * LA FEUILLE D'UNE GRAPPE — ce qu'elle contient, et par où y entrer.
+ *
+ * ⚠ LES FAMILLES SONT TRIÉES PAR NOMBRE, la plus présente en tête et annoncée
+ *   comme telle. C'est la réponse à « où vais-je manger dans ce coin » sans
+ *   avoir à lire six lignes : le premier bouton est presque toujours le bon.
+ *
+ * ⚠ LES COMPTES VIENNENT DE LA GRAPPE, PAS D'UN RECALCUL. `familles` est
+ *   agrégé par Postgres sur la case entière ; l'écran n'en a reçu aucun point
+ *   individuel à cette échelle et ne pourrait donc rien recompter.
+ *
+ * ⚠ « TOUT VOIR ICI » RESTE UN BOUTON PLEIN ET PLEINE LARGEUR : c'est le geste
+ *   d'avant, celui que la plupart des gens veulent, et il ne doit pas devenir
+ *   plus difficile que les nouveautés qu'on ajoute autour.
+ */
+function FeuilleGrappe({
+  grappe: g,
+  onFamille,
+  onTout,
+  onFermer,
+}: {
+  grappe: Grappe;
+  onFamille: (code: Famille) => void;
+  onTout: () => void;
+  onFermer: () => void;
+}) {
+  const compo = composition(g.familles);
+  const rangs = FAMILLES.filter((f) => (compo[f.code] ?? 0) > 0).sort(
+    (a, b) => (compo[b.code] ?? 0) - (compo[a.code] ?? 0)
+  );
+
+  return (
+    /* ⚠ `region` ET NON `dialog` : cette feuille ne bloque pas la carte
+        derrière elle, on peut continuer à la déplacer. Annoncer un `dialog`
+        promettrait un piège à focus et une fermeture au clavier que ce
+        panneau ne fait pas — un rôle qui ment coûte plus cher que pas de rôle.
+        Le nom accessible, lui, dit de quoi parle le panneau. */
+    <div
+      role="region"
+      aria-label={`Ce qu'il y a dans cette zone : ${nombre(g.n)} points`}
+      className="absolute inset-x-0 bottom-[calc(4rem+var(--safe-b,0px))] z-[600] flex max-h-[62%] flex-col rounded-t-2xl border-t border-border bg-card shadow-2xl xl:inset-x-auto xl:bottom-4 xl:left-3 xl:w-[21rem] xl:rounded-2xl xl:border"
+    >
+      <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-2.5">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{nombre(g.n)} points ici</p>
+          {/* ⚠ `exemple` EST LE NOM LE PLUS COURT DE LA CASE, choisi côté
+              serveur : il situe la grappe (« près de JIM ») là où des
+              coordonnées ne diraient rien. Absent, on n'invente pas de lieu. */}
+          {g.exemple && <p className="dk-secondaire truncate">{autourDe(g.exemple)}</p>}
+        </div>
+        <button
+          onClick={onFermer}
+          aria-label="Fermer"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-muted"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto overscroll-contain">
+        {rangs.map((f, i) => (
+          <li key={f.code}>
+            <button
+              onClick={() => onFamille(f.code)}
+              className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-muted/40"
+            >
+              <span
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white"
+                style={{ backgroundColor: f.couleur }}
+                aria-hidden="true"
+                dangerouslySetInnerHTML={{ __html: svgFamille(f.code, 17) }}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{f.label}</span>
+                {/* ⚠ On ne le dit QUE sur la première, et seulement quand il y
+                    a plusieurs familles : « la plus présente » sur une liste
+                    d'un seul élément ne compare rien. */}
+                {i === 0 && rangs.length > 1 && (
+                  <span className="dk-secondaire block">la plus présente ici</span>
+                )}
+              </span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
+                {nombre(compo[f.code] ?? 0)}
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {/* ⚠ `pr-[4.25rem]` SUR PETIT ÉCRAN : le bouton flottant de l'assistant
+          (`AgentDiako`) est posé en bas à droite, AU-DESSUS de cette feuille.
+          En pleine largeur, le dernier quart du bouton passait dessous et ne
+          répondait plus au doigt — vu en capture à 390 px. On lui laisse la
+          place plutôt que de lui passer sous le nez. */}
+      <div className="border-t border-border p-3 pr-[4.25rem] xl:pr-3">
+        <button
+          onClick={onTout}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground"
+        >
+          Tout voir ici ({nombre(g.n)})
+        </button>
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { TagRow } from "@/components/TagRow";
+import { PartagerMenu } from "@/components/PartagerMenu";
+import { noterLieu } from "@/lib/affinites";
+import { useVu } from "@/hooks/useVu";
 import { toast } from "sonner";
 import { useConnexionRequise } from "@/hooks/useConnexionRequise";
 import {
@@ -77,10 +80,19 @@ const SEUIL_TEXTE = 180;
 export function PostCard({
   post,
   onSupprime,
+  surSaPage = false,
 }: {
   post: Post;
   onSupprime?: (id: string) => void;
+  /**
+   * ⭐ VRAI QUAND LA CARTE EST DÉJÀ LA PAGE DU RÉCIT (`/post/<id>`).
+   *   Dans un fil, la carte entière mène au récit et la photo aussi ; sur sa
+   *   propre page, il n'y a plus nulle part où aller — la photo reprend son
+   *   geste d'agrandissement et la carte cesse d'être cliquable.
+   */
+  surSaPage?: boolean;
 }) {
+  const naviguer = useNavigate();
   const { user } = useAuth();
   const [reaction, setReaction] = useState<string | null>(post.ma_reaction);
   const [nbReactions, setNbReactions] = useState(post.reactions_count);
@@ -92,6 +104,13 @@ export function PostCard({
   const [saisie, setSaisie] = useState("");
   const [menu, setMenu] = useState(false);
   const [envoi, setEnvoi] = useState(false);
+  const [partage, setPartage] = useState(false);
+  /* ⭐ La mémoire du visiteur : une carte restée à l'écran est « vue » (elle
+     reculera au prochain chargement), et chaque geste sur elle — réagir,
+     enregistrer, commenter — dit que ce lieu l'intéresse. */
+  const racine = useRef<HTMLElement>(null);
+  useVu(racine, post.id);
+  const interesse = (poids: number) => noterLieu(post.place_slug ?? post.place, poids);
 
   /* ⚠ Le crochet porte desormais l'ACTION vers l'inscription : le toast seul
      laissait le visiteur devant un bouton muet, a l'instant precis ou il avait
@@ -115,9 +134,13 @@ export function PostCard({
     const avant = reaction;
     // Toucher la meme reaction la retire ; en toucher une autre la remplace.
     const vise = avant === type ? null : type;
+    // ⚠ Le rattrapage doit défaire EXACTEMENT ce delta : « remplacer » (0) puis
+    //   échec rendait +1 à un compteur qui n'avait pas bougé.
+    const delta = avant ? (vise ? 0 : -1) : 1;
     setReaction(vise);
-    setNbReactions((n) => n + (avant ? (vise ? 0 : -1) : 1));
+    setNbReactions((n) => n + delta);
     setChoixOuvert(false);
+    if (vise) interesse(3);
     try {
       const nouvelle = await basculerReaction(post.id, type);
       setReaction(nouvelle);
@@ -127,7 +150,7 @@ export function PostCard({
       }
     } catch {
       setReaction(avant);
-      setNbReactions((n) => n + (avant ? 1 : -1));
+      setNbReactions((n) => n - delta);
       toast.error("La réaction n'a pas pu être enregistrée.");
     }
   }
@@ -138,6 +161,7 @@ export function PostCard({
     if (!connecte("garder ce récit")) return;
     const avant = favori;
     setFavori(!avant);
+    if (!avant) interesse(3);
     try {
       setFavori(await basculerFavori(post.id, avant));
     } catch {
@@ -149,6 +173,7 @@ export function PostCard({
   async function ouvrirCommentaires() {
     const suivant = !ouvert;
     setOuvert(suivant);
+    if (suivant) interesse(1);
     if (suivant && commentaires.length === 0) {
       try {
         setCommentaires(await chargerCommentaires(post.id));
@@ -174,33 +199,112 @@ export function PostCard({
     }
   }
 
-  async function partager() {
-    const url = `${window.location.origin}/post/${post.id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Diako", text: post.body?.slice(0, 100) ?? "", url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Lien copié");
-      }
-    } catch {
-      /* partage annulé */
+  /* ⭐ Un menu — Facebook, WhatsApp, lien, Instagram — plutôt que le seul
+     partage natif : sur ordinateur il n'existe pas, et ici on partage avant
+     tout sur Facebook et WhatsApp. */
+  function partager() {
+    interesse(1);
+    setPartage(true);
+  }
+
+  /**
+   * ⭐ OUVRIR LE RÉCIT — le geste qu'Andry a demandé le 03/09/2026 : « si je
+   *   clique sur une carte il s'ouvre en grand, et va dans la page de détails
+   *   du récit ». Jusqu'ici seul l'horodatage y menait : onze pixels de haut,
+   *   tout en bas de la carte.
+   */
+  function ouvrirLeRecit() {
+    interesse(2);
+    naviguer(`/post/${post.id}`);
+  }
+
+  /**
+   * ⚠ LE CLIC GLOBAL NE DOIT AVALER AUCUN GESTE. Une carte porte huit
+   *   commandes — réagir, commenter, partager, enregistrer, le menu, le lien
+   *   d'auteur, les puces de lieu et de plat, les flèches du carrousel — et un
+   *   lien qui envelopperait tout les rendrait toutes inatteignables.
+   *   On ne navigue donc QUE si le clic n'a atterri sur aucune commande.
+   * ⚠ Et jamais après une sélection de texte : on vient de lire, pas de
+   *   cliquer. Sans ce test, surligner une phrase changeait de page.
+   */
+  const ouvertureDifferee = useRef<number | null>(null);
+
+  /**
+   * ⚠ DOUBLE-CLIC = SÉLECTIONNER UN MOT, PAS OUVRIR. Le premier clic d'un
+   *   double-clic part avant que la sélection existe : sans délai, on quittait
+   *   la carte en voulant surligner. L'ouverture attend donc 220 ms, et un
+   *   second clic l'annule. La photo, elle, ouvre tout de suite (Carrousel).
+   * ⚠ Ctrl/Cmd/Maj/clic milieu = un nouvel onglet, comme sur n'importe quel
+   *   lien : `navigate()` seul ne le sait pas.
+   */
+  function clicSurLaCarte(e: React.MouseEvent<HTMLElement>) {
+    if (surSaPage) return;
+    if (e.detail > 1) {
+      if (ouvertureDifferee.current) window.clearTimeout(ouvertureDifferee.current);
+      ouvertureDifferee.current = null;
+      return;
     }
+    const cible = e.target as HTMLElement;
+    if (
+      cible.closest(
+        'a,button,input,textarea,select,video,form,[role="button"],[role="menu"],[role="dialog"],[data-sans-ouverture]',
+      )
+    )
+      return;
+    if ((window.getSelection()?.toString() ?? "").length > 0) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+      window.open(`/post/${post.id}`, "_blank", "noopener");
+      return;
+    }
+    ouvertureDifferee.current = window.setTimeout(() => {
+      ouvertureDifferee.current = null;
+      if ((window.getSelection()?.toString() ?? "").length > 0) return;
+      ouvrirLeRecit();
+    }, 220);
+  }
+
+  function clicMilieuSurLaCarte(e: React.MouseEvent<HTMLElement>) {
+    if (surSaPage || e.button !== 1) return;
+    const cible = e.target as HTMLElement;
+    if (cible.closest('a,button,input,textarea,select,video,[role="dialog"]')) return;
+    e.preventDefault();
+    window.open(`/post/${post.id}`, "_blank", "noopener");
   }
 
   const estMien = user?.id === post.author.id;
   const texte = post.body ?? "";
-  const long = texte.length > SEUIL_TEXTE;
+  /* ⚠ SUR SA PROPRE PAGE, UN RÉCIT NE SE COUPE PAS. On y est venu POUR le
+       lire : le tronquer à 240 caractères et proposer « plus » y ajoute un
+       geste sans rien économiser — il n'y a pas de fil à ne pas perdre. */
+  const long = !surSaPage && texte.length > SEUIL_TEXTE;
   const visible = deplie || !long ? texte : texte.slice(0, SEUIL_TEXTE).trimEnd() + "…";
   const nom = post.author.name || "Membre Diako";
 
   return (
-    <article className="dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border">
+    <article
+      ref={racine}
+      onClick={clicSurLaCarte}
+      onAuxClick={clicMilieuSurLaCarte}
+      className={cn(
+        "dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border",
+        !surSaPage && "cursor-pointer"
+      )}
+    >
+      {partage && (
+        <PartagerMenu
+          url={`${window.location.origin}/post/${post.id}`}
+          texte={post.body ?? post.place ?? ""}
+          onFermer={() => setPartage(false)}
+        />
+      )}
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
       <header className="flex items-center gap-3 px-4 py-3">
         <Link
           to={`/user/${post.author.id}`}
-          className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-soft text-xs font-semibold text-primary-foreground"
+          aria-label={`Profil de ${nom}`}
+          /* ⚠ `primary-soft` est DÉCORATIF (2,9:1) : il ne porte pas de texte,
+             même une initiale. `primary` seul tient 4,95:1 sur blanc. */
+          className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-xs font-semibold text-primary-foreground"
         >
           {post.author.avatar ? (
             <img src={getThumbUrl(post.author.avatar)} alt="" width={36} height={36} className="h-9 w-9 object-cover" />
@@ -253,7 +357,13 @@ export function PostCard({
           </button>
           {menu && (
             <>
-              <button className="fixed inset-0 z-10 cursor-default" aria-hidden="true" onClick={() => setMenu(false)} />
+              <button
+                type="button"
+                tabIndex={-1}
+                className="fixed inset-0 z-10 cursor-default"
+                aria-hidden="true"
+                onClick={() => setMenu(false)}
+              />
               <div className="absolute right-0 top-9 z-20 w-48 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
                 {estMien ? (
                   <button
@@ -299,6 +409,10 @@ export function PostCard({
         <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
           <Carrousel
             images={post.media}
+            /* ⭐ DANS UN FIL, LA PHOTO MÈNE AU RÉCIT — pas à une visionneuse qui
+                 montrerait la même image sans son texte ni son lieu. Sur la
+                 page du récit (`surSaPage`), la visionneuse reprend la main. */
+            alClic={surSaPage ? null : ouvrirLeRecit}
             alt={post.place ? `${post.place}, Madagascar` : nom}
             /* ⚠ La carte du fil desktop vit dans une grille : une colonne sur
                écran large, deux à partir de 1280, trois à 1920. Sans cette
@@ -373,7 +487,7 @@ export function PostCard({
           boutons a tout le monde ralentirait le geste le plus frequent du
           site, alors que la nuance n'interesse qu'une partie des lecteurs. */}
       {choixOuvert && (
-        <div className="dk-scale-in flex flex-wrap gap-1.5 px-2 pt-2">
+        <div className="dk-scale-in flex flex-wrap gap-1.5 px-2 pt-2" data-sans-ouverture="">
           {REACTIONS.map((r) => (
             <button
               key={r.code}
@@ -409,12 +523,25 @@ export function PostCard({
             </Link>{" "}
             {visible}
             {long && !deplie && (
-              <button
-                onClick={() => setDeplie(true)}
-                className="ml-1 text-muted-foreground hover:underline"
-              >
-                plus
-              </button>
+              <>
+                <button
+                  onClick={() => setDeplie(true)}
+                  className="ml-1 text-muted-foreground hover:underline"
+                >
+                  plus
+                </button>
+                {/* ⚠ DEUX SORTIES, PAS UNE. « plus » déplie sur place — on ne
+                    perd pas sa position dans le fil pour lire trois lignes de
+                    plus. « Ouvrir » mène à la publication entière, avec tous
+                    ses commentaires et le champ pour en écrire un. Les deux
+                    gestes ne servent pas la même intention. */}
+                <Link
+                  to={`/post/${post.id}`}
+                  className="ml-2 text-xs font-medium text-primary hover:underline"
+                >
+                  Ouvrir
+                </Link>
+              </>
             )}
           </p>
         )}
@@ -432,23 +559,48 @@ export function PostCard({
           plat={post.dish ? { nom: post.dish } : null}
         />
 
-        {nbCommentaires > 0 && !ouvert && (
+        {/* ⚠ ON GARDE L'OUVERTURE EN PLACE. Sur une carte du fil, dérouler deux
+            réponses sous les yeux vaut mieux qu'un changement d'écran : c'est
+            le geste le plus fréquent, il doit rester le moins cher. La
+            publication entière reste à un clic, par l'horodatage. */}
+        {nbCommentaires > 0 && (
+          /* ⚠ LE BOUTON RESTE MONTÉ. Il disparaissait à l'ouverture : le focus
+             clavier tombait sur le corps du document, et le lecteur d'écran se
+             taisait. Il bascule maintenant, et le dit. */
           <button
-            onClick={ouvrirCommentaires}
+            onClick={() => (ouvert ? setOuvert(false) : ouvrirCommentaires())}
+            aria-expanded={ouvert}
             className="mt-1 block text-sm text-muted-foreground hover:underline"
           >
-            Voir les {nbCommentaires} commentaire{nbCommentaires > 1 ? "s" : ""}
+            {ouvert
+              ? "Masquer les commentaires"
+              : `Voir les ${nbCommentaires} commentaire${nbCommentaires > 1 ? "s" : ""}`}
           </button>
         )}
 
-        <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+        {/* ⭐ L'HORODATAGE OUVRE LA PUBLICATION. C'est le geste standard —
+               Instagram, Facebook, Twitter font tous ça — et il ne coûte aucun
+               élément cliquable à la carte, contrairement à un lien qui
+               envelopperait tout et avalerait la visionneuse, les réactions,
+               le lien d'auteur et la puce de lieu.
+            ⚠ La route `/post/:id` existait déjà, mais RIEN dans le fil n'y
+              menait : elle ne servait qu'aux liens partagés et aux
+              notifications. On y arrivait donc uniquement par un lien reçu
+              d'ailleurs, jamais depuis le site lui-même. */}
+        <Link
+          to={`/post/${post.id}`}
+          onClick={() => interesse(2)}
+          className="mt-1 block text-[11px] text-muted-foreground hover:underline"
+        >
           {ilYA(post.created_at)}
-        </p>
+        </Link>
       </div>
 
       {/* ── Commentaires ────────────────────────────────────────────────── */}
       {ouvert && (
-        <div className="mt-3 border-t border-border px-4 pt-3">
+        /* ⚠ LIRE UNE RÉPONSE NE QUITTE PAS LE FIL : ce bloc vit dans une carte
+           cliquable, et cliquer le texte d'un commentaire ouvrait le récit. */
+        <div className="mt-3 border-t border-border px-4 pt-3" data-sans-ouverture="">
           {commentaires.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Aucun commentaire. Soyez le premier à répondre.

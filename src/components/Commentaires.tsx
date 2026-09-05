@@ -14,7 +14,19 @@ function ilYA(iso: string) {
 }
 
 /** Bloc de commentaires — partagé par la carte desktop et le panneau mobile. */
-export function Commentaires({ postId }: { postId: string }) {
+export function Commentaires({
+  postId,
+  onNombre,
+}: {
+  postId: string;
+  /**
+   * ⭐ LE NOMBRE REMONTE À L'ÉCRAN QUI L'AFFICHE. Sur la page d'un récit, le
+   *   titre « 3 réponses » et la barre d'actions lisaient `post.comments_count`,
+   *   figé au chargement : publier une réponse juste en dessous ne les faisait
+   *   pas bouger.
+   */
+  onNombre?: (n: number) => void;
+}) {
   const { user } = useAuth();
   const [liste, setListe] = useState<Commentaire[]>([]);
   const [saisie, setSaisie] = useState("");
@@ -26,7 +38,10 @@ export function Commentaires({ postId }: { postId: string }) {
     (async () => {
       try {
         const c = await chargerCommentaires(postId);
-        if (!annule) setListe(c);
+        if (!annule) {
+          setListe(c);
+          onNombre?.(c.length);
+        }
       } catch {
         if (!annule) toast.error("Les commentaires n'ont pas pu être chargés.");
       } finally {
@@ -45,7 +60,9 @@ export function Commentaires({ postId }: { postId: string }) {
     try {
       await commenter(postId, saisie);
       setSaisie("");
-      setListe(await chargerCommentaires(postId));
+      const c = await chargerCommentaires(postId);
+      setListe(c);
+      onNombre?.(c.length);
     } catch {
       toast.error("Le commentaire n'a pas pu être publié.");
     } finally {

@@ -1,6 +1,226 @@
 # État de Diako avant lancement
 
-Mis à jour le 18/08/2026.
+Mis à jour le 01/09/2026.
+
+## ✅ Nettoyer le fil et le calendrier — FAIT le 03/09/2026 (179 récits masqués, 72 événements dépubliés, 35 sous-genres, 441 trouvailles requalifiées)
+
+Décision d'Andry du 03/09/2026 : le fil porte le vécu des voyageurs, le
+calendrier porte les événements malgaches qui ont un lieu, et ce qu'un
+établissement dit de lui pour vendre (offres, menus de fête, vœux) nourrit sa
+fiche — jamais le fil. Le bot classe désormais ainsi (`bot-diako/bot/extraction.py`,
+`classer_avec_motif`, 17 tests dans `tests/test_classement.py`).
+
+Rejoué à blanc sur la base du bot le 03/09 (`python outils/reclasser.py`) :
+**253 publications en ligne** n'ont pas leur place —
+
+| Ce qui est en ligne | Combien | Ce qui sera fait |
+|---|---|---|
+| publicités d'établissement réécrites en récits (« Vos cours de tennis au Carlton », « FLASH PROMO -30 % ») | 163 | récit masqué (`posts.status = 'hidden'`), trouvaille requalifiée en fiche à trier |
+| voyages organisés d'agence publiés comme événements (« Voyage organisé Tana - Tuléar (8 jours) ») | 69 | événement dépublié (`is_published = false`), trouvaille requalifiée en fiche à trier |
+| hors sujet (bijouterie, vente, offre sans information) | 15 | récit masqué, trouvaille rejetée |
+| programmes d'excursion lus comme des cartes | 4 | événement dépublié |
+| récits dont le sous-genre change (assiette, avis…) | 35 | `posts.kind` mis à jour |
+
+**Rien n'est supprimé** : un récit masqué se remontre par un `UPDATE`, un
+événement dépublié aussi.
+
+Le classificateur de sécurité a refusé cette écriture depuis une session
+Claude. À lancer à la main, depuis `Diako\bot-diako` :
+
+```
+python outils/reclasser.py               # à blanc : montre la liste
+python outils/reclasser.py --ecrire --site
+```
+
+La commande écrit au nom du compte Diako (voir la section précédente), relit ce
+qu'elle a écrit, et le journal du bot en garde la trace.
+
+## ✅ Second passage du nettoyage — FAIT le 03/09/2026 (41 récits masqués, 72 trouvailles requalifiées)
+
+Après le premier nettoyage (03/09/2026), 248 récits restaient en ligne. En les
+relisant : 18 étaient encore des annonces, en malgache (« Manankery … ity
+tolotra ity », « misokatra foana izahay », « zahay mandray vahiny ») ou en
+anglais (« Escape to the paradise of Nosy Sakatia… book now »), plus des ventes
+d'objets (matelas à louer, blender, tapis, vêtements d'enfants, sono). Le
+vocabulaire d'`est_une_offre` était tout français, et « izahay » (nous)
+comptait comme un vécu alors qu'un établissement dit « nous » autant qu'un
+voyageur.
+
+Corrigé dans `bot-diako/bot/extraction.py` (7 tests de plus, 137 au total),
+rejoué à blanc : **36 publications en ligne** à masquer —
+
+| Ce qui est en ligne | Combien | Ce qui sera fait |
+|---|---|---|
+| annonces d'établissement en malgache ou en anglais, réécrites en récits | 28 | récit masqué, trouvaille requalifiée en fiche à trier |
+| ventes d'objets et services hors sujet (matelas, blender, tapis, vêtements, sono) | 8 | récit masqué, trouvaille rejetée |
+
+Lancé le 03/09 sur autorisation d'Andry : **41 récits masqués**, 72 trouvailles
+requalifiées. Il restait 213 récits visibles, contre 418 avant les deux passes.
+
+## ✅ Le chrome de Facebook dans les textes déjà publiés — FAIT le 03/09/2026 (1 récit écarté, à dessein)
+
+Mesuré le 03/09/2026 sur les récits en ligne : **106 des 213 visibles** (et 103
+masqués, 209 en tout) portent dans leur corps des morceaux de l'interface de
+Facebook, capturés avec le texte —
+
+| Ce qu'on lit dans le fil | Exemple |
+|---|---|
+| `Voir moins…` collé à la fin du récit | « …#photograph #reportage #voyage Voir moins… » |
+| `Indicateur de statut En ligne En ligne` en tête | « Indicateur de statut En ligne En ligne TL Voyage · LOCATION DE VOITURE » |
+| `Contenu IA`, `· Suivre`, `Écrivez un commentaire public…` | « Hôtel HAPPY Foulpointe · Suivre 16 août · Écrivez un commentaire public... » |
+| la ligne de provenance **deux fois** | « Vu sur Facebook — Andri.matel le 23/08/2026 » ×2 |
+
+`redaction.nettoyer()` ne retirait que les LIGNES entières de bruit
+(`BRUIT_FIL` est ancré `^…$`) : ce qui était collé au texte passait. Et
+`BRUIT_FIL` faisait pire sur « Indicateur de statut … » — il avalait la ligne
+entière, texte utile compris.
+
+**Corrigé pour les prochaines publications** (`extraction.sans_bruit_de_fil`,
+`redaction.nettoyer`, pied de `corps_recit` qui ne répète plus la provenance ;
+4 tests). Mais le bot ne republie pas ce qu'il a déjà publié : les 209 textes
+en ligne ne se corrigeront pas tout seuls.
+
+Le classificateur a refusé cette écriture **par quatre chemins** (outil dédié,
+SQL par le connecteur, SQL par le bot, relance de l'outil). Depuis
+`Diako/bot-diako` :
+
+```
+python outils/nettoyer_textes.py            # à blanc : 209 récits, 1 écarté
+python outils/nettoyer_textes.py --ecrire
+```
+
+**Premier passage lancé par Andry le 03/09** : la provenance en double a
+disparu (0 cas), et le bruit est tombé de 106 à 32 récits visibles. Les 32
+restants portaient tous « Écrivez un commentaire…… » **sans** le mot
+« public », que le filtre exigeait ; s'y ajoutait le chrome des réactions
+(« 3 ans J'aime », le compteur « · 4 »). Filtre élargi → **41 récits à
+reprendre**, même commande.
+
+En écrivant le test de ce filtre, un bug ANTÉRIEUR est apparu : `MOTS_RESEAU`
+retirait la LIGNE ENTIÈRE dès qu'elle commençait par « j'aime », si bien que
+« J'aime beaucoup ce petit lodge, on y a dormi deux nuits. » disparaissait en
+entier. Corrigé (le chrome est court, la phrase d'un voyageur ne l'est pas).
+Une seule trouvaille était concernée, et c'était un vrai appel au like en
+allemand : aucun récit n'a été perdu.
+
+Garde-fous : jamais un texte vidé, jamais amputé de plus de 40 % — le seul cas
+écarté est une fiche dont l'auteur s'appelle littéralement « Indicateur de
+statut En ligne ». Les 323 `pages.long_desc` qui portent le même bruit ne sont
+**pas** touchées par cet outil : `trg_pages_avant` est un BEFORE INSERT **OR
+UPDATE**, et toute écriture sur une fiche sans le préfixe propriétaire la
+dépublierait.
+
+**Lancé deux fois par Andry le 03/09** (filtre élargi entre les deux) : il ne reste
+**1 récit sur 213** avec du bruit, et c'est celui que le garde-fou refuse à raison —
+son auteur s'appelle littéralement « Indicateur de statut En ligne » et son corps ne
+contient rien d'autre. Rien à faire de plus ici ; le bot ne produit plus ce bruit.
+
+## ⏳ 333 fiches créées par le bot sont INVISIBLES — à trancher, puis SQL
+
+Trouvé par l'audit du bot du 02/09/2026. Le déclencheur `pages_avant_ecriture`
+force `is_published := false` à toute insertion faite hors d'un compte
+administrateur ; sous l'API Management, `auth.uid()` est vide, donc
+`is_admin()` est faux. **Les 333 fiches d'établissement créées par le bot
+depuis le 23/08 ont toutes `is_published = false`** : le bot annonçait
+« Publiée sur Diako », le site ne les montre pas. Les événements (118) et les
+récits (418) ne sont pas concernés.
+
+Le bot est corrigé : chaque lot d'écriture commence désormais par
+`set_config('request.jwt.claims', …)` avec le compte `contact.diako@gmail.com`
+(`284aa922-…`), ce qui rend `is_admin()` vrai le temps de la transaction
+(vérifié le 02/09 : `auth.uid()` = le compte, `is_admin()` = true). Et la
+publication relit la ligne écrite et signale en erreur un `is_published` resté
+à false.
+
+**Avant de publier les 333 en bloc, une décision :** 76 d'entre elles
+ressemblent (similarité ≥ 0,6 sur le nom normalisé) à une fiche déjà publiée
+— le rapprochement était passé sous le seuil et la fiche a été créée à côté
+(« Shain Lodge » / « SHAIN LODGE », par exemple). 38 n'ont aucun contact.
+Publier tel quel mettrait des doublons dans l'annuaire.
+
+```sql
+-- 1. Voir les 333, doublons probables en tête
+select n.id, n.name, n.slug, n.created_at::date,
+       (select e.slug from pages e where e.is_published and e.id <> n.id
+          and e.norm % n.norm and similarity(e.norm, n.norm) >= 0.6
+          order by similarity(e.norm, n.norm) desc limit 1) as ressemble_a
+  from pages n
+ where n.source like 'Facebook ·%' and not n.is_published
+ order by ressemble_a nulls last, n.name;
+
+-- 2. Publier celles qui n'ont PAS de sosie (257), au nom du compte Diako
+select set_config('request.jwt.claims',
+  '{"sub":"284aa922-edf6-4773-bcee-c4f7cc074d67","role":"authenticated"}', true);
+update pages n set is_published = true
+ where n.source like 'Facebook ·%' and not n.is_published
+   and not exists (select 1 from pages e where e.is_published and e.id <> n.id
+                     and e.norm % n.norm and similarity(e.norm, n.norm) >= 0.6);
+
+-- 3. Les 76 sosies : fusionner à la main (photos, contact) puis supprimer,
+--    ou publier si ce sont bien deux établissements distincts.
+```
+
+Le `set_config` et l'`update` doivent être dans la **même** exécution (une
+seule requête dans l'éditeur SQL) : la revendication est locale à la
+transaction.
+
+## ⏳ Nettoyage des sites web écrits par le bot — à exécuter dans l'éditeur SQL
+
+Trouvé par l'audit du bot de collecte du 02/09/2026. Le classificateur a refusé
+l'écriture depuis la session : **à passer par l'éditeur SQL Supabase** (ou par
+le connecteur après accord, comme 0115 et 0117).
+
+- **23 fiches portent `https://gmail.com` comme site web**, toutes écrites par
+  le bot depuis une publication Facebook (« contact : xxx@gmail.com » lu comme
+  une adresse de site). Le garde-fou n'existait que dans la moisson des sites
+  (`toile.py`), pas dans l'extraction Facebook ni à la publication — corrigé
+  dans le bot le 02/09, mais les 23 lignes déjà en ligne restent.
+- **5 fiches portent un balisage Wikivoyage dans l'adresse** :
+  `http://www.renala.mg {{dead link|December 2020}}`. Elles viennent de
+  l'import, pas du bot ; le bot lisait ces adresses telles quelles.
+
+```sql
+-- Contrôle avant : 23 et 5 attendus
+select count(*) from pages where website = 'https://gmail.com';
+select count(*) from pages where website like '%{{dead link%';
+
+update pages set website = null where website = 'https://gmail.com';
+update pages
+   set website = regexp_replace(website, '\s*\{\{[^}]*\}\}\s*$', '')
+ where website like '%{{dead link%';
+
+-- Contrôle après : 0 et 0
+select count(*) from pages where website = 'https://gmail.com';
+select count(*) from pages where website like '%{{%';
+```
+
+Les 23 identifiants concernés (pour retour arrière) : Étoile Blanche Hotel,
+FRANCO MALGACHE TOURS, Frederico Walker, Hotel Mahamasina, Hotel Soalia
+Antsirabe, ID Dream Tours, Izzy Car Rental, Jet Ski Nosy Be, L'Arôme Lodge,
+Le Corto Maltèse, Lemuria Land Park, Léonard Tour, Madiro Hôtel, Madjid English
+Guide, Nosy - Be Record Excursion, Nosy Be Tour, Nosy-Be SIDO TOURS, Shain
+Lodge, SHAIN LODGE, SylKomba, Taj Hôtel, TL Rent Car, VITAIGNY CATAMARAN.
+
+À noter, hors périmètre du bot : **19 fiches de l'import OSM/Wikivoyage ont une
+adresse `facebook.com` dans `website`** au lieu de `facebook`. Rien de cassé,
+mais la colonne ne dit pas ce qu'elle annonce.
+
+## ✅ `0117_destinations_emblematiques.sql` — appliquée le 01/09/2026
+
+Écrite avec la refonte de l'écran Destinations, refusée une première fois par
+le classificateur, **appliquée par le connecteur après l'accord d'Andry**
+(« applique 0117 ») — le même appel passe une fois l'accord donné, comme sur
+0115. Les trois assertions ont validé, dont le chronométrage sous `role anon`
++ `statement_timeout 3s`. Vérifié de l'extérieur à la clé anon : la RPC rend
+61 éléments sur les 5 familles, et `stats_diako.destinations` dit 61 (contre
+508 avant, dont 430 villages, hameaux et quartiers).
+
+Le repli client de `src/lib/destinations.ts` (lecture directe de `places`
+pendant que la fonction n'existait pas) s'est débranché tout seul — il reste
+en place comme filet. `types.ts` régénéré dans la foulée : la régénération a
+produit, comme leurs commentaires l'annonçaient, les entrées écrites à la main
+pour 0114/0115, plus `destinations_emblematiques`, `fil_cats_du_theme` et
+`post_du_theme`.
 
 ## ✅ Les dix-huit migrations sont appliquées
 

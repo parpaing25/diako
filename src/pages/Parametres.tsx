@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Bell, ChevronRight, Lock, LogOut, Monitor, Moon, Shield, Sun, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import {
   activerPush,
   desactiverPush,
@@ -76,7 +76,7 @@ function Ligne({
  *    qu'un réglage absent : il fait croire que le malgache est déjà choisi.
  */
 export default function Parametres() {
-  useDocumentTitle("Paramètres");
+  useSEO({ titre: "Paramètres", noindex: true });
   const { theme, effectif, setTheme } = useTheme();
   const { user, signOut } = useAuth();
 
@@ -219,7 +219,7 @@ export default function Parametres() {
               <button
                 onClick={() =>
                   toast("Suppression de compte", {
-                    description: "Écrivez à contact.fonenako@gmail.com : votre compte et vos publications seront effacés.",
+                    description: "Écrivez à contact.diako@gmail.com : votre compte et vos publications seront effacés.",
                   })
                 }
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-destructive transition hover:bg-destructive/5"

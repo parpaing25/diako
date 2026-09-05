@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronRight, Eye, Loader2, Plus, ShieldCheck, Trash2 } from
 import { ApercuMobile } from "@/components/ApercuMobile";
 import { Cogestion, jeGereCettePage } from "@/components/Cogestion";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
 import {
@@ -98,7 +98,7 @@ export default function ProConsole() {
   /** Incrémenté après chaque enregistrement : l'aperçu se recharge alors seul. */
   const [versionApercu, setVersionApercu] = useState(0);
 
-  useDocumentTitle(fiche ? `Gérer — ${fiche.name}` : "Espace professionnel");
+  useSEO({ titre: fiche ? `Gérer — ${fiche.name}` : "Espace professionnel", noindex: true });
 
   const recharger = useCallback(async () => {
     if (!slug) return;

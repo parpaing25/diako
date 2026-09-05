@@ -38,7 +38,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -2831,6 +2831,74 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_offers: {
+        Row: {
+          created_at: string
+          deposit_ar: number | null
+          fuel_included: boolean | null
+          id: string
+          km_included_per_day: number | null
+          model: string | null
+          page_id: string
+          photos: string[]
+          price_day_ar: number | null
+          price_note: string | null
+          price_on: string | null
+          seats: number | null
+          sort_order: number
+          source: string | null
+          status: string
+          vehicle_type: string
+          with_driver: boolean
+        }
+        Insert: {
+          created_at?: string
+          deposit_ar?: number | null
+          fuel_included?: boolean | null
+          id?: string
+          km_included_per_day?: number | null
+          model?: string | null
+          page_id: string
+          photos?: string[]
+          price_day_ar?: number | null
+          price_note?: string | null
+          price_on?: string | null
+          seats?: number | null
+          sort_order?: number
+          source?: string | null
+          status?: string
+          vehicle_type: string
+          with_driver?: boolean
+        }
+        Update: {
+          created_at?: string
+          deposit_ar?: number | null
+          fuel_included?: boolean | null
+          id?: string
+          km_included_per_day?: number | null
+          model?: string | null
+          page_id?: string
+          photos?: string[]
+          price_day_ar?: number | null
+          price_note?: string | null
+          price_on?: string | null
+          seats?: number | null
+          sort_order?: number
+          source?: string | null
+          status?: string
+          vehicle_type?: string
+          with_driver?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_offers_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       sites_localises: {
@@ -2916,6 +2984,7 @@ export type Database = {
         Args: {
           p_categorie?: string
           p_est: number
+          p_familles?: string[]
           p_nord: number
           p_ouest: number
           p_pas: number
@@ -2923,6 +2992,8 @@ export type Database = {
         }
         Returns: {
           exemple: string
+          familles: Json
+          familles_zone: Json
           lat: number
           lng: number
           n: number
@@ -2934,6 +3005,7 @@ export type Database = {
         Args: {
           p_categorie?: string
           p_est: number
+          p_familles?: string[]
           p_limite?: number
           p_nord: number
           p_ouest: number
@@ -2943,6 +3015,8 @@ export type Database = {
         Returns: {
           categories: string[]
           cover_url: string
+          famille: string
+          familles_zone: Json
           genre: string
           id: string
           lat: number
@@ -3025,6 +3099,7 @@ export type Database = {
           n: number
         }[]
       }
+      destinations_emblematiques: { Args: never; Returns: Json }
       devenir_pro: { Args: { p_metier: string }; Returns: undefined }
       distance_km: {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
@@ -3154,6 +3229,10 @@ export type Database = {
         Returns: string
       }
       dk_compte_proprietaire: { Args: never; Returns: boolean }
+      dk_famille_carte: {
+        Args: { p_categories: string[]; p_genre: string; p_kind: string }
+        Returns: string
+      }
       dk_grande_region: { Args: { p_region: string }; Returns: string }
       dk_kinds_envie: { Args: { p_envie: string }; Returns: string[] }
       dk_libelle_type: { Args: { p_kind: string }; Returns: string }
@@ -3207,7 +3286,9 @@ export type Database = {
       }
       fiche_destination: { Args: { p_slug: string }; Returns: Json }
       fiche_plat: { Args: { p_slug: string }; Returns: Json }
+      fil_cats_du_theme: { Args: { p_theme: string }; Returns: string[] }
       fil_modes_disponibles: { Args: never; Returns: Json }
+      fil_themes_comptes: { Args: never; Returns: Json }
       get_feed: {
         Args: { p_curseur?: string; p_limite?: number }
         Returns: Json
@@ -3322,6 +3403,10 @@ export type Database = {
           rating_count: number
           slug: string
         }[]
+      }
+      post_du_theme: {
+        Args: { p_post: string; p_theme: string }
+        Returns: boolean
       }
       profil_expose: { Args: { p: string }; Returns: boolean }
       profil_public: { Args: { p_id: string }; Returns: Json }

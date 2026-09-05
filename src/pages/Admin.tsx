@@ -30,7 +30,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { jeSuisAdmin } from "@/lib/admin";
 import { cn } from "@/lib/utils";
 import Statistiques from "@/components/admin/Statistiques";
@@ -59,7 +59,7 @@ const ONGLETS: { cle: Cle; label: string; icone: LucideIcon }[] = [
 const PAR_DEFAUT: Cle = "chiffres";
 
 export default function Admin() {
-  useDocumentTitle("Console d'administration");
+  useSEO({ titre: "Console d'administration", noindex: true });
   const { user, loading: authLoading } = useAuth();
   const [params, setParams] = useSearchParams();
   const [acces, setAcces] = useState<"chargement" | "ok" | "refus">("chargement");

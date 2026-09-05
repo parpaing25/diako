@@ -1,5 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+/* ⚠ IMPORT DE TYPE SEUL. `themesFil` charge `etablissements` et `decouverte`,
+ *  qui reviendraient ici : un import de valeur créerait un cycle. `import type`
+ *  est effacé à la compilation, donc aucun cycle à l'exécution. */
+import type { CleTheme } from "@/lib/themesFil";
 
 /**
  * Couche d'accès aux données — LE seul endroit qui parle à la base.
@@ -18,6 +22,11 @@ export interface Media {
   url: string;
   w?: number;
   h?: number;
+  /** ⭐ Depuis le 03/09/2026 une publication peut porter UNE vidéo (mp4/webm),
+   *  hébergée chez o2switch comme les photos. Absent = image. */
+  type?: "image" | "video";
+  /** L'image d'attente d'une vidéo (première image, fabriquée à l'envoi). */
+  poster?: string;
 }
 
 export interface AuteurPost {
@@ -58,6 +67,26 @@ export interface Post {
   author: AuteurPost;
   ma_reaction: string | null;
   enregistre: boolean;
+  /**
+   * ⭐ L'IDENTIFIANT DU LIEU — il était sélectionné puis JETÉ. C'est lui qui
+   *   permet « Autres récits à <lieu> » : sans lui, la page d'un récit est un
+   *   cul-de-sac, alors que c'est l'écran où atterrissent les liens partagés.
+   */
+  place_id?: string | null;
+  /**
+   * ⭐ LE PRIX RELEVÉ, avec sa date. Les trois colonnes existent et le bot les
+   *   écrit ; aucune lecture ne les ramenait, donc un prix n'était visible
+   *   nulle part. `price_on` dit QUAND : un tarif sans date ne vaut rien.
+   *
+   * ⚠ FACULTATIFS, ET CE N'EST PAS UN DÉTAIL. Seul `chargerPost` les ramène ;
+   *   le fil passe par `get_feed`/`feed_filtre`, qui ne les rendent pas.
+   *   `undefined` veut donc dire « pas chargé », jamais « pas de prix » — un
+   *   écran qui les confondrait afficherait « prix inconnu » sur un récit qui
+   *   en porte un.
+   */
+  price_ar?: number | null;
+  price_unit?: string | null;
+  price_on?: string | null;
 }
 
 /* ── Le fil ────────────────────────────────────────────────────────────── */
@@ -69,8 +98,11 @@ export interface Post {
 export const PAR_PALIER = () =>
   typeof window !== "undefined" && window.innerWidth >= 1024 ? 12 : 8;
 
-/** Les quatre entrées du fil de la maquette D1. */
-export type ModeFil = "tout" | "abonnements" | "pres_de_moi" | "assiettes";
+/** Les quatre entrées du fil de la maquette D1… */
+export type ModeClassique = "tout" | "abonnements" | "pres_de_moi" | "assiettes";
+
+/** …et les six thèmes ouverts par la migration 0115 (`src/lib/themesFil.ts`). */
+export type ModeFil = ModeClassique | CleTheme;
 
 export interface PostSitue extends Post {
   /** Renseignée seulement en mode « près de moi » : c'est le CURSEUR. */
@@ -119,6 +151,58 @@ export async function modesFilDisponibles(): Promise<{
   };
 }
 
+/* ── Les six onglets thématiques (migration 0115) ──────────────────────── */
+
+export interface CompteTheme {
+  /** Fiches du référentiel : hôtels, plats, destinations… */
+  fiches: number;
+  /** Publications rattachées au thème par un lien RÉEL, jamais par le texte. */
+  recits: number;
+}
+
+export type ComptesThemes = Record<CleTheme, CompteTheme>;
+
+/**
+ * Combien il y a derrière chaque onglet — et le VERROU qui les autorise.
+ *
+ * 🔴 CET APPEL N'EST PAS DÉCORATIF, IL PROTÈGE D'UN MENSONGE. Tant que la
+ *    migration 0115 n'est pas passée, `feed_filtre` ignore les modes `th_*` et
+ *    se termine par `else true` : demander « th_hotels » lui fait servir le fil
+ *    ENTIER — 417 publications — sous l'étiquette « Hôtels ». Rien ne planterait,
+ *    rien ne serait vide, et l'écran afficherait des récits de Tuléar comme des
+ *    récits d'hôtel.
+ *
+ *    D'où la règle : les onglets thématiques n'apparaissent QUE si cette
+ *    fonction répond. Elle n'existe que dans 0115, donc son existence prouve
+ *    que le fil sait filtrer. `null` = on n'affiche pas les thèmes, et le fil
+ *    reste exactement ce qu'il était.
+ *
+ * ⚠ MÉMORISÉ AU NIVEAU DU MODULE, comme `useStats` : `Feed` se remonte à chaque
+ *   changement d'onglet, et sans cache l'appel repartait à chaque clic.
+ */
+let comptesEnVol: Promise<ComptesThemes | null> | null = null;
+
+export function comptesThemes(): Promise<ComptesThemes | null> {
+  if (comptesEnVol) return comptesEnVol;
+  // ⚠ `Promise.resolve` : le constructeur de requête supabase-js est un simple
+  //   *thenable*, il n'expose pas `.catch` et ne se met pas en cache tel quel.
+  const p: Promise<ComptesThemes | null> = Promise.resolve(
+    supabase.rpc("fil_themes_comptes")
+  )
+    .then(({ data, error }) => {
+      if (error) throw error;
+      return (data as unknown as ComptesThemes | null) ?? null;
+    })
+    .catch(() => {
+      // ⚠ On oublie l'échec : garder une promesse rejetée condamnerait les
+      //   onglets pour toute la session après un simple hoquet réseau.
+      comptesEnVol = null;
+      return null;
+    });
+  comptesEnVol = p;
+  return p;
+}
+
 export async function chargerFeed(curseur?: string | null, limite = PAR_PALIER()): Promise<Post[]> {
   const { data, error } = await supabase.rpc("get_feed", {
     p_curseur: curseur ?? undefined,
@@ -143,35 +227,36 @@ export async function chargerPost(id: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from("posts")
     .select(
-      "id, kind, body, media, place, place_id, dish, page_name, created_at, author_id, reactions_count, comments_count, saves_count, status"
+      "id, kind, body, media, place, place_id, dish, page_name, created_at, author_id, reactions_count, comments_count, saves_count, status, price_ar, price_unit, price_on"
     )
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
   if (!data || data.status !== "published") return null;
 
-  const { data: profil } = await supabase
-    .from("profiles")
-    .select("id, display_name, avatar_url, verification, account_type")
-    .eq("id", data.author_id)
-    .maybeSingle();
-
-  /* ⚠ UNE REQUETE DE PLUS, ET SEULEMENT SI LE LIEU EXISTE. Cet ecran est celui
-   *  d'un lien partage : une lecture de plus y coute moins qu'une puce morte,
-   *  et elle ne part pas du tout quand la publication n'a pas de lieu. */
-  let lieuSlug: string | null = null;
-  if (data.place_id) {
-    const { data: lieu } = await supabase
-      .from("places")
-      .select("slug")
-      .eq("id", data.place_id)
-      .maybeSingle();
-    lieuSlug = lieu?.slug ?? null;
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  /* ⚠ EN PARALLÈLE, PAS EN SÉRIE. Auteur, slug du lieu et session partaient
+   *  l'un après l'autre : trois allers-retours avant le moindre pixel, sur
+   *  l'écran où l'on arrive par un lien reçu — sur une connexion malgache,
+   *  c'est le triple du temps d'attente pour rien.
+   *  ⚠ Le lieu ne se lit que s'il existe : une lecture de plus coûte moins
+   *  qu'une puce morte, et elle ne part pas quand la publication n'a pas de
+   *  lieu. */
+  const [{ data: profil }, lieuSlug, { data: { user } }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url, verification, account_type")
+      .eq("id", data.author_id)
+      .maybeSingle(),
+    data.place_id
+      ? supabase
+          .from("places")
+          .select("slug")
+          .eq("id", data.place_id)
+          .maybeSingle()
+          .then(({ data: lieu }) => lieu?.slug ?? null)
+      : Promise.resolve<string | null>(null),
+    supabase.auth.getUser(),
+  ]);
 
   let ma_reaction: string | null = null;
   let enregistre = false;
@@ -206,6 +291,10 @@ export async function chargerPost(id: string): Promise<Post | null> {
     },
     ma_reaction,
     enregistre,
+    place_id: data.place_id ?? null,
+    price_ar: data.price_ar ?? null,
+    price_unit: data.price_unit ?? null,
+    price_on: data.price_on ?? null,
   };
 }
 

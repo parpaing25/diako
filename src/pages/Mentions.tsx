@@ -1,10 +1,17 @@
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { Link } from "react-router-dom";
+import { useSEO } from "@/hooks/useSEO";
 import { PageLegale } from "@/components/PageLegale";
 
 export default function Mentions() {
-  useDocumentTitle("Mentions légales");
+  /* `useSEO` et non `useDocumentTitle` : sans lui la page gardait le canonique
+     statique de l'accueil et se déclarait duplicata. Audit du 05/09/2026. */
+  useSEO({
+    titre: "Mentions légales",
+    description: "Éditeur, hébergeurs et nature du service Diako, annuaire et réseau social du voyage à Madagascar.",
+    url: "/mentions",
+  });
   return (
-    <PageLegale titre="Mentions légales" majLe="31 juillet 2026">
+    <PageLegale titre="Mentions légales" majLe="5 septembre 2026">
       
 
       <h2>Éditeur du site</h2>
@@ -12,7 +19,8 @@ export default function Mentions() {
         Diako — Antananarivo, Madagascar.
         <br />
         Contact :{" "}
-        <a href="mailto:contact.fonenako@gmail.com">contact.fonenako@gmail.com</a>
+        <a href="mailto:contact.diako@gmail.com">contact.diako@gmail.com</a>{" "}
+        — voir aussi la <Link to="/aide">page Aide et contact</Link>.
       </p>
 
       <h2>Hébergement</h2>
@@ -37,6 +45,12 @@ export default function Mentions() {
         établissements eux-mêmes ou collectés à partir de sources publiques. Ils
         sont donnés à titre indicatif et peuvent avoir changé. Diako ne garantit
         ni leur exactitude, ni la qualité des prestations.
+      </p>
+
+      <h2>Données personnelles</h2>
+      <p>
+        Ce que Diako conserve, pourquoi, combien de temps, et vos droits sont
+        décrits dans la <Link to="/confidentialite">page Confidentialité</Link>.
       </p>
 
       <h2>Signaler un contenu</h2>

@@ -55,11 +55,16 @@ export function ChampLieu({
   onChange,
   id,
   autoFocus,
+  etiquette = "Destination",
 }: {
   valeur: LieuChoisi | null;
   onChange: (l: LieuChoisi | null) => void;
   id?: string;
   autoFocus?: boolean;
+  /** Nom accessible du champ (« Destination », « Ville de départ »…). Le
+   *  placeholder n'est qu'un exemple : sans ce nom, le combobox était le seul
+   *  champ sans étiquette du site (audit du 05/09/2026, /quand-partir). */
+  etiquette?: string;
 }) {
   const auto = useId();
   const champId = id ?? auto;
@@ -177,6 +182,7 @@ export function ChampLieu({
           id={champId}
           type="text"
           role="combobox"
+          aria-label={etiquette}
           aria-expanded={ouvert && (liste.length > 0 || peutSaisirLibre)}
           aria-controls={`${champId}-liste`}
           aria-autocomplete="list"

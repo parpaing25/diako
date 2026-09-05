@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bookmark, Heart, MapPin, Star, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { PostCard } from "@/components/PostCard";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { mesFavoris, type Post } from "@/lib/api";
@@ -31,14 +31,16 @@ type Onglet = "adresses" | "enregistres" | "aimes";
  *   que c'est ce qui sert à décider.
  */
 export default function Favoris() {
-  useReveal();
-  useDocumentTitle("Mon carnet");
+  useSEO({ titre: "Mon carnet", noindex: true });
   const { user, loading } = useAuth();
   const [onglet, setOnglet] = useState<Onglet>("adresses");
 
   const [adresses, setAdresses] = useState<FicheGardee[] | null>(null);
   const [enregistres, setEnregistres] = useState<Post[] | null>(null);
   const [aimes, setAimes] = useState<PublicationAimee[] | null>(null);
+  // La dépendance, sinon les cartes arrivées après le montage restent
+  // invisibles (le piège est décrit dans useReveal.ts).
+  useReveal(adresses ?? enregistres ?? aimes);
 
   // Chaque onglet charge à sa première ouverture, pas au montage : sur une 3G,
   // trois requêtes pour une seule liste regardée, c'est deux de trop.

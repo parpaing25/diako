@@ -5,6 +5,11 @@ import { Visionneuse } from "@/components/Visionneuse";
 import { cn } from "@/lib/utils";
 import type { Media } from "@/lib/api";
 
+/** Le réglage système « réduire les animations », lu une fois. */
+const MOUVEMENT_REDUIT =
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 /**
  * Carrousel d'images.
  *
@@ -46,6 +51,20 @@ export function Carrousel({
   agrandissable = true,
   /** Le crédit de la photo, affiché en bas de la visionneuse. */
   credit = null,
+  /**
+   * ⭐ Une vidéo dans le fil plein écran démarre seule, muette, en boucle —
+   *   le geste d'Instagram. Dans une carte, elle attend qu'on la lance.
+   */
+  videoAuto = false,
+  /**
+   * ⭐ CE QUE FAIT LE CLIC SUR L'IMAGE, quand ce n'est pas « ouvrir en grand ».
+   *   Dans un fil, toucher la photo doit mener au RÉCIT : la visionneuse y
+   *   montrerait la même image sans le texte, sans le lieu, sans les
+   *   commentaires. Sur la page du récit, en revanche, la visionneuse garde
+   *   tout son sens — d'où un réglage par appelant, et non une règle globale.
+   * ⚠ Prend le pas sur `agrandissable`.
+   */
+  alClic = null,
 }: {
   images: Media[];
   alt?: string;
@@ -53,7 +72,9 @@ export function Carrousel({
   ajustement?: "couvrir" | "contenir";
   largeurAffichee?: string;
   agrandissable?: boolean;
+  alClic?: (() => void) | null;
   credit?: string | null;
+  videoAuto?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [ouverte, setOuverte] = useState<number | null>(null);
@@ -92,12 +113,52 @@ export function Carrousel({
              ⚠ `type="button"` : ce carrousel peut vivre dans un formulaire
              (l'aperçu de /publier), où un bouton sans type SOUMET la page. */
           <div key={m.url + i} className="h-full w-full shrink-0 snap-center">
-            {agrandissable ? (
+            {m.type === "video" ? (
+              /* ⚠ Pas de bouton autour d'une vidéo : ses commandes ont besoin du
+                 clic. `playsInline` : sans lui, iOS ouvre le lecteur plein
+                 écran et sort du fil. `preload="metadata"` : on ne télécharge
+                 pas une vidéo qu'on n'a pas lancée — c'est le forfait qui paie. */
+              <video
+                src={m.url}
+                poster={m.poster}
+                /* ⚠ UNE VIDÉO QUI TOURNE SEULE DOIT POUVOIR S'ARRÊTER. Dans le
+                   fil plein écran elle n'avait ni commandes ni geste : un appui
+                   la met en pause et la relance, comme partout ailleurs. Et
+                   sous « moins d'animations », elle ne démarre pas seule et
+                   montre ses commandes. */
+                controls={!videoAuto || MOUVEMENT_REDUIT}
+                autoPlay={videoAuto && !MOUVEMENT_REDUIT}
+                muted={videoAuto}
+                loop={videoAuto}
+                onClick={
+                  videoAuto && !MOUVEMENT_REDUIT
+                    ? (e) => {
+                        const v = e.currentTarget;
+                        if (v.paused) void v.play();
+                        else v.pause();
+                      }
+                    : undefined
+                }
+                playsInline
+                preload={videoAuto ? "auto" : "metadata"}
+                width={m.w}
+                height={m.h}
+                className={cn(
+                  "h-full w-full bg-black",
+                  ajustement === "couvrir" ? "object-cover" : "object-contain"
+                )}
+              >
+                Votre navigateur ne lit pas cette vidéo.
+              </video>
+            ) : alClic || agrandissable ? (
               <button
                 type="button"
-                onClick={() => setOuverte(i)}
-                aria-label="Voir la photo en grand"
-                className="block h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={() => (alClic ? alClic() : setOuverte(i))}
+                aria-label={alClic ? "Ouvrir le récit" : "Voir la photo en grand"}
+                className={cn(
+                  "block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  alClic ? "cursor-pointer" : "cursor-zoom-in"
+                )}
               >
                 <ImageProgressive
                   src={m.url}
@@ -144,7 +205,7 @@ export function Carrousel({
             <button
               onClick={() => allerA(index - 1)}
               aria-label="Image précédente"
-              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-foreground shadow md:grid"
+              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-card/85 text-card-foreground shadow md:grid"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -153,7 +214,7 @@ export function Carrousel({
             <button
               onClick={() => allerA(index + 1)}
               aria-label="Image suivante"
-              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-foreground shadow md:grid"
+              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-card/85 text-card-foreground shadow md:grid"
             >
               <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>

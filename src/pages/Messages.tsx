@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AlertCircle, ArrowLeft, Check, CheckCheck, MessageCircle, Send } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { useRetour } from "@/hooks/useRetour";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatLive, type Msg } from "@/hooks/useChatLive";
@@ -43,7 +43,7 @@ function jourLisible(iso: string): string {
  * par auteur, séparateurs de jour, Entrée pour envoyer.
  */
 export default function Messages() {
-  useDocumentTitle("Messages");
+  useSEO({ titre: "Messages", noindex: true });
   const { user, loading: authLoading } = useAuth();
   const [params, setParams] = useSearchParams();
   const convId = params.get("c");

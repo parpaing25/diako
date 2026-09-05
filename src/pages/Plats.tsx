@@ -4,7 +4,7 @@ import { BookMarked, Search, Store, UtensilsCrossed } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
 import { EmptyState, EtatErreur } from "@/components/Etats";
-import { ImageProgressive } from "@/components/ImageProgressive";
+import { CartePlat } from "@/components/CartesReferentiel";
 import { chargerAtlas, statsAtlas, type PlatAtlas } from "@/lib/decouverte";
 import { cn } from "@/lib/utils";
 
@@ -386,41 +386,8 @@ function Chiffre({ n, quoi, alerte }: { n?: number; quoi: string; alerte?: boole
   );
 }
 
-function CartePlat({ plat }: { plat: PlatAtlas }) {
-  const regime = [
-    plat.is_vegetarian && "végétarien",
-    plat.has_pork && "porc",
-    plat.has_seafood && "fruits de mer",
-    plat.has_peanut && "arachide",
-  ].filter(Boolean)[0] as string | undefined;
-
-  return (
-    <Link
-      to={`/plat/${plat.slug}`}
-      className="dk-reveal dk-carte block overflow-hidden rounded-xl border border-border bg-card"
-    >
-      <div className="dk-zoom aspect-[4/3] bg-secondary">
-        {plat.photo_url ? (
-          <ImageProgressive src={plat.photo_url} alt={plat.name_fr} ajustement="cover"
-              largeurAffichee={"(min-width:1536px) 22vw, (min-width:1280px) 25vw, (min-width:768px) 33vw, 50vw"}
-            />
-        ) : (
-          <div className="grid h-full w-full place-items-center">
-            <UtensilsCrossed className="h-7 w-7 text-primary/40" aria-hidden="true" />
-          </div>
-        )}
-      </div>
-      <div className="p-3">
-        <p className="truncate text-sm font-semibold leading-tight">{plat.name_fr}</p>
-        <p className="dk-secondaire mt-0.5 truncate">
-          {[plat.family, plat.typical_place?.region ?? regime].filter(Boolean).join(" · ")}
-        </p>
-        {/* ⚠ « aucune adresse encore » est écrit noir sur blanc, plat par plat.
-            C'est vrai pour les 95 : aucune carte de restaurant n'est saisie. */}
-        <p className="mt-1.5 text-[11px] font-semibold text-accent-strong">
-          aucune adresse encore
-        </p>
-      </div>
-    </Link>
-  );
-}
+/* ⚠ `CartePlat` A DÉMÉNAGÉ dans `@/components/CartesReferentiel`. Les onglets
+   thématiques du fil servent la même carte : la laisser ici, en fonction locale,
+   obligeait à la recopier — donc à faire diverger deux cartes du même plat.
+   Elle y a été corrigée au passage : elle écrivait « aucune adresse encore » en
+   dur sur les 95 plats alors que 3 en ont désormais une. */

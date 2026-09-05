@@ -2,7 +2,9 @@ import {
   Bell,
   Bookmark,
   Briefcase,
+  Building2,
   CalendarDays,
+  Car,
   Compass,
   Map,
   Home,
@@ -87,6 +89,12 @@ export const NAV_PRINCIPAL: NavItem[] = [
 export const NAV_COMPLET: NavItem[] = [
   { to: "/", label: "Fil", icon: Home, pret: true },
   { to: "/explorer", label: "Destinations", icon: Compass, pret: true, groupe: "decouvrir", compteur: "destinations" },
+  /* ⚠ SORTIE DE « DESTINATIONS » SUR DEMANDE DU PROPRIÉTAIRE : une descente
+     régions › communes n'est pas ce qu'on attend derrière ce mot. /explorer
+     ne montre plus que les lieux emblématiques ; les villes ont leur entrée.
+     Pas de compteur ici : `stats_diako` n'a pas de clé « villes », et un
+     chiffre approximatif serait pire qu'aucun. */
+  { to: "/villes", label: "Villes et villages", icon: Building2, pret: true, groupe: "decouvrir" },
   { to: "/plats", label: "Atlas des plats", icon: UtensilsCrossed, pret: true, groupe: "decouvrir", compteur: "plats" },
   /* 🔴 `pret: false` PARCE QUE LA TABLE EST VIDE. Mesuré : 0 circuit, 0 guide
      publiés. Ces deux entrées menaient à un écran qui ne peut rien afficher, et
@@ -110,6 +118,10 @@ export const NAV_COMPLET: NavItem[] = [
      noyé — et c'est précisément l'argument écrit dans SideNav.tsx. */
   { to: "/quand-partir", label: "Quand partir", icon: Sun, pret: true, groupe: "preparer" },
   { to: "/y-aller", label: "Y aller", icon: Route, pret: true, groupe: "preparer" },
+  /* ⚠ AJOUTÉE AVEC LA GRILLE DES LOUEURS (0114) : 18 loueurs publiés avec
+     leurs types de véhicules et leurs tarifs par jour. L'écran ouvre sur du
+     réel — la règle « pas d'entrée vers un écran vide » est respectée. */
+  { to: "/location", label: "Louer un véhicule", icon: Car, pret: true, groupe: "preparer" },
   { to: "/guides", label: "Guides", icon: Mountain, pret: false, groupe: "decouvrir" },
   { to: "/carte", label: "Carte", icon: Map, pret: true },
   /* 🔴 RETIRÉS DU RAIL GAUCHE sur demande du propriétaire, captures à l'appui :

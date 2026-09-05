@@ -10,6 +10,7 @@ import { ariary, recitsDuLieu } from "@/lib/etablissements";
 import { ProposerPhoto } from "@/components/ProposerPhoto";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { jeuDeTailles } from "@/lib/imageThumb";
+import { noterLieu } from "@/lib/affinites";
 import { cn } from "@/lib/utils";
 
 /**
@@ -120,11 +121,17 @@ export default function Destination() {
   //   l'affichage du reste, et leur absence ne casse rien.
   useEffect(() => {
     if (!f?.lieu?.slug) return;
+    // ⭐ Ouvrir une destination, c'est dire qu'elle compte : le fil la
+    //   montrera d'abord (voir `affinites.ts`).
+    noterLieu(f.lieu.slug, 2);
+    noterLieu(f.lieu.name_fr, 2);
     void recitsDuLieu(f.lieu.slug, 6).then(setRecits).catch(() => undefined);
-  }, [f?.lieu?.slug]);
+  }, [f?.lieu?.slug, f?.lieu?.name_fr]);
 
   useSEO({
     titre: f ? `${f.lieu.name_fr} — où dormir et où manger` : "Destination",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absente",
     description: f
       ? f.lieu.summary ??
         `${f.lieu.name_fr}${f.lieu.region ? ` (${f.lieu.region})` : ""} : ${f.nb_ou_dormir} hébergements, ${f.nb_ou_manger} tables${f.prix_des ? `, à partir de ${ariary(f.prix_des)}` : ""}.`

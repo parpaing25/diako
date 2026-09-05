@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Search, SlidersHorizontal, Star, UtensilsCrossed, X } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { SearchBar } from "@/components/SearchBar";
 import { FicheCard } from "@/components/FicheCard";
@@ -77,6 +77,21 @@ const EQUIPEMENTS_COURANTS = [
   { code: "eau-chaude", label: "Eau chaude" },
 ];
 
+/**
+ * Les puces de catégorie du bandeau de filtres — CATÉGORIES PEUPLÉES SEULEMENT.
+ *
+ * 🔴 `CATEGORIES.slice(0, 4)` prenait les quatre premières de la liste des
+ *    catégories : hôtel et restaurant, mais aussi agence_voyage (18 fiches
+ *    quasi vides) et guide (0 fiche). Deux puces sur quatre ouvraient donc sur
+ *    du vide — et la location de véhicule, qui a 18 loueurs publiés AVEC leur
+ *    grille tarifaire (0114), était introuvable. Règle du dépôt : pas d'entrée
+ *    de navigation vers un écran qui ouvre sur du vide.
+ *
+ * ⚠ Comptes du 23/08/2026 : restaurant 1 845, hôtel 1 422, site_attraction 21,
+ *   location_vehicule 18. À recompter avant d'en rajouter une.
+ */
+const PUCES_CATEGORIES = new Set(["hotel", "restaurant", "location_vehicule", "site_attraction"]);
+
 interface Recit {
   id: string;
   body: string | null;
@@ -85,7 +100,6 @@ interface Recit {
 }
 
 export default function Recherche() {
-  useReveal();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
@@ -109,17 +123,24 @@ export default function Recherche() {
     return { sud: n[0], ouest: n[1], nord: n[2], est: n[3] };
   }, [params]);
 
-  useDocumentTitle(
-    q
+  /* ⚠ La page nue est indexable (canonique /recherche) ; un résultat ne l'est
+     pas — robots.txt interdit déjà `/recherche?`, `noindex` ferme l'indexation
+     des URL qui y arriveraient par un lien. Audit du 05/09/2026. */
+  useSEO({
+    titre: q
       ? `« ${q} »`
       : categorie
         ? (CATEGORIES.find((c) => c.code === categorie)?.pluriel ?? "Rechercher")
-        : "Rechercher"
-  );
+        : "Rechercher",
+    url: "/recherche",
+    noindex: Boolean(q || categorie),
+  });
 
   const [lieu, setLieu] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [plat, setPlat] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [fiches, setFiches] = useState<ResultatPage[]>([]);
+  // Idem : les fiches arrivent en asynchrone.
+  useReveal(fiches);
   const [tables, setTables] = useState<
     Awaited<ReturnType<typeof restaurantsParPlat>>
   >([]);
@@ -444,7 +465,7 @@ export default function Recherche() {
               className="h-4 w-4 shrink-0 text-muted-foreground"
               aria-hidden="true"
             />
-            {CATEGORIES.slice(0, 4).map((c) => (
+            {CATEGORIES.filter((c) => PUCES_CATEGORIES.has(c.code)).map((c) => (
               <button
                 key={c.code}
                 type="button"

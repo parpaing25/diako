@@ -1,0 +1,4 @@
+# Tout ce que le bot fabrique reste local : base, session Facebook, photos.
+data/
+__pycache__/
+*.pyc

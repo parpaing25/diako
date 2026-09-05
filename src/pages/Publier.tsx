@@ -10,7 +10,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadToO2Switch } from "@/lib/o2switchUpload";
@@ -38,6 +38,50 @@ import { cn } from "@/lib/utils";
  * sur une 3G, et le chargement progressif (ImageProgressive) absorbe le reste.
  */
 const MAX_PHOTOS = 15;
+/** ⭐ Une vidéo par publication (03/09/2026), 50 Mo au plus : c'est le forfait
+ *  du lecteur qui paie chaque octet, et o2switch plafonne l'envoi. */
+const MAX_VIDEOS = 1;
+const MAX_VIDEO_MO = 50;
+
+/**
+ * L'image d'attente d'une vidéo, prise dans le navigateur à la première
+ * seconde. Sans elle, une vidéo dans le fil est un rectangle noir jusqu'au
+ * lancement — et la vignette du partage Facebook serait vide.
+ */
+async function imageDAttente(fichier: File): Promise<{ blob: Blob; w: number; h: number } | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    const objet = URL.createObjectURL(fichier);
+    const fin = (r: { blob: Blob; w: number; h: number } | null) => {
+      URL.revokeObjectURL(objet);
+      resolve(r);
+    };
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.onerror = () => fin(null);
+    video.onloadeddata = () => {
+      try {
+        video.currentTime = Math.min(1, Math.max(0, (video.duration || 1) / 10));
+      } catch {
+        fin(null);
+      }
+    };
+    video.onseeked = () => {
+      const toile = document.createElement("canvas");
+      const w = video.videoWidth || 1280;
+      const h = video.videoHeight || 720;
+      const echelle = Math.min(1, 1280 / w);
+      toile.width = Math.round(w * echelle);
+      toile.height = Math.round(h * echelle);
+      const ctx = toile.getContext("2d");
+      if (!ctx) return fin(null);
+      ctx.drawImage(video, 0, 0, toile.width, toile.height);
+      toile.toBlob((blob) => fin(blob ? { blob, w, h } : null), "image/jpeg", 0.82);
+    };
+    video.src = objet;
+  });
+}
 
 /**
  * Publier — pleinement fonctionnel.
@@ -48,7 +92,7 @@ const MAX_PHOTOS = 15;
  * génère une vignette WebP à côté de l'original.
  */
 export default function Publier() {
-  useDocumentTitle("Publier");
+  useSEO({ titre: "Publier", noindex: true });
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -222,6 +266,39 @@ export default function Publier() {
     setEnvoiPhoto(true);
     try {
       for (const f of fichiers.slice(0, place)) {
+        // ⭐ UNE VIDÉO. Envoyée telle quelle (pas de compression vidéo dans un
+        //   navigateur d'entrée de gamme), avec son image d'attente à côté.
+        if (f.type.startsWith("video/")) {
+          if (photos.filter((p) => p.type === "video").length >= MAX_VIDEOS) {
+            toast.error(`${MAX_VIDEOS} vidéo par publication.`);
+            continue;
+          }
+          if (f.size > MAX_VIDEO_MO * 1024 * 1024) {
+            toast.error(`La vidéo dépasse ${MAX_VIDEO_MO} Mo — raccourcissez-la ou baissez sa qualité.`);
+            continue;
+          }
+          if (!/\.(mp4|webm|mov)$/i.test(f.name)) {
+            toast.error("Formats acceptés : mp4, webm, mov.");
+            continue;
+          }
+          const attente = await imageDAttente(f);
+          let poster: string | undefined;
+          if (attente) {
+            const fichierPoster = new File([attente.blob], f.name.replace(/\.\w+$/, "") + "-poster.jpg", { type: "image/jpeg" });
+            const envoiPoster = await uploadToO2Switch(await compressImage(fichierPoster), "posts");
+            if (envoiPoster.success && envoiPoster.url) poster = envoiPoster.url;
+          }
+          const res = await uploadToO2Switch(f, "posts");
+          if (!res.success || !res.url) {
+            toast.error(res.error || "La vidéo n'a pas pu être envoyée.");
+            continue;
+          }
+          setPhotos((p) => [
+            ...p,
+            { url: res.url as string, type: "video", poster, w: attente?.w ?? 1280, h: attente?.h ?? 720 },
+          ]);
+          continue;
+        }
         if (!f.type.startsWith("image/")) continue;
         const compresse = await compressImage(f);
         const res = await uploadToO2Switch(compresse, "posts");
@@ -441,7 +518,11 @@ ${a} ` : `${a} `));
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {photos.map((p, i) => (
             <div key={p.url} className="relative overflow-hidden rounded-xl bg-muted">
-              <img src={p.url} alt="" className="aspect-square w-full object-cover" />
+              {p.type === "video" ? (
+                <video src={p.url} poster={p.poster} muted playsInline controls className="aspect-square w-full bg-black object-cover" />
+              ) : (
+                <img src={p.url} alt="" className="aspect-square w-full object-cover" />
+              )}
               <button
                 type="button"
                 onClick={() => setPhotos((l) => l.filter((_, j) => j !== i))}
@@ -469,21 +550,21 @@ ${a} ` : `${a} `));
         ) : (
           <>
             <Image className="h-5 w-5" aria-hidden="true" />
-            Ajouter des photos ({photos.length}/{MAX_PHOTOS})
+            Ajouter des photos ou une vidéo ({photos.length}/{MAX_PHOTOS})
           </>
         )}
       </button>
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/mp4,video/webm,video/quicktime"
         multiple
         className="hidden"
         onChange={(e) => void ajouterPhotos(e)}
       />
       <p className="mt-1 text-xs text-muted-foreground">
-        Les photos sont compressées dans votre navigateur avant l'envoi — pour
-        ménager votre forfait.
+        Photos compressées dans votre navigateur avant l'envoi. Une vidéo de
+        {" "}{MAX_VIDEO_MO} Mo au plus.
       </p>
 
       {/* ═══ CE QUE CE TYPE DEMANDE, ET RIEN D'AUTRE ═══════════════════════

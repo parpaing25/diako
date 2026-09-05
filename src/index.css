@@ -457,6 +457,10 @@ table {
 /* ── Les pastilles de la carte ────────────────────────────────────────────
    Leaflet injecte du HTML brut via divIcon : ces classes ne peuvent pas etre
    des utilitaires Tailwind (elles ne seraient pas vues au balayage). */
+/* ⚠ `--dk-pin` PORTE LA COULEUR DE FAMILLE, avec un repli sur la couleur de
+   marque. C'est ce qui permet à /carte de colorer ses épingles par famille
+   SANS toucher à `CarteResultats`, qui pose la même classe autour d'un emoji
+   et n'a pas de famille à donner. Retirer le repli dépeindrait cet écran-là. */
 .dk-pin {
   display: grid;
   place-items: center;
@@ -465,19 +469,57 @@ table {
   font-size: 18px;
   border-radius: 9999px;
   background: hsl(var(--card));
-  border: 2px solid hsl(var(--primary));
+  border: 2px solid var(--dk-pin, hsl(var(--primary)));
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
   transition: transform 0.12s ease;
 }
 .dk-pin:hover { transform: scale(1.12); }
+
+/* Le disque intérieur PLEIN, qui porte l'icône ou le nombre en blanc.
+   🔴 POURQUOI UN DISQUE ET PAS UN SIMPLE FOND COLORÉ. Les tuiles
+      OpenStreetMap sont beiges, vertes et bleues : une épingle verte posée
+      sur une forêt verte disparaît. L'anneau clair du conteneur détache la
+      couleur du fond, quelle que soit la tuile en dessous. */
+.dk-pin__i,
+.dk-pin__n {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  background: var(--dk-pin, hsl(var(--primary)));
+  color: #fff;
+}
+.dk-pin__n {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* ⚠ Les épingles de /carte sont plus petites que celles de CarteResultats
+   (34 px contre 38) : à 800 points affichables, 4 px de moins chacune, c'est
+   un tiers de surface en moins qui se chevauche.
+   ⚠ UNE CLASSE, PAS `:has()`. La cible du produit est un Android d'entrée de
+     gamme : `:has()` n'existe pas avant Chrome 105, et le sélecteur y serait
+     IGNORÉ EN SILENCE — les épingles garderaient 38 px sans que rien ne le
+     signale. Une classe posée dans le HTML marche partout. */
+.dk-pin--famille {
+  width: 34px;
+  height: 34px;
+  border-width: 2.5px;
+  border-color: hsl(var(--card));
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+}
+
 /* ⚠ LA GRAPPE DE VUE D'ENSEMBLE. Sa taille varie (posée en style en ligne par
    la carte, en racine du nombre) : on ne fixe donc NI width NI height ici,
-   sinon la variation serait écrasée. */
+   sinon la variation serait écrasée.
+   ⚠ NI `background` : depuis 0118 la carte y pose un dégradé conique qui dit
+     la COMPOSITION de la grappe. Un fond déclaré ici serait écrasé de toute
+     façon, mais le laisser ferait croire qu'il sert encore à quelque chose. */
 .dk-grappe {
   display: grid;
   place-items: center;
   border-radius: 9999px;
-  background: hsl(var(--primary) / 0.92);
   color: hsl(var(--primary-foreground));
   border: 2px solid hsl(var(--card));
   font-weight: 700;
@@ -488,6 +530,25 @@ table {
   transition: transform 0.12s ease;
 }
 .dk-grappe:hover { transform: scale(1.08); }
+
+/* Le cœur clair qui transforme le disque en ANNEAU.
+   ⚠ EN POURCENTAGE, parce que la pastille mesure de 30 à 64 px selon le
+     nombre : une taille fixe donnerait un anneau épais sur les petites et un
+     filet invisible sur les grosses.
+   ⚠ ET C'EST LUI QUI REND LE NOMBRE LISIBLE. Écrit à même le dégradé, il
+     tomberait tantôt sur du corail clair, tantôt sur du bleu foncé — illisible
+     une fois sur deux, et impossible à corriger par une seule couleur de texte. */
+.dk-grappe__coeur {
+  display: grid;
+  place-items: center;
+  width: 62%;
+  height: 62%;
+  border-radius: 9999px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  font-size: 0.78em;
+  font-weight: 700;
+}
 
 .dk-pin--groupe {
   background: hsl(var(--primary));

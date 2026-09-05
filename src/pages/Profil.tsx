@@ -49,6 +49,10 @@ export default function Profil() {
     description: profil?.bio ?? undefined,
     image: profil?.avatar_url ?? undefined,
     url: id ? `/user/${id}` : undefined,
+    // Un profil porte des déplacements : trouvable SUR le site, pas indexé
+    // dehors (cohérent avec `Disallow: /user/` de robots.txt, qui n'empêche
+    // pas l'indexation d'une URL liée). Audit du 05/09/2026.
+    noindex: true,
     type: "profile",
   });
 

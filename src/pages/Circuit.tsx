@@ -15,7 +15,11 @@ import { cn } from "@/lib/utils";
  * ⚠ LE PRIX BAISSE QUAND LE GROUPE GRANDIT, ET L'ÉCRAN LE MONTRE. C'est la
  *   règle du métier : la voiture, le chauffeur et le guide se partagent. Un
  *   prix unique tromperait le couple comme le groupe de six. Le barème vit dans
- *   `tour_prices`, par palier de `pax_min`.
+ *   `tour_prices`, par `base_pax` (nombre de personnes sur lequel le prix est calculé).
+ *   ⚠ 05/09/2026 : la page interrogeait des colonnes qui n'existaient pas
+ *     (pax_min, day_no, label…) → RPC 400 et écran d'erreur sur l'unique circuit.
+ *     Alignée sur information_schema : base_pax / jour, titre, detail, nuitee /
+ *     libelle, inclus, sort_order.
  *
  * ⚠ « NON INCLUS » A SON PROPRE BLOC, jamais fondu dans le prix. Les droits
  *   d'entrée des parcs peuvent représenter le quart du budget d'un circuit
@@ -47,9 +51,9 @@ interface Fiche {
   months_open: number[] | null;
   transports: string[] | null;
   page: { slug: string; name: string; verification_status: string } | null;
-  prices: { pax_min: number; pax_max: number | null; price_ar: number; price_unit: string }[];
-  days: { day_no: number; title: string | null; km: number | null; hours: number | null; meals: string | null; lodging: string | null }[];
-  inclusions: { label: string; included: boolean }[];
+  prices: { base_pax: number | null; price_ar: number; price_unit: string | null }[];
+  days: { jour: number; titre: string | null; detail: string | null; nuitee: string | null; place_id: string | null }[];
+  inclusions: { libelle: string; inclus: boolean; sort_order: number | null }[];
 }
 
 export default function Circuit() {
@@ -67,9 +71,9 @@ export default function Circuit() {
         .select(
           "id, slug, title, summary, description, duration_days, duration_nights, difficulty, " +
             "format, axe, months_open, transports, page:pages(slug, name, verification_status), " +
-            "prices:tour_prices(pax_min, pax_max, price_ar, price_unit), " +
-            "days:tour_days(day_no, title, km, hours, meals, lodging), " +
-            "inclusions:tour_inclusions(label, included)"
+            "prices:tour_prices(base_pax, price_ar, price_unit), " +
+            "days:tour_days(jour, titre, detail, nuitee, place_id), " +
+            "inclusions:tour_inclusions(libelle, inclus, sort_order)"
         )
         .eq("slug", slug)
         .limit(1);
@@ -87,7 +91,9 @@ export default function Circuit() {
   }, [charger]);
 
   useSEO({
-    titre: f ? `${f.title} — circuit de ${f.duration_days} jours` : "Circuit",
+    titre: f ? `${f.title} — circuit de ${f.duration_days} jour${f.duration_days > 1 ? "s" : ""}` : "Circuit",
+    // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
+    noindex: etat === "absent",
     description: f?.summary ?? undefined,
     url: slug ? `/circuit/${slug}` : undefined,
   });
@@ -117,10 +123,12 @@ export default function Circuit() {
       </div>
     );
 
-  const inclus = f.inclusions?.filter((i) => i.included) ?? [];
-  const nonInclus = f.inclusions?.filter((i) => !i.included) ?? [];
-  const paliers = [...(f.prices ?? [])].sort((a, b) => a.pax_min - b.pax_min);
-  const jours = [...(f.days ?? [])].sort((a, b) => a.day_no - b.day_no);
+  const parOrdre = (a: { sort_order: number | null }, b: { sort_order: number | null }) =>
+    (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  const inclus = [...(f.inclusions ?? [])].filter((i) => i.inclus).sort(parOrdre);
+  const nonInclus = [...(f.inclusions ?? [])].filter((i) => !i.inclus).sort(parOrdre);
+  const paliers = [...(f.prices ?? [])].sort((a, b) => (a.base_pax ?? 0) - (b.base_pax ?? 0));
+  const jours = [...(f.days ?? [])].sort((a, b) => a.jour - b.jour);
 
   return (
     <div className="px-4 py-5 xl:flex xl:items-start xl:gap-5">
@@ -157,26 +165,15 @@ export default function Circuit() {
             <h2 className="dk-etiquette">Jour par jour</h2>
             <ol className="mt-3 space-y-3">
               {jours.map((j) => (
-                <li key={j.day_no} className="flex gap-3">
+                <li key={j.jour} className="flex gap-3">
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                    {j.day_no}
+                    {j.jour}
                   </span>
                   <div className="min-w-0 flex-1 border-b border-border pb-3">
-                    {j.title && <p className="font-semibold leading-tight">{j.title}</p>}
-                    <p className="dk-secondaire mt-0.5">
-                      {[
-                        j.km && `${j.km} km`,
-                        // ⚠ Heures RÉELLES : 250 km font 6 h ici, pas 2 h 30.
-                        j.hours && `${j.hours} h de route réelles`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                    {(j.meals || j.lodging) && (
-                      <p className="dk-secondaire">
-                        {[j.meals, j.lodging].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
+                    {j.titre && <p className="font-semibold leading-tight">{j.titre}</p>}
+                    {/* Ni km ni heures : la table ne les porte pas, et on n'invente rien. */}
+                    {j.detail && <p className="dk-secondaire mt-0.5">{j.detail}</p>}
+                    {j.nuitee && <p className="dk-secondaire">Nuit : {j.nuitee}</p>}
                   </div>
                 </li>
               ))}
@@ -192,7 +189,7 @@ export default function Circuit() {
                 <h2 className="dk-etiquette">Inclus</h2>
                 <ul className="mt-2 space-y-1 text-sm">
                   {inclus.map((i) => (
-                    <li key={i.label}>· {i.label}</li>
+                    <li key={i.libelle}>· {i.libelle}</li>
                   ))}
                 </ul>
               </div>
@@ -202,7 +199,7 @@ export default function Circuit() {
                 <h2 className="dk-etiquette text-accent-strong">Non inclus</h2>
                 <ul className="mt-2 space-y-1 text-sm">
                   {nonInclus.map((i) => (
-                    <li key={i.label}>· {i.label}</li>
+                    <li key={i.libelle}>· {i.libelle}</li>
                   ))}
                 </ul>
                 <p className="dk-secondaire mt-2 leading-relaxed">
@@ -224,13 +221,13 @@ export default function Circuit() {
           {paliers.length > 0 ? (
             <>
               <ul className="mt-3 grid grid-cols-3 gap-2">
-                {paliers.slice(0, 3).map((p) => (
-                  <li key={p.pax_min} className="rounded-xl bg-white/12 p-2.5 text-center">
+                {paliers.slice(0, 3).map((p, i) => (
+                  <li key={`${p.base_pax ?? "base"}-${i}`} className="rounded-xl bg-white/12 p-2.5 text-center">
                     <p className="text-[11px] opacity-85">
-                      {p.pax_min}
-                      {p.pax_max ? `–${p.pax_max}` : "+"} pers.
+                      {p.base_pax ? `base ${p.base_pax} pers.` : "prix de base"}
                     </p>
                     <p className="mt-1 text-sm font-bold tabular-nums">{ariary(p.price_ar)}</p>
+                    {p.price_unit && <p className="text-[11px] opacity-85">{p.price_unit}</p>}
                   </li>
                 ))}
               </ul>

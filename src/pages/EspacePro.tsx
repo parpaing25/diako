@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Eye, Plus, Star, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AssistantEtablissement } from "@/components/AssistantEtablissement";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import {
   ariary,
   CATEGORIES,
@@ -33,7 +33,7 @@ type MonEtab = Awaited<ReturnType<typeof mesEtablissements>>[number];
  */
 export default function EspacePro() {
   const { user } = useAuth();
-  useDocumentTitle("Espace professionnel");
+  useSEO({ titre: "Espace professionnel", noindex: true });
 
   const [etabs, setEtabs] = useState<MonEtab[]>([]);
   const [chargement, setChargement] = useState(true);

@@ -332,6 +332,102 @@ export async function ecrireALEtablissement(pageId: string): Promise<string> {
   return data as string;
 }
 
+/* ── La grille tarifaire des loueurs (migration 0114) ──────────────────── */
+
+/**
+ * Un type de véhicule chez un loueur — le pendant d'une `Chambre` chez un
+ * hôtel : même table fille de `pages`, même RLS, même déclencheur de prix
+ * d'appel (`pages.price_min_unit` vaut alors « jour »).
+ *
+ * ⚠ `price_day_ar` EST NULLABLE, ET C'EST VOULU (0114) : sur `room_types`,
+ *   le NOT NULL du prix a fait jeter en silence 46 chambres collectées sur 77.
+ *   Une grille sans prix vaut mieux que pas de grille — l'écran affiche
+ *   « prix sur demande », jamais un montant inventé.
+ *
+ * ⚠ La grille n'est PAS dans `get_page_by_slug` : la RPC n'a pas été
+ *   retouchée la veille du lancement. Les écrans la chargent à part, par les
+ *   deux fonctions ci-dessous, et savent vivre sans elle.
+ */
+export interface OffreVehicule {
+  id: string;
+  page_id: string;
+  vehicle_type: string;
+  model: string | null;
+  photos: string[];
+  seats: number | null;
+  with_driver: boolean;
+  /** `null` = non précisé — ce qui n'est PAS « non » : l'écran se tait. */
+  fuel_included: boolean | null;
+  km_included_per_day: number | null;
+  price_day_ar: number | null;
+  price_note: string | null;
+  deposit_ar: number | null;
+  /** Date du relevé du tarif — jamais inventée (règle n°1 du projet). */
+  price_on: string | null;
+  status: string;
+  sort_order: number;
+}
+
+/** Les codes du CHECK de 0114, en français d'écran. Un code absent s'affiche
+ *  tel quel : mieux vaut lire `autre` que voir la ligne disparaître. */
+export const LIBELLE_VEHICULE: Record<string, string> = {
+  "4x4": "4x4",
+  berline: "Berline",
+  citadine: "Citadine",
+  minibus: "Minibus",
+  van: "Van",
+  moto: "Moto",
+  quad: "Quad",
+  bateau: "Bateau",
+  velo: "Vélo",
+  camion: "Camion",
+  autre: "Autre véhicule",
+};
+
+/** La grille d'UN loueur : lignes actives seulement, dans l'ordre du gérant. */
+export async function vehiculesDe(pageId: string): Promise<OffreVehicule[]> {
+  const { data, error } = await supabase
+    .from("vehicle_offers")
+    .select(
+      // ⚠ UNE SEULE CHAÎNE LITTÉRALE — même raison que chargerDestinations :
+      //   coupée en deux, la liste perd son type et le retour dégénère.
+      "id, page_id, vehicle_type, model, photos, seats, with_driver, fuel_included, km_included_per_day, price_day_ar, price_note, deposit_ar, price_on, status, sort_order"
+    )
+    .eq("page_id", pageId)
+    .eq("status", "actif")
+    .order("sort_order");
+  if (error) throw error;
+  return (data as OffreVehicule[]) ?? [];
+}
+
+/**
+ * Les grilles de PLUSIEURS loueurs en UN aller-retour, regroupées par page.
+ * La page /location en a besoin pour résumer « 4x4 · Minibus » sous chaque
+ * fiche : une requête par loueur en aurait fait dix-huit — sur une 3G
+ * malgache, les allers-retours coûtent plus cher que la charge utile.
+ */
+export async function vehiculesPour(pageIds: string[]): Promise<Map<string, OffreVehicule[]>> {
+  const parPage = new Map<string, OffreVehicule[]>();
+  if (!pageIds.length) return parPage;
+  const { data, error } = await supabase
+    .from("vehicle_offers")
+    .select(
+      // ⚠ UNE SEULE CHAÎNE LITTÉRALE — même raison que chargerDestinations :
+      //   coupée en deux, la liste perd son type et le retour dégénère.
+      "id, page_id, vehicle_type, model, photos, seats, with_driver, fuel_included, km_included_per_day, price_day_ar, price_note, deposit_ar, price_on, status, sort_order"
+    )
+    .in("page_id", pageIds)
+    .eq("status", "actif")
+    .order("sort_order");
+  if (error) throw error;
+  for (const offre of (data as OffreVehicule[]) ?? []) {
+    const liste = parPage.get(offre.page_id);
+    if (liste) liste.push(offre);
+    else parPage.set(offre.page_id, [offre]);
+  }
+  return parPage;
+}
+
 /* ── Référentiels ──────────────────────────────────────────────────────── */
 
 /**

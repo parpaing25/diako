@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { useConnexionRequise } from "@/hooks/useConnexionRequise";
+import { PartagerMenu } from "@/components/PartagerMenu";
+import { noterLieu } from "@/lib/affinites";
+import { useVu } from "@/hooks/useVu";
 import { Bookmark, Heart, MapPin, MessageCircle, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getThumbUrl } from "@/lib/imageThumb";
@@ -36,6 +38,10 @@ export function PostImmersif({
   const [nbReactions, setNbReactions] = useState(post.reactions_count);
   const [favori, setFavori] = useState(post.enregistre);
   const [deplie, setDeplie] = useState(false);
+  const [partage, setPartage] = useState(false);
+  const racine = useRef<HTMLElement>(null);
+  useVu(racine, post.id);
+  const interesse = (poids: number) => noterLieu(post.place_slug ?? post.place, poids);
 
   /* ⚠ Le crochet porte desormais l'ACTION vers l'inscription : le toast seul
      laissait le visiteur devant un bouton muet, a l'instant precis ou il avait
@@ -45,13 +51,21 @@ export function PostImmersif({
   async function reagir() {
     if (!connecte("réagir aux récits")) return;
     const avant = reaction;
+    const delta = avant ? -1 : 1;
     setReaction(avant ? null : "utile"); // ⚠ « jaime » refuse en base depuis 0031
-    setNbReactions((n) => n + (avant ? -1 : 1));
+    setNbReactions((n) => n + delta);
+    if (!avant) interesse(3);
     try {
-      setReaction(await basculerReaction(post.id));
+      /* ⚠ LE TYPE COURANT, PAS « utile » EN DUR. Un membre qui avait réagi
+         « Bon prix » depuis le fil et touchait le cœur pour RETIRER sa
+         réaction la voyait remplacée par « utile » : côté serveur, un autre
+         type fait un UPDATE, pas un DELETE — et le compteur restait faux. */
+      const nouvelle = await basculerReaction(post.id, avant ?? "utile");
+      setReaction(nouvelle);
+      setNbReactions((n) => n - delta + (avant ? (nouvelle ? 0 : -1) : nouvelle ? 1 : 0));
     } catch {
       setReaction(avant);
-      setNbReactions((n) => n + (avant ? 1 : -1));
+      setNbReactions((n) => n - delta);
     }
   }
 
@@ -59,6 +73,7 @@ export function PostImmersif({
     if (!connecte("garder ce récit")) return;
     const avant = favori;
     setFavori(!avant);
+    if (!avant) interesse(3);
     try {
       setFavori(await basculerFavori(post.id, avant));
     } catch {
@@ -66,17 +81,9 @@ export function PostImmersif({
     }
   }
 
-  async function partager() {
-    const url = `${window.location.origin}/post/${post.id}`;
-    try {
-      if (navigator.share) await navigator.share({ title: "Diako", text: post.place ?? "", url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Lien copié");
-      }
-    } catch {
-      /* annulé */
-    }
+  function partager() {
+    interesse(1);
+    setPartage(true);
   }
 
   const texte = post.body ?? "";
@@ -85,12 +92,20 @@ export function PostImmersif({
   const nom = post.author.name || "Membre Diako";
 
   return (
-    <article className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
+    <article ref={racine} className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
+      {partage && (
+        <PartagerMenu
+          url={`${window.location.origin}/post/${post.id}`}
+          texte={post.body ?? post.place ?? ""}
+          onFermer={() => setPartage(false)}
+        />
+      )}
       {post.media?.length > 0 ? (
         <Carrousel
           images={post.media}
           alt={post.place ? `${post.place}, Madagascar` : nom}
           prioritaire={prioritaire}
+          videoAuto
         />
       ) : (
         /* ⚠ SEUL ENDROIT DE CE FICHIER OU LE JETON S'APPLIQUE : ici le fond est
@@ -111,6 +126,7 @@ export function PostImmersif({
       <header className="absolute inset-x-0 top-0 flex items-center gap-2.5 px-4 pt-3">
         <Link
           to={`/user/${post.author.id}`}
+          aria-label={`Profil de ${nom}`}
           className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/20 text-xs font-semibold text-white ring-1 ring-white/40"
         >
           {post.author.avatar ? (
@@ -157,7 +173,7 @@ export function PostImmersif({
         </span>
 
         <button
-          onClick={() => void partager()}
+          onClick={partager}
           aria-label="Partager"
           className="mt-2 grid h-12 w-12 place-items-center rounded-full text-white drop-shadow-lg"
         >
@@ -202,14 +218,31 @@ export function PostImmersif({
                 </button>
               )}
             </p>
-            {deplie && (
-              <button
-                onClick={() => setDeplie(false)}
-                className="mt-1 text-xs font-semibold text-white/70"
+            {/* ⭐ OUVRIR LE RÉCIT — il n'existait AUCUN chemin vers `/post/<id>`
+                   depuis le téléphone : le fil immersif portait l'auteur, les
+                   quatre commandes et « plus », mais pas la publication
+                   elle-même. On ne pouvait donc lire un récit en entier, avec
+                   ses commentaires, que sur un ordinateur.
+                ⚠ Un libellé, pas un appui sur la photo : dans un fil qu'on
+                  parcourt au pouce, toucher l'image se confond avec le geste
+                  de défilement, et l'on ouvrirait un récit en voulant passer
+                  au suivant. */}
+            <div className="mt-1.5 flex items-center gap-3">
+              {deplie && (
+                <button
+                  onClick={() => setDeplie(false)}
+                  className="text-xs font-semibold text-white/70"
+                >
+                  reduire
+                </button>
+              )}
+              <Link
+                to={`/post/${post.id}`}
+                className="inline-flex min-h-9 items-center rounded-full bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-sm"
               >
-                reduire
-              </button>
-            )}
+                Ouvrir le récit
+              </Link>
+            </div>
           </div>
         </div>
       )}

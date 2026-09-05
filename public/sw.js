@@ -97,6 +97,34 @@ self.addEventListener("fetch", (event) => {
   // et un cache d'API sous RLS est une fuite de données en puissance.
   if (url.hostname.endsWith(".supabase.co")) return;
 
+  /* 🔴 ON NE TOUCHE PLUS À CE QUI VIENT D'UNE AUTRE ORIGINE — ET C'EST LA CAUSE
+        DE « LA CARTE NE SORT PAS ».
+
+        Les tuiles OpenStreetMap sont des `<img>` vers a/b/c.tile.openstreetmap.org.
+        Le CSP du site les autorise dans `img-src`. Mais dès que ce service
+        worker les interceptait, il n'affichait plus une image : il appelait
+        `fetch()`. Or un `fetch()` n'est pas un chargement d'image, c'est une
+        CONNEXION — et les connexions sont régies par `connect-src`, où les
+        tuiles ne figurent pas. Le navigateur refusait, la promesse était
+        rejetée, et le code retombait sur `catch(() => hit)` avec `hit`
+        indéfini : `respondWith(undefined)` transforme ça en `ERR_FAILED`.
+
+        Résultat : 28 tuiles demandées, 0 chargée, un rectangle gris #DDD à la
+        place de Madagascar. Et seulement à partir de la DEUXIÈME visite, quand
+        le service worker prend la main — d'où une carte qui « marchait » une
+        fois puis plus jamais.
+
+     ⚠ FONENAKO N'A JAMAIS EU CE DÉFAUT, et pas par chance : il passe par
+       Workbox, dont les routes en expression régulière ne s'appliquent qu'à la
+       MÊME ORIGINE par défaut. Ce service worker-ci est écrit à la main et
+       interceptait tout. On remet la même règle, explicitement.
+
+     ⚠ ET ON NE PERD RIEN : mettre en cache les tuiles d'OpenStreetMap serait
+       de toute façon contraire à leur politique d'usage, et leur propre
+       en-tête `Cache-Control` fait déjà le travail dans le cache HTTP du
+       navigateur. */
+  if (url.origin !== self.location.origin) return;
+
   // Photos o2switch et vignettes : cache d'abord (elles ne changent jamais,
   // le nom de fichier est unique). C'est le principal gain de data mobile.
   const isImage =
@@ -120,7 +148,16 @@ self.addEventListener("fetch", (event) => {
               }
               return res;
             })
-            .catch(() => hit)
+            /* ⚠ `catch(() => hit)` RENVOYAIT `undefined` QUAND IL N'Y AVAIT
+                  RIEN EN CACHE, et `respondWith(undefined)` ne veut pas dire
+                  « laisse passer » : ça veut dire ÉCHEC. Une coupure réseau
+                  d'une seconde devenait donc une image définitivement cassée,
+                  là où sans service worker le navigateur aurait simplement
+                  réessayé. On ne rend une réponse que si on en a une. */
+            .catch((e) => {
+              if (hit) return hit;
+              throw e;
+            })
       )
     );
     return;

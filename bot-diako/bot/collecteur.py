@@ -1637,7 +1637,13 @@ class Collecteur:
                     champs, analyse_llm.relire_site(texte, cfg)
                 )
             except analyse_llm.LLMIndisponible as e:
-                base.logguer(f"Lecture du site par l'IA indisponible ({e}).", "avert")
+                # Même règle que pour Facebook : sans le modèle, rien n'a été
+                # trié. Un garde-fou ne vaut qu'aux DEUX bouts du chemin.
+                champs["tri_ia_manquant"] = True
+                base.logguer(
+                    f"Lecture du site par l'IA indisponible ({e}) — mise de côté.",
+                    "avert",
+                )
 
         # Les photos du site : c'est la réponse au « 0 photo sur 3 356 fiches ».
         images = [
@@ -1691,7 +1697,10 @@ class Collecteur:
         vehicules = champs.get("lignes_vehicule") or []
         if not chambres and not plats and not vehicules and not champs.get("prix_ar"):
             manques.append("aucun tarif trouvé")
-        bloquants = [m for m in manques if m in ("lieu", "établissement")]
+        if champs.get("tri_ia_manquant"):
+            manques.append("tri IA manquant")
+        bloquants = [m for m in manques
+                     if m in ("lieu", "établissement", "tri IA manquant")]
         statut = "incomplete" if bloquants else "a_trier"
 
         base.modifier(tid, {
@@ -1848,7 +1857,21 @@ class Collecteur:
                     champs, analyse_llm.relire(texte, cfg), texte=texte, cfg=cfg
                 )
             except analyse_llm.LLMIndisponible as e:
-                base.logguer(f"Relecture IA indisponible ({e}) — lecture simple.", "avert")
+                # 🔴 SANS LE MODÈLE, PERSONNE NE JUGE LE HORS-SUJET. Les règles
+                #    lisent des numéros et des montants ; elles ne savent pas
+                #    qu'un cric de voiture n'est pas un hébergement. Le modèle,
+                #    lui, répond « rien » à 97 % de confiance en six secondes.
+                #    Le 06/09/2026 la passerelle est tombée de 14 h 59 à 15 h 05
+                #    et TOUT est parti dans « à trier » comme si c'était trié :
+                #    promotion CANAL+, piscine hors-sol, cric, ordinateur.
+                # ⚠ On ne jette pas pour autant — la passerelle revient, et une
+                #   bonne trouvaille perdue ne se retrouve pas. On la met de côté
+                #   en le DISANT, et `outils/retrier.py` la repasse au modèle.
+                champs["tri_ia_manquant"] = True
+                base.logguer(
+                    f"Relecture IA indisponible ({e}) — trouvaille mise de côté, "
+                    "à repasser au modèle.", "avert",
+                )
 
         # Le plat du référentiel cité (s'il n'y en a qu'un) : c'est ce lien qui
         # laisse la photo d'un récit illustrer la fiche du plat.
@@ -1924,7 +1947,14 @@ class Collecteur:
 
         # -- Ce qui manque pour publier
         manques = self._manques(champs, rapprochement, gardees)
-        bloquants = [m for m in manques if m in ("lieu", "établissement", "date", "photo")]
+        # ⚠ « tri IA manquant » est BLOQUANT : une trouvaille que le modèle n'a
+        #   pas vue n'a pas été triée, et n'a rien à faire dans la file de
+        #   travail. Elle attend dans « incomplètes », son motif écrit dessus.
+        if champs.get("tri_ia_manquant"):
+            manques.append("tri IA manquant")
+        bloquants = [m for m in manques
+                     if m in ("lieu", "établissement", "date", "photo",
+                              "tri IA manquant")]
         statut = "incomplete" if bloquants else "a_trier"
         if bloquants and not cfg.get("garder_les_incompletes", True):
             base.supprimer(tid)

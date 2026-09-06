@@ -340,6 +340,26 @@ MOTS_HORS_SUJET = (
     "condoléances", "perdu chien", "perdu chat", "arnaque", "police",
 )
 
+# 🔴 ON CHERCHE DES MOTS, PAS DES SUITES DE LETTRES. Jusqu'au 06/09/2026 le
+#    pré-filtre faisait `mot in texte` : « dia » (voyage, en malgache) se
+#    déclenchait sur « **média** » et « im**média**te », « bar » sur « **bar**re
+#    de fer » et « em**bar**quement », « plat » sur « **plat**eau », « dj » sur
+#    « a**dj**oint ». Mesuré sur les 4 801 textes de la base : « dia » était
+#    l'UNIQUE déclencheur de 131 publications, « bar » de 25, « plat » de 16.
+#    C'est ainsi qu'une promotion CANAL+, une piscine hors-sol, un cric de
+#    voiture et un ordinateur portable sont entrés dans un annuaire de voyage.
+#
+# ⚠ Mesuré contre la vérité terrain (586 publiées contre 2 212 rejetées, source
+#   Facebook seule) : la frontière de mot écarte **186 publications parasites**
+#   pour 27 bonnes perdues. Ce n'est pas un durcissement, c'est une correction :
+#   aucune publication qui contient vraiment le mot n'est perdue.
+MOTIF_TOURISME = re.compile(
+    r"\b(?:" + "|".join(
+        re.escape(sans_accent(m))
+        for m in sorted(set(MOTS_TOURISME), key=len, reverse=True)
+    ) + r")\b"
+)
+
 
 # ── Ce qui n'a pas sa place, et ce qui n'est pas ce qu'il paraît ─────────────
 # ⭐ POURQUOI (03/09/2026, décision d'Andry). Le fil de Diako doit porter le
@@ -551,7 +571,7 @@ def parle_de_tourisme(texte: str, nb_photos: int = 0) -> bool:
         return False
     if est_vente_d_objets(texte):
         return False
-    trouves = sum(1 for mot in MOTS_TOURISME if mot in n)
+    trouves = len(set(MOTIF_TOURISME.findall(n)))
     return trouves >= 2 or (trouves >= 1 and nb_photos >= 1)
 
 

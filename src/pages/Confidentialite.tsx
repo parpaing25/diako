@@ -31,72 +31,167 @@ export default function Confidentialite() {
       </p>
 
       <h2>Ce que nous conservons, et pourquoi</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Donnée</th>
-            <th>Pourquoi</th>
-            <th>Base</th>
-            <th>Combien de temps</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Adresse e-mail, mot de passe (haché), ou identifiant Google</td>
-            <td>Ouvrir et sécuriser votre compte, vous envoyer les e-mails de compte</td>
-            <td>Exécution du service</td>
-            <td>Tant que le compte existe</td>
-          </tr>
-          <tr>
-            <td>Nom affiché, photo de profil, type de compte (voyageur ou professionnel), métier</td>
-            <td>Signer vos publications, gérer une fiche</td>
-            <td>Exécution du service</td>
-            <td>Tant que le compte existe</td>
-          </tr>
-          <tr>
-            <td>Récits, photos, réactions, carnet, plats goûtés, commentaires</td>
-            <td>Le service lui-même : ce que vous publiez</td>
-            <td>Exécution du service</td>
-            <td>Tant que le compte existe ; effacés avec lui</td>
-          </tr>
-          <tr>
-            <td>Messages privés</td>
-            <td>Vous mettre en relation avec un membre ou un établissement</td>
-            <td>Exécution du service</td>
-            <td>Tant que le compte existe</td>
-          </tr>
-          <tr>
-            <td>Pièces de revendication d'une fiche (NIF, STAT, pièce, photo du lieu)</td>
-            <td>Vérifier qu'un gérant est bien responsable de l'établissement</td>
-            <td>Intérêt légitime (éviter les usurpations)</td>
-            <td>Stockées dans un espace privé, jamais servies publiquement ; effacées après validation ou refus</td>
-          </tr>
-          <tr>
-            <td>Position (si vous l'autorisez : « Autour de moi »)</td>
-            <td>Trier les résultats par distance</td>
-            <td>Consentement (bouton du navigateur)</td>
-            <td>Jamais conservée</td>
-          </tr>
-          <tr>
-            <td>Pages vues (chemin de la page, identifiant de session temporaire, page d'origine)</td>
-            <td>Savoir ce qui est consulté, sans savoir par qui</td>
-            <td>Intérêt légitime (mesure d'audience sans cookie)</td>
-            <td>12 mois, sans lien avec votre compte</td>
-          </tr>
-          <tr>
-            <td>Erreurs techniques (message, page, modèle de navigateur, type de réseau)</td>
-            <td>Réparer ce qui casse</td>
-            <td>Intérêt légitime</td>
-            <td>90 jours</td>
-          </tr>
-          <tr>
-            <td>Questions posées à l'assistant Diako</td>
-            <td>Répondre, et améliorer les réponses</td>
-            <td>Exécution du service</td>
-            <td>La question est transmise au modèle de langage sans votre identité ; elle n'est pas conservée avec votre compte</td>
-          </tr>
-        </tbody>
-      </table>
+      {/* 🔴 DES BLOCS, PAS UN TABLEAU À QUATRE COLONNES. Mesuré le 06/09/2026 sur
+          la production à 390 px : le tableau débordait de son conteneur, la
+          colonne « Combien de temps » était coupée — une page légale illisible
+          sur le téléphone, c'est-à-dire sur l'écran de presque tous les
+          visiteurs. Chaque donnée est maintenant un bloc avec ses trois
+          réponses étiquetées ; rien ne dépasse, rien ne se lit de travers. */}
+      <ul className="mt-3 list-none space-y-3 pl-0 text-sm">
+        <li>
+          <p className="font-semibold text-foreground">Adresse e-mail, mot de passe (haché), ou identifiant Google</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Ouvrir et sécuriser votre compte, vous envoyer les e-mails de compte</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Exécution du service</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">Tant que le compte existe</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Nom affiché, photo de profil, type de compte (voyageur ou professionnel), métier</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Signer vos publications, gérer une fiche</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Exécution du service</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">Tant que le compte existe</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Récits, photos, réactions, carnet, plats goûtés, commentaires</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Le service lui-même : ce que vous publiez</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Exécution du service</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">Tant que le compte existe ; effacés avec lui</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Messages privés</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Vous mettre en relation avec un membre ou un établissement</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Exécution du service</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">Tant que le compte existe</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Pièces de revendication d'une fiche (NIF, STAT, pièce, photo du lieu)</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Vérifier qu'un gérant est bien responsable de l'établissement</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Intérêt légitime (éviter les usurpations)</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">Stockées dans un espace privé, jamais servies publiquement ; effacées après validation ou refus</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Position (si vous l'autorisez : « Autour de moi »)</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Trier les résultats par distance</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Consentement (bouton du navigateur)</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">Jamais conservée</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Pages vues (chemin de la page, identifiant de session temporaire, page d'origine)</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Savoir ce qui est consulté, sans savoir par qui</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Intérêt légitime (mesure d'audience sans cookie)</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">12 mois, sans lien avec votre compte</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Erreurs techniques (message, page, modèle de navigateur, type de réseau)</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Réparer ce qui casse</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Intérêt légitime</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">90 jours</dd>
+            </div>
+          </dl>
+        </li>
+        <li>
+          <p className="font-semibold text-foreground">Questions posées à l'assistant Diako</p>
+          <dl className="mt-1.5 space-y-1">
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Pourquoi</dt>
+              <dd className="min-w-0 flex-1">Répondre, et améliorer les réponses</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Base</dt>
+              <dd className="min-w-0 flex-1">Exécution du service</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground">Durée</dt>
+              <dd className="min-w-0 flex-1">La question est transmise au modèle de langage sans votre identité ; elle n'est pas conservée avec votre compte</dd>
+            </div>
+          </dl>
+        </li>
+      </ul>
 
       <h2>Cookies et traceurs</h2>
       <p>

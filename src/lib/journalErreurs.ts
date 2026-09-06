@@ -24,6 +24,17 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const MAX_PAR_SESSION = 10;
+
+/* 🔴 UNE SESSION DE DÉVELOPPEMENT N'ÉCRIT PAS DANS LE JOURNAL DE PRODUCTION.
+   Le 05/09/2026, en testant le rattrapage d'un morceau JS bloqué sur
+   127.0.0.1:8788, quatre erreurs de TEST se sont retrouvées dans
+   `journal_erreurs` — la table même que l'alerte lit toutes les dix minutes.
+   Trois erreurs en dix minutes déclenchent l'alerte : un banc de tests aurait
+   réveillé Andry pour des pannes qui n'existaient pas, et faussé le compte des
+   pannes réelles. Le site n'a qu'une base : le garde-fou est donc ici. */
+const LOCAL =
+  typeof window !== "undefined" &&
+  /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(window.location.hostname);
 const FENETRE_DOUBLON_MS = 30_000;
 
 let envoyees = 0;
@@ -51,6 +62,7 @@ export interface ErreurJournalisee {
 
 export async function journaliser(e: ErreurJournalisee): Promise<void> {
   try {
+    if (LOCAL) return;
     if (envoyees >= MAX_PAR_SESSION) return;
 
     const sig = signature(e.message, e.source);

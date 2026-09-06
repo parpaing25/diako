@@ -6,7 +6,7 @@ Supabase (projet **Diako** — `eifrwecaszzqrdwjjjbu`).
 
 ---
 
-## 1. SMTP — ✅ FAIT et vérifié le 31/07/2026
+## 1. SMTP — ✅ corrigé et vérifié le 06/09/2026 (port 587 + hook d'envoi)
 
 *Authentication → Emails → SMTP Settings*
 
@@ -15,10 +15,11 @@ Supabase (projet **Diako** — `eifrwecaszzqrdwjjjbu`).
 | Sender email | `no-reply@diako.fonenako.mg` |
 | Sender name | `Diako` |
 | Host | `mail.fonenako.mg` |
-| Port | `465` |
+| Port | **`587`** (STARTTLS) — **plus 465** |
 | Username | `no-reply@diako.fonenako.mg` |
 | Password | voir `~/.diako-secrets/smtp.env` |
 | Minimum interval | `60` s |
+| Rate limit (courriels/heure) | **100** (30 par défaut : trop bas un jour d'annonce) |
 
 > ⚠️ Le **Host** est `mail.fonenako.mg`, pas `mail.diako.fonenako.mg` (n'existe
 > pas) ni `mail.anfa7857.odns.fr` (certificat émis pour `karla.o2switch.net`,
@@ -26,10 +27,45 @@ Supabase (projet **Diako** — `eifrwecaszzqrdwjjjbu`).
 >
 > ⚠️ Le **Username** est l'adresse **complète**. Un simple `no-reply` échoue.
 
-Vérifié de bout en bout : authentification TLS OK, mail de confirmation
-Supabase reçu en ~1 s dans la boîte, expédié « Diako
-<no-reply@diako.fonenako.mg> ». SPF et DKIM sont VALID sur
-`diako.fonenako.mg` (contrôlés côté cPanel **et** dans le DNS public).
+### 🔴 Ce qui était cassé, et depuis quand (trouvé le 06/09/2026)
+
+**Aucune inscription par courriel n'avait JAMAIS abouti.** Le compte de test du
+23/08 avait encore `email_confirmed_at` à `null`, et celui du 06/09 n'a rien
+reçu. Les deux seuls comptes confirmés du projet viennent de Google, qui ne
+demande aucun courriel. La ligne « vérifié de bout en bout » écrite ici le
+31/07 portait sur l'authentification SMTP, pas sur la remise d'un message.
+
+Deux causes, mesurées séparément :
+
+1. **Le port 465.** Depuis l'infrastructure Supabase (`ec2-…eu-west-3`), le 465
+   casse la connexion (« Broken pipe ») ; le **587** fait tout le dialogue :
+   `220`, `EHLO`, `STARTTLS`, certificat accepté, `235 Authentication
+   succeeded`, `MAIL FROM 250 OK`, `RCPT TO 250 Accepted`.
+2. **Le HTML.** Quatre messages envoyés dans la **même** session SMTP, vers la
+   **même** boîte : sujet à tiret cadratin en texte brut → **arrivé** ; témoin
+   texte simple → **arrivé** ; gabarit HTML de 4,6 Ko → **jamais arrivé** ;
+   HTML minimal de 119 caractères → **jamais arrivé**. Le serveur mutualisé
+   accepte (250 OK) puis ne remet pas dès qu'il y a une partie HTML. Or GoTrue
+   n'envoie que du HTML.
+
+### La solution en place : le hook « Send Email »
+
+*Authentication → Hooks → Send Email* pointe sur la fonction
+`envoyer-courriel` (code dans `supabase/functions/envoyer-courriel/`), qui
+compose un message **en texte brut** et l'envoie elle-même par le SMTP
+d'o2switch. Secrets de fonction à poser : `SMTP_HOST`, `SMTP_PORT` (587),
+`SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SEND_EMAIL_HOOK_SECRET`
+(gardé dans `~/.diako-secrets/hook_email_secret.txt`).
+
+**Vérifié le 06/09/2026 de bout en bout** : inscription → courriel reçu en
+**2 secondes** en boîte de réception (« Diako — confirmez votre adresse
+e-mail ») → lien ouvert → compte confirmé et session ouverte → export
+`mes_donnees` → suppression du compte. Les gabarits HTML français restent
+configurés : le jour où le HTML passera (support o2switch, ou relais dédié
+type Brevo/Resend), il suffira de désactiver le hook.
+
+SPF et DKIM sont VALID sur `diako.fonenako.mg` (contrôlés côté cPanel **et**
+dans le DNS public).
 
 ---
 

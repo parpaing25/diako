@@ -66,12 +66,21 @@ function refDomain(): string | null {
 // (StrictMode, re-render, retour au même écran sans navigation réelle).
 let lastPath: string | null = null;
 
+/* 🔴 LES VISITES DE DÉVELOPPEMENT NE SONT PAS DES VISITES. Le site n'a qu'une
+   base : un aperçu local ou un banc de tests comptait ses propres pages dans
+   `page_views`, et Andry aurait lu ces chiffres comme du trafic réel au
+   lancement. (Constaté le 06/09/2026 : des vues venues de 127.0.0.1.) */
+const LOCAL =
+  typeof window !== "undefined" &&
+  /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(window.location.hostname);
+
 /**
  * Compte une page vue — fire-and-forget, jamais bloquant, jamais d'erreur.
  * À appeler à chaque changement de route (le hook s'en charge).
  */
 export function trackView(pathname: string): void {
   try {
+    if (LOCAL) return;
     const path = cleanPath(pathname);
     if (path === lastPath) return;
     lastPath = path;

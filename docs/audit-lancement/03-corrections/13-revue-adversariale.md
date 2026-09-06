@@ -39,6 +39,18 @@ Trois juges indépendants peuvent se tromper ensemble quand le constat est plaus
 
 De la même façon, le constat de l'en-tête annonçait « 8 px de champ utile » : la mesure réelle donne **88 px** hors session et environ **52 px** pour un membre connecté. Le défaut est réel, son ampleur ne l'était pas. Après correctif : **96 px** hors session, mesurés à 360 px.
 
+## Et ce que la revue n'avait PAS vu : le balayage des 23 appelants
+
+Une revue reste un échantillon. Après application du lot 5, chaque appelant de `useReveal` a été relu **un par un**, par un script qui signale ceux qui ont une tranche, une pagination ou des onglets — 23 fichiers, 7 signalés.
+
+Un huitième défaut de la même famille est sorti, et il n'était dans **aucun** des 25 constats : sur `/favoris`, la dépendance était écrite `adresses ?? enregistres ?? aimes`. Cette expression **se fige sur le premier terme non nul** — et `adresses` est l'onglet d'ouverture, qui répond toujours, même vide (`[]` n'est pas `null`). Passer à « Enregistrés » montait donc des `PostCard`, qui portent `.dk-reveal`, **sans relancer l'effet** : `opacity: 0`, écran vide, aucune erreur.
+
+Le symptôme était pire qu'une panne franche : le filet `useRevealFilet` couvre les 6 premières secondes après l'arrivée sur la page, donc l'onglet **marchait quand on cliquait vite** et paraissait vide quand on prenait son temps.
+
+Les six autres pages signalées sont justes : `Explorer`, `Sites` et `Villes` passent bien leur liste rendue (`Villes` porte même le commentaire qui décrit ce piège), `Gouts` passe un tableau littéral — l'effet se rejoue à chaque rendu, coûteux mais sûr — et `Projet` ne révèle rien.
+
+**La leçon**, qui vaut plus que le défaut : après une revue, relire **exhaustivement** la famille de code qu'elle a mise en cause. 138 agents ont trouvé deux occurrences de ce piège ; un script de vingt lignes a trouvé la troisième.
+
 ## Ce que la revue a coûté et rapporté
 
 - 4 défauts sur 6 bloquants avaient été **introduits par les corrections de l'audit lui-même**, entre 24 et 48 heures plus tôt.
@@ -58,5 +70,6 @@ C'est l'argument le plus solide en faveur de la relecture adversariale : elle at
 | `robots.txt` vu par `facebookexternalhit` | `200 text/html` | **`200 text/plain`** |
 | `Cache-Control` d'`app-init.js` | `max-age=31536000, immutable` | **`max-age=3600`** |
 | Suite Playwright | 11/15, échecs changeants | **15/15** (un seul ouvrier) |
+| Appelants de `useReveal` relus | 2 (ceux des constats) | **23 sur 23**, 1 défaut de plus corrigé |
 
 ⚠ La suite de bout en bout tournait avec trois ouvriers en parallèle : elle rendait 4 échecs sur 15, puis 2 **autres** au passage suivant, et 15/15 en séquentiel. Trois Chromium et le serveur de prévisualisation ne tiennent pas dans la mémoire de ce poste. Une suite qui échoue au hasard s'apprend à ignorer : `workers: 1`, pour 41 secondes au lieu d'1 min 20.

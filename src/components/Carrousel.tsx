@@ -29,6 +29,14 @@ export function Carrousel({
   /** `couvrir` remplit le cadre (fil immersif), `contenir` montre toute l'image. */
   ajustement = "couvrir",
   /**
+   * 🔴 OU SE POSE LE COMPTEUR « 2/5 ». Dans le fil immersif, la barre de
+   *    puces flotte sur les 60 premiers pixels et le compteur, colle a
+   *    `top-3`, disparaissait dessous. La correction du 05/09 n'avait deplace
+   *    que la ligne d'auteur (PostImmersif `pt-[68px]`) : le compteur est
+   *    reste cache. Meme decalage, meme raison.
+   */
+  decalageHaut = "top-3",
+  /**
    * 🔴 CE PARAMÈTRE MANQUAIT, ET C'EST CE QUI RENDAIT LE FIL SI LENT.
    *    `ImageProgressive` n'émet un `srcset` QUE si on lui dit la largeur réelle
    *    du créneau — sans elle, le navigateur n'a aucun moyen de choisir et
@@ -70,6 +78,8 @@ export function Carrousel({
   alt?: string;
   prioritaire?: boolean;
   ajustement?: "couvrir" | "contenir";
+  /** Classe Tailwind du decalage haut du compteur « 2/5 » (defaut `top-3`). */
+  decalageHaut?: string;
   largeurAffichee?: string;
   agrandissable?: boolean;
   alClic?: (() => void) | null;
@@ -206,7 +216,12 @@ export function Carrousel({
 
       {!unique && (
         <>
-          <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+          <span
+            className={cn(
+              "pointer-events-none absolute right-3 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm",
+              decalageHaut
+            )}
+          >
             {index + 1}/{images.length}
           </span>
 

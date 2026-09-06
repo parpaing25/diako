@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getThumbUrl, jeuDeTailles } from "@/lib/imageThumb";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,12 @@ export function ImageProgressive({
   h,
   prioritaire = false,
   ajustement = "cover",
-  largeurAffichee,
+  /* 🔴 UN DEFAUT, PARCE QUE SIX APPELANTS L'OUBLIAIENT. Sans valeur,
+     `srcSet` n'etait pas emis DU TOUT et le navigateur telechargeait
+     l'ORIGINAL (730 Ko mesures) pour une carte de 390 px. « 100vw » surestime
+     le creneau d'une petite carte, mais reste TOUJOURS meilleur que
+     l'original ; un appelant qui affiche plus petit doit toujours le dire. */
+  largeurAffichee = "100vw",
   fondSombre = false,
 }: {
   src: string;
@@ -44,7 +49,23 @@ export function ImageProgressive({
   fondSombre?: boolean;
 }) {
   const [chargee, setChargee] = useState(false);
-  const [casse, setCasse] = useState(false);
+  /* 🔴 TROIS ÉTAPES, PAS DEUX. Avant : « srcSet, puis vignette ». Or depuis que
+     le srcSet ne liste QUE les trois variantes WebP (et plus l'original), une
+     image dont les variantes manquent n'avait PLUS AUCUNE candidate valide —
+     et o2switch rend `index.html` en 200 pour un fichier absent, donc l'échec
+     est muet. Le repli passe maintenant par l'ORIGINAL, qui existe toujours :
+     0 = les trois variantes · 1 = l'original seul, sans srcSet · 2 = la
+     vignette, dernière chance. Mesuré le 06/09/2026 : 73 images sur 7 familles
+     ont bien leurs trois variantes, et `o2upload.php:256` les fabrique à
+     l'envoi — ce filet couvre l'échec de génération, pas le cas courant. */
+  const [repli, setRepli] = useState(0);
+
+  // Une nouvelle image repart de zéro : sans cela, un composant réutilisé à la
+  // même position garderait l'échec (et le flou) de la précédente.
+  useEffect(() => {
+    setRepli(0);
+    setChargee(false);
+  }, [src]);
   // La vraie image ne remplace pas la vignette d'un coup sec : elle se pose.
   const vignette = getThumbUrl(src);
   const aVignette = vignette !== src;
@@ -56,6 +77,15 @@ export function ImageProgressive({
           src={vignette}
           alt=""
           aria-hidden="true"
+          width={w || 1600}
+          height={h || 1200}
+          decoding="async"
+          /* ⚠ ELLE AUSSI EST DIFFEREE. Sans `loading="lazy"`, chaque carte
+             montee telechargeait sa vignette WebP immediatement, meme a dix
+             ecrans plus bas : la moitie du fil partait sur le reseau avant
+             d'etre regardee. Et sans dimensions, la case d'attente n'a pas de
+             ratio — c'est du saut de mise en page. */
+          loading={prioritaire ? "eager" : "lazy"}
           className={cn(
             "absolute inset-0 h-full w-full scale-105 blur-md",
             ajustement === "cover" ? "object-cover" : "object-contain"
@@ -64,7 +94,7 @@ export function ImageProgressive({
       )}
 
       <img
-        src={casse && aVignette ? vignette : src}
+        src={repli >= 2 && aVignette ? vignette : src}
         /* 🔴 SANS `srcSet`, LE NAVIGATEUR TÉLÉCHARGEAIT LES DEUX IMAGES.
            La vignette 480 px arrivait, restait floue à l'écran, puis
            l'originale de 730 Ko se posait par-dessus : on payait 750 Ko pour
@@ -78,7 +108,7 @@ export function ImageProgressive({
            navigateur prenait l'original de 80-90 Ko. Après un échec (variante
            absente : o2switch rend index.html en 200), plus de srcSet du tout,
            sinon le navigateur repartait sur la même candidate. */
-        srcSet={!casse && aVignette && largeurAffichee ? (jeuDeTailles(src) ?? undefined) : undefined}
+        srcSet={repli === 0 && aVignette && largeurAffichee ? (jeuDeTailles(src) ?? undefined) : undefined}
         sizes={aVignette && largeurAffichee ? largeurAffichee : undefined}
         alt={alt}
         width={w || 1600}
@@ -92,7 +122,9 @@ export function ImageProgressive({
            vignette déjà affichée et laissait un cadre vide avec le texte de
            remplacement — la pire des deux issues. */
         onError={() => {
-          if (aVignette && !casse) setCasse(true);
+          const avaitSrcSet = repli === 0 && aVignette && largeurAffichee;
+          if (avaitSrcSet) setRepli(1);
+          else if (repli < 2 && aVignette) setRepli(2);
           else setChargee(true);
         }}
         className={cn(

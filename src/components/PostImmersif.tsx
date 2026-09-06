@@ -105,6 +105,9 @@ export function PostImmersif({
           images={post.media}
           alt={post.place ? `${post.place}, Madagascar` : nom}
           prioritaire={prioritaire}
+          /* Meme 68 px que la ligne d'auteur ci-dessous : sinon le compteur
+             « 2/5 » se cache sous la barre de puces du fil. */
+          decalageHaut="top-[68px]"
           videoAuto
         />
       ) : (

@@ -49,6 +49,14 @@ const RUNTIME = `${VERSION}-rt`;
    ferait retélécharger jusqu'à 400 photos à des gens qui paient leur mégaoctet.
    C'est le principal gain de données du service worker, on n'y touche pas. */
 const IMAGES = "dk-img";
+/* 🔴 LE PARTAGE ANDROID DOIT SURVIVRE À UN DÉPLOIEMENT. Ce cache porte le texte
+   et les photos qu'une personne vient de partager depuis sa galerie, en
+   attendant qu'elle se connecte. `activate` efface TOUT cache absent de la
+   liste épargnée : sans cette constante, un déploiement pendant qu'elle
+   s'inscrit jetait son partage — sans erreur, sans trace, elle retrouvait un
+   formulaire vide. Trouvé le 06/09/2026 en relisant `activate` après avoir
+   vérifié le partage en production. */
+const PARTAGE = "dk-partage";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -70,7 +78,7 @@ self.addEventListener("activate", (event) => {
             // ⚠ On garde la coquille et le cache d'exécution DE CE BUILD, plus
             //   les images (non versionnées). Tout le reste est une coquille
             //   périmée qui pointe vers des fichiers supprimés du serveur.
-            .filter((k) => k !== SHELL && k !== RUNTIME && k !== IMAGES)
+            .filter((k) => k !== SHELL && k !== RUNTIME && k !== IMAGES && k !== PARTAGE)
             .map((k) => caches.delete(k))
         )
       )
@@ -100,25 +108,39 @@ self.addEventListener("fetch", (event) => {
       (async () => {
         try {
           const fd = await req.formData();
-          const cache = await caches.open("dk-partage");
+          const cache = await caches.open(PARTAGE);
           const texte = ["titre", "texte", "lien"]
             .map((k) => fd.get(k))
             .filter((v) => typeof v === "string" && v.trim())
             .join("\n");
           await cache.put("/dk-partage/texte", new Response(texte));
           const photos = fd.getAll("photos").filter((f) => f && typeof f === "object" && f.size > 0);
-          await cache.put("/dk-partage/nombre", new Response(String(photos.length)));
+          /* 🔴 ON COMPTE CE QUI EST REELLEMENT RANGE. « nombre » etait ecrit
+             AVANT la boucle : quand la memoire du telephone manquait au milieu,
+             la page reprenait moins de photos que promis et annoncait quand
+             meme « contenu repris ». Le seul catch de ce bloc suppose un echec
+             TOTAL ; il attrapait aussi les echecs partiels. On ecrit donc le
+             compte APRES, et on garde a cote ce qui etait attendu pour pouvoir
+             le dire a l'auteur. */
+          let stockees = 0;
           for (let i = 0; i < photos.length; i++) {
-            await cache.put(
-              "/dk-partage/photo-" + i,
-              new Response(photos[i], {
-                headers: {
-                  "Content-Type": photos[i].type || "application/octet-stream",
-                  "X-Nom": encodeURIComponent(photos[i].name || "photo-" + i + ".jpg"),
-                },
-              })
-            );
+            try {
+              await cache.put(
+                "/dk-partage/photo-" + stockees,
+                new Response(photos[i], {
+                  headers: {
+                    "Content-Type": photos[i].type || "application/octet-stream",
+                    "X-Nom": encodeURIComponent(photos[i].name || "photo-" + i + ".jpg"),
+                  },
+                })
+              );
+              stockees++;
+            } catch (ePhoto) {
+              /* memoire pleine : on garde ce qui est deja range */
+            }
           }
+          await cache.put("/dk-partage/nombre", new Response(String(stockees)));
+          await cache.put("/dk-partage/attendues", new Response(String(photos.length)));
         } catch (e) {
           /* rien reçu : la page s'ouvre vide, comme avant */
         }

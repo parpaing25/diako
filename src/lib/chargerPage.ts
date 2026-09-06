@@ -20,6 +20,35 @@ import { lazy, type ComponentType } from "react";
  *   servi en HTML par le repli SPA d'o2switch quand le hachage a changé) doit
  *   échouer franchement ici, pas dans le rendu de React.
  */
+/**
+ * 🔴 VITE NE REDEMANDE JAMAIS LE CSS D'UN MORCEAU DIFFERE. Son assistant
+ *    de prechargement marque l'URL « deja tentee » AVANT de creer le <link>
+ *    (`Fr[l]=!0` dans le bundle en ligne) : un echec reseau sur
+ *    `maps-vendor-*.css` ouvrait /carte SANS le CSS de Leaflet — carte
+ *    disloquee, aucune erreur, et un reessai qui ne change rien. On retire donc
+ *    le lien mort et on en repose un nous-memes avant de rejouer l'import.
+ */
+async function reposerCss(url: string) {
+  try {
+    const fichier = url.replace(/^.*\//, "");
+    document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]').forEach((l) => {
+      if (l.href.endsWith(fichier)) l.remove();
+    });
+    await new Promise<void>((resolve) => {
+      const lien = document.createElement("link");
+      lien.rel = "stylesheet";
+      lien.href = url;
+      lien.onload = () => resolve();
+      lien.onerror = () => resolve();
+      document.head.appendChild(lien);
+      // Jamais bloquant : au pire on rejoue l'import sans attendre le CSS.
+      setTimeout(resolve, 3000);
+    });
+  } catch {
+    /* le reessai a lieu de toute facon */
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- même signature que React.lazy
 export function chargerPage<T extends ComponentType<any>>(
   importer: () => Promise<{ default: T }>,
@@ -31,6 +60,9 @@ export function chargerPage<T extends ComponentType<any>>(
       if (!m || !m.default) throw new Error("module sans export default");
       return m;
     } catch (premiere) {
+      const message = premiere instanceof Error ? premiere.message : String(premiere);
+      const css = /Unable to preload CSS for (\S+)/i.exec(message);
+      if (css) await reposerCss(css[1]);
       await new Promise((r) => setTimeout(r, attenteMs));
       try {
         const m = await importer();

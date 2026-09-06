@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromError(error: Error): State {
     return {
       hasError: true,
-      reseau: /dynamically imported module|reading 'default'|module sans export|Importing a module script failed|Unexpected token '<'/i.test(
+      reseau: /dynamically imported module|reading 'default'|module sans export|Importing a module script failed|Unable to preload CSS|Unexpected token '<'/i.test(
         error?.message ?? ""
       ),
     };

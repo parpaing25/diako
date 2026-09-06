@@ -231,9 +231,11 @@ export default function Publier() {
         const cache = await caches.open("dk-partage");
         const rTexte = await cache.match("/dk-partage/texte");
         const rNombre = await cache.match("/dk-partage/nombre");
+        const rAttendues = await cache.match("/dk-partage/attendues");
         if (!rTexte && !rNombre) return;
         const texteRecu = rTexte ? (await rTexte.text()).trim() : "";
         const n = rNombre ? Number(await rNombre.text()) : 0;
+        const attendues = rAttendues ? Number(await rAttendues.text()) : n;
         const fichiers: File[] = [];
         for (let i = 0; i < n; i++) {
           const r = await cache.match(`/dk-partage/photo-${i}`);
@@ -246,7 +248,18 @@ export default function Publier() {
         if (annule) return;
         if (texteRecu) setTexte((t) => (t ? t : texteRecu));
         if (fichiers.length) await ajouterFichiers(fichiers);
-        toast.success("Contenu partagé repris : relisez, choisissez le lieu, publiez.");
+        // ⚠ ON DIT CE QUI MANQUE. Le service worker écrit à côté le nombre de
+        //   photos ATTENDUES : quand la mémoire du téléphone a manqué, annoncer
+        //   « repris » tout court laisserait publier un récit amputé sans le
+        //   savoir.
+        if (attendues > fichiers.length) {
+          toast.warning(
+            `${fichiers.length} photo${fichiers.length > 1 ? "s" : ""} sur ${attendues} ${fichiers.length > 1 ? "ont" : "a"} pu être reprise${fichiers.length > 1 ? "s" : ""}.`,
+            { description: "La mémoire du téléphone était pleine — rajoutez les manquantes à la main." }
+          );
+        } else {
+          toast.success("Contenu partagé repris : relisez, choisissez le lieu, publiez.");
+        }
       } catch {
         /* pas de cache : rien à reprendre */
       }
@@ -307,12 +320,18 @@ export default function Publier() {
     }
 
     setEnvoiPhoto(true);
+    /* 🔴 UN COMPTEUR LOCAL, PAS L'ETAT REACT. `photos` est fige pour toute
+       la duree de cette fonction : selectionner trois videos d'un coup les
+       envoyait TOUTES LES TROIS, chacune lisant le meme « 0 video deja
+       jointe ». La limite ne se voyait qu'a la publication suivante.
+       (revue adversariale du 06/09/2026) */
+    let videos = photos.filter((p) => p.type === "video").length;
     try {
       for (const f of fichiers.slice(0, place)) {
         // ⭐ UNE VIDÉO. Envoyée telle quelle (pas de compression vidéo dans un
         //   navigateur d'entrée de gamme), avec son image d'attente à côté.
         if (f.type.startsWith("video/")) {
-          if (photos.filter((p) => p.type === "video").length >= MAX_VIDEOS) {
+          if (videos >= MAX_VIDEOS) {
             toast.error(`${MAX_VIDEOS} vidéo par publication.`);
             continue;
           }
@@ -340,6 +359,7 @@ export default function Publier() {
             ...p,
             { url: res.url as string, type: "video", poster, w: attente?.w ?? 1280, h: attente?.h ?? 720 },
           ]);
+          videos++;
           continue;
         }
         if (!f.type.startsWith("image/")) continue;

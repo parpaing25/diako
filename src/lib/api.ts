@@ -431,6 +431,21 @@ export async function mesFavoris(): Promise<Post[]> {
     .in("id", liste)
     .eq("status", "published");
 
+  /* 🔴 LA REACTION DE L'UTILISATEUR MANQUAIT, ET CA EFFACAIT LA SIENNE.
+     Avec `ma_reaction: null` fabrique, PostCard croyait qu'il n'avait rien
+     mis : toucher la meme reaction depuis l'onglet « Enregistres » la
+     SUPPRIMAIT en base (api.ts, `basculerReaction` : meme type = suppression)
+     et laissait le compteur faux de +1. Une lecture de plus sur 50
+     identifiants au maximum, sur un ecran qui en fait deja deux. */
+  const { data: reacs } = await supabase
+    .from("reactions")
+    .select("post_id,type")
+    .eq("user_id", user.id)
+    .in("post_id", liste);
+  const parPost = new Map<string, string>(
+    ((reacs ?? []) as { post_id: string; type: string }[]).map((r) => [r.post_id, r.type])
+  );
+
   type Ligne = {
     id: string; kind: string; body: string | null; media: unknown;
     place: string | null; dish: string | null; page_name: string | null;
@@ -463,7 +478,7 @@ export async function mesFavoris(): Promise<Post[]> {
       verification: r.profiles?.verification ?? "none",
       account_type: r.profiles?.account_type ?? "voyageur",
     },
-    ma_reaction: null,
+    ma_reaction: parPost.get(r.id) ?? null,
     enregistre: true,
   }));
 }

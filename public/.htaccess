@@ -57,7 +57,7 @@ ErrorDocument 503 /offline.html
   # ⚠ LES ORIGINES AUTORISÉES SONT CELLES QUE LE SITE UTILISE VRAIMENT :
   #   Supabase (base + fonctions), o2switch (images), OpenStreetMap (tuiles de
   #   la carte). Rien d'autre — pas de CDN de police, le site n'en charge plus.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob: https://diako.fonenako.mg; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org https://*.googleusercontent.com https://*.fbcdn.net https://upload.wikimedia.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob: https://diako.fonenako.mg; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org https://*.googleusercontent.com https://*.fbcdn.net https://upload.wikimedia.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
 </IfModule>
 
 # Fichiers sensibles : jamais servis.
@@ -104,6 +104,13 @@ ErrorDocument 503 /offline.html
   #   sait lire.
   RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Discordbot|Slackbot|TelegramBot|Pinterest|SkypeUriPreview|vkShare|redditbot|Applebot) [NC]
   RewriteCond %{REQUEST_URI} !^/(partage\.php|sitemap\.php|api/|assets/|media/|uploads/) [NC]
+  # ⚠ UN FICHIER QUI EXISTE EST SERVI TEL QUEL, meme a un robot de partage.
+  #   Sans cette ligne, /robots.txt, /sitemap.xml, /llms.txt et /offline.html
+  #   rendaient du HTML a facebookexternalhit — mesure en production le
+  #   06/09/2026 : « 200 text/html » sur /robots.txt, et le corps de partage.php
+  #   dans la reponse 403 de /.env. L'accueil « / » continue de passer par
+  #   partage.php : c'est un repertoire, donc -f y est faux.
+  RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^ /partage.php [L]
 
   # Repli SPA : tout ce qui n'est ni un fichier ni un dossier existant
@@ -140,6 +147,14 @@ ErrorDocument 503 /offline.html
   # assez long pour ne pas être redemandé à chaque page.
   <Files "app-init.js">
     ExpiresDefault "access plus 1 hour"
+    # 🔴 SANS CETTE LIGNE LE FICHIER ETAIT GELE UN AN. Le bloc
+    #   <FilesMatch "\.(js|css|woff2)$"> ci-dessus pose « max-age=31536000,
+    #   immutable » ; `ExpiresDefault` seul ne le remplace pas. Mesure en
+    #   production le 06/09/2026 : Expires a +1 h ET Cache-Control immutable,
+    #   et c'est ce dernier qui gagne — aucun correctif d'app-init.js
+    #   n'atteignait donc un visiteur deja venu. A RE-MESURER APRES DEPLOIEMENT
+    #   (curl -sI .../app-init.js), o2switch reordonne les blocs mod_headers.
+    Header set Cache-Control "public, max-age=3600"
   </Files>
 </IfModule>
 

@@ -67,17 +67,37 @@ export default function Auth() {
       return;
     }
     setBusy(true);
+    /* 🔴 LE RETOUR ETAIT IGNORE : le message « le lien est parti » sortait
+       du `finally`, donc AUSSI quand Supabase avait refuse l'envoi (limite
+       horaire atteinte, SMTP en panne — exactement le P0 des courriels du
+       06/09). Le `catch` seul ne pouvait rien voir : supabase-js rend l'erreur
+       metier dans `error`, il ne la leve pas. On distingue donc les deux
+       natures d'echec SANS rien reveler sur l'existence du compte : Supabase
+       ne renvoie pas d'erreur pour une adresse inconnue, le message reste
+       identique dans les deux cas. Et le jeton captcha part comme sur les deux
+       autres appels du fichier. */
     try {
-      await supabase.auth.resetPasswordForEmail(adresse, {
+      const { error } = await supabase.auth.resetPasswordForEmail(adresse, {
         redirectTo: `${window.location.origin}/compte`,
+        captchaToken: captcha ?? undefined,
       });
-    } catch {
-      /* On ne revele rien : meme reponse dans tous les cas. */
+      if (error) {
+        console.error("[reinitialiser]", error.message);
+        toast.error("L'envoi n'a pas pu se faire à l'instant.", {
+          description: "Réessayez dans une minute.",
+        });
+      } else {
+        toast.success("Si un compte existe pour cette adresse, le lien est parti.", {
+          description: "Vérifiez votre boîte, et vos indésirables.",
+        });
+      }
+    } catch (e) {
+      console.error("[reinitialiser]", e);
+      toast.error("L'envoi n'a pas pu se faire à l'instant.", {
+        description: "Réessayez dans une minute.",
+      });
     } finally {
       setBusy(false);
-      toast.success("Si un compte existe pour cette adresse, le lien est parti.", {
-        description: "Vérifiez votre boîte, et vos indésirables.",
-      });
     }
   }
   const [email, setEmail] = useState("");

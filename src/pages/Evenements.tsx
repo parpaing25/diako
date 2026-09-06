@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, Compass, RefreshCw } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
@@ -112,7 +112,15 @@ export default function Evenements() {
     });
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
-  useReveal(evts);
+  /* 🔴 CE QUI EST RENDU, PAS CE QUI EST CHARGE. `useReveal(evts)` ne se
+     relancait pas au clic sur « Voir plus » : la liste ne change pas, seul
+     `visibles` bouge. Les 24 cartes ajoutees restaient donc a `opacity: 0`
+     (`.dk-reveal` part invisible) — 64 des 88 evenements publies etaient
+     inatteignables. Le filet `useRevealFilet` ne rattrape pas : il s'arrete
+     6 s apres le changement d'adresse. Mesure du 06/09/2026 : 88 publies.
+     Passer le TABLEAU RENDU relance l'effet a chaque « Voir plus ». */
+  const rendus = useMemo(() => evts.slice(0, visibles), [evts, visibles]);
+  useReveal(rendus);
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -168,7 +176,7 @@ export default function Evenements() {
 
       {!chargement && evts.length > 0 && (
         <ul className="mt-5 grid gap-3 sm:grid-cols-2 large:grid-cols-3">
-          {evts.slice(0, visibles).map((e) => (
+          {rendus.map((e) => (
             <li key={e.id}>
               <article className="dk-reveal dk-carte overflow-hidden rounded-2xl border border-border bg-card">
                 {/* ⭐ L'AFFICHE, ET SON CRÉDIT PAR-DESSUS. Les 14 affiches

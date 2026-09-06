@@ -64,7 +64,13 @@ export function Header() {
                `lg:hidden` il s'effaçait dès 1024 alors que la barre latérale
                n'apparaît qu'à 1280 : entre les deux, plus aucun accès au menu
                complet. */
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-muted xl:hidden"
+            /* ⚠ 36 px A L'ECRAN, 44 px SOUS LE DOIGT (`dk-tap` pose une zone
+               tactile de 44 px en ::after). Passes en boites pleines de 44 px
+               le 05/09, les trois boutons de cette barre mangeaient le champ de
+               recherche : 88 px de champ utile mesures a 360 px hors session,
+               ~52 px pour un membre connecte (deux boutons de plus). La regle
+               des 44 px porte sur la CIBLE, pas sur la boite peinte. */
+            className="dk-tap grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-muted xl:hidden"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -107,7 +113,7 @@ export function Header() {
           <button
             onClick={() => setTheme(effectif === "sombre" ? "clair" : "sombre")}
             aria-label={`Passer en mode ${effectif === "sombre" ? "clair" : "sombre"}`}
-            className="hidden h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted sm:grid"
+            className="dk-tap hidden h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted sm:grid"
           >
             {effectif === "sombre" ? (
               <Sun className="h-4 w-4" aria-hidden="true" />
@@ -125,7 +131,7 @@ export function Header() {
                   onClick={() => setPanneau((p) => (p === "messages" ? null : "messages"))}
                   aria-label={msgNonLus > 0 ? `Messages (${msgNonLus} non lus)` : "Messages"}
                   aria-expanded={panneau === "messages"}
-                  className="relative grid h-11 w-11 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                  className="dk-tap relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
                 >
                   <MessageCircle className="h-5 w-5" aria-hidden="true" />
                   {msgNonLus > 0 && (
@@ -145,7 +151,7 @@ export function Header() {
                   onClick={() => setPanneau((p) => (p === "notifs" ? null : "notifs"))}
                   aria-label={nonLues > 0 ? `Notifications (${nonLues} non lues)` : "Notifications"}
                   aria-expanded={panneau === "notifs"}
-                  className="relative grid h-11 w-11 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                  className="dk-tap relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
                 >
                   <Bell className="h-5 w-5" aria-hidden="true" />
                   {nonLues > 0 && (

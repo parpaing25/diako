@@ -17,15 +17,23 @@
   // prefers-color-scheme — l'utilisateur voyait donc un écran sombre suivi d'un
   // flash blanc violent à chaque visite. Doit s'exécuter AVANT le premier rendu.
   try {
+    // 🔴 LE CHOIX DE L'UTILISATEUR PASSE AVANT LE SYSTEME. Ce bloc
+    //    n'appliquait que `prefers-color-scheme` : qui avait choisi « Clair »
+    //    dans /parametres voyait le theme du telephone s'imposer a chaque
+    //    chargement, et l'ecouteur `change` le lui reprenait DEFINITIVEMENT des
+    //    que le telephone basculait en mode nuit. Meme cle que ThemeContext
+    //    (« dk_theme », valeurs clair | sombre | systeme).
+    var choix = null;
+    try { choix = localStorage.getItem("dk_theme"); } catch (e2) { choix = null; }
     var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
     var applique = function (sombre) {
       document.documentElement.classList.toggle("dark", !!sombre);
     };
-    if (mq) {
-      applique(mq.matches);
-      if (mq.addEventListener) {
-        mq.addEventListener("change", function (e) { applique(e.matches); });
-      }
+    applique(choix === "sombre" || (choix !== "clair" && !!(mq && mq.matches)));
+    // L'ecouteur ne sert QU'A qui suit le systeme : sinon il contredit un
+    // reglage explicite.
+    if (mq && mq.addEventListener && choix !== "clair" && choix !== "sombre") {
+      mq.addEventListener("change", function (e) { applique(e.matches); });
     }
   } catch (e) {
     /* thème clair par défaut */

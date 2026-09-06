@@ -234,9 +234,19 @@ export function Feed() {
 
   const charger = useCallback(
     async (curseur?: string | null, apresKm?: number | null) => {
-      if (enVol.current) return;
-      enVol.current = true;
+      /* 🔴 L'ORDRE DE CES LIGNES DECIDAIT DE CE QUI S'AFFICHE. Le refus
+         « un chargement est deja en vol » etait pose AVANT l'increment de
+         version : changer d'onglet pendant un chargement jetait le clic EN
+         SILENCE, la version ne bougeait pas, et le garde plus bas laissait donc
+         passer la reponse de l'ONGLET PRECEDENT — affichee sous le libelle du
+         nouvel onglet. Desormais la version bouge d'abord (ce qui invalide la
+         reponse en vol), et seule la PAGINATION est refusee pendant un
+         chargement : un changement d'onglet, lui, doit toujours partir.
+         (revue adversariale du 06/09/2026) */
+      const pagination = curseur != null || apresKm != null;
+      if (enVol.current && pagination) return;
       const mien = ++version.current;
+      enVol.current = true;
       try {
         // ⚠ LE PALIER EST RELU A CHAQUE APPEL, et la MEME valeur sert a demander
         //   et a conclure. Fige au chargement du module, il restait a 8 pour qui
@@ -288,8 +298,13 @@ export function Feed() {
       } catch {
         if (mien === version.current) setErreur(true);
       } finally {
-        enVol.current = false;
-        if (mien === version.current) setChargement(false);
+        // ⚠ Seul le chargement LE PLUS RECENT rend la main : sinon celui
+        //   qu'on vient d'abandonner rouvrirait la porte a la pagination alors
+        //   que le nouvel onglet n'a pas encore repondu.
+        if (mien === version.current) {
+          enVol.current = false;
+          setChargement(false);
+        }
       }
     },
     [mode, ici]

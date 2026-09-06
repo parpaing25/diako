@@ -145,7 +145,12 @@ if (preg_match('#^/p/([a-z0-9\-]+)$#i', $chemin, $m)) {
     $titre = 'Atlas des plats malgaches — 95 plats et où les trouver';
     $desc  = "Chaque plat avec ses variantes d'orthographe, ses ingrédients, sa famille et sa région.";
 } elseif ($chemin === '/explorer') {
-    $titre = 'Explorer Madagascar — 178 destinations · Diako';
+    // 🔴 PLUS DE CHIFFRE ICI. « 178 destinations » etait ecrit en dur et
+    //    ne correspondait a rien : la page en montre 61 (RPC
+    //    destinations_emblematiques) et la base compte 508 lieux touristiques
+    //    (recomptes le 06/09/2026). Un chiffre faux servi a Facebook et
+    //    WhatsApp se verifie d'un clic — et c'est le premier contact.
+    $titre = 'Explorer Madagascar — les destinations emblématiques · Diako';
     $desc  = "Les destinations de Madagascar, avec leur saisonnalité, leurs accès réels et les adresses qui s'y trouvent.";
 } elseif ($chemin === '/carte') {
     $titre = 'La carte des hôtels et restaurants de Madagascar · Diako';

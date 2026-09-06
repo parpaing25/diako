@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,8 @@ export default function Bienvenue() {
   //   codé en dur survit à la disparition du métier qu'il désigne.
   const [metier, setMetier] = useState<string>(METIERS_PRO[0].cle);
   const [busy, setBusy] = useState(false);
+  /** Le drapeau d'inscription, lu et efface UNE fois (voir l'effet plus bas). */
+  const etaitNouveau = useRef<boolean | null>(null);
   useSEO({ titre: "Bienvenue", noindex: true });
 
   useEffect(() => {
@@ -34,6 +36,11 @@ export default function Bienvenue() {
 
   useEffect(() => {
     if (profile?.display_name) setNom(profile.display_name);
+    /* 🔴 LA VILLE AUSSI. Sans ce pre-remplissage, valider cet ecran
+       ECRASAIT `home_place` a NULL pour qui l'avait deja renseignee : le champ
+       partait vide et `ville.trim() || null` ecrivait NULL. /compte fait deja
+       ce geste (Compte.tsx : setVille(profile.home_place ?? "")). */
+    if (profile?.home_place) setVille(profile.home_place);
   }, [profile]);
 
   /* Un membre déjà installé (nom ET ville, ou statut pro) qui arrive ici par
@@ -41,12 +48,21 @@ export default function Bienvenue() {
      posé par /auth) ou un profil incomplet voit le formulaire. */
   useEffect(() => {
     if (loading || !user || !profile) return;
-    let nouveau = false;
-    try {
-      nouveau = sessionStorage.getItem("dk-bienvenue") === "1";
-    } catch {
-      nouveau = false;
+    /* 🔴 UN DRAPEAU QUI NE S'EFFACE JAMAIS N'EST PLUS UN SIGNAL.
+       « dk-bienvenue » etait pose par /auth a l'inscription et n'etait retire
+       NULLE PART (deux occurrences dans tout le depot) : cet ecran redevenait
+       obligatoire a chaque passage, pour toute la duree de la session. On le
+       consomme une fois, et on garde sa valeur dans une reference pour que les
+       re-rendus (arrivee du profil, rafraichissement) voient la meme chose. */
+    if (etaitNouveau.current === null) {
+      try {
+        etaitNouveau.current = sessionStorage.getItem("dk-bienvenue") === "1";
+        sessionStorage.removeItem("dk-bienvenue");
+      } catch {
+        etaitNouveau.current = false;
+      }
     }
+    const nouveau = etaitNouveau.current;
     if (!nouveau && profile.display_name && (profile.home_place || profile.account_type === "pro")) {
       navigate("/", { replace: true });
     }
@@ -70,9 +86,17 @@ export default function Bienvenue() {
     //      s'affichait dans un toast : plus personne ne pouvait devenir
     //      professionnel, donc plus personne ne pouvait revendiquer. La base
     //      était en avance sur le client, et c'est le client qui cassait.
+    /* ⚠ ON N'ECRIT PAS NULL PAR OMISSION. Un champ laisse vide ici ne doit
+       pas effacer une ville deja connue : on ne met `home_place` dans la mise a
+       jour que si l'utilisateur a saisi quelque chose. Vider sa ville se fait
+       depuis /compte, ou le champ est pre-rempli et l'intention explicite. */
+    const maj: { display_name: string; home_place?: string } = { display_name: nom.trim() };
+    const villeSaisie = ville.trim();
+    if (villeSaisie) maj.home_place = villeSaisie;
+
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: nom.trim(), home_place: ville.trim() || null })
+      .update(maj)
       .eq("id", user.id)
       .select("id");
 

@@ -139,8 +139,6 @@ export default function Recherche() {
   const [lieu, setLieu] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [plat, setPlat] = useState<{ id: string; slug: string; name_fr: string } | null>(null);
   const [fiches, setFiches] = useState<ResultatPage[]>([]);
-  // Idem : les fiches arrivent en asynchrone.
-  useReveal(fiches);
   const [tables, setTables] = useState<
     Awaited<ReturnType<typeof restaurantsParPlat>>
   >([]);
@@ -255,6 +253,14 @@ export default function Recherche() {
         (f.lat >= zone.sud && f.lat <= zone.nord && f.lng >= zone.ouest && f.lng <= zone.est)
     );
   }, [fiches, zone]);
+
+  /* 🔴 ON REVELE CE QUI EST RENDU. `useReveal(fiches)` ne se relancait pas
+     quand seul le recadrage de la carte changeait. Au retour de « Toute la
+     recherche », les fiches reintroduites sont de NOUVEAUX noeuds sans
+     `data-vu` : elles restaient a `opacity: 0` pour toujours, sans la moindre
+     erreur. Meme famille de defaut que /evenements et que /sites en aout.
+     (revue adversariale du 06/09/2026) */
+  useReveal(fichesVisibles);
 
   /** Bascule un filtre dans l'URL : partageable, et le retour arrière marche. */
   function basculer(cle: string, valeur: string | null) {

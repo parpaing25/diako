@@ -16,6 +16,14 @@ export default defineConfig({
   //   plantait sur ces fichiers (4 fichiers en échec le 06/09).
   testMatch: /.*\.e2e\.ts$/,
   timeout: 45_000,
+  /* 🔴 UN SEUL OUVRIER. En parallele (3 par defaut), la suite rendait 4
+     echecs sur 15 le 06/09/2026 — puis 2 AUTRES au passage suivant, et 15/15
+     avec --workers=1 en 41 s. Trois Chromium plus le serveur de previsualisation
+     ne tiennent pas dans la memoire de ce poste, et les appels partent tous
+     vers la MEME base de production. Une suite qui echoue au hasard
+     s'apprend a ignorer : elle ne vaut plus rien. Le gain de temps ne
+     justifiait pas ca (1 min 20 contre 41 s). */
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {

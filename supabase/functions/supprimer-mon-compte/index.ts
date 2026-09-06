@@ -23,14 +23,29 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "https://diako.fonenako.mg",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// 🔴 LA LISTE D'EN-TETES ETAIT FIGEE, ET LE BOUTON NE PARTAIT JAMAIS.
+//    « authorization, apikey, content-type » omet `x-client-info` (et
+//    `x-supabase-api-version` selon la version), que supabase-js envoie sur
+//    chaque `functions.invoke` : le navigateur refusait le preambule OPTIONS et
+//    « Supprimer mon compte » echouait AVANT tout appel. Le test en curl du
+//    06/09 ne pouvait pas le voir : curl n'applique pas le CORS. On renvoie
+//    donc ce que le navigateur demande, comme agent-diako.
+function cors(req: Request) {
+  return {
+    "Access-Control-Allow-Origin": "https://diako.fonenako.mg",
+    "Access-Control-Allow-Headers":
+      req.headers.get("Access-Control-Request-Headers") ??
+      "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    // Une journee : le preambule ne repart pas a chaque suppression.
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin, Access-Control-Request-Headers",
+  };
+}
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+  const CORS = cors(req);
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return new Response("méthode", { status: 405, headers: CORS });
 
   const jwt = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";

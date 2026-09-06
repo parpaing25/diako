@@ -2,9 +2,16 @@
 
 **Site audité :** diako.fonenako.mg · **Date :** 5 septembre 2026 · **Méthode :** 49 pages parcourues, 8 tailles d'écran, mesures réelles depuis Madagascar, base et configuration relues à la source. Le détail est dans 00 → 07.
 
-## La décision : **NO-GO aujourd'hui — GO CONDITIONNEL atteignable en une semaine de travail (≈ 35 h)**
+> 🔴 **ÉTAT AU SOIR DU 06/09/2026 : GO, note ≈ 88 / 100, 0 P0.** Ce qui suit est le
+> verdict du **05/09**, gardé tel quel — il dit d'où l'on part. Le journal
+> d'exécution, en bas de page, suit chaque correction jusqu'à sa vérification en
+> production, y compris les deux P0 découverts en cours de route (le limiteur de
+> l'hébergeur, et les courriels d'inscription jamais remis) et la revue
+> adversariale qui a trouvé quatre bloquants **dans les corrections elles-mêmes**.
 
-| Critère de la grille | Exigé pour GO | Constaté |
+## La décision du 05/09 : **NO-GO aujourd'hui — GO CONDITIONNEL atteignable en une semaine de travail (≈ 35 h)**
+
+| Critère de la grille | Exigé pour GO | Constaté le 05/09 |
 |---|---|---|
 | Note globale pondérée | ≥ 85 (GO) / ≥ 75 (conditionnel) | **72 / 100** |
 | Points bloquants (P0) | 0 | **1** — le limiteur de l'hébergeur fait tomber le site en erreur pour un visiteur réel (vu aujourd'hui) |
@@ -95,3 +102,27 @@ Ce qui a été **fait et vérifié** sur la branche `feat/bot-collecte-diako` (d
 Andry a désactivé la règle « Sécurité par défaut d'o2switch » de TigerProtect pour `diako.fonenako.mg`. Preuve relevée juste après : 240 requêtes en rafale → 240 × 200 ; parcours des 49 pages en 7 minutes → 49 × 200, 0 sous-requête en 429 (la veille : blocage dès la 3ᵉ page). Exploitation 78 → **86**.
 
 **Décision mise à jour : GO CONDITIONNEL** — note ≈ **84 / 100, 0 P0**. Les conditions restantes sont les parcours en écriture à deux comptes (09 §2 H) et les trois gestes de sécurité complémentaires (Turnstile, Telegram, DMARC), aucun n'est bloquant pour annoncer le site.
+
+### 06/09/2026, soirée — le parcours d'inscription joué en vrai : un P0 caché, et sa correction
+
+En jouant enfin l'inscription de bout en bout sur la production (09 §2 H), un défaut plus grave que tous les précédents est apparu : **aucun courriel d'inscription n'était jamais remis**. Personne ne pouvait créer de compte par adresse e-mail. Le compte de test du 23/08 n'avait jamais été confirmé non plus, et les deux seuls comptes confirmés du projet viennent de Google — qui n'envoie aucun courriel. Le défaut durait depuis au moins deux semaines sans laisser de trace.
+
+Deux causes cumulées, mesurées séparément (détail et preuves dans [03-corrections/12](03-corrections/12-P0-courriels-jamais-remis.md)) : le **port 465**, qui casse la connexion depuis l'infrastructure Supabase alors que le 587 la mène jusqu'à `RCPT TO 250 Accepted` ; et le **HTML**, jeté en silence par l'hébergement mutualisé — quatre messages dans la même session SMTP l'ont prouvé, le texte brut arrive, un HTML de 119 caractères non.
+
+Corrigé : port 587, limite d'envoi portée de 30 à 100 par heure, et un hook « Send Email » vers une fonction qui compose le message en texte brut et l'envoie elle-même. **Vérifié de bout en bout** : inscription → courriel reçu en 2 secondes → confirmation → connexion → export RGPD → suppression du compte, plus le courriel de mot de passe oublié. Les quatre comptes de test ont été supprimés.
+
+**Ce que cela change pour la décision.** Le site était annonçable et personne n'aurait pu s'y inscrire : la note d'avant surestimait donc les parcours. Après correction et vérification réelle : parcours 78 → **90**, sécurité inchangée, **note ≈ 86 / 100, 0 P0 — GO**. La condition qui reste est de garder un œil dessus : ce défaut a duré deux semaines sans alerte, et rien ne surveille encore les inscriptions.
+
+### 06/09/2026, nuit — la revue adversariale : quatre des six bloquants venaient de mes propres corrections
+
+Une fois tout corrigé et déployé, le dépôt a été relu **contre** lui-même : 12 dimensions de recherche, puis **trois réfuteurs par constat**, chacun chargé de le démolir. 138 agents, 59 trouvailles, **25 confirmées (6 bloquantes), 17 écartées**. Le détail et les preuves sont dans [03-corrections/13](03-corrections/13-revue-adversariale.md).
+
+**Le résultat qui compte : quatre des six bloquants avaient été introduits par les corrections de l'audit, dans les 48 heures précédentes.** Le garde de concurrence du fil, écrit la veille contre ce défaut précis, était posé dans le mauvais ordre et ne servait à rien. La pagination d'`/evenements`, ajoutée la veille, rendait **64 des 88 événements** inatteignables — cartes présentes dans le DOM, `opacity: 0`, aucune erreur. La CSP posée la veille pour Turnstile tuait l'aperçu de la console pro. Et le bouton « Supprimer mon compte » était bloqué par le navigateur : le test de la veille l'avait déclaré bon parce qu'il passait par `curl`, qui n'applique pas le CORS.
+
+S'y ajoute un défaut de fond que l'audit avait manqué : `noter_vue`, censée fermer le gonflage des vues, plafonnait sur un identifiant **fourni par le client**. La migration 0124 pose trois plafonds dont deux hors de portée de l'appelant, et son contrôle **essaie l'abus** au lieu de vérifier un seul appel.
+
+**Un constat a été écarté à la mesure**, bien que confirmé par les trois réfuteurs : « la cible tactile de “plus” est passée de 44 à 24 px ». `git log` montre qu'elle n'a jamais fait 44 px — c'était un bouton en ligne haut comme sa ligne de texte. La correction l'a **augmentée**. Trois juges se trompent ensemble quand le constat est plausible ; remonter à la source vaut aussi contre ses propres relecteurs.
+
+**Ce que cela change pour la décision.** Rien sur le fond, tout sur la confiance : les corrections sont maintenant relues, mesurées et vérifiées en ligne une par une. Accueil **740 Ko** (contre 870), LCP médian **2 056 ms**, `/evenements` **48 cartes sur 48**, `robots.txt` rendu en `text/plain` aux robots de partage, `app-init.js` enfin remplaçable, suite de bout en bout **15/15**. Qualité 86 → **90**, sécurité 78 → **84**, parcours 90 → **92**, exploitation 86 → **88**. **Note ≈ 88 / 100, 0 P0 — GO.**
+
+Ce qui reste tient dans les mains d'Andry (09 §2) : les clés Turnstile, le destinataire Telegram, la ligne DMARC, le choix du plan Supabase, l'identité des mentions légales, les 277 fiches du bot, et les trois parcours en écriture à jouer ensemble (publier un récit avec photos, revendiquer une fiche, s'écrire à deux comptes).

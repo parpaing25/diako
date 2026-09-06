@@ -20,12 +20,21 @@ Deno.serve(async (req: Request) => {
   }
 
   let depuis = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  let messageDirect: string | null = null;
   try {
     const corps = await req.json();
     if (typeof corps?.depuis === "string" && !Number.isNaN(Date.parse(corps.depuis))) depuis = new Date(corps.depuis).toISOString();
+    /* ⭐ UN MESSAGE TOUT FAIT. Le veilleur des inscriptions (0125) n'a rien a
+       resumer : il a deja sa phrase. On la transmet telle quelle plutot que de
+       lui faire ecrire dans journal_erreurs, qui n'est pas fait pour ca. */
+    if (typeof corps?.message === "string" && corps.message.trim()) {
+      messageDirect = corps.message.slice(0, 3500);
+    }
   } catch {
     /* corps absent : les 10 dernières minutes */
   }
+
+  if (messageDirect) return await prevenir(messageDirect, { direct: true });
 
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data, error } = await admin
@@ -55,16 +64,21 @@ Deno.serve(async (req: Request) => {
   const mobiles = lignes.filter((l) => /Android|iPhone/i.test(l.navigateur ?? "")).length;
   const texte = `⚠️ Diako : ${lignes.length} erreur(s) depuis ${depuis.slice(11, 16)} UTC (${mobiles} sur mobile)\n${resume}\n\nselect * from journal_erreurs order by id desc limit 20;`;
 
+  return await prevenir(texte, { n: lignes.length });
+});
+
+/** Envoie sur Telegram, ou journalise si le destinataire n'est pas encore posé. */
+async function prevenir(texte: string, extra: Record<string, unknown>) {
   const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
   const chat = Deno.env.get("TELEGRAM_CHAT_ID");
   if (!token || !chat) {
     console.warn("[alerte-erreurs] Telegram non configuré —", texte);
-    return Response.json({ envoye: false, n: lignes.length, motif: "telegram non configuré" });
+    return Response.json({ envoye: false, ...extra, motif: "telegram non configuré" });
   }
   const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chat, text: texte, disable_web_page_preview: true }),
   });
-  return Response.json({ envoye: r.ok, n: lignes.length, statut: r.status });
-});
+  return Response.json({ envoye: r.ok, ...extra, statut: r.status });
+}

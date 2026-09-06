@@ -150,6 +150,24 @@ if (preg_match('#^/p/([a-z0-9\-]+)$#i', $chemin, $m)) {
 } elseif ($chemin === '/carte') {
     $titre = 'La carte des hôtels et restaurants de Madagascar · Diako';
     $desc  = "Trouvez sur la carte les adresses de Madagascar, avec leurs tarifs en ariary.";
+} elseif ($chemin === '/a-propos') {
+    $titre = 'À propos de Diako';
+    $desc  = "Ce qu'est Diako, d'où viennent les prix, qui le fait, et ce qu'il n'est pas.";
+} elseif ($chemin === '/aide') {
+    $titre = 'Aide et contact · Diako';
+    $desc  = "Diako est-il gratuit ? Les prix sont-ils fiables ? Comment revendiquer la fiche de mon hôtel ? Les réponses, et comment nous écrire.";
+} elseif ($chemin === '/villes') {
+    $titre = 'Villes et villages de Madagascar · Diako';
+    $desc  = "Les villes et les villages référencés, avec leurs adresses et leurs récits.";
+} elseif ($chemin === '/sites') {
+    $titre = 'Sites et parcs de Madagascar · Diako';
+    $desc  = "Parcs nationaux, réserves, plages et patrimoine : tarifs d'entrée, guide, meilleurs mois et fady.";
+} elseif ($chemin === '/evenements') {
+    $titre = 'Événements à Madagascar · Diako';
+    $desc  = "Fêtes, festivals et saisons, classés par mois, avec leur lieu.";
+} elseif ($chemin === '/location') {
+    $titre = 'Louer une voiture à Madagascar · Diako';
+    $desc  = "Loueurs de 4×4 et de véhicules avec chauffeur, transporteurs, et leurs types de véhicules.";
 }
 
 ?><!doctype html>

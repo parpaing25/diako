@@ -218,6 +218,44 @@ export default function Publier() {
     if (def.uniteParDefaut) setUnite(def.uniteParDefaut);
   }, [def.uniteParDefaut]);
   const [photos, setPhotos] = useState<Media[]>([]);
+
+  /* ⭐ REPRISE D'UN PARTAGE ANDROID. Le service worker a rangé texte et photos
+     dans le cache « dk-partage » (public/sw.js) ; on les reprend une fois,
+     même si la personne est passée par /auth entre-temps. Sans compte, rien
+     n'est lu : le cache attend la connexion. */
+  useEffect(() => {
+    if (!user || typeof caches === "undefined") return;
+    let annule = false;
+    void (async () => {
+      try {
+        const cache = await caches.open("dk-partage");
+        const rTexte = await cache.match("/dk-partage/texte");
+        const rNombre = await cache.match("/dk-partage/nombre");
+        if (!rTexte && !rNombre) return;
+        const texteRecu = rTexte ? (await rTexte.text()).trim() : "";
+        const n = rNombre ? Number(await rNombre.text()) : 0;
+        const fichiers: File[] = [];
+        for (let i = 0; i < n; i++) {
+          const r = await cache.match(`/dk-partage/photo-${i}`);
+          if (!r) continue;
+          const blob = await r.blob();
+          const nom = decodeURIComponent(r.headers.get("X-Nom") || `photo-${i}.jpg`);
+          fichiers.push(new File([blob], nom, { type: r.headers.get("Content-Type") || blob.type }));
+        }
+        await caches.delete("dk-partage");
+        if (annule) return;
+        if (texteRecu) setTexte((t) => (t ? t : texteRecu));
+        if (fichiers.length) await ajouterFichiers(fichiers);
+        toast.success("Contenu partagé repris : relisez, choisissez le lieu, publiez.");
+      } catch {
+        /* pas de cache : rien à reprendre */
+      }
+    })();
+    return () => {
+      annule = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule reprise, à la connexion
+  }, [user]);
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -246,6 +284,11 @@ export default function Publier() {
   async function ajouterPhotos(e: React.ChangeEvent<HTMLInputElement>) {
     const fichiers = Array.from(e.target.files ?? []);
     e.target.value = "";
+    await ajouterFichiers(fichiers);
+  }
+
+  /** Photos venues du sélecteur OU du partage Android (cache « dk-partage »). */
+  async function ajouterFichiers(fichiers: File[]) {
     if (!fichiers.length) return;
 
     const place = MAX_PHOTOS - photos.length;

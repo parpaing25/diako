@@ -86,6 +86,9 @@ export default function Evenements() {
   });
 
   const [evts, setEvts] = useState<Evenement[]>([]);
+  /* 88 événements publiés : on en peint 24, puis 24 de plus à la demande —
+     27 000 caractères d'un bloc, c'est lourd en 3G (audit 05/09, CO5). */
+  const [visibles, setVisibles] = useState(24);
   /**
    * ⭐ LES CARTES S'OUVRENT SUR PLACE, il n'y a pas de page par événement.
    *
@@ -165,7 +168,7 @@ export default function Evenements() {
 
       {!chargement && evts.length > 0 && (
         <ul className="mt-5 grid gap-3 sm:grid-cols-2 large:grid-cols-3">
-          {evts.map((e) => (
+          {evts.slice(0, visibles).map((e) => (
             <li key={e.id}>
               <article className="dk-reveal dk-carte overflow-hidden rounded-2xl border border-border bg-card">
                 {/* ⭐ L'AFFICHE, ET SON CRÉDIT PAR-DESSUS. Les 14 affiches
@@ -304,6 +307,17 @@ export default function Evenements() {
             </li>
           ))}
         </ul>
+      )}
+      {!chargement && evts.length > visibles && (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => setVisibles((v) => v + 24)}
+            className="inline-flex min-h-11 items-center rounded-full border border-input px-6 text-sm font-medium hover:bg-muted"
+          >
+            Voir {Math.min(24, evts.length - visibles)} événements de plus ({evts.length - visibles} restants)
+          </button>
+        </div>
       )}
 
       {!chargement && evts.length === 0 && !erreur && (

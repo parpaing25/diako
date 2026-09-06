@@ -89,6 +89,45 @@ async function trim(cacheName, max) {
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+
+  /* ⭐ PARTAGE DEPUIS ANDROID (share_target du manifeste). Le système envoie un
+     POST multipart vers /publier ; sans ce bloc, Apache servait index.html et
+     texte comme photos étaient PERDUS (audit du 05/09/2026, 02-MO4). On range
+     tout dans un cache dédié et on redirige vers /publier?partage=1, où la page
+     les reprend — même après un passage par /auth (le cache attend). */
+  if (req.method === "POST" && new URL(req.url).pathname === "/publier") {
+    event.respondWith(
+      (async () => {
+        try {
+          const fd = await req.formData();
+          const cache = await caches.open("dk-partage");
+          const texte = ["titre", "texte", "lien"]
+            .map((k) => fd.get(k))
+            .filter((v) => typeof v === "string" && v.trim())
+            .join("\n");
+          await cache.put("/dk-partage/texte", new Response(texte));
+          const photos = fd.getAll("photos").filter((f) => f && typeof f === "object" && f.size > 0);
+          await cache.put("/dk-partage/nombre", new Response(String(photos.length)));
+          for (let i = 0; i < photos.length; i++) {
+            await cache.put(
+              "/dk-partage/photo-" + i,
+              new Response(photos[i], {
+                headers: {
+                  "Content-Type": photos[i].type || "application/octet-stream",
+                  "X-Nom": encodeURIComponent(photos[i].name || "photo-" + i + ".jpg"),
+                },
+              })
+            );
+          }
+        } catch (e) {
+          /* rien reçu : la page s'ouvre vide, comme avant */
+        }
+        return Response.redirect("/publier?partage=1", 303);
+      })()
+    );
+    return;
+  }
+
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);

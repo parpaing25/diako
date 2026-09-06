@@ -121,9 +121,11 @@ export function PostImmersif({
       )}
 
       {/* Voile du haut : rend le nom lisible sur une photo claire */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/55 to-transparent" />
 
-      <header className="absolute inset-x-0 top-0 flex items-center gap-2.5 px-4 pt-3">
+      {/* pt-[68px] : la barre de puces flotte sur les 60 premiers pixels du fil
+          (44 px de puces + marges) et rognait la ligne d'auteur (audit 05/09, UX2). */}
+      <header className="absolute inset-x-0 top-0 flex items-center gap-2.5 px-4 pt-[68px]">
         <Link
           to={`/user/${post.author.id}`}
           aria-label={`Profil de ${nom}`}

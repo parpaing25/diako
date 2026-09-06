@@ -54,8 +54,16 @@ begin
   if not has_function_privilege('authenticated', 'public.mes_donnees()', 'execute') then
     raise exception '0122 : un compte connecté ne peut pas appeler mes_donnees';
   end if;
-  -- Sans session, l'objet est vide de données (profil null, listes vides).
-  if (select (public.mes_donnees()->'profil') is not null) then
+  -- Sans session : profil = JSON null (⚠ un JSON null n'est PAS un SQL NULL —
+  -- le premier contrôle testait `is not null` et échouait sur une fonction
+  -- juste, 06/09/2026) et toutes les listes vides. La session du connecteur
+  -- porte des claims : on les vide LOCALEMENT.
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
+  if (public.mes_donnees() -> 'profil') <> 'null'::jsonb then
     raise exception '0122 : mes_donnees rend un profil sans session';
+  end if;
+  if (public.mes_donnees() -> 'publications') <> '[]'::jsonb then
+    raise exception '0122 : mes_donnees rend des publications sans session';
   end if;
 end $$;

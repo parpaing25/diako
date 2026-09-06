@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { chargerPage } from "@/lib/chargerPage";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -95,10 +95,19 @@ function RouteEffects() {
   const { pathname } = useLocation();
   const [annonce, setAnnonce] = useState("");
 
+  /* ⚠ Le focus n'est rendu au contenu QU'APRÈS une navigation interne : au
+     premier chargement, le forcer faisait sauter le lien d'évitement et
+     l'en-tête — la première tabulation arrivait sur « Découvrir » (audit
+     05/09, AC3). */
+  const premierRendu = useRef(true);
   useEffect(() => {
     trackView(pathname);
     window.scrollTo({ top: 0 });
-    document.getElementById("contenu")?.focus({ preventScroll: true });
+    if (premierRendu.current) {
+      premierRendu.current = false;
+    } else {
+      document.getElementById("contenu")?.focus({ preventScroll: true });
+    }
     setAnnonce(document.title);
   }, [pathname]);
 

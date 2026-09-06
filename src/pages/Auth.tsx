@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,10 +8,45 @@ import { useSEO } from "@/hooks/useSEO";
 
 type Mode = "connexion" | "inscription";
 
+/* ⭐ CAPTCHA DERRIÈRE UN DRAPEAU (audit 05/09, SE2). Sans clé dans
+   VITE_TURNSTILE_SITE_KEY, rien ne change : pas de script, pas de widget.
+   Avec la clé (publique), le widget Cloudflare Turnstile se pose avant le
+   bouton et son jeton part avec l'inscription et la connexion ; côté Supabase,
+   « Attack protection → Turnstile » avec la clé SECRÈTE termine le branchement.
+   ⚠ Les deux côtés ensemble : le serveur avec captcha et le client sans clé
+     refuserait TOUTES les connexions. */
+const TURNSTILE_CLE = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+
 export default function Auth() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<Mode>("connexion");
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!TURNSTILE_CLE || !widgetRef.current) return;
+    const el = widgetRef.current;
+    const poser = () => {
+      if (!window.turnstile || el.childElementCount) return;
+      window.turnstile.render(el, {
+        sitekey: TURNSTILE_CLE,
+        language: "fr",
+        callback: (jeton: string) => setCaptcha(jeton),
+        "expired-callback": () => setCaptcha(null),
+        "error-callback": () => setCaptcha(null),
+      });
+    };
+    if (window.turnstile) {
+      poser();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.onload = poser;
+    document.head.appendChild(script);
+  }, []);
 
   /**
    * Envoie le courriel de réinitialisation.
@@ -70,13 +105,20 @@ export default function Auth() {
       toast.error("Le mot de passe doit faire au moins 8 caractères.");
       return;
     }
+    if (TURNSTILE_CLE && !captcha) {
+      toast.error("Vérification anti-robot en cours : réessayez dans un instant.");
+      return;
+    }
     setBusy(true);
     try {
       if (mode === "inscription") {
         const { error } = await supabase.auth.signUp({
           email: mail,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/bienvenue` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/bienvenue`,
+            captchaToken: captcha ?? undefined,
+          },
         });
         if (error) throw error;
         toast.success("Compte créé. Vérifiez votre boîte mail pour confirmer.");
@@ -85,6 +127,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({
           email: mail,
           password,
+          options: { captchaToken: captcha ?? undefined },
         });
         if (error) throw error;
         navigate("/", { replace: true });
@@ -191,6 +234,7 @@ export default function Auth() {
           )}
         </div>
 
+        {TURNSTILE_CLE && <div ref={widgetRef} className="mb-3 min-h-[65px]" />}
         <button
           type="submit"
           disabled={busy}

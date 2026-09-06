@@ -37,13 +37,7 @@
 
 ## 3. Ce qui reste refusé depuis ma session
 
-Une seule commande, toujours bloquée par le classificateur (PowerShell 5.1 : `;`, pas `&&`) :
-
-```powershell
-cd ~/Desktop/Diako
-python scripts/appliquer_config_auth.py
-```
-Elle pose : mot de passe 8 caractères avec lettres et chiffres, ré-authentification pour changer de mot de passe, redirections sans `localhost`, sujets et gabarits d'e-mail en français ; elle tente ensuite HIBP et les durées de session (refus attendus sur le plan gratuit, sans conséquence). Le déploiement, les migrations et les fonctions sont passés le 06/09 (voir §4).
+Plus rien. La dernière commande, `python scripts/appliquer_config_auth.py`, a été lancée par Andry le 06/09 et **relue par l'API de gestion** : mot de passe 8 caractères avec lettres et chiffres, ré-authentification pour changer de mot de passe, redirections limitées à `https://diako.fonenako.mg/**`, sujets et gabarits d'e-mail en français (`lang="fr"` confirmé). HIBP et durées de session refusés en 402 comme prévu (plan gratuit, décision B).
 
 ## 4. Plan et avancement
 

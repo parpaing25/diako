@@ -33,7 +33,7 @@
 | F | **Alerte Telegram** | Tout est en place sauf le destinataire | `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID` dans Edge Functions → `alerte-erreurs` → Secrets (un bot existant du pont convient) |
 | G | **DMARC** | `p=none; rua=mailto:contact.diako@gmail.com` maintenant, `quarantine` à J+15 | Une ligne TXT `_dmarc.fonenako.mg` dans la zone DNS |
 | H | **Parcours en écriture** (inscription, publication, revendication, messages, partage Android, export/suppression) | Checklist 07-B, 45 minutes à deux comptes | Une adresse e-mail jetable et ton téléphone |
-| I | **Fusion dans `main`** | Avance rapide de `main` sur `feat/bot-collecte-diako` (la prod sert déjà ce build) | Ton OK (l'autre session travaille sur cette branche) |
+| I | ~~Fusion dans `main`~~ | **Tranché techniquement le 06/09** : `main` avancé (sans fusion, avance rapide) sur `feat/bot-collecte-diako` et poussé — `main` = la branche = la production (`4e80759`). L'autre session continue sur sa branche sans rien changer. | Rien |
 
 ## 3. Ce qui reste refusé depuis ma session
 
@@ -53,7 +53,7 @@ Elle pose : mot de passe 8 caractères avec lettres et chiffres, ré-authentific
 | 2 | Auth (script adapté), CSP, fil préchargé, images, cibles 44/24 px, textes ≥ 12 px, Google → bienvenue, `/pro/:slug`, `/compte`, écran d'erreur, contraste du fil, Cgu, RGPD (composant + RPC + fonction), vues par RPC, index FK, alerte erreurs, tests e2e + axe, CI | 14 | ✅ **en production** : typecheck 0, lint 0, 72 tests, 15/15 e2e ; **migrations 0120–0123 appliquées**, **fonctions `supprimer-mon-compte` et `alerte-erreurs` déployées**, secret d'alerte posé |
 | 3 | Déploiement + vérification du hash, re-mesures | 2 | ✅ `index-DIFKXDzz.js` puis `index-BvnLut2U.js` vérifiés en ligne ; **LCP accueil médian 2 076 ms (contre 2 616), 870 Ko (contre 1 396), première requête Supabase à 0,75 s (contre 1,5 s)** ; `www` → 301, `llms.txt`, CSP, robots, sitemap contrôlés en prod |
 | 4 | Parcours en écriture à deux comptes (07-B) | 3 | ⏳ avec Andry (H) |
-| 5 | Fusion `main`, re-score | 2 | ⏳ sur ton OK (I) ; re-score dans 08 après les parcours |
+| 5 | Fusion `main`, re-score | 2 | ✅ `main` = production (`4e80759`) ; re-score provisoire 81/100 dans 08, définitif après les parcours H |
 | 6 | Partage Android, `/evenements` par 24, Turnstile derrière un drapeau, aperçus de partage des pages statiques (`partage.php`), focus initial, ligne d'auteur dégagée | 8 | ✅ **fait et en production le 06/09** (partage Android non testé de bout en bout : demande un Android avec l'app installée) ; ⏳ descriptions des 50 fiches les plus complètes = écriture de données, sur ton OK |
 
 **Total réalisé : ≈ 30 h sur 35.** Le reste (≈ 5 h) est entre tes mains : les clics A à G, et les 45 minutes de parcours H avec moi.

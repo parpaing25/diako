@@ -38,9 +38,21 @@ export default function Favoris() {
   const [adresses, setAdresses] = useState<FicheGardee[] | null>(null);
   const [enregistres, setEnregistres] = useState<Post[] | null>(null);
   const [aimes, setAimes] = useState<PublicationAimee[] | null>(null);
-  // La dépendance, sinon les cartes arrivées après le montage restent
-  // invisibles (le piège est décrit dans useReveal.ts).
-  useReveal(adresses ?? enregistres ?? aimes);
+  /* 🔴 LA DEPENDANCE DOIT SUIVRE L'ONGLET, PAS LE PREMIER CHARGE.
+     `adresses ?? enregistres ?? aimes` se fige sur `adresses` des que cet
+     onglet a repondu — et il repond toujours, c'est celui d'ouverture, meme
+     vide (`[]` n'est pas `null`). Passer ensuite a « Enregistres » montait des
+     `PostCard`, qui portent `.dk-reveal`, SANS relancer l'effet : elles
+     restaient a `opacity: 0`. Le filet `useRevealFilet` masquait le defaut
+     pendant les 6 premieres secondes qui suivent l'arrivee sur la page, donc
+     l'onglet paraissait vide seulement quand on prenait son temps — le pire
+     des symptomes. Trouve en relisant TOUS les appelants de useReveal apres la
+     revue du 06/09/2026 : celui-la n'etait dans aucun des 25 constats.
+     Ici on passe la liste REELLEMENT RENDUE : elle change a chaque changement
+     d'onglet ET a chaque arrivee de donnees. */
+  const listeRendue =
+    onglet === "adresses" ? adresses : onglet === "enregistres" ? enregistres : aimes;
+  useReveal(listeRendue);
 
   // Chaque onglet charge à sa première ouverture, pas au montage : sur une 3G,
   // trois requêtes pour une seule liste regardée, c'est deux de trop.

@@ -70,7 +70,7 @@ export function CartePlat({ plat }: { plat: PlatAtlas }) {
           {[plat.family, plat.typical_place?.region ?? regime].filter(Boolean).join(" · ")}
         </p>
         {adresses != null && (
-          <p className="mt-1.5 text-[11px] font-semibold text-accent-strong">
+          <p className="mt-1.5 text-xs font-semibold text-accent-strong">
             {adresses === 0
               ? "aucune adresse encore"
               : `${adresses} adresse${adresses > 1 ? "s" : ""}`}

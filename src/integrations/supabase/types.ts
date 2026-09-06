@@ -3289,6 +3289,10 @@ export type Database = {
       fil_cats_du_theme: { Args: { p_theme: string }; Returns: string[] }
       fil_modes_disponibles: { Args: never; Returns: Json }
       fil_themes_comptes: { Args: never; Returns: Json }
+      // ⚠ Ajoutées à la main le 06/09/2026 (migrations 0120 et 0122) : à
+      //   régénérer après application. Même pratique que vehicle_offers (0114).
+      mes_donnees: { Args: never; Returns: Json }
+      noter_vue: { Args: { p_path: string; p_ref?: string; p_sid?: string }; Returns: undefined }
       get_feed: {
         Args: { p_curseur?: string; p_limite?: number }
         Returns: Json

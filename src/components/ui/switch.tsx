@@ -28,7 +28,7 @@ const Switch = React.forwardRef<
     <span
       aria-hidden="true"
       className={cn(
-        "rounded-full px-3 py-1 text-[11px] font-semibold leading-none transition-all duration-200",
+        "rounded-full px-3 py-1 text-xs font-semibold leading-none transition-all duration-200",
         "group-data-[state=unchecked]:bg-slate-500 group-data-[state=unchecked]:text-white group-data-[state=unchecked]:shadow",
         "group-data-[state=checked]:text-muted-foreground",
       )}
@@ -38,7 +38,7 @@ const Switch = React.forwardRef<
     <span
       aria-hidden="true"
       className={cn(
-        "rounded-full px-3 py-1 text-[11px] font-semibold leading-none transition-all duration-200",
+        "rounded-full px-3 py-1 text-xs font-semibold leading-none transition-all duration-200",
         "group-data-[state=checked]:bg-gradient-to-r group-data-[state=checked]:from-[#2994C0] group-data-[state=checked]:to-[#1E6B8C] group-data-[state=checked]:text-white group-data-[state=checked]:shadow",
         "group-data-[state=unchecked]:text-muted-foreground",
       )}

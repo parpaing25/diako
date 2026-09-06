@@ -76,25 +76,37 @@ export function trackView(pathname: string): void {
     if (path === lastPath) return;
     lastPath = path;
 
-    const body = JSON.stringify({
-      path,
-      ref: refDomain(),
-      sid: getSessionId(),
-    });
+    const ref = refDomain();
+    const sid = getSessionId();
+    const entetes = {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Prefer: "return=minimal",
+    };
 
-    // fetch keepalive : la requête survit à la navigation/fermeture d'onglet,
-    // n'attend rien (pas de .then), avale toute erreur (réseau, 404, 401…).
-    fetch(`${SUPABASE_URL}/rest/v1/page_views`, {
+    /* ⚠ PAR RPC, PLAFONNÉE (migration 0120, audit du 05/09/2026) : l'insertion
+       directe dans page_views était ouverte à tout script sans limite. Tant
+       que la migration n'est pas appliquée, la RPC répond 404 et on retombe
+       sur l'ancienne insertion : rien ne se perd entre les deux. Le premier
+       appel garde `keepalive` (il survit à la fermeture de l'onglet) ; le
+       repli, lui, n'est tenté que si l'on a encore une page pour le faire. */
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/noter_vue`, {
       method: "POST",
       keepalive: true,
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        Prefer: "return=minimal",
-      },
-      body,
-    }).catch(() => {});
+      headers: entetes,
+      body: JSON.stringify({ p_path: path, p_ref: ref, p_sid: sid }),
+    })
+      .then((r) => {
+        if (r.status !== 404) return;
+        return fetch(`${SUPABASE_URL}/rest/v1/page_views`, {
+          method: "POST",
+          keepalive: true,
+          headers: entetes,
+          body: JSON.stringify({ path, ref, sid }),
+        });
+      })
+      .catch(() => {});
   } catch {
     // silencieux — le comptage ne doit JAMAIS gêner la navigation
   }

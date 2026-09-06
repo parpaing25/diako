@@ -106,7 +106,7 @@ export function Commentaires({
                   </Link>{" "}
                   {c.body}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{ilYA(c.created_at)}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{ilYA(c.created_at)}</p>
               </div>
             </li>
           ))}

@@ -182,7 +182,7 @@ export default function Evenements() {
                       largeurAffichee={"(min-width:1280px) 30vw, (min-width:640px) 45vw, 92vw"}
                     />
                     {e.poster_credit && (
-                      <span className="pointer-events-none absolute bottom-1 right-1 max-w-[92%] truncate rounded bg-black/55 px-1.5 py-0.5 text-[10px] text-white/85 backdrop-blur-sm">
+                      <span className="pointer-events-none absolute bottom-1 right-1 max-w-[92%] truncate rounded bg-black/55 px-1.5 py-0.5 text-xs text-white/85 backdrop-blur-sm">
                         {e.poster_credit}
                         {e.poster_licence ? ` · ${e.poster_licence}` : ""}
                       </span>

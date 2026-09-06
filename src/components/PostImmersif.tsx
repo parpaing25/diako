@@ -203,7 +203,10 @@ export function PostImmersif({
         <div className="absolute inset-x-0 bottom-0 px-4 pb-20">
           <div
             className={cn(
-              "max-w-[85%] overscroll-contain",
+              /* Fond sombre sous le texte : axe mesurait un contraste insuffisant
+                 (blanc sur le dégradé à 45 % au-dessus d'une photo claire, 06/09/2026).
+                 Noir à 60 % → 5,7:1 quel que soit le cliché derrière. */
+              "max-w-[85%] overscroll-contain rounded-xl bg-black/60 px-3 py-2",
               deplie && "max-h-[45dvh] overflow-y-auto pr-1"
             )}
           >
@@ -212,7 +215,7 @@ export function PostImmersif({
               {long && !deplie && (
                 <button
                   onClick={() => setDeplie(true)}
-                  className="ml-1 font-semibold text-white/80"
+                  className="ml-1 font-semibold text-white"
                 >
                   plus
                 </button>
@@ -231,7 +234,7 @@ export function PostImmersif({
               {deplie && (
                 <button
                   onClick={() => setDeplie(false)}
-                  className="text-xs font-semibold text-white/70"
+                  className="text-xs font-semibold text-white/90"
                 >
                   reduire
                 </button>

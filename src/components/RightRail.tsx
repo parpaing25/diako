@@ -317,7 +317,7 @@ export function RightRail() {
                           style={{ width: `${total ? Math.round((n / total) * 100) : 0}%` }}
                         />
                       </span>
-                      <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
                         {v.reactions_count > 0 && (
                           <span className="inline-flex items-center gap-0.5">
                             <Heart className="h-3 w-3" aria-hidden="true" />
@@ -343,7 +343,7 @@ export function RightRail() {
               );
             })}
           </ol>
-          <p className="mt-3 border-t border-border pt-2 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-3 border-t border-border pt-2 text-xs leading-relaxed text-muted-foreground">
             Classé sur l'attention reçue <em>par jour</em>, pas sur un total —
             un récit d'hier peut passer devant un récit du mois dernier.
           </p>
@@ -393,7 +393,7 @@ export function RightRail() {
                     href={s.source}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="mt-0.5 inline-block text-[11px] text-muted-foreground underline"
+                    className="mt-0.5 inline-block text-xs text-muted-foreground underline"
                   >
                     source
                   </a>
@@ -443,7 +443,7 @@ export function RightRail() {
             <li key={quoi} className="flex items-start gap-2 text-sm">
               <span
                 className={cn(
-                  "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                  "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
                   COULEURS[etat]
                 )}
               >

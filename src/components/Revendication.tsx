@@ -473,7 +473,7 @@ function Piece({
             {occupe ? "Envoi en cours…" : "Choisir un fichier"}
           </button>
           <p className="mt-1 text-xs text-muted-foreground">{aide}</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{formats}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{formats}</p>
         </>
       )}
     </div>

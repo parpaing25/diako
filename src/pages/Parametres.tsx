@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Bell, ChevronRight, Lock, LogOut, Monitor, Moon, Shield, Sun, Trash2 } from "lucide-react";
+import { Bell, ChevronRight, Lock, LogOut, Monitor, Moon, Shield, Sun } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useSEO } from "@/hooks/useSEO";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/lib/pushNotifications";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { MesDonnees } from "@/components/MesDonnees";
 
 const MODES: { cle: Theme; label: string; icon: typeof Sun }[] = [
   { cle: "clair", label: "Clair", icon: Sun },
@@ -216,17 +217,8 @@ export default function Parametres() {
                 <LogOut className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="text-sm font-medium">Se déconnecter</span>
               </button>
-              <button
-                onClick={() =>
-                  toast("Suppression de compte", {
-                    description: "Écrivez à contact.diako@gmail.com : votre compte et vos publications seront effacés.",
-                  })
-                }
-                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-destructive transition hover:bg-destructive/5"
-              >
-                <Trash2 className="h-5 w-5 shrink-0" aria-hidden="true" />
-                <span className="text-sm font-medium">Supprimer mon compte</span>
-              </button>
+              {/* Export JSON et suppression réelle (RGPD) — audit 05/09/2026, fiche 03-11 */}
+              <MesDonnees />
             </>
           ) : (
             <Link to="/auth" className="flex w-full items-center gap-3 px-4 py-3.5 transition hover:bg-muted">

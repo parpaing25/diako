@@ -62,7 +62,7 @@ export function BadgeVerification({
     <span
       title={aide}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
         classe,
         className
       )}
@@ -78,7 +78,7 @@ export function BadgeSponsorise({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent-strong",
+        "inline-flex items-center rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent-strong",
         className
       )}
     >
@@ -109,7 +109,7 @@ export function BadgeOuverture({ v, className }: { v: EtatOuverture; className?:
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
           bientot ? "bg-accent/15 text-accent-strong" : "bg-primary/12 text-primary",
           className
         )}
@@ -126,7 +126,7 @@ export function BadgeOuverture({ v, className }: { v: EtatOuverture; className?:
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground",
+        "inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground",
         className
       )}
     >
@@ -140,7 +140,7 @@ export function BadgeTarifsAConfirmer({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent-strong",
+        "inline-flex items-center rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent-strong",
         className
       )}
     >

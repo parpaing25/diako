@@ -97,7 +97,7 @@ function BarreFil({
 
   const pastille = (actif: boolean) =>
     cn(
-      "min-h-9 shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition",
+      "min-h-11 shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition", // 44 px : règle du projet et audit 05/09
       actif
         ? "border-primary bg-primary text-primary-foreground"
         : flottante
@@ -244,14 +244,29 @@ export function Feed() {
         //   demander 12 en comparant a 8 (ou l'inverse) fait declarer le fil
         //   « termine » alors qu'il reste des publications.
         const palier = PAR_PAGE();
-        const page = await chargerFilFiltre({
-          mode,
-          curseur,
-          apresKm,
-          lat: ici?.lat,
-          lng: ici?.lng,
-          limite: palier,
-        });
+        /* ⭐ LE FIL DEMANDÉ AVANT REACT. `public/app-init.js` a lancé la même
+           requête (feed_filtre, mode « tout », même palier) dès le début du
+           HTML pour un visiteur non connecté ; si sa promesse est là et que
+           les paramètres sont ceux du premier chargement, on la consomme —
+           une seule fois — au lieu de repayer l'aller-retour (≈ 0,9 s mesurés
+           le 05/09/2026). Tout autre cas repasse par l'appel normal. */
+        let page: PostSitue[] | null = null;
+        const pre = window.__dkFil;
+        if (pre && !curseur && apresKm == null && mode === "tout" && !ici && window.__dkFilLimite === palier) {
+          window.__dkFil = null;
+          const brut = await pre;
+          if (Array.isArray(brut)) page = brut as PostSitue[];
+        }
+        if (!page) {
+          page = await chargerFilFiltre({
+            mode,
+            curseur,
+            apresKm,
+            lat: ici?.lat,
+            lng: ici?.lng,
+            limite: palier,
+          });
+        }
         if (mien !== version.current) return;
         setErreur(false);
         if (page.length < palier) setFini(true);

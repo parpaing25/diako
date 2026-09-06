@@ -533,7 +533,7 @@ function PalierVille({ slug, regionUrl }: { slug: string; regionUrl: string | nu
             {v.nom}
           </h1>
           {v.cover_credit && (
-            <p className="absolute bottom-1 right-2 text-[10px] text-white/75">{v.cover_credit}</p>
+            <p className="absolute bottom-1 right-2 text-xs text-white/75">{v.cover_credit}</p>
           )}
         </div>
       )}
@@ -706,7 +706,7 @@ function Carte({
             {/* Le crédit voyage AVEC la photo : dans un pied de page global il
                 se perdrait au premier remaniement. */}
             {credit && (
-              <p className="absolute bottom-1 right-2 text-[10px] text-white/75 drop-shadow">
+              <p className="absolute bottom-1 right-2 text-xs text-white/75 drop-shadow">
                 {credit}
               </p>
             )}

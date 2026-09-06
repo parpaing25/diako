@@ -533,7 +533,7 @@ function CarteRegion({
               largeurAffichee="(min-width:1920px) 22vw, (min-width:1280px) 25vw, (min-width:640px) 45vw, 92vw"
             />
             {r.cover_credit && (
-              <span className="absolute bottom-0 right-0 bg-black/55 px-1.5 py-0.5 text-[10px] leading-tight text-white">
+              <span className="absolute bottom-0 right-0 bg-black/55 px-1.5 py-0.5 text-xs leading-tight text-white">
                 {r.cover_credit}
               </span>
             )}
@@ -569,7 +569,7 @@ function CarteRegion({
             {r.types.map((t) => (
               <li
                 key={t.code}
-                className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium"
+                className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium"
               >
                 {libelleTypeCourt(t.code)} · {nombre(t.n)}
               </li>
@@ -1163,7 +1163,7 @@ function LigneSite({ site: s, libelle }: { site: SiteLigne; libelle: string }) {
           </div>
 
           {s.guide_obligatoire && (
-            <span className="h-fit shrink-0 rounded-full bg-gold-soft px-2.5 py-1 text-[11px] font-semibold text-warn">
+            <span className="h-fit shrink-0 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-semibold text-warn">
               Guide obligatoire
             </span>
           )}
@@ -1279,7 +1279,7 @@ function LigneSite({ site: s, libelle }: { site: SiteLigne; libelle: string }) {
                 l'incruster : il prend donc sa propre ligne, en pied de fiche,
                 plutôt que de disparaître. */}
             {s.cover_url && s.cover_credit && (
-              <span className="dk-secondaire text-[11px]">Photo&nbsp;: {s.cover_credit}</span>
+              <span className="dk-secondaire text-xs">Photo&nbsp;: {s.cover_credit}</span>
             )}
           </div>
         )}
@@ -1315,8 +1315,8 @@ function FriseMois({ mois }: { mois: number[] }) {
             title={MOIS_LONG[i]}
             className={
               mois.includes(i + 1)
-                ? "grid h-5 w-5 place-items-center rounded bg-primary text-[10px] font-bold text-primary-foreground"
-                : "grid h-5 w-5 place-items-center rounded bg-muted text-[10px] text-muted-foreground/50"
+                ? "grid h-5 w-5 place-items-center rounded bg-primary text-xs font-bold text-primary-foreground"
+                : "grid h-5 w-5 place-items-center rounded bg-muted text-xs text-muted-foreground/50"
             }
           >
             {m}

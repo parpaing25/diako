@@ -113,7 +113,14 @@ export function Carrousel({
              ⚠ `type="button"` : ce carrousel peut vivre dans un formulaire
              (l'aperçu de /publier), où un bouton sans type SOUMET la page. */
           <div key={m.url + i} className="h-full w-full shrink-0 snap-center">
-            {m.type === "video" ? (
+            {/* ⚠ SEULES LA DIAPOSITIVE COURANTE ET SES DEUX VOISINES SONT
+                MONTÉES. Mesuré le 05/09/2026 : l'accueil chargeait les 35
+                photos de tous les carrousels (1,1 Mo sur 1,4) pour 5 récits
+                dont on ne voit que la première image. La case grise garde la
+                taille : le scroll-snap et le compteur ne bougent pas. */}
+            {m.type !== "video" && Math.abs(i - index) > 1 ? (
+              <div className="h-full w-full bg-muted" aria-hidden="true" />
+            ) : m.type === "video" ? (
               /* ⚠ Pas de bouton autour d'une vidéo : ses commandes ont besoin du
                  clic. `playsInline` : sans lui, iOS ouvre le lecteur plein
                  écran et sort du fil. `preload="metadata"` : on ne télécharge
@@ -168,6 +175,7 @@ export function Carrousel({
                   prioritaire={prioritaire && i === 0}
                   ajustement={ajustement === "couvrir" ? "cover" : "contain"}
                   largeurAffichee={largeurAffichee}
+                  fondSombre={videoAuto}
                 />
               </button>
             ) : (
@@ -179,6 +187,7 @@ export function Carrousel({
               prioritaire={prioritaire && i === 0}
               ajustement={ajustement === "couvrir" ? "cover" : "contain"}
               largeurAffichee={largeurAffichee}
+              fondSombre={videoAuto}
             />
             )}
           </div>
@@ -197,7 +206,7 @@ export function Carrousel({
 
       {!unique && (
         <>
-          <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+          <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
             {index + 1}/{images.length}
           </span>
 

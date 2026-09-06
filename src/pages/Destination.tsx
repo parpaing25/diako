@@ -203,7 +203,7 @@ export default function Destination() {
             fetchPriority="high"
           />
           {f.lieu.cover_credit && (
-            <figcaption className="absolute bottom-0 right-0 rounded-tl bg-black/45 px-1.5 py-0.5 text-[10px] text-white/85">
+            <figcaption className="absolute bottom-0 right-0 rounded-tl bg-black/45 px-1.5 py-0.5 text-xs text-white/85">
               {f.lieu.cover_credit}
             </figcaption>
           )}
@@ -276,7 +276,7 @@ export default function Destination() {
                       largeurAffichee="(min-width:640px) 144px, 92vw"
                     />
                     {ev.credit && (
-                      <span className="pointer-events-none absolute bottom-1 right-1 max-w-[92%] truncate rounded bg-black/55 px-1 py-0.5 text-[10px] text-white/85">
+                      <span className="pointer-events-none absolute bottom-1 right-1 max-w-[92%] truncate rounded bg-black/55 px-1 py-0.5 text-xs text-white/85">
                         {ev.credit}
                       </span>
                     )}

@@ -42,10 +42,14 @@ ErrorDocument 503 /offline.html
   #   `javascript:` saisie par un gérant dans « site web » — la contrainte en
   #   base (migration 0036) ferme la porte d'entrée, la CSP ferme la sortie.
   #
-  # ⚠ `'unsafe-inline'` SUR script-src EST NÉCESSAIRE ET ASSUMÉ : index.html
-  #   porte le squelette statique et le JSON-LD en ligne, et Vite injecte son
-  #   module de préchargement. Les retirer demanderait un nonce, donc un rendu
-  #   dynamique de la page — ce qu'un hébergement mutualisé ne fait pas ici.
+  # ⚠ `script-src 'self'` SUFFIT (06/09/2026). Depuis le passage du chargeur en
+  #   `app-init.js` (externe), index.html ne porte plus aucun script exécutable
+  #   en ligne : le JSON-LD est une donnée, la CSP ne le bloque pas, et Vite ne
+  #   met plus son polyfill en ligne. Vérifié sur 8 pages du build servi avec
+  #   cet en-tête (accueil, carte, fiche, auth, explorer…) : 0 « Refused to ».
+  #   `style-src` garde `'unsafe-inline'` : Leaflet et Radix posent des styles
+  #   en ligne. ⚠ Toute réintroduction d'un script en ligne casserait le site
+  #   EN SILENCE : rejouer $TEMP/verif-csp.mjs avant de déployer.
   #   Ce qui compte le plus est déjà là : `object-src 'none'` (pas de Flash ni
   #   d'embed), `base-uri 'self'` (on ne détourne pas les URL relatives) et
   #   `frame-ancestors 'self'` (pas de détournement de clic).
@@ -53,7 +57,7 @@ ErrorDocument 503 /offline.html
   # ⚠ LES ORIGINES AUTORISÉES SONT CELLES QUE LE SITE UTILISE VRAIMENT :
   #   Supabase (base + fonctions), o2switch (images), OpenStreetMap (tuiles de
   #   la carte). Rien d'autre — pas de CDN de police, le site n'en charge plus.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob: https://diako.fonenako.mg; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org https://*.googleusercontent.com https://*.fbcdn.net https://upload.wikimedia.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob: https://diako.fonenako.mg; img-src 'self' data: blob: https://diako.fonenako.mg https://fonenako.mg https://*.supabase.co https://*.tile.openstreetmap.org https://*.googleusercontent.com https://*.fbcdn.net https://upload.wikimedia.org; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://diako.fonenako.mg https://nominatim.openstreetmap.org https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
 </IfModule>
 
 # Fichiers sensibles : jamais servis.

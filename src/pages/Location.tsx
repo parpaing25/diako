@@ -47,7 +47,7 @@ function ResumeGrille({ offres }: { offres: OffreVehicule[] | undefined }) {
       {types.map((t) => (
         <span
           key={t}
-          className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-primary"
+          className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-primary"
         >
           {LIBELLE_VEHICULE[t] ?? t}
         </span>

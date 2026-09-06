@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getThumbUrl } from "@/lib/imageThumb";
+import { getThumbUrl, jeuDeTailles } from "@/lib/imageThumb";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,6 +22,7 @@ export function ImageProgressive({
   prioritaire = false,
   ajustement = "cover",
   largeurAffichee,
+  fondSombre = false,
 }: {
   src: string;
   alt: string;
@@ -37,6 +38,10 @@ export function ImageProgressive({
    *   Exemples : `"(min-width:1280px) 25vw, (min-width:640px) 50vw, 100vw"`.
    */
   largeurAffichee?: string;
+  /** Scène noire (fil plein écran) : la case d'attente est noire, pas papier.
+   *  Sinon le texte blanc posé sur la photo n'a AUCUN contraste tant qu'elle
+   *  n'est pas arrivée (axe : 1,09:1, 06/09/2026). */
+  fondSombre?: boolean;
 }) {
   const [chargee, setChargee] = useState(false);
   const [casse, setCasse] = useState(false);
@@ -45,7 +50,7 @@ export function ImageProgressive({
   const aVignette = vignette !== src;
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-muted">
+    <div className={cn("relative h-full w-full overflow-hidden", fondSombre ? "bg-black" : "bg-muted")}>
       {aVignette && !chargee && (
         <img
           src={vignette}
@@ -68,7 +73,12 @@ export function ImageProgressive({
            choisit UNE seule source, adaptée au créneau et à la densité de
            l'écran — et sur un petit créneau il prend la vignette, qui n'est
            alors plus floue du tout puisqu'elle est affichée à sa taille. */
-        srcSet={aVignette && largeurAffichee ? `${vignette} 480w, ${src} 1600w` : undefined}
+        /* 06/09/2026 : les trois variantes (480 / 960 / 1600 WebP) au lieu de
+           « vignette ou original JPEG » — sur un 390 px à densité 2 le
+           navigateur prenait l'original de 80-90 Ko. Après un échec (variante
+           absente : o2switch rend index.html en 200), plus de srcSet du tout,
+           sinon le navigateur repartait sur la même candidate. */
+        srcSet={!casse && aVignette && largeurAffichee ? (jeuDeTailles(src) ?? undefined) : undefined}
         sizes={aVignette && largeurAffichee ? largeurAffichee : undefined}
         alt={alt}
         width={w || 1600}

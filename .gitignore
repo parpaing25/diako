@@ -34,3 +34,7 @@ auto.json
 couvertures.json
 photos_envoyees.json
 scripts/__pycache__/
+
+# Playwright (e2e)
+playwright-report/
+test-results/

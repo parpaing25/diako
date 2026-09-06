@@ -66,7 +66,7 @@ export function FicheCard({ fiche, platCherche }: { fiche: ResultatPage; platChe
             </span>
           )}
           {fiche.categories.slice(0, 2).map((c) => (
-            <span key={c} className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-primary">
+            <span key={c} className="rounded-full bg-secondary px-2 py-0.5 text-xs text-primary">
               {LIBELLE[c] ?? c}
             </span>
           ))}

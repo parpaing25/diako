@@ -7,6 +7,8 @@ interface Props {
 }
 interface State {
   hasError: boolean;
+  /** Morceau de code non chargé (429 du limiteur, coupure) : cause réseau. */
+  reseau: boolean;
 }
 
 /**
@@ -16,10 +18,15 @@ interface State {
  * jamais). Piège vécu sur Fonenako.
  */
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, reseau: false };
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return {
+      hasError: true,
+      reseau: /dynamically imported module|reading 'default'|module sans export|Importing a module script failed|Unexpected token '<'/i.test(
+        error?.message ?? ""
+      ),
+    };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -46,10 +53,14 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.props.fallback !== undefined) return this.props.fallback;
 
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="text-2xl font-semibold">Quelque chose s'est mal passé</h1>
+      <div className="mx-auto max-w-md px-4 py-16 text-center" role="alert">
+        <h1 className="text-2xl font-semibold">
+          {this.state.reseau ? "La connexion a été coupée" : "Quelque chose s'est mal passé"}
+        </h1>
         <p className="mt-2 text-muted-foreground">
-          La page n'a pas pu s'afficher. Votre connexion est peut-être instable.
+          {this.state.reseau
+            ? "Une partie de la page n'a pas pu être téléchargée. Réessayez : ça marche presque toujours du deuxième coup."
+            : "La page n'a pas pu s'afficher. Votre connexion est peut-être instable."}
         </p>
         <button
           onClick={() => window.location.reload()}

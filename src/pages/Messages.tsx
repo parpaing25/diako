@@ -356,7 +356,7 @@ function Bulle({
   return (
     <>
       {(nouveauJour || grosseCoupure) && (
-        <p className="py-3 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="py-3 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {jourLisible(message.created_at)}
         </p>
       )}
@@ -384,7 +384,7 @@ function Bulle({
           </button>
 
           {message.echoue && (
-            <p className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-destructive">
+            <p className="mt-0.5 flex items-center justify-end gap-1 text-xs text-destructive">
               <AlertCircle className="h-3 w-3" aria-hidden="true" />
               Non envoyé — appuyez pour réessayer
             </p>
@@ -394,7 +394,7 @@ function Bulle({
           {!memeAuteurApres && !message.echoue && (
             <p
               className={cn(
-                "mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground",
+                "mt-0.5 flex items-center gap-1 text-xs text-muted-foreground",
                 aMoi ? "justify-end" : "justify-start"
               )}
             >

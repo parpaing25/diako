@@ -169,6 +169,14 @@ export default function ProConsole() {
         >
           Mon espace professionnel
         </Link>
+        {slug && (
+          <Link
+            to={`/p/${slug}`}
+            className="mt-3 block text-sm font-medium text-primary underline underline-offset-4"
+          >
+            Voir la fiche publique
+          </Link>
+        )}
       </div>
     );
   }

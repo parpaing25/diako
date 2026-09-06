@@ -80,7 +80,7 @@ export function TagRow({
             className={cn(
               "inline-flex max-w-[16rem] items-center gap-1 rounded-full border font-medium transition hover:brightness-95",
               t.classe,
-              compact ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs"
+              compact ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-xs"
             )}
           >
             <t.Icone className={compact ? "h-3 w-3 shrink-0" : "h-3.5 w-3.5 shrink-0"} aria-hidden="true" />

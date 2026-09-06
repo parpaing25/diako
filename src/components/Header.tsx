@@ -64,7 +64,7 @@ export function Header() {
                `lg:hidden` il s'effaçait dès 1024 alors que la barre latérale
                n'apparaît qu'à 1280 : entre les deux, plus aucun accès au menu
                complet. */
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-muted xl:hidden"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-muted xl:hidden"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -107,7 +107,7 @@ export function Header() {
           <button
             onClick={() => setTheme(effectif === "sombre" ? "clair" : "sombre")}
             aria-label={`Passer en mode ${effectif === "sombre" ? "clair" : "sombre"}`}
-            className="hidden h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted sm:grid"
+            className="hidden h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted sm:grid"
           >
             {effectif === "sombre" ? (
               <Sun className="h-4 w-4" aria-hidden="true" />
@@ -125,11 +125,11 @@ export function Header() {
                   onClick={() => setPanneau((p) => (p === "messages" ? null : "messages"))}
                   aria-label={msgNonLus > 0 ? `Messages (${msgNonLus} non lus)` : "Messages"}
                   aria-expanded={panneau === "messages"}
-                  className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                  className="relative grid h-11 w-11 place-items-center rounded-full text-muted-foreground hover:bg-muted"
                 >
                   <MessageCircle className="h-5 w-5" aria-hidden="true" />
                   {msgNonLus > 0 && (
-                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-[10px] font-bold text-accent-foreground">
+                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-xs font-bold text-accent-foreground">
                       {msgNonLus > 9 ? "9+" : msgNonLus}
                     </span>
                   )}
@@ -145,11 +145,11 @@ export function Header() {
                   onClick={() => setPanneau((p) => (p === "notifs" ? null : "notifs"))}
                   aria-label={nonLues > 0 ? `Notifications (${nonLues} non lues)` : "Notifications"}
                   aria-expanded={panneau === "notifs"}
-                  className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                  className="relative grid h-11 w-11 place-items-center rounded-full text-muted-foreground hover:bg-muted"
                 >
                   <Bell className="h-5 w-5" aria-hidden="true" />
                   {nonLues > 0 && (
-                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-[10px] font-bold text-accent-foreground">
+                    <span className="dk-badge-pulse absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-xs font-bold text-accent-foreground">
                       {nonLues > 9 ? "9+" : nonLues}
                     </span>
                   )}

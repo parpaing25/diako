@@ -177,7 +177,7 @@ export default function QuandPartir() {
               >
                 {m}
                 {i + 1 === moisCourant && moisChoisi !== i + 1 && (
-                  <span className="ml-1.5 text-[10px] opacity-70">· ce mois-ci</span>
+                  <span className="ml-1.5 text-xs opacity-70">· ce mois-ci</span>
                 )}
               </button>
             </li>
@@ -204,7 +204,7 @@ export default function QuandPartir() {
                   </div>
                   <span
                     className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase",
+                      "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold uppercase",
                       NOTE[m!.note!].classe
                     )}
                   >
@@ -331,7 +331,7 @@ export default function QuandPartir() {
                             m?.note ? NOTE[m.note].mot : "non renseigné"
                           }${m?.raison ? ` : ${m.raison}` : ""}`}
                           className={cn(
-                            "grid h-8 w-full place-items-center rounded text-[10px] font-bold",
+                            "grid h-8 w-full place-items-center rounded text-xs font-bold",
                             m?.note ? NOTE[m.note].pastille : "bg-muted",
                             m?.note === "ideale" && "text-ok-foreground",
                             m?.note === "correcte" && "text-ok",

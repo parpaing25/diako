@@ -214,7 +214,7 @@ export default function Circuit() {
       {/* ── Le barème par taille de groupe ───────────────────────────────── */}
       <aside className="mt-6 shrink-0 space-y-3 xl:sticky xl:top-20 xl:mt-0 xl:w-[340px]">
         <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
-          <h2 className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] opacity-85">
+          <h2 className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] opacity-85">
             <Users className="h-4 w-4" aria-hidden="true" />
             Prix par personne, selon la taille du groupe
           </h2>
@@ -223,11 +223,11 @@ export default function Circuit() {
               <ul className="mt-3 grid grid-cols-3 gap-2">
                 {paliers.slice(0, 3).map((p, i) => (
                   <li key={`${p.base_pax ?? "base"}-${i}`} className="rounded-xl bg-white/12 p-2.5 text-center">
-                    <p className="text-[11px] opacity-85">
+                    <p className="text-xs opacity-85">
                       {p.base_pax ? `base ${p.base_pax} pers.` : "prix de base"}
                     </p>
                     <p className="mt-1 text-sm font-bold tabular-nums">{ariary(p.price_ar)}</p>
-                    {p.price_unit && <p className="text-[11px] opacity-85">{p.price_unit}</p>}
+                    {p.price_unit && <p className="text-xs opacity-85">{p.price_unit}</p>}
                   </li>
                 ))}
               </ul>
@@ -291,7 +291,7 @@ export default function Circuit() {
 
 function Puce({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide">
+    <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold uppercase tracking-wide">
       {children}
     </span>
   );

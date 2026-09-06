@@ -1237,7 +1237,7 @@ function PlatLigne({ plat }: { plat: Fiche["menu_items"][number] }) {
         <p className="text-sm font-medium">
           {plat.name}
           {plat.is_signature && (
-            <span className="ml-1.5 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+            <span className="ml-1.5 rounded-full bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
               spécialité
             </span>
           )}

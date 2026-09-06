@@ -107,7 +107,7 @@ export function DiakoHero({
                 />
               </span>
               <span
-                className={`text-[10px] font-medium md:text-xs ${
+                className={`text-xs font-medium md:text-xs ${
                   actif ? "text-primary" : "text-muted-foreground"
                 }`}
               >

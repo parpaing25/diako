@@ -156,7 +156,7 @@ function Puce({ children }: { children: React.ReactNode }) {
   return (
     <span
       className={cn(
-        "rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
+        "rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold uppercase tracking-wide"
       )}
     >
       {children}

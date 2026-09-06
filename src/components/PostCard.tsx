@@ -526,7 +526,7 @@ export function PostCard({
               <>
                 <button
                   onClick={() => setDeplie(true)}
-                  className="ml-1 text-muted-foreground hover:underline"
+                  className="ml-1 inline-flex min-h-6 items-center px-1 text-muted-foreground hover:underline"
                 >
                   plus
                 </button>
@@ -537,7 +537,7 @@ export function PostCard({
                     gestes ne servent pas la même intention. */}
                 <Link
                   to={`/post/${post.id}`}
-                  className="ml-2 text-xs font-medium text-primary hover:underline"
+                  className="ml-2 inline-flex min-h-6 items-center px-1 text-xs font-medium text-primary hover:underline"
                 >
                   Ouvrir
                 </Link>
@@ -590,7 +590,7 @@ export function PostCard({
         <Link
           to={`/post/${post.id}`}
           onClick={() => interesse(2)}
-          className="mt-1 block text-[11px] text-muted-foreground hover:underline"
+          className="mt-1 block text-xs text-muted-foreground hover:underline"
         >
           {ilYA(post.created_at)}
         </Link>
@@ -621,7 +621,7 @@ export function PostCard({
                       <span className="font-semibold">{c.auteur.name || "Membre"}</span>{" "}
                       {c.body}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">{ilYA(c.created_at)}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{ilYA(c.created_at)}</p>
                   </div>
                 </li>
               ))}

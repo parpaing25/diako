@@ -131,7 +131,7 @@ export function MenuMobile({ ouvert, fermer }: { ouvert: boolean; fermer: () => 
                   <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                   <span className="truncate">{label}</span>
                   {!pret && (
-                    <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                       bientôt
                     </span>
                   )}

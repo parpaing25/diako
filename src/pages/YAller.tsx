@@ -258,7 +258,7 @@ export default function YAller() {
                     <td className="px-3 py-2.5">
                       <span className="text-muted-foreground">{t.etat_route ?? "—"}</span>
                       {t.toute_annee === false && (
-                        <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase text-accent-strong">
+                        <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-bold uppercase text-accent-strong">
                           <TriangleAlert className="h-3 w-3" aria-hidden="true" />
                           pas toute l'année
                         </span>

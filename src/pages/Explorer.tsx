@@ -365,7 +365,7 @@ function CarteDestination({ d, lcp }: { d: DestinationEmblematique; lcp: boolean
               className="h-full w-full object-cover"
             />
             {d.cover_credit && (
-              <p className="absolute bottom-1 right-2 text-[10px] text-white/75 drop-shadow">
+              <p className="absolute bottom-1 right-2 text-xs text-white/75 drop-shadow">
                 {d.cover_credit}
               </p>
             )}
@@ -520,7 +520,7 @@ function FicheLieu({ slug }: { slug: string }) {
         {lieu.cover_credit && (
           /* Le crédit voyage AVEC la photo — il ne se met pas dans un pied
              de page global, où il se perd au premier remaniement. */
-          <p className="absolute bottom-1 right-2 text-[10px] text-white/70">
+          <p className="absolute bottom-1 right-2 text-xs text-white/70">
             {lieu.cover_credit}
           </p>
         )}
@@ -562,7 +562,7 @@ function FicheLieu({ slug }: { slug: string }) {
                 <div
                   key={s.month}
                   className={cn(
-                    "rounded-lg py-1.5 text-center text-[11px] font-medium",
+                    "rounded-lg py-1.5 text-center text-xs font-medium",
                     COULEUR_SAISON[s.rating] ?? "bg-muted"
                   )}
                   title={s.reason ?? undefined}

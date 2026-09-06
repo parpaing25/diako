@@ -36,6 +36,22 @@ export default function Bienvenue() {
     if (profile?.display_name) setNom(profile.display_name);
   }, [profile]);
 
+  /* Un membre déjà installé (nom ET ville, ou statut pro) qui arrive ici par
+     une connexion Google repart vers l'accueil ; un nouvel inscrit (drapeau
+     posé par /auth) ou un profil incomplet voit le formulaire. */
+  useEffect(() => {
+    if (loading || !user || !profile) return;
+    let nouveau = false;
+    try {
+      nouveau = sessionStorage.getItem("dk-bienvenue") === "1";
+    } catch {
+      nouveau = false;
+    }
+    if (!nouveau && profile.display_name && (profile.home_place || profile.account_type === "pro")) {
+      navigate("/", { replace: true });
+    }
+  }, [loading, user, profile, navigate]);
+
   async function valider(e: React.FormEvent) {
     e.preventDefault();
     if (!user || busy) return;

@@ -240,7 +240,7 @@ export default function Projet() {
       <div className="min-w-0 flex-1">
         {/* ── L'entête teal du modèle N3 ─────────────────────────────────── */}
         <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
-          <p className="text-[11px] font-bold uppercase tracking-[0.12em] opacity-80">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] opacity-80">
             Mon projet · un seul actif à la fois
           </p>
           <h1 className="mt-2 text-2xl font-bold leading-tight">
@@ -462,7 +462,7 @@ export default function Projet() {
                     )}
                   </p>
                   {o.status === "envoyee" && (
-                    <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase text-accent-strong">
+                    <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-bold uppercase text-accent-strong">
                       nouveau
                     </span>
                   )}

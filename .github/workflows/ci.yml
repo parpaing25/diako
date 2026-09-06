@@ -42,6 +42,23 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Dépendances SERVIES en production seulement (les hautes de la chaîne de
+      # build sont connues et ne s'exécutent pas chez le visiteur).
+      - name: Audit des dépendances de production
+        run: npm audit --omit=dev --audit-level=high
+
+      # Parcours de lecture (7 scénarios, e2e/) sur le build, avec un agent
+      # utilisateur Android réel et axe-core. Jamais d'écriture en base.
+      - name: Navigateur pour Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Parcours de bout en bout
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-rapport
+          path: playwright-report
+
       # Garde-fou du TDR §10.1 : le bundle initial doit rester sous 200 Ko
       # brotli pour la 3G malgache. Si ça dépasse, la CI échoue — c'est
       # volontaire, la performance n'est pas une option sur ce marché.

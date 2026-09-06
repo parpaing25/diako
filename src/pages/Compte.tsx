@@ -158,8 +158,9 @@ function EnTeteCompte() {
   const [a, setA] = useState<MonActivite | null>(null);
 
   useEffect(() => {
+    if (!user) return; // sinon 401 en console pour un visiteur redirigé vers /auth
     monActivite().then(setA).catch(() => undefined);
-  }, []);
+  }, [user]);
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
@@ -763,10 +764,12 @@ function BlocMetierPro({ onChange }: { onChange: () => Promise<void> | void }) {
 /* ── Onglet 3 · les carnets ──────────────────────────────────────────────── */
 
 function OngletCarnets() {
+  const { user } = useAuth();
   const [a, setA] = useState<MonActivite | null>(null);
   useEffect(() => {
+    if (!user) return; // sinon 401 en console pour un visiteur redirigé vers /auth
     monActivite().then(setA).catch(() => undefined);
-  }, []);
+  }, [user]);
 
   // ⚠ On NE RECOPIE PAS /favoris et /gouts ici : ce sont des écrans entiers,
   //   avec leur pagination et leurs gestes. Cet onglet les ANNONCE avec leur
@@ -802,10 +805,12 @@ function OngletCarnets() {
 /* ── Onglet 4 · les établissements, pour un pro ──────────────────────────── */
 
 function OngletPages() {
+  const { user } = useAuth();
   const [a, setA] = useState<MonActivite | null>(null);
   useEffect(() => {
+    if (!user) return; // sinon 401 en console pour un visiteur redirigé vers /auth
     monActivite().then(setA).catch(() => undefined);
-  }, []);
+  }, [user]);
 
   return (
     <div className="max-w-2xl">

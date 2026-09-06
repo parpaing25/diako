@@ -104,9 +104,19 @@ export default function Auth() {
   }
 
   async function google() {
+    /* ⚠ RETOUR SUR /bienvenue, PAS SUR L'ACCUEIL. Un inscrit Google ne
+       passait jamais par le choix voyageur / professionnel (audit 05/09/2026,
+       02-FN3). Le drapeau de session dit à /bienvenue que c'est une
+       INSCRIPTION ; une connexion Google d'un membre déjà installé repart
+       vers l'accueil sans revoir le formulaire. */
+    try {
+      if (mode === "inscription") sessionStorage.setItem("dk-bienvenue", "1");
+    } catch {
+      /* stockage indisponible : /bienvenue montrera le formulaire */
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: `${window.location.origin}/bienvenue` },
     });
     if (error) toast.error(error.message);
   }

@@ -48,6 +48,32 @@
     document.addEventListener("DOMContentLoaded", applyCss, { once: true });
   }
 
+  // ── 1 bis. LE FIL, DEMANDÉ AVANT REACT ────────────────────────────────
+  // Mesuré le 05/09/2026 : la première requête Supabase partait à 1,5 s, une
+  // fois le JS téléchargé et exécuté. Ce script tourne dès le début du HTML :
+  // il lance LA MÊME requête que src/components/Feed.tsx (feed_filtre, mode
+  // « tout », 8 ou 12 selon l'écran) et la laisse dans une promesse que le fil
+  // consomme s'il démarre avec ces paramètres-là. Sinon elle est ignorée.
+  // ⚠ Jamais pour un visiteur connecté (le fil peut dépendre du compte) : on
+  //   regarde si le jeton Supabase est dans localStorage.
+  // ⚠ La clé est la clé PUBLIQUE anon, la même que dans le bundle.
+  try {
+    var connecte = false;
+    try { connecte = !!localStorage.getItem("sb-eifrwecaszzqrdwjjjbu-auth-token"); } catch (e) {}
+    if (!connecte && location.pathname === "/" && typeof fetch === "function") {
+      var CLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZnJ3ZWNhc3p6cXJkd2pqamJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NTM5OTYsImV4cCI6MjA3MDAyOTk5Nn0.Ks8epc1CiOyj7Y4AYGL9zRHHoZscQJ7_nWbqwMNcVMQ";
+      var limite = window.innerWidth >= 1024 ? 12 : 8;
+      window.__dkFilLimite = limite;
+      window.__dkFil = fetch("https://eifrwecaszzqrdwjjjbu.supabase.co/rest/v1/rpc/feed_filtre", {
+        method: "POST",
+        headers: { apikey: CLE, Authorization: "Bearer " + CLE, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_mode: "tout", p_limite: limite })
+      }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    }
+  } catch (e) {
+    window.__dkFil = null;
+  }
+
   // ── 2. Service worker, en différé ──────────────────────────────────────
   // Jamais sur localhost (le SW masque les changements pendant le dev).
   var isLocal =

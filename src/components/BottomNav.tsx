@@ -37,7 +37,7 @@ export function BottomNav() {
                 aria-label={label}
                 aria-current={actif ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 text-[11px]",
+                  "flex flex-col items-center justify-center gap-0.5 text-xs",
                   centre && "-mt-7",
                   actif ? "text-primary" : "text-muted-foreground"
                 )}

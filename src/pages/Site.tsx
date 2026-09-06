@@ -281,8 +281,8 @@ export default function Site() {
                         title={`mois ${i + 1}`}
                         className={
                           s.best_months.includes(i + 1)
-                            ? "grid h-6 w-6 place-items-center rounded bg-primary text-[11px] font-bold text-primary-foreground"
-                            : "grid h-6 w-6 place-items-center rounded bg-muted text-[11px] text-muted-foreground/50"
+                            ? "grid h-6 w-6 place-items-center rounded bg-primary text-xs font-bold text-primary-foreground"
+                            : "grid h-6 w-6 place-items-center rounded bg-muted text-xs text-muted-foreground/50"
                         }
                       >
                         {m}

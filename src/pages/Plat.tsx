@@ -294,7 +294,7 @@ export default function Plat() {
                     <span className="flex items-center gap-1.5">
                       <span className="truncate font-semibold">{a.nom}</span>
                       {a.signature && (
-                        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-accent-strong">
+                        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-xs font-bold uppercase text-accent-strong">
                           Signature
                         </span>
                       )}

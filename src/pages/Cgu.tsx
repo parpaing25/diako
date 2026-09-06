@@ -87,10 +87,16 @@ export default function Cgu() {
       <h2>8. Contact</h2>
       <p>
         Pour toute question ou réclamation :{" "}
-        <a href="mailto:contact.fonenako@gmail.com">contact.fonenako@gmail.com</a>.
+        <a href="mailto:contact.diako@gmail.com">contact.diako@gmail.com</a>.
       </p>
 
-      
+            <h2>Votre compte et vos données</h2>
+      <p>
+        Vous pouvez télécharger l'ensemble de vos données et supprimer votre
+        compte à tout moment depuis vos Paramètres. La suppression est
+        immédiate et définitive : vos récits, photos, commentaires et messages
+        sont effacés. Le détail est dans la page Confidentialité.
+      </p>
     </PageLegale>
   );
 }

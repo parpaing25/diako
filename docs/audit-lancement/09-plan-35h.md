@@ -25,7 +25,7 @@
 
 | # | Question | Ce que je recommande | Ce que ça demande de toi |
 |---|---|---|---|
-| A | **Limiteur o2switch (le P0)** | **Aujourd'hui** : cPanel → Outils → TigerProtect → règles → `diako.fonenako.mg` → « Sécurité par défaut o2switch » **Off**. Cloudflare ensuite, à tête reposée (touche le DNS de tout `fonenako.mg`). | 2 minutes dans cPanel ; puis `node $TEMP/crawl.mjs` contre la prod pour prouver 0 × 429 |
+| A | ~~Limiteur o2switch (le P0)~~ | **Fait par Andry le 06/09** (TigerProtect → Générique → « Sécurité par défaut d'o2switch » Off pour `diako.fonenako.mg`). **Prouvé** : rafale de 240 requêtes en quelques secondes → 240 × 200 ; parcours des 49 pages en 7 minutes → 49 × 200, 0 sous-requête en 429 (la veille, blocage dès la 3ᵉ page). Cloudflare reste une option d'amélioration (HTTP/3, cache), plus une urgence. | Rien |
 | B | **Plan Supabase** | Rester en gratuit pour le lancement **si** tu acceptes : pas de sauvegarde automatique, pas de HIBP, pas de limite de session. Sinon Pro (25 $/mois) règle les trois. | Décision d'argent |
 | C | **277 fiches du bot non publiées** (76 doublons probables, 38 sans contact) | Publier les fiches **sans doublon et avec au moins un contact**, garder le reste invisible ; SQL prêt dans `docs/A-APPLIQUER.md` | Ton OK, puis SQL par l'éditeur |
 | D | **Qui signe les mentions légales** | Personne physique ou société, adresse, NIF/STAT | Un nom et une ligne d'adresse |

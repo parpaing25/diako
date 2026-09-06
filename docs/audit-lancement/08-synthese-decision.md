@@ -89,3 +89,9 @@ Ce qui a été **fait et vérifié** sur la branche `feat/bot-collecte-diako` (d
 - Andry a ensuite lancé `python scripts/appliquer_config_auth.py` : configuration relue par l'API de gestion — mot de passe 8 caractères lettres+chiffres, ré-authentification, redirections sans localhost, sujets et gabarits en français ; HIBP et sessions refusés (plan gratuit).
 
 **Re-score provisoire** (avant les parcours en écriture, 09 §2 H) : performance 64 → **80**, sécurité 59 → **78** (mot de passe serveur et e-mails réglés ; captcha en attente des clés Turnstile), SEO 67 → **88**, parcours 66 → **78**, exploitation 62 → **78** (alerte posée sans destinataire, limiteur o2switch intact), qualité 75 → **86**, accessibilité 77 → **88**, pages 73 → **86**. **Note globale ≈ 82 / 100, 1 P0 restant (le limiteur, 2 minutes dans cPanel) → GO CONDITIONNEL dès que A est fait.**
+
+### 06/09/2026, fin de journée — le P0 est levé
+
+Andry a désactivé la règle « Sécurité par défaut d'o2switch » de TigerProtect pour `diako.fonenako.mg`. Preuve relevée juste après : 240 requêtes en rafale → 240 × 200 ; parcours des 49 pages en 7 minutes → 49 × 200, 0 sous-requête en 429 (la veille : blocage dès la 3ᵉ page). Exploitation 78 → **86**.
+
+**Décision mise à jour : GO CONDITIONNEL** — note ≈ **84 / 100, 0 P0**. Les conditions restantes sont les parcours en écriture à deux comptes (09 §2 H) et les trois gestes de sécurité complémentaires (Turnstile, Telegram, DMARC), aucun n'est bloquant pour annoncer le site.

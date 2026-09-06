@@ -108,7 +108,7 @@ export function ImageProgressive({
            navigateur prenait l'original de 80-90 Ko. Après un échec (variante
            absente : o2switch rend index.html en 200), plus de srcSet du tout,
            sinon le navigateur repartait sur la même candidate. */
-        srcSet={repli === 0 && aVignette && largeurAffichee ? (jeuDeTailles(src) ?? undefined) : undefined}
+        srcSet={repli === 0 && aVignette && largeurAffichee ? (jeuDeTailles(src, w, h) ?? undefined) : undefined}
         sizes={aVignette && largeurAffichee ? largeurAffichee : undefined}
         alt={alt}
         width={w || 1600}

@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Diako — le fil v5, « ce qu'on apprend d'un endroit »</title>
+<style>
+/* ===========================================================================
+   DIAKO — LE FIL v5
+   Synthèse des quatre pistes du 06/09/2026, construite sur six publications
+   RÉELLES et leurs photos réelles. Aucun chiffre inventé : tout ce qui est
+   affiché a été recompté en base le 06/09/2026.
+
+   L'ARITHMÉTIQUE DES PHOTOS, qui est le cœur du sujet.
+   Écran 390 px, densité 2. Colonne de contenu = 390 − 2 (cadre) − 32 (gouttière)
+   = 356 px CSS, soit 712 pixels réels à demander.
+     · 810 × 540 sur 356 px  ->  712/810 = 0,88×  (on RÉDUIT)
+     · 590 × 443 sur 356 px  ->  712/590 = 1,21×
+     · duo de 175 px         ->  350/590 = 0,59×
+     · planche de 4 à 84 px  ->  168/480 = 0,35×  (sur la vignette 480)
+   Maximum 1,21×, contre 3,56× aujourd'hui — MESURÉ au navigateur sur les
+   seize photos, pas seulement calculé.
+   Recadrage : 0 % sur les quatre photos pleine colonne, 0 à 6 % sur les duos,
+   et 16 % au pire sur les deux planches contact (deux photos de ratios
+   éloignés alignées côte à côte). Le plafond que se donne le projet est 25 %.
+   Aujourd'hui : 67 % de chaque photo est coupé.
+   =========================================================================== */
+
+:root{
+  --dk-teal:#0E7C86; --dk-teal-dark:#0A5F67; --dk-teal-soft:#E7F2F3;
+  --dk-coral-text:#D0471C; --dk-coral-deco:#F4633A; --dk-coral-soft:#FDEDE8;
+  --dk-gold:#E8C77A; --dk-gold-soft:#FFF6E5;
+  --dk-sand:#F7EFE3; --dk-desk:#EDE5D9;
+  --dk-ink:#10262B; --dk-body:#2B4247; --dk-muted:#5B6E72;
+  --dk-line:#E3DACE; --dk-line-soft:#EFE7DB;
+  --dk-ok:#256B3D; --dk-ok-soft:#E9F5EC;
+  --ombre:0 18px 34px -24px rgba(16,38,43,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--dk-desk); color:var(--dk-body);
+  font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.page{max-width:900px;margin:0 auto;padding:28px 20px 80px}
+
+/* ── Bandeau d'explication ───────────────────────────────────────────── */
+.kicker{font:700 11px/1 system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--dk-coral-text);margin:0 0 10px}
+h1{font:700 34px/1.15 system-ui;color:var(--dk-ink);margin:0 0 4px;letter-spacing:-.02em}
+.sous{font:400 17px/1.55 system-ui;color:var(--dk-body);max-width:60ch;margin:10px 0 0}
+.regle{width:56px;height:4px;background:var(--dk-coral-deco);border-radius:999px;margin:16px 0 22px}
+
+.avant-apres{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0 28px}
+.mesure{border-radius:16px;padding:14px 16px}
+.mesure.avant{background:var(--dk-coral-soft)}
+.mesure.apres{background:var(--dk-teal-soft)}
+.mesure .t{font:700 11px/1 system-ui;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+.mesure.avant .t{color:var(--dk-coral-text)} .mesure.apres .t{color:var(--dk-teal-dark)}
+.mesure .n{font:700 26px/1.1 system-ui;color:var(--dk-ink);font-variant-numeric:tabular-nums;margin:0 0 6px}
+.mesure .d{font:400 13px/1.5 system-ui;color:var(--dk-muted);margin:0}
+
+.decisions{display:grid;gap:10px;margin:0 0 28px}
+.dec{background:#fff;border:1px solid var(--dk-line);border-radius:12px;padding:13px 15px}
+.dec b{display:block;font:700 11px/1 system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--dk-teal-dark);margin:0 0 6px}
+.dec p{margin:0;font:400 14px/1.55 system-ui;color:var(--dk-body)}
+
+.note-source{font:400 13px/1.6 system-ui;color:var(--dk-muted);border-top:1px solid var(--dk-line);padding-top:14px;margin:0 0 30px}
+
+/* ── Le téléphone ────────────────────────────────────────────────────── */
+.tel{
+  width:390px;margin:0 auto;background:#fff;border:1px solid var(--dk-ink);
+  border-radius:20px;overflow:hidden;box-shadow:var(--ombre);
+}
+
+/* En-tête : la recherche, puis les intentions de voyage. */
+.entete{padding:10px 12px 0;background:#fff;border-bottom:1px solid var(--dk-line-soft)}
+.marque{display:flex;align-items:center;justify-content:space-between;height:44px}
+.logo{font:700 20px/1 system-ui;color:var(--dk-ink);letter-spacing:-.01em}
+.logo i{font-style:normal;color:var(--dk-teal)}
+.moi{width:36px;height:36px;border-radius:999px;background:var(--dk-sand);border:1px solid var(--dk-line);
+     display:grid;place-items:center;font:700 12px/1 system-ui;color:var(--dk-muted)}
+.champ{
+  display:flex;align-items:center;gap:9px;height:44px;padding:0 14px;margin:2px 0 10px;
+  background:var(--dk-sand);border:1px solid var(--dk-line);border-radius:999px;
+  font-size:16px;color:var(--dk-muted);
+}
+.champ svg{flex:0 0 auto}
+/* Les quatre intentions du TDR, telles quelles. Cibles 44 px de haut. */
+.intentions{display:flex;gap:7px;overflow-x:auto;padding:0 0 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.intentions::-webkit-scrollbar{display:none}
+.intent{
+  flex:0 0 auto;height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 15px;
+  border-radius:999px;border:1px solid var(--dk-line);background:#fff;
+  font:600 14px/1 system-ui;color:var(--dk-ink);text-decoration:none;white-space:nowrap;
+}
+.intent.on{background:var(--dk-teal);border-color:var(--dk-teal);color:#fff}
+
+/* ── Une entrée du fil ───────────────────────────────────────────────── */
+.fil{background:var(--dk-desk);padding:12px 0 0}
+.e{background:#fff;border-top:1px solid var(--dk-line);border-bottom:1px solid var(--dk-line);
+   padding:0 0 14px;margin:0 0 12px;position:relative}
+
+/* 1. LE LIEU EST LE TITRE, et toute la ligne est le lien vers sa fiche.
+      213 publications sur 213 portent un lieu : c'est la seule donnée
+      structurée fiable du corpus, donc la seule promesse qu'on peut tenir. */
+.tete{display:flex;align-items:center;gap:9px;min-height:52px;padding:6px 16px 2px;text-decoration:none}
+.tete .pin{flex:0 0 auto;color:var(--dk-teal)}
+.tete .lieu{font:700 22px/1.2 system-ui;color:var(--dk-teal);letter-spacing:-.01em;flex:1 1 auto}
+.tete .chev{flex:0 0 auto;color:var(--dk-muted)}
+.genre{
+  display:inline-block;margin:0 16px 8px;padding:3px 9px;border-radius:999px;
+  font:700 11px/1.5 system-ui;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--dk-teal-soft);color:var(--dk-teal-dark);
+}
+.genre.alerte{background:var(--dk-gold-soft);color:#8A6412}
+.genre.assiette{background:var(--dk-coral-soft);color:var(--dk-coral-text)}
+
+/* 2. LE TEXTE, AVANT LA PHOTO. Médiane du corpus : 323 caractères.
+      Ce n'est pas une légende, c'est une note de voyage : elle se lit. */
+.corps{margin:0 16px 12px;font:400 15px/1.62 system-ui;color:var(--dk-body)}
+.corps.mg{letter-spacing:.01em}          /* le malgache en capitales respire */
+.suite{display:inline-flex;align-items:center;gap:5px;min-height:44px;
+       font:600 14px/1 system-ui;color:var(--dk-teal-dark);text-decoration:none;margin:0 16px}
+
+/* 3. LES PHOTOS, AU GABARIT QU'ELLES DICTENT.
+      1 photo -> pleine colonne, hauteur naturelle, 0 % de recadrage.
+      2 photos de ratios voisins (écart <= 10 %) -> duo au ratio commun.
+      3 et plus -> une grande + une planche contact.
+      Aucune photo n'est agrandie de plus de 1,21×. */
+/* La colonne des photos est CELLE DU TEXTE : 390 - 2 (cadre) - 32 = 356 px.
+   C'est ce qui tient l'agrandissement a 1,21x — a 388 px il passait a 1,32x. */
+.photos{margin:0 16px 12px}
+.pleine{display:block;width:100%;height:auto;border-radius:10px;background:var(--dk-sand)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:10px;overflow:hidden}
+.duo img{display:block;width:100%;height:100%;object-fit:cover;background:var(--dk-sand)}
+.planche{display:grid;gap:2px;margin-top:2px;border-radius:10px;overflow:hidden}
+.planche.n2{grid-template-columns:1fr 1fr}
+.planche.n4{grid-template-columns:repeat(4,1fr)}
+.planche img{display:block;width:100%;height:100%;object-fit:cover;background:var(--dk-sand)}
+.manque{
+  display:block;margin:6px 16px 0;font:400 13px/1.5 system-ui;color:var(--dk-muted);
+}
+
+/* 4. LA BANDE DU RÉFÉRENTIEL — c'est ELLE qui convertit, donc c'est elle
+      qui est forte. Les gestes sociaux, eux, restent discrets tant que le
+      fil n'a qu'un auteur et zéro commentaire. */
+.ouvrir{
+  display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:12px 14px;min-height:44px;
+  background:var(--dk-sand);border:1px solid var(--dk-line);border-radius:12px;text-decoration:none;
+}
+.ouvrir .rond{flex:0 0 auto;width:34px;height:34px;border-radius:999px;background:#fff;
+              border:1px solid var(--dk-line);display:grid;place-items:center;color:var(--dk-teal)}
+.ouvrir .txt{flex:1 1 auto;min-width:0}
+.ouvrir .t1{display:block;font:600 15px/1.3 system-ui;color:var(--dk-ink)}
+.ouvrir .t2{display:block;font:400 13px/1.4 system-ui;color:var(--dk-muted);margin-top:1px}
+.ouvrir .chev{flex:0 0 auto;color:var(--dk-muted)}
+
+/* 5. LES TROIS TAGS, HONNÊTES. Le lieu est là (213/213), le plat ne l'est
+      jamais (0/213) et l'adresse une fois sur deux. On ne fabrique pas le
+      manque : on l'ouvre. */
+.tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 16px 10px;min-height:44px}
+/* 32 px peints, 44 px sous le doigt : la regle des 44 px porte sur la CIBLE,
+   pas sur la boite dessinee — trois pastilles de 44 px empileraient du vide. */
+.tag{position:relative;display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 11px;
+     border-radius:999px;font:600 13px/1 system-ui;text-decoration:none;border:1px solid}
+.tag::after{content:"";position:absolute;inset:-6px 0}
+.tag.lieu{background:var(--dk-teal-soft);border-color:transparent;color:var(--dk-teal-dark)}
+.tag.a-faire{background:#fff;border-color:var(--dk-line);color:var(--dk-muted);border-style:dashed}
+.tag.plat{color:var(--dk-coral-text);border-color:#F3C9BA;background:var(--dk-coral-soft);border-style:dashed}
+
+.source{margin:0 16px 10px;font:400 13px/1.5 system-ui;color:var(--dk-muted);
+        border-top:1px solid var(--dk-line-soft);padding-top:10px}
+.source b{font-weight:600;color:var(--dk-body)}
+
+.gestes{display:flex;gap:8px;margin:0 16px}
+.geste{flex:1 1 0;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+       border-radius:10px;border:1px solid transparent;background:transparent;
+       font:400 14px/1 system-ui;color:var(--dk-muted);text-decoration:none}
+.geste:first-child{border-color:var(--dk-line);background:#fff;color:var(--dk-body)}
+
+/* ── Ce que Diako connaît autour de ces lieux — on NOMME, on ne compte pas
+      seulement. Un chiffre affirme la richesse, un nom la prouve. ─────── */
+.autour{background:#fff;border-top:1px solid var(--dk-line);border-bottom:1px solid var(--dk-line);
+        padding:14px 16px;margin:0 0 12px}
+.autour h2{font:700 15px/1.3 system-ui;color:var(--dk-ink);margin:0 0 3px}
+.autour p{margin:0 0 11px;font:400 13px/1.5 system-ui;color:var(--dk-muted)}
+.noms{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.noms::-webkit-scrollbar{display:none}
+.nom{flex:0 0 auto;min-height:44px;display:inline-flex;flex-direction:column;justify-content:center;
+     padding:5px 13px;border-radius:12px;background:var(--dk-sand);border:1px solid var(--dk-line);
+     text-decoration:none}
+.nom b{font:600 14px/1.25 system-ui;color:var(--dk-ink)}
+.nom span{font:400 12px/1.3 system-ui;color:var(--dk-muted);font-variant-numeric:tabular-nums}
+
+/* ── La fin du fil, dite en clair ────────────────────────────────────── */
+.fin{background:#fff;border-top:1px solid var(--dk-line);padding:20px 16px 24px;text-align:left}
+.fin h2{font:700 22px/1.25 system-ui;color:var(--dk-ink);margin:0 0 8px}
+.fin p{margin:0 0 14px;font:400 14px/1.6 system-ui;color:var(--dk-body)}
+.fin p b{font-variant-numeric:tabular-nums}
+.cta{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;
+     border-radius:10px;background:var(--dk-teal);color:#fff;font:600 15px/1 system-ui;text-decoration:none}
+.cta.creux{background:#fff;color:var(--dk-teal-dark);border:1px solid var(--dk-line);margin-left:8px}
+
+/* ── Barre du bas ────────────────────────────────────────────────────── */
+.barre{display:flex;align-items:center;justify-content:space-around;height:60px;
+       background:#fff;border-top:1px solid var(--dk-line)}
+.barre a{flex:1 1 0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+         text-decoration:none;font:400 11px/1 system-ui;color:var(--dk-muted)}
+.barre a.on{color:var(--dk-teal);font-weight:600}
+.plus{width:44px;height:44px;border-radius:999px;background:var(--dk-coral-text);color:#fff;
+      display:grid;place-items:center;font:400 26px/1 system-ui}
+
+.repere{display:flex;align-items:center;gap:8px;margin:0;padding:0 0 0 2px}
+.repere span{font:700 10px/1 system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--dk-coral-text);
+             background:var(--dk-coral-soft);padding:5px 9px;border-radius:999px}
+.repere i{flex:1 1 auto;height:1px;background:var(--dk-coral-deco);opacity:.5;display:block}
+
+.pied{max-width:900px;margin:34px auto 0;font:400 14px/1.65 system-ui;color:var(--dk-body)}
+.pied h2{font:700 22px/1.25 system-ui;color:var(--dk-ink);margin:0 0 10px}
+.pied ol{margin:0;padding-left:20px} .pied li{margin:0 0 7px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kicker">Diako · refonte du fil · 06/09/2026</p>
+  <h1>Ce qu'on apprend d'un endroit</h1>
+  <div class="regle"></div>
+  <p class="sous">
+    Le fil actuel donne tout l'écran à une photo qu'il agrandit 3,56 fois et dont il ne montre
+    qu'un tiers. Celui-ci part de la matière réelle : <b>213 publications, toutes ancrées sur un
+    lieu</b>, des textes de 300 à 600 signes, et des photos de 590 pixels de large, en paysage
+    neuf fois sur dix. Le lieu devient le titre, le texte retrouve le droit d'être lu, la photo
+    reprend sa taille juste — et la richesse de Diako (508 destinations, 2 521 sites, 95 plats)
+    entre enfin dans le fil.
+  </p>
+  <p class="sous" style="margin-top:14px">
+    Mesuré au navigateur sur cette maquette : agrandissement maximum <b>1,21×</b>, aucune cible
+    tactile sous 44 px, <b>96 Ko</b> d'images au premier écran et 414 Ko pour les six
+    publications entières, toutes en WebP.
+  </p>
+
+  <div class="avant-apres">
+    <div class="mesure avant">
+      <p class="t">Le fil actuel</p>
+      <p class="n">3,56× · 33 %</p>
+      <p class="d">agrandissement de la photo, et part encore visible. Une photo par écran, et le
+      texte replié derrière un « plus ».</p>
+    </div>
+    <div class="mesure apres">
+      <p class="t">Ce fil-ci</p>
+      <p class="n">1,21× · 84 %</p>
+      <p class="d">agrandissement maximum et part la moins visible, mesurés sur les seize photos.
+      Les quatre grandes photos, elles, sont entières.</p>
+    </div>
+  </div>
+
+  <div class="decisions">
+    <div class="dec"><b>1 — le lieu passe devant</b>
+      <p>Le nom du lieu ouvre l'entrée et toute la ligne est cliquable. C'est la seule donnée
+      qu'on a sur 213 publications sur 213 ; c'est donc la seule promesse qu'on peut tenir.</p></div>
+    <div class="dec"><b>2 — le texte avant la photo</b>
+      <p>Médiane du corpus : 323 caractères, moyenne 468. On lit cinq lignes sans rien toucher,
+      le reste d'un geste. Tronquer à deux lignes ne montrerait souvent que la salutation.</p></div>
+    <div class="dec"><b>3 — la photo prend le gabarit qu'elle dicte</b>
+      <p>Une photo : pleine colonne, hauteur naturelle. Deux photos de ratios voisins : en duo.
+      Trois et plus : une grande et une planche contact. Jamais l'inverse.</p></div>
+    <div class="dec"><b>4 — ce qui convertit est ce qui est fort</b>
+      <p>« Ouvrir ce lieu » est un bloc plein largeur. « J'y suis allé » et « Répondre » restent
+      discrets tant que le fil compte un auteur, neuf réactions et zéro commentaire.</p></div>
+    <div class="dec"><b>5 — le manque est une porte, pas un trou</b>
+      <p>Aucune publication ne cite encore un plat. Plutôt que de le taire, l'entrée l'ouvre :
+      « Plat à rattacher ». Le référentiel entre dans le fil en nommant, pas en comptant.</p></div>
+  </div>
+
+  <p class="note-source">
+    Les six publications, leurs textes et leurs seize photos sont réels et servis par la
+    production. Les chiffres viennent d'un recompte en base du 06/09/2026 : 213 publications
+    visibles, 1 auteur, 9 réactions, 0 commentaire, 500 photos dont 424 en paysage, largeur
+    médiane 590 px. Aucun prix, aucune note, aucun compteur n'a été fabriqué.
+  </p>
+
+  <div class="tel">
+
+    <div class="entete">
+      <div class="marque">
+        <div class="logo">Di<i>a</i>ko</div>
+        <div class="moi">AR</div>
+      </div>
+      <div class="champ">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Un lieu, un plat, une adresse
+      </div>
+      <div class="intentions">
+        <a class="intent on" href="#">Le fil</a>
+        <a class="intent" href="#">Où dormir</a>
+        <a class="intent" href="#">Où manger</a>
+        <a class="intent" href="#">Que voir</a>
+        <a class="intent" href="#">Quand partir</a>
+      </div>
+    </div>
+
+    <div class="fil">
+
+      <!-- ─────────────────────────────────────────────────────────────────
+           ENTRÉE 1 — UNE photo, 810 × 540. Pleine colonne : 356 px CSS,
+           712 pixels réels demandés pour 810 disponibles => 0,88×, on RÉDUIT.
+           0 % de recadrage.
+           ───────────────────────────────────────────────────────────────── -->
+      <article class="e">
+        <a class="tete" href="#">
+          <svg class="pin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span class="lieu">Hell-Ville</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <span class="genre alerte">Alerte</span>
+        <p class="corps">
+          Des images en mémoire de Tsitakakantsa. Fin 2025, lorsque j'ai compris que le plus gros
+          baobab connu et mesuré de l'île de Madagascar, Tsitakakantsa, dont le nom signifie dans
+          un dialecte local « si l'on chante d'un côté du tronc, on ne peut pas être entendu de
+          l'autre côté », était mort, j'ai voulu retrouver les images que j'avais faites de lui.
+        </p>
+        <div class="photos">
+          <img class="pleine" width="810" height="540" loading="eager" fetchpriority="high" decoding="async"
+               alt="Le baobab Tsitakakantsa vu du ciel, ses branches nues au-dessus de la forêt"
+               sizes="356px"
+               srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272829/01.thumb.webp 480w,
+                       https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272829/01.w960.webp 810w"
+               src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272829/01.jpg" />
+        </div>
+        <a class="ouvrir" href="#">
+          <span class="rond"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+          <span class="txt">
+            <b class="t1">Ouvrir Hell-Ville</b>
+            <span class="t2">Nosy Be — ce que Diako sait de ce lieu</span>
+          </span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <div class="tags">
+          <a class="tag lieu" href="#">Hell-Ville ✓</a>
+          <a class="tag plat" href="#">Plat à rattacher</a>
+          <a class="tag a-faire" href="#">Adresse à rattacher</a>
+        </div>
+        <p class="source">Vu sur Facebook · page <b>Des images en mémoire de Tsitakakantsa</b></p>
+        <div class="gestes">
+          <a class="geste" href="#">J'y suis allé</a>
+          <a class="geste" href="#">Répondre</a>
+        </div>
+      </article>
+
+      <div class="repere"><span>Fin du 1<sup>er</sup> écran · 788 px</span><i></i></div>
+
+      <!-- ─────────────────────────────────────────────────────────────────
+           ENTRÉE 2 — DEUX photos, 590 × 443 toutes les deux (ratio 1,332
+           identique) : duo au ratio commun, 175 px CSS chacune, 350 pixels
+           réels pour 590 disponibles => 0,59×. 0 % de recadrage.
+           Texte en malgache : lang="mg" pour que le lecteur d'écran ne le
+           prononce pas à la française.
+           ───────────────────────────────────────────────────────────────── -->
+      <article class="e">
+        <a class="tete" href="#">
+          <svg class="pin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span class="lieu">Manambato</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <span class="genre">Récit</span>
+        <p class="corps mg" lang="mg">
+          Akory aby ee ! Juste mba mizara fogna sao de mba mahasoa ny hafa. Ialagna tsigny
+          amboalohany fao vidéo brute izy tô kay mety tsy mahafa-po ny sary sy feo. Isaoragna ana
+          nizaha sy nitrandregny.
+        </p>
+        <div class="photos">
+          <div class="duo" style="aspect-ratio:2.664">   <!-- 2 x 1,332 : les deux photos ont le meme ratio, 0 % de recadrage -->
+            <img width="590" height="443" loading="lazy" decoding="async" alt="La plage de sable blanc de Manambato"
+                 sizes="175px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272748/01.thumb.webp 480w,
+                         https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272748/01.w960.webp 590w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272748/01.jpg" />
+            <img width="590" height="443" loading="lazy" decoding="async" alt="Un bungalow en falafa au bord de la plage"
+                 sizes="175px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272748/02.thumb.webp 480w,
+                         https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272748/02.w960.webp 590w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272748/02.jpg" />
+          </div>
+        </div>
+        <a class="ouvrir" href="#">
+          <span class="rond"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+          <span class="txt">
+            <b class="t1">Ouvrir Manambato</b>
+            <span class="t2">Lac Rasoabe — ce que Diako sait de ce lieu</span>
+          </span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <div class="tags">
+          <a class="tag lieu" href="#">Manambato ✓</a>
+          <a class="tag plat" href="#">Plat à rattacher</a>
+          <a class="tag a-faire" href="#">Adresse à rattacher</a>
+        </div>
+        <p class="source">Vu sur Facebook · page <b>Plage de sable blanc à Manambato</b></p>
+        <div class="gestes">
+          <a class="geste" href="#">J'y suis allé</a>
+          <a class="geste" href="#">Répondre</a>
+        </div>
+      </article>
+
+      <!-- ─────────────────────────────────────────────────────────────────
+           CE QUE DIAKO CONNAÎT AUTOUR DE CES LIEUX — on NOMME d'abord, on
+           compte ensuite. Les cinq destinations citées sont celles des
+           publications ci-dessus ; les chiffres sont ceux du référentiel.
+           ───────────────────────────────────────────────────────────────── -->
+      <section class="autour">
+        <h2>Autour de ces lieux</h2>
+        <p>Le fil raconte, le référentiel documente. 508 destinations, 2 521 sites, 95 plats.</p>
+        <div class="noms">
+          <a class="nom" href="#"><b>Nosy Be</b><span>destination</span></a>
+          <a class="nom" href="#"><b>Lac Rasoabe</b><span>destination</span></a>
+          <a class="nom" href="#"><b>Mahajanga</b><span>destination</span></a>
+          <a class="nom" href="#"><b>Ravitoto</b><span>plat</span></a>
+          <a class="nom" href="#"><b>Romazava</b><span>plat</span></a>
+        </div>
+      </section>
+
+      <!-- ─────────────────────────────────────────────────────────────────
+           ENTRÉE 3 — TROIS photos : une grande (590 × 394, 1,21×) puis une
+           planche contact de deux à 177 px CSS (354 pixels réels sur la
+           vignette de 480 => 0,74×).
+           ───────────────────────────────────────────────────────────────── -->
+      <article class="e">
+        <a class="tete" href="#">
+          <svg class="pin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span class="lieu">Boanamary</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <span class="genre">Récit</span>
+        <p class="corps">
+          Oui, oui… on peut aussi observer des flamants roses à Majunga ! À quelques kilomètres de
+          la ville, du côté de Boanamary, ces magnifiques oiseaux offrent un spectacle fascinant,
+          particulièrement durant la saison sèche, mais surtout d'août à octobre. Une belle
+          surprise pour les voyageurs.
+        </p>
+        <div class="photos">
+          <img class="pleine" width="590" height="394" loading="lazy" decoding="async"
+               alt="Une colonie de flamants roses sur l'eau, près de Boanamary"
+               sizes="356px"
+               srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/01.thumb.webp 480w,
+                       https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/01.w960.webp 590w"
+               src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/01.jpg" />
+          <div class="planche n2" style="aspect-ratio:3.002">   <!-- cellules a 1,501, le ratio le plus etroit : 15,5 % de recadrage sur la photo 1,777 -->
+            <img width="590" height="393" loading="lazy" decoding="async" alt="Les flamants roses en vol"
+                 sizes="177px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/02.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/02.jpg" />
+            <img width="590" height="332" loading="lazy" decoding="async" alt="La baie de Boanamary au soleil"
+                 sizes="177px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/03.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/03.jpg" />
+          </div>
+        </div>
+        <a class="ouvrir" href="#">
+          <span class="rond"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+          <span class="txt">
+            <b class="t1">Ouvrir Boanamary</b>
+            <span class="t2">Mahajanga — ce que Diako sait de ce lieu</span>
+          </span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <div class="tags">
+          <a class="tag lieu" href="#">Boanamary ✓</a>
+          <a class="tag plat" href="#">Plat à rattacher</a>
+          <a class="tag a-faire" href="#">Adresse à rattacher</a>
+        </div>
+        <p class="source">Vu sur Facebook · page <b>Madagascar Tourisme</b></p>
+        <div class="gestes">
+          <a class="geste" href="#">J'y suis allé</a>
+          <a class="geste" href="#">Répondre</a>
+        </div>
+      </article>
+
+      <!-- ─────────────────────────────────────────────────────────────────
+           ENTRÉE 4 — CINQ photos, toutes 590 × 443. Une grande (1,21×) et
+           une planche de quatre à 87 px CSS (174 pixels réels sur la
+           vignette de 480 => 0,36×). Malgache en capitales : la casse est
+           gardée telle quelle, c'est la voix de l'auteur.
+           ───────────────────────────────────────────────────────────────── -->
+      <article class="e">
+        <a class="tete" href="#">
+          <svg class="pin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span class="lieu">Sainte-Marie</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <span class="genre">Récit</span>
+        <p class="corps mg" lang="mg">
+          MANKASITRAKA ATSIKA JIABY TONGA ZALAH, ZAO NY SARY VITSIVITSY NANDRITRAN'NY TOUR DE
+          SAINTE MARIE NATAO NIANY VERS LE NORD. MISAOTRA INDRINDRA KOA ZARE AO @ LE BON ANDROIT
+          NIKARAKARA NAHAMASAKA, ARY NAHAVOKY TSY FANAGNAMBOLA ZALAH.
+        </p>
+        <div class="photos">
+          <img class="pleine" width="590" height="443" loading="lazy" decoding="async"
+               alt="Les motos alignées sur l'herbe pendant le tour de Sainte-Marie"
+               sizes="356px"
+               srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/01.thumb.webp 480w,
+                       https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/01.w960.webp 590w"
+               src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/01.jpg" />
+          <div class="planche n4" style="aspect-ratio:5.328">   <!-- 4 x 1,332 : meme ratio pour les quatre, 0 % de recadrage -->
+            <img width="590" height="443" loading="lazy" decoding="async" alt="" sizes="87px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/02.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/02.jpg" />
+            <img width="590" height="443" loading="lazy" decoding="async" alt="" sizes="87px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/03.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/03.jpg" />
+            <img width="590" height="443" loading="lazy" decoding="async" alt="" sizes="87px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/04.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/04.jpg" />
+            <img width="590" height="443" loading="lazy" decoding="async" alt="" sizes="87px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/05.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272088/05.jpg" />
+          </div>
+        </div>
+        <p class="manque">Cinq photos dans cette publication — les quatre autres sont sous la première.</p>
+        <a class="ouvrir" href="#">
+          <span class="rond"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+          <span class="txt">
+            <b class="t1">Ouvrir Sainte-Marie</b>
+            <span class="t2">Île aux baleines — ce que Diako sait de ce lieu</span>
+          </span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <div class="tags">
+          <a class="tag lieu" href="#">Sainte-Marie ✓</a>
+          <a class="tag plat" href="#">Plat à rattacher</a>
+          <a class="tag a-faire" href="#">Adresse à rattacher</a>
+        </div>
+        <p class="source">Vu sur Facebook · page <b>Dimanche le 30 août 2026</b></p>
+        <div class="gestes">
+          <a class="geste" href="#">J'y suis allé</a>
+          <a class="geste" href="#">Répondre</a>
+        </div>
+      </article>
+
+      <!-- ─────────────────────────────────────────────────────────────────
+           ENTRÉE 5 — DEUX photos de ratios VOISINS mais pas identiques
+           (1,501 et 1,590, soit 5,9 % d'écart) : duo aligné sur le ratio le
+           plus étroit, donc 5,6 % de recadrage sur la seconde seulement.
+           Le plafond du projet est 25 %.
+           ───────────────────────────────────────────────────────────────── -->
+      <article class="e">
+        <a class="tete" href="#">
+          <svg class="pin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span class="lieu">Mahajanga</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <span class="genre">Récit</span>
+        <p class="corps">
+          TF sary prend la route pour une nouvelle aventure Travel Photography. Aujourd'hui,
+          passage par le Pont de Kamoro, sur la route de Mahajanga. Un voyage, de nouveaux
+          paysages et surtout de nouvelles histoires à raconter en images.
+        </p>
+        <div class="photos">
+          <div class="duo" style="aspect-ratio:3.002">   <!-- cellules a 1,501 : 5,6 % de recadrage sur la photo 1,590 -->
+            <img width="590" height="393" loading="lazy" decoding="async" alt="La route de Mahajanga vue depuis la voiture"
+                 sizes="175px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272357/01.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272357/01.jpg" />
+            <img width="590" height="371" loading="lazy" decoding="async" alt="Le pont de Kamoro"
+                 sizes="175px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272357/02.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272357/02.jpg" />
+          </div>
+        </div>
+        <a class="ouvrir" href="#">
+          <span class="rond"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+          <span class="txt">
+            <b class="t1">Ouvrir Mahajanga</b>
+            <span class="t2">Boeny — ce que Diako sait de ce lieu</span>
+          </span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <div class="tags">
+          <a class="tag lieu" href="#">Mahajanga ✓</a>
+          <a class="tag plat" href="#">Plat à rattacher</a>
+          <a class="tag a-faire" href="#">Adresse à rattacher</a>
+        </div>
+        <p class="source">Vu sur Facebook · page <b>En route vers Mahajanga</b></p>
+        <div class="gestes">
+          <a class="geste" href="#">J'y suis allé</a>
+          <a class="geste" href="#">Répondre</a>
+        </div>
+      </article>
+
+      <!-- ─────────────────────────────────────────────────────────────────
+           ENTRÉE 6 — TROIS photos de ratios ÉLOIGNÉS (1,490 · 1,821 · 1,536).
+           On ne les aligne pas : la grande garde son ratio, les deux autres
+           passent en planche. Aucune n'est déformée.
+           ───────────────────────────────────────────────────────────────── -->
+      <article class="e">
+        <a class="tete" href="#">
+          <svg class="pin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span class="lieu">Antananarivo</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <span class="genre">Récit</span>
+        <p class="corps mg" lang="mg">
+          Tantaran'ny fanamboarana ny GARA SOARANO. 1. Talohan'ny fanorenana : mbola tanimbary sy
+          lohasaha. Tany amin'ny faran'ny taonjato faha-19, ny faritra avaratr'i Analakely, izay
+          misy an'i Soarano ankehitriny, dia mbola faritra iva nisy tanimbary.
+        </p>
+        <div class="photos">
+          <img class="pleine" width="587" height="394" loading="lazy" decoding="async"
+               alt="La gare de Soarano en construction, archives"
+               sizes="356px"
+               srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272138/01.thumb.webp 480w,
+                       https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272138/01.w960.webp 587w"
+               src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272138/01.jpg" />
+          <div class="planche n2" style="aspect-ratio:3.072">   <!-- cellules a 1,536 : 15,7 % de recadrage sur la photo 1,821 -->
+            <img width="590" height="324" loading="lazy" decoding="async" alt="La gare achevée" sizes="177px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272138/02.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272138/02.jpg" />
+            <img width="590" height="384" loading="lazy" decoding="async" alt="Analakely aujourd'hui" sizes="177px"
+                 srcset="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272138/03.thumb.webp 480w"
+                 src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272138/03.jpg" />
+          </div>
+        </div>
+        <a class="ouvrir" href="#">
+          <span class="rond"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+          <span class="txt">
+            <b class="t1">Ouvrir Antananarivo</b>
+            <span class="t2">Analamanga — ce que Diako sait de ce lieu</span>
+          </span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <div class="tags">
+          <a class="tag lieu" href="#">Antananarivo ✓</a>
+          <a class="tag plat" href="#">Plat à rattacher</a>
+          <a class="tag a-faire" href="#">Adresse à rattacher</a>
+        </div>
+        <p class="source">Vu sur Facebook · page <b>Tantara Madagasikara</b></p>
+        <div class="gestes">
+          <a class="geste" href="#">J'y suis allé</a>
+          <a class="geste" href="#">Répondre</a>
+        </div>
+      </article>
+
+      <!-- La fin du fil, dite en clair : ni compteur flatteur, ni faux vide. -->
+      <section class="fin">
+        <h2>Vous avez tout vu</h2>
+        <p>
+          <b>213</b> publications dans Diako, et un seul auteur : le collecteur.
+          <b>9</b> réactions, <b>0</b> commentaire. Le fil attend une première voix — la vôtre.
+        </p>
+        <a class="cta" href="#">Raconter mon dernier voyage</a>
+        <a class="cta creux" href="#">Explorer les 508 destinations</a>
+      </section>
+    </div>
+
+    <nav class="barre">
+      <a class="on" href="#">Fil</a>
+      <a href="#">Explorer</a>
+      <a href="#"><span class="plus">+</span></a>
+      <a href="#">Goûts</a>
+      <a href="#">Moi</a>
+    </nav>
+  </div>
+
+  <div class="pied">
+    <h2>Ce que ce fil décide, et ce qu'il abandonne</h2>
+    <ol>
+      <li><b>Il abandonne le plein écran.</b> C'était lui qui agrandissait les photos 3,56 fois et
+        n'en montrait qu'un tiers. On perd la sensation immersive ; on gagne des photos nettes et
+        entières, et une publication ENTIÈRE par écran — texte compris — au lieu d'une seule
+        photo. Sur tout le fil : 8 blocs pour 5 338 px, soit 1,18 bloc par écran de 788 px.</li>
+      <li><b>Il fait du lieu le titre.</b> 213 publications sur 213 en portent un ; c'est la seule
+        chose qu'on puisse promettre à chaque entrée.</li>
+      <li><b>Il donne le texte avant la photo.</b> La médiane du corpus est à 323 caractères :
+        tronquer à deux lignes ne montrerait souvent qu'une salutation.</li>
+      <li><b>Il laisse la photo dicter son gabarit</b> au lieu de lui imposer un cadre. C'est ce
+        qui garantit 0 % de recadrage dans cinq cas sur six, et 5,6 % dans le sixième.</li>
+      <li><b>Il donne le traitement fort à ce qui convertit</b> — « Ouvrir ce lieu » — et le
+        traitement discret aux gestes sociaux, tant que le fil compte zéro commentaire.</li>
+      <li><b>Il ouvre le manque au lieu de le cacher.</b> Aucune publication ne cite un plat :
+        l'entrée propose de le rattacher.</li>
+      <li><b>Il nomme le référentiel avant de le compter.</b> « Nosy Be », « Ravitoto » font
+        désirer ; « 508 destinations » fait tableau de bord.</li>
+      <li><b>Il ne cache pas le vide à la fin</b> : un auteur, neuf réactions, zéro commentaire,
+        et l'invitation qui va avec.</li>
+      <li><b>Ce qu'il exige côté serveur :</b> un <code>srcset</code> honnête. Les fichiers
+        <code>w960</code> et <code>w1600</code> ne sont pas larges de 960 ni de 1600 px — ce sont
+        des recopies de l'original, souvent 590. Tant que le <code>srcset</code> annonce des
+        pixels qui n'existent pas, le navigateur agrandit en croyant réduire.</li>
+      <li><b>Ce qui reste à trancher :</b> faut-il une dérivée intermédiaire à 240 px pour les
+        planches contact ? Aujourd'hui elles chargent la vignette de 480 px, soit ~18 Ko par
+        photo pour un affichage de 87 px.</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import { PostCard } from "@/components/PostCard";
-import { PostImmersif } from "@/components/PostImmersif";
+import { EntreeFil } from "@/components/EntreeFil";
 import { Commentaires } from "@/components/Commentaires";
 import { BandeauTheme } from "@/components/BandeauTheme";
 import { EmptyState } from "@/components/Etats";
@@ -374,6 +374,17 @@ export function Feed() {
     />
   );
 
+  /* ⚠ LA BARRE RESTE SOUS LA MAIN, SANS RECOUVRIR LA PHOTO. Elle flottait
+     par-dessus l'image parce que le fil était un conteneur `fixed` ; en flux
+     ordinaire elle se colle simplement sous l'en-tête (56 px), avec un fond
+     opaque — un fond translucide sur une photo qui défile rend les libellés
+     illisibles la moitié du temps. */
+  const barreCollante = (
+    <div className="sticky top-14 z-30 border-b border-border bg-background pt-2 [&>div]:mb-2">
+      {barre()}
+    </div>
+  );
+
   const squelette = (
     <div className="space-y-4">
       {[0, 1].map((i) => (
@@ -500,38 +511,50 @@ export function Feed() {
     if (chargement) {
       return (
         <>
-          {barre(true)}
-          <div className="dk-skeleton fixed inset-x-0 bottom-0 top-14 w-full rounded-none" />
+          {barreCollante}
+          <div className="space-y-3 px-4 pt-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="dk-skeleton h-7 w-1/2 rounded-lg" />
+                <div className="dk-skeleton h-16 w-full rounded-lg" />
+                <div className="dk-skeleton aspect-[3/2] w-full rounded-[10px]" />
+              </div>
+            ))}
+          </div>
         </>
       );
     }
     if (erreur && posts.length === 0) {
       return (
         <>
-          {barre(true)}
-          <div className="mx-4 mt-16">{blocErreur}</div>
+          {barreCollante}
+          <div className="mx-4 mt-10">{blocErreur}</div>
         </>
       );
     }
     if (posts.length === 0) {
       return (
         <>
-          {barre(true)}
-          <div className="mx-4 mt-16">
+          {barreCollante}
+          <div className="mx-4 mt-10">
             <FilVide mode={mode} />
           </div>
         </>
       );
     }
+    /* 🔴 LE FIL N'EST PLUS UN CONTENEUR `fixed` PLEIN ÉCRAN. C'était lui qui
+       imposait à chaque photo un créneau de 390 × 788 px CSS — 780 × 1576
+       pixels réels — alors que la photo médiane du corpus fait 590 × 443 :
+       3,56× d'agrandissement et 33 % de la photo visible. Un défilement
+       ordinaire rend à chaque publication le gabarit de ses propres photos
+       (`EntreeFil`), et au texte le droit d'être lu avant elles.
+       Refonte du 07/09/2026, maquette `docs/design/fil-v5.html`. */
     return (
       <>
-        {/* ⚠ LA BARRE FLOTTE PAR-DESSUS LA PHOTO, elle ne pousse rien : le fil
-            du téléphone est un conteneur `fixed` plein écran, il n'y a pas de
-            flux au-dessus de lui où poser quoi que ce soit. */}
-        {barre(true)}
-        <div className="fixed inset-x-0 bottom-0 top-14 snap-y snap-mandatory overflow-y-auto overscroll-y-contain bg-black">
+        {barreCollante}
+        <div>
           {posts.map((p, i) => (
-            <PostImmersif
+            <EntreeFil
               key={p.id}
               post={p}
               prioritaire={i === 0}
@@ -540,17 +563,23 @@ export function Feed() {
           ))}
           <div ref={sentinelle} className="h-1" aria-hidden="true" />
           {fini && (
-            <div className="grid h-full w-full snap-start place-items-center bg-background px-6 text-center">
-              <div>
-                <p className="font-medium">Vous avez tout vu.</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  De nouvelles destinations arrivent régulièrement.
-                </p>
+            <div className="px-4 py-7">
+              <p className="text-[22px] font-bold leading-tight text-foreground">Vous avez tout vu</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Le fil est encore jeune : il attend une première voix, la vôtre.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   to="/publier"
-                  className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-6 font-medium text-primary-foreground"
+                  className="inline-flex min-h-11 items-center rounded-[10px] bg-primary px-5 font-semibold text-primary-foreground"
                 >
-                  Publier à mon tour
+                  Raconter mon dernier voyage
+                </Link>
+                <Link
+                  to="/explorer"
+                  className="inline-flex min-h-11 items-center rounded-[10px] border border-border bg-card px-5 font-semibold text-primary"
+                >
+                  Explorer les destinations
                 </Link>
               </div>
             </div>

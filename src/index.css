@@ -45,6 +45,14 @@
 
     --primary: 185 81% 29%;         /* #0E7C86 — 4,95:1 sur blanc */
     --primary-foreground: 0 0% 100%;
+    /* 🔴 4,95:1 SUR BLANC, MAIS 4,33:1 SUR SA PROPRE PASTILLE. Une étiquette
+          `bg-primary/10 text-primary` écrit du teal sur #E7F2F3 : sous le seuil
+          de 4,5 pour du 13 px, donc illisible pour qui voit mal les contrastes.
+       ⚠ ON N'ASSOMBRIT PAS `--primary` LUI-MÊME : il porte les boutons pleins,
+         les icônes et les titres, où sa clarté est juste. On ajoute un ton
+         texte à côté, comme `--accent-strong` et `--or-fort`.
+         6,55:1 sur la pastille, 7,48:1 sur blanc. */
+    --primary-fort: 185 81% 22%;    /* #0A5F67 — dès que le teal écrit sur un fond teinté */
     --primary-soft: 185 78% 40%;    /* #16A9B5 — DÉCORATIF SEULEMENT */
 
     --secondary: 35 61% 93%;        /* #F7EFE3 — sable, fonds chauds */
@@ -130,6 +138,10 @@
        porte le texte (le teal foncé y devient illisible). */
     --primary: 174 66% 50%;
     --primary-foreground: 191 47% 12%;
+    /* En sombre, le turquoise est déjà clair sur fond de nuit : il écrit sans
+       problème (7,47:1 sur la pastille). Le ton fort y vaut le ton normal,
+       comme `--or-fort`. */
+    --primary-fort: 174 66% 50%;
     --primary-soft: 185 81% 29%;
 
     --secondary: 191 28% 15%;

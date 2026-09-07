@@ -40,6 +40,8 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          /** Le teal qui ÉCRIT sur un fond teinté (pastilles) — voir index.css. */
+          fort: "hsl(var(--primary-fort))",
           soft: "hsl(var(--primary-soft))",
         },
         secondary: {

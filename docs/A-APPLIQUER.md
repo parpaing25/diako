@@ -28,6 +28,23 @@ en base le 18/09 par un SELECT, pas repris d'un rapport.
   essai sans effet : l'apostrophe en base n'était pas celle de la requête — la
   garde compare maintenant après avoir ramené ’ à '.
 
+### ⚠ Couvertures Kirindy (29/09) et Zafimaniry (04/10) : envoi BLOQUÉ par o2switch
+
+Photos choisies et vérifiées à l'œil par la session marketing :
+`marketing/atelier/photos/kirindy.jpg` (fossa, « File:Fossa 03.JPG », Heinonlein,
+CC BY-SA 4.0) et `zafimaniry.jpg` (« File:Antoetra 05.jpg », Bernard Gagnon,
+CC BY-SA 3.0) — crédits exacts dans `marketing/atelier/choix/<clé>.json`.
+Le 19/09 vers 0 h 30, `POST /api/o2upload.php` (même chaîne que
+`scripts/photos_archives.py` : curl multipart, `X-API-Key`, folder=pages) a
+rendu **406 Not Acceptable**, corps = `index.html` — deux fois, avec et sans
+« / » dans le nom de fichier. C'est le pare-feu de l'hébergeur, pas PHP (sans
+clé, un GET rend bien `403 {"error":"Unauthorized"}` en JSON). Piste : la clé
+lue dans `~/.diako-secrets/env_diako.txt` fait **64** caractères alors que
+`photos_archives.py` documente 55 pour Diako et 64 pour Fonenako — comparer à
+`/home2/anfa7857/.env_diako` ; sinon regarder la règle ModSecurity / Tiger
+Protect du cPanel. Une fois l'envoi rétabli : poser `places.cover_url`,
+`cover_credit`, `cover_licence`, `cover_source` sur `kirindy` et `zafimaniry`.
+
 ### ⛔ Refusé depuis la session (usurpation du compte admin), à lancer sur ordre
 
 Le classificateur a refusé le préambule qui se fait passer pour

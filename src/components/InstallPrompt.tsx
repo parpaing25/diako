@@ -89,7 +89,7 @@ export function InstallPrompt() {
     <div
       role="dialog"
       aria-label="Installer Diako"
-      className="dk-scale-in fixed inset-x-3 bottom-20 z-40 rounded-2xl border border-border bg-card p-4 shadow-lg sm:left-auto sm:right-6 sm:w-[360px] lg:bottom-6"
+      className="dk-scale-in fixed inset-x-3 bottom-20 z-40 rounded-2xl border border-border bg-card p-4 shadow-lg sm:left-auto sm:right-6 sm:w-[360px] xl:bottom-6"
     >
       <div className="flex items-start gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">

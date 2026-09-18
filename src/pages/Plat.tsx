@@ -240,7 +240,9 @@ export default function Plat() {
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="dk-etiquette">Où en manger</h2>
           {f.adresses.length > 0 && (
-            <span className="dk-secondaire">{f.adresses.length} adresses</span>
+            <span className="dk-secondaire">
+              {f.adresses.length} adresse{f.adresses.length > 1 ? "s" : ""}
+            </span>
           )}
         </div>
 
@@ -253,11 +255,11 @@ export default function Plat() {
             contenuReel={
               <>
                 <p className="dk-secondaire leading-relaxed">
-                  Zéro carte de restaurant saisie à ce jour. La liste s'affichera
-                  avec le prix du plat chez chacun, sa distance et son horaire.
-                  En attendant, ce plat porte déjà sa fiche et ses{" "}
-                  {f.alias.length} variantes d'orthographe — ce sont elles qui
-                  font marcher la recherche.
+                  Vous connaissez une table qui le sert ? Dites-le : la liste
+                  s'affichera ici, avec le prix du plat chez chacun. En
+                  attendant, ce plat a déjà sa fiche et ses{" "}
+                  {f.alias.length} orthographes, qui mènent toutes ici depuis
+                  la recherche.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link
@@ -335,7 +337,7 @@ export default function Plat() {
       <aside className="mt-6 shrink-0 space-y-3 xl:sticky xl:top-20 xl:mt-0 xl:w-[340px]">
         {f.alias.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="dk-etiquette">Aussi ecrit</p>
+            <p className="dk-etiquette">Aussi écrit</p>
             <ul className="mt-2 flex flex-wrap gap-1.5">
               {f.alias.map((a) => (
                 <li
@@ -349,17 +351,17 @@ export default function Plat() {
             {/* ⚠ La phrase compte autant que la liste : elle apprend au lecteur
                 que l'orthographe n'a pas d'importance sur ce site. */}
             <p className="dk-secondaire mt-2.5 leading-relaxed">
-              {f.alias.length} facon{f.alias.length > 1 ? "s" : ""} de l'ecrire.
-              Toutes menent ici — c'est ce qui fait marcher la recherche.
+              {f.alias.length} façon{f.alias.length > 1 ? "s" : ""} de l'écrire.
+              Toutes mènent ici — c'est ce qui fait marcher la recherche.
             </p>
           </div>
         )}
 
         <div className="rounded-2xl border border-accent-strong/25 bg-accent/[0.07] p-4">
-          <p className="dk-etiquette text-accent-strong">Mon carnet de gouts</p>
+          <p className="dk-etiquette text-accent-strong">Mon carnet de goûts</p>
           <p className="dk-secondaire mt-2 leading-relaxed">
-            Marquez ce plat goute, il rejoint votre carnet. Aucune adresse n'est
-            encore saisie : le carnet, lui, marche des aujourd'hui.
+            Marquez ce plat comme goûté : il rejoint votre carnet, et vous
+            retrouvez tout ce que vous avez goûté au même endroit.
           </p>
           <Link
             to="/gouts"

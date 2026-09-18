@@ -28,6 +28,7 @@ export function ImageProgressive({
      l'original ; un appelant qui affiche plus petit doit toujours le dire. */
   largeurAffichee = "100vw",
   fondSombre = false,
+  plafond,
 }: {
   src: string;
   alt: string;
@@ -47,6 +48,8 @@ export function ImageProgressive({
    *  Sinon le texte blanc posé sur la photo n'a AUCUN contraste tant qu'elle
    *  n'est pas arrivée (axe : 1,09:1, 06/09/2026). */
   fondSombre?: boolean;
+  /** Plus grande variante proposée au navigateur (voir `jeuDeTailles`). */
+  plafond?: number;
 }) {
   const [chargee, setChargee] = useState(false);
   /* 🔴 TROIS ÉTAPES, PAS DEUX. Avant : « srcSet, puis vignette ». Or depuis que
@@ -72,7 +75,9 @@ export function ImageProgressive({
 
   return (
     <div className={cn("relative h-full w-full overflow-hidden", fondSombre ? "bg-black" : "bg-muted")}>
-      {aVignette && !chargee && (
+      {/* ⚠ PAS DE VIGNETTE POUR L'IMAGE PRIORITAIRE : elle partait en même
+          temps que la vraie, en priorité haute, et lui volait de la bande. */}
+      {aVignette && !chargee && !prioritaire && (
         <img
           src={vignette}
           alt=""
@@ -108,7 +113,7 @@ export function ImageProgressive({
            navigateur prenait l'original de 80-90 Ko. Après un échec (variante
            absente : o2switch rend index.html en 200), plus de srcSet du tout,
            sinon le navigateur repartait sur la même candidate. */
-        srcSet={repli === 0 && aVignette && largeurAffichee ? (jeuDeTailles(src, w, h) ?? undefined) : undefined}
+        srcSet={repli === 0 && aVignette && largeurAffichee ? (jeuDeTailles(src, w, h, plafond) ?? undefined) : undefined}
         sizes={aVignette && largeurAffichee ? largeurAffichee : undefined}
         alt={alt}
         width={w || 1600}
@@ -128,9 +133,12 @@ export function ImageProgressive({
           else setChargee(true);
         }}
         className={cn(
-          "relative h-full w-full transition-opacity duration-300",
+          "relative h-full w-full",
+          /* ⚠ PAS DE FONDU SUR L'IMAGE PRIORITAIRE : il retardait le LCP de
+             300 ms et masquait parfois la mesure. */
+          !prioritaire && "transition-opacity duration-300",
           ajustement === "cover" ? "object-cover" : "object-contain",
-          chargee || !aVignette ? "opacity-100" : "opacity-0"
+          chargee || !aVignette || prioritaire ? "opacity-100" : "opacity-0"
         )}
       />
     </div>

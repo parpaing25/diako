@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
 import { useSEO } from "@/hooks/useSEO";
 import { METIERS_PRO } from "@/lib/metiersPro";
+import { lireSuite, oublierSuite } from "@/lib/suite";
+
+/**
+ * ⚠ La suite vient d'une fiche touchée par un gérant (« C'est mon
+ *   établissement » pose `reprendre=1` dans l'adresse) : il est venu pour
+ *   revendiquer, on lui épargne de retrouver le bon choix.
+ */
+function suiteDeGerant(suite: string | null): boolean {
+  return !!suite && /[?&]reprendre=1(?:[&#]|$)/.test(suite);
+}
 
 /**
  * Complétion du profil après confirmation de l'adresse e-mail.
@@ -21,7 +31,18 @@ export default function Bienvenue() {
   const { profile, refresh } = useUserData();
   const [nom, setNom] = useState("");
   const [ville, setVille] = useState("");
-  const [type, setType] = useState<"voyageur" | "pro">("voyageur");
+  /* ⭐ LA PAGE OÙ REVENIR (src/lib/suite.ts), lue une fois à l'arrivée.
+     🔴 Avant le 18/09/2026, les trois sorties de cet écran menaient à « / » :
+        le gérant qui venait de toucher « C'est mon établissement » perdait sa
+        fiche une deuxième fois. */
+  const [suite] = useState(() => lireSuite());
+  const partir = useCallback(() => {
+    oublierSuite();
+    navigate(suite ?? "/", { replace: true });
+  }, [navigate, suite]);
+  const [type, setType] = useState<"voyageur" | "pro">(() =>
+    suiteDeGerant(suite) ? "pro" : "voyageur"
+  );
   // ⚠ Le premier de la liste partagée, pas une chaîne écrite ici : un défaut
   //   codé en dur survit à la disparition du métier qu'il désigne.
   const [metier, setMetier] = useState<string>(METIERS_PRO[0].cle);
@@ -64,9 +85,9 @@ export default function Bienvenue() {
     }
     const nouveau = etaitNouveau.current;
     if (!nouveau && profile.display_name && (profile.home_place || profile.account_type === "pro")) {
-      navigate("/", { replace: true });
+      partir();
     }
-  }, [loading, user, profile, navigate]);
+  }, [loading, user, profile, partir]);
 
   async function valider(e: React.FormEvent) {
     e.preventDefault();
@@ -119,8 +140,11 @@ export default function Bienvenue() {
     }
 
     setBusy(false);
+    /* ⚠ LE PROFIL EST RELU AVANT DE PARTIR, jamais après. La page d'arrivée est
+       souvent la fiche `/p/<slug>?reprendre=1` : elle doit voir tout de suite
+       le compte devenu professionnel, sans un aller-retour de plus. */
     await refresh();
-    navigate("/", { replace: true });
+    partir();
   }
 
   return (
@@ -226,7 +250,7 @@ export default function Bienvenue() {
       </form>
 
       <button
-        onClick={() => navigate("/")}
+        onClick={partir}
         className="mt-6 text-center text-sm text-muted-foreground"
       >
         Plus tard

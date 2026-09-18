@@ -69,11 +69,14 @@ export function CartePlat({ plat }: { plat: PlatAtlas }) {
         <p className="dk-secondaire mt-0.5 truncate">
           {[plat.family, plat.typical_place?.region ?? regime].filter(Boolean).join(" · ")}
         </p>
-        {adresses != null && (
+        {/* 🔴 RIEN QUAND C'EST ZÉRO (18/09/2026). « aucune adresse encore », en
+              brique, se répétait sur presque toutes les cartes de l'atlas : la
+              même mauvaise nouvelle 95 fois, en couleur d'alerte, sur la page
+              qui porte la matière la plus riche du site. Le manque se dit une
+              fois, sur la fiche du plat — pas sur chaque vignette. */}
+        {adresses != null && adresses > 0 && (
           <p className="mt-1.5 text-xs font-semibold text-accent-strong">
-            {adresses === 0
-              ? "aucune adresse encore"
-              : `${adresses} adresse${adresses > 1 ? "s" : ""}`}
+            {`${adresses} adresse${adresses > 1 ? "s" : ""}`}
           </p>
         )}
       </div>
@@ -86,7 +89,11 @@ export function CartePlat({ plat }: { plat: PlatAtlas }) {
  *
  * ⚠ PAS DE CADRE GRIS QUAND IL N'Y A PAS DE PHOTO. 147 destinations sur 508 en
  *   portent une (recompté le 01/09/2026) : l'absence est le cas COURANT, pas le
- *   cas dégradé. On pose alors le nom sur un aplat, comme `FicheCard`.
+ *   cas dégradé. On pose alors le nom sur un aplat.
+ * ⚠ PAS LE LISERÉ LAMBA DE `FicheCard` (18/09/2026) : lui et le médaillon
+ *   `IconeCategorie` disent la FAMILLE d'un établissement (hôtel, table,
+ *   agence) via `lambaDe(categories)`. Une destination n'a pas de catégorie :
+ *   le motif ne dirait rien ici.
  *
  * ⚠ AUCUN COMPTEUR AFFICHÉ ICI. `places.nb_pages` et `places.nb_posts` existent,
  *   mais ce sont précisément les deux compteurs que 0092 a dû réparer parce

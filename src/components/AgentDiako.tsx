@@ -60,18 +60,58 @@ function idAnonyme(): string {
   return v;
 }
 
+/**
+ * Les fiches où la bulle se retire sous 1280 px.
+ * ⚠ Elle y recouvrait du texte et les valeurs alignées à droite (prix,
+ *   distances, horaires) — précisément ce qu'on vient lire sur une fiche.
+ *   Au-delà de 1280 px la colonne de droite laisse la place, elle revient.
+ */
+const FICHE = /^\/(p|lieu|site|plat)\//;
+
+/** Le nom de l'événement qui ouvre la bulle depuis n'importe quelle page. */
+const EVENEMENT_OUVRIR = "dk:agent";
+
 export function AgentDiako() {
-  const surUnRecit = useLocation().pathname.startsWith("/post/");
+  const { pathname } = useLocation();
+  const surUnRecit = pathname.startsWith("/post/");
+  const surUneFiche = FICHE.test(pathname);
   const [ouvert, setOuvert] = useState(false);
   const [bulles, setBulles] = useState<Bulle[]>([]);
   const [saisie, setSaisie] = useState("");
   const [enCours, setEnCours] = useState(false);
+  /** Incrémenté à chaque ouverture par événement : le champ prend alors le focus. */
+  const [demandeFocus, setDemandeFocus] = useState(0);
   const fin = useRef<HTMLDivElement>(null);
+  const champ = useRef<HTMLInputElement>(null);
   const historique = useRef<{ role: string; content: string }[]>([]);
 
   useEffect(() => {
     if (ouvert) fin.current?.scrollIntoView({ behavior: "smooth" });
   }, [bulles, ouvert]);
+
+  /* ⭐ UNE PAGE PEUT OUVRIR LA BULLE AVEC UNE QUESTION TOUTE PRÊTE :
+       window.dispatchEvent(new CustomEvent("dk:agent", { detail: "Comment aller à Ampefy ?" }))
+     ⚠ LA QUESTION EST POSÉE DANS LE CHAMP, JAMAIS ENVOYÉE. La personne la
+       relit, la corrige ou l'envoie : un envoi automatique parlerait à sa
+       place, et consommerait un appel au modèle qu'elle n'a pas demandé. */
+  useEffect(() => {
+    const ouvrir = (e: Event) => {
+      const detail = (e as CustomEvent<unknown>).detail;
+      if (typeof detail === "string" && detail.trim()) setSaisie(detail.trim().slice(0, 500));
+      setOuvert(true);
+      setDemandeFocus((n) => n + 1);
+    };
+    window.addEventListener(EVENEMENT_OUVRIR, ouvrir);
+    return () => window.removeEventListener(EVENEMENT_OUVRIR, ouvrir);
+  }, []);
+
+  /* ⚠ SUR `demandeFocus` SEUL : l'ouverture et la demande arrivent dans le même
+     rendu (React 18 regroupe les deux mises à jour), donc le champ existe déjà.
+     Dépendre aussi de `ouvert` redonnerait le focus — et le clavier du
+     téléphone — à chaque réouverture manuelle qui suit. */
+  useEffect(() => {
+    if (demandeFocus > 0) champ.current?.focus();
+  }, [demandeFocus]);
 
   // Échap ferme le panneau : geste attendu, et ça évite de piéger le clavier.
   useEffect(() => {
@@ -135,13 +175,21 @@ export function AgentDiako() {
         aria-label="Demander à l'agent Diako"
         /* ⚠ SUR LA PAGE D'UN RÉCIT, la barre d'actions est collée au-dessus de
            la navigation basse (64 → 120 px du bas) : à `bottom-20` ce bouton
-           recouvrait le signet. Il monte d'un cran là-bas, et seulement là. */
+           recouvrait le signet. Il monte d'un cran là-bas, et seulement là.
+           🔴 SOUS 1280 PX, UNE PASTILLE DISCRÈTE ET NON UN APLAT TEAL
+              (18/09/2026). À 56 px pleins elle recouvrait le texte et les
+              valeurs alignées à droite de toutes les pages. Elle passe à 48 px
+              sur fond de carte, au ras de la barre du bas.
+           ⚠ `xl` ET NON `lg` : la barre du bas ne disparaît qu'à 1280 px. Entre
+             1024 et 1279, `lg:bottom-6` posait la bulle SUR la barre du bas. */
         className={cn(
-          "fixed right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105 lg:bottom-6",
-          surUnRecit ? "bottom-36" : "bottom-20",
+          "fixed right-3 z-40 h-12 w-12 items-center justify-center rounded-full border border-primary/30 bg-card text-primary shadow-md transition hover:scale-105",
+          "xl:bottom-6 xl:right-4 xl:h-14 xl:w-14 xl:border-transparent xl:bg-primary xl:text-primary-foreground xl:shadow-lg",
+          surUneFiche ? "hidden xl:inline-flex" : "inline-flex",
+          surUnRecit ? "bottom-36" : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))]",
         )}
       >
-        <Sparkles className="h-6 w-6" aria-hidden="true" />
+        <Sparkles className="h-5 w-5 xl:h-6 xl:w-6" aria-hidden="true" />
       </button>
     );
   }
@@ -271,6 +319,7 @@ export function AgentDiako() {
           Votre question
         </label>
         <input
+          ref={champ}
           id="agent-saisie"
           value={saisie}
           onChange={(e) => setSaisie(e.target.value)}

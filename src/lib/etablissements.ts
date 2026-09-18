@@ -1445,6 +1445,210 @@ export function unite(code: string | null | undefined): string {
   return (code && UNITES[code]) || "";
 }
 
+/* ── Catégories : libellés, famille, motif ─────────────────────────────── */
+
+/**
+ * Le libellé COURT d'une catégorie, pour les cartes et l'étiquette des fiches.
+ * ⚠ Il vivait en double dans FicheCard et FicheLigne : une seule table ici.
+ *   `CATEGORIES` (plus haut) porte les libellés longs des filtres.
+ */
+export const LIBELLE_CATEGORIE: Record<string, string> = {
+  hotel: "Hôtel",
+  restaurant: "Restaurant",
+  agence_voyage: "Agence",
+  guide: "Guide",
+  transporteur: "Transport",
+  location_vehicule: "Location",
+  site_attraction: "Site",
+  organisateur_evenement: "Événementiel",
+};
+
+/** Ce qui dit le mieux ce qu'est l'endroit passe devant. */
+const ORDRE_CATEGORIES = [
+  "hotel",
+  "restaurant",
+  "agence_voyage",
+  "guide",
+  "location_vehicule",
+  "transporteur",
+  "site_attraction",
+  "organisateur_evenement",
+];
+
+function rangCategorie(code: string): number {
+  const i = ORDRE_CATEGORIES.indexOf(code);
+  return i < 0 ? ORDRE_CATEGORIES.length : i;
+}
+
+/**
+ * Les catégories dans l'ordre d'affichage.
+ * ⚠ L'ordre stocké n'est pas un ordre d'importance : 8 fiches publiées
+ *   commencent par « transporteur » avant « hotel, restaurant ». Les afficher
+ *   telles quelles présentait un hôtel-restaurant comme une compagnie de
+ *   transport.
+ */
+export function categoriesOrdonnees(categories: string[] | null | undefined): string[] {
+  return [...(categories ?? [])].sort((a, b) => rangCategorie(a) - rangCategorie(b));
+}
+
+/** « Hôtel · Restaurant » — deux au plus, le reste n'apprend rien de plus. */
+export function libelleCategories(categories: string[] | null | undefined, max = 2): string {
+  return categoriesOrdonnees(categories)
+    .slice(0, max)
+    .map((c) => LIBELLE_CATEGORIE[c] ?? c)
+    .join(" · ");
+}
+
+export type FamilleEtablissement = "hebergement" | "table" | "agence" | "vehicule" | "autre";
+
+/**
+ * LA famille d'un établissement : elle choisit l'icône du médaillon et la
+ * teinte du lamba des fiches sans photo.
+ * ⚠ PAR PRIORITÉ, PAS PAR POSITION : un hôtel qui a aussi une table reste un
+ *   hébergement, quel que soit l'ordre dans lequel ses catégories ont été
+ *   saisies.
+ */
+export function familleDe(categories: string[] | null | undefined): FamilleEtablissement {
+  const c = categories ?? [];
+  if (c.includes("hotel")) return "hebergement";
+  if (c.includes("restaurant")) return "table";
+  if (c.includes("agence_voyage") || c.includes("guide")) return "agence";
+  if (c.includes("location_vehicule") || c.includes("transporteur")) return "vehicule";
+  return "autre";
+}
+
+/**
+ * La variante du motif `.dk-lamba` (index.css) pour cette famille.
+ * ⚠ Les noms de classe sont écrits EN ENTIER ici : Tailwind ne garde une
+ *   classe de `@layer components` que s'il la trouve telle quelle dans src/.
+ *   Un nom recomposé (`dk-lamba--${x}`) serait purgé du CSS de production.
+ */
+export function lambaDe(categories: string[] | null | undefined): string {
+  const f = familleDe(categories);
+  if (f === "table") return "dk-lamba--table";
+  if (f === "agence" || f === "vehicule") return "dk-lamba--route";
+  return "";
+}
+
+/* ── Descriptions recopiées depuis Facebook ────────────────────────────── */
+
+/**
+ * ⚠ LE CHROME DE FACEBOOK EST DANS LES DESCRIPTIONS. Relevé le 18/09/2026 :
+ *   295 des 427 `long_desc` renseignées portent « Voir moins » (216),
+ *   « Écrivez un commentaire public… », « · Suivre », « Audio d'origine »,
+ *   « Indicateur de statut En ligne », des horodatages de commentaires
+ *   (« 3 sem. », « J'aime »), et 15 un « Sponsorisé » brouillé en lettres
+ *   isolées. Le bot a son propre filtre (`bot-diako/bot/extraction.py`,
+ *   BRUIT_FIL et BRUIT_INLINE), mais il n'a pas réparé ce qui était déjà en
+ *   base : on nettoie donc À L'AFFICHAGE, sans rien réécrire.
+ *
+ * ⚠ DEUX FORMES, COMME CÔTÉ BOT. Le bruit tient parfois sa propre ligne
+ *   (« Voir moins ») et parfois se colle à la fin d'une phrase utile
+ *   (« WhatsApp : 032 11 105 52 Voir moins ») : un motif ancré seul jetterait
+ *   le numéro avec le bruit, un motif en ligne seul laisserait les lignes vides.
+ *
+ * ⚠ « voir » EST PRIS AVEC SA FRONTIÈRE DE MOT : sans `\b`, « pour en savoir
+ *   plus » perdait sa fin (« savoir » contient « voir »). Et « voir plus »
+ *   n'est retiré dans une phrase que collé à des points de suspension (avant
+ *   ou après) : « à voir plus loin » est une phrase.
+ *
+ * Mesuré le 18/09/2026 sur les 251 descriptions publiées : 164 portaient ce
+ * bruit, 0 après nettoyage, aucun numéro de téléphone perdu.
+ */
+const BRUIT_EN_LIGNE: RegExp[] = [
+  /indicateur de statut(?:\s+en ligne)*/gi,
+  /\bcontenu ia\b/gi,
+  /\bvoir (?:moins|plus)\s*(?:…|\.{2,3})/gi,
+  /\s*\bvoir moins\s*$/i,
+  /·\s*suivre\b/gi,
+  /[ée]crivez un commentaire(?: public)?\s*(?:…|\.{2,3})?/gi,
+  /\btous les commentaires\b/gi,
+  /\b\d+\s*(?:an|ans|mois|sem|j|h|min)\.?\s+j[’']aime\b/gi,
+  /·\s*audio d[’']origine/gi,
+  /\bafficher la traduction\b/gi,
+];
+
+/** Lignes ENTIÈRES qui ne sont que l'interface (Facebook, ou le site copié). */
+const BRUIT_LIGNE: RegExp[] = [
+  /^en ligne$/i,
+  /^(?:en )?voir (?:moins|plus)(?: de (?:commentaires|réponses))?\s*(?:…|\.{2,3})?$/i,
+  /^voir les \d+ réponses?$/i,
+  /^·?\s*suivre$/i,
+  /^j[’']aime$/i,
+  /^répondre$/i,
+  /^partager$/i,
+  /· audio d[’']origine$/i,
+  // Compteurs de réactions (« 5 », « +8 ») — un numéro de téléphone, lui, a
+  // au moins neuf chiffres et n'est jamais touché.
+  /^\+?\d{1,3}$/,
+  // Horodatages de commentaire : « 3 sem. », « 13 h », « · 26 août ».
+  /^·?\s*\d+\s*(?:an|ans|mois|sem|j|h|min)\.?$/i,
+  /^·?\s*\d{1,2}\s+(?:janv|févr|mars|avr|mai|juin|juil|août|sept|oct|nov|déc)[a-zéû]*\.?(?:\s+\d{4})?$/i,
+  // Boutons de site web recopiés : « EN SAVOIR PLUS », « En savoir plusRéserver ».
+  /^\(?\s*en savoir plus.{0,50}$/i,
+];
+
+/** Le « Sponsorisé » brouillé de Facebook : une lettre par ligne, suivie
+ *  d'un U+034F (combining grapheme joiner). Construit sans séquence
+ *  d'échappement dans le source, pour qu'aucun outil ne la décode. */
+const CGJ = new RegExp(String.fromCharCode(0x034f), "g");
+
+/**
+ * Une ligne qui ne dit rien : un « · » seul, un emoji seul, une lettre isolée.
+ * ⚠ Test sur les LETTRES ET CHIFFRES (\p{L}, \p{N}), pas sur une liste
+ *   d'emoji : la liste serait toujours incomplète, la règle ne l'est pas.
+ */
+function ligneVide(ligne: string): boolean {
+  return [...ligne].length <= 2 || !/[\p{L}\p{N}]/u.test(ligne);
+}
+
+/**
+ * La description longue d'une fiche, sans le bruit de l'interface d'où elle a
+ * été recopiée. `null` quand il ne reste rien.
+ * ⚠ AFFICHAGE SEULEMENT. La base garde le texte brut : c'est lui qui fait foi
+ *   si un filtre se trompe un jour, et on ne corrige pas une donnée pour un
+ *   défaut d'écran.
+ */
+export function descriptionPropre(texte: string | null | undefined): string | null {
+  if (!texte) return null;
+  const sortie: string[] = [];
+  for (const brute of texte.replace(CGJ, "").split(/\r?\n/)) {
+    if (!brute.trim()) {
+      // Un saut de paragraphe, un seul, et jamais en tête.
+      if (sortie.length && sortie[sortie.length - 1] !== "") sortie.push("");
+      continue;
+    }
+    // ⚠ LA LIGNE BRUTE D'ABORD : « Ysidina Mada Parapente · Audio d'origine »
+    //   est entièrement du bruit (le nom est celui de l'auteur de la vidéo).
+    //   Nettoyée en ligne d'abord, elle aurait laissé le nom seul.
+    if (BRUIT_LIGNE.some((m) => m.test(brute.trim()))) continue;
+    let ligne = brute;
+    for (const motif of BRUIT_EN_LIGNE) ligne = ligne.replace(motif, " ");
+    ligne = ligne
+      // « un texte tronqué… Voir plus » : l'ellipse reste, le lien part.
+      // (Pas de lookbehind : Safari ne le lit que depuis la 16.4, et une
+      // expression illisible fait tomber le module entier.)
+      .replace(/(…|\.{3})\s*(?:\ben )?\bvoir plus\s*$/i, "$1")
+      // Le bruit retiré laisse ses séparateurs : « TL Voyage · · LOCATION ».
+      .replace(/(?:\s*·\s*){2,}/g, " · ")
+      .replace(/^\s*·\s*|\s*·\s*$/g, "")
+      // « Vu sur Facebook — Indicateur de statut En ligne le 25/08/2026 » :
+      // l'auteur s'appelait littéralement comme le bruit.
+      .replace(/(Vu sur Facebook)\s*—\s*(?=le \d)/, "$1 ")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
+    // ⚠ Une ligne VIDÉE par le nettoyage disparaît ; ce n'est pas un
+    //   paragraphe, contrairement à une ligne vide d'origine.
+    if (!ligne || ligneVide(ligne) || BRUIT_LIGNE.some((m) => m.test(ligne))) continue;
+    // Facebook répète le nom de la page sur deux lignes consécutives.
+    const precedente = [...sortie].reverse().find((l) => l !== "");
+    if (precedente === ligne) continue;
+    sortie.push(ligne);
+  }
+  while (sortie.length && sortie[sortie.length - 1] === "") sortie.pop();
+  return sortie.length ? sortie.join("\n") : null;
+}
+
 /**
  * LES RÉCITS PUBLIÉS SUR UN LIEU.
  *

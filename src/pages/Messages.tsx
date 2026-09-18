@@ -125,7 +125,7 @@ export default function Messages() {
   /* ── Une conversation ouverte ────────────────────────────────────────── */
   if (convId) {
     return (
-      <div className="flex h-[calc(100dvh-3.5rem)] flex-col">
+      <div className="flex h-[calc(100dvh_-_var(--dk-entete,61px))] flex-col">
         <div className="dk-glass sticky top-0 z-10 flex items-center gap-3 border-b border-border px-4 py-3">
           {/* ⚠ L'ÉTIQUETTE NE PROMET PLUS LES CONVERSATIONS. Le bouton ramène
               maintenant d'où l'on vient : depuis la fiche d'un hôtel, c'est la

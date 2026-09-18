@@ -9,9 +9,12 @@ import { FEUILLE_DE_ROUTE } from "@/lib/nav";
 import { choisirEnVogue } from "@/lib/tendance";
 import { cn } from "@/lib/utils";
 
+/* ⚠ `text-accent-strong` ET NON `text-accent` : le corail clair (#F4633A)
+   écrit à 3,14:1 et ne porte jamais de texte (CLAUDE.md). « en cours » est
+   du texte. Même raison pour `text-primary-fort` sur la pastille teal. */
 const COULEURS: Record<string, string> = {
-  ouvert: "bg-primary/10 text-primary",
-  "en cours": "bg-accent/10 text-accent",
+  ouvert: "bg-primary/10 text-primary-fort",
+  "en cours": "bg-accent/10 text-accent-strong",
   "à venir": "bg-muted text-muted-foreground",
 };
 
@@ -232,8 +235,10 @@ export function RightRail() {
          plus haut que l'écran, il ne défilait ni avec la page ni pour
          lui-même. On borne sa hauteur à celle de la fenêtre et on lui donne
          son propre défilement — `overscroll-contain` évite d'entraîner la
-         page quand on arrive au bout. */
-      className="dk-rail sticky top-14 hidden w-80 max-h-[calc(100dvh-3.5rem)] shrink-0 space-y-4 overflow-y-auto overscroll-contain py-4 [scrollbar-width:thin] lg:block"
+         page quand on arrive au bout.
+         ⚠ `--dk-entete` (61 px, index.css) et non `top-14` (56) : l'en-tête
+           porte aussi sa frise et sa bordure, 5 px passaient dessous. */
+      className="dk-rail sticky top-[var(--dk-entete)] hidden w-80 max-h-[calc(100dvh_-_var(--dk-entete))] shrink-0 space-y-4 overflow-y-auto overscroll-contain py-4 [scrollbar-width:thin] lg:block"
     >
       {/* ── Les chiffres, vrais ────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-4">

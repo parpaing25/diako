@@ -84,9 +84,16 @@ export function Header() {
               de 5,6 Ko : le fichier d'origine fait 1920 px pour 494 Ko, soit
               onze secondes de 3G pour une image de 36 px de haut.
               `dark:invert` : le tracé est une encre unie, il se retourne
-              proprement en blanc sur fond de nuit. */}
+              proprement en blanc sur fond de nuit.
+              🔴 SOUS 640 PX, LE MOT ET NON LE BADGE (18/09/2026). Le badge est
+                 un dessin détaillé gris : à 36 px il ne se lit pas, et le mot
+                 « Diako » était masqué (`hidden sm:block`) — un téléphone ne
+                 voyait donc JAMAIS le nom du site. Le mot seul, en serif, dit
+                 où l'on est ; le badge revient là où il a la place. */}
           <Link to="/" className="flex shrink-0 items-center gap-2" aria-label="Diako, accueil">
-            <picture>
+            {/* ⚠ `hidden` SUR LE <picture>, pas sur l'<img> : un <picture> vide
+                resterait un élément du flex et garderait son `gap`. */}
+            <picture className="hidden shrink-0 sm:block">
               <source srcSet="/media/diako-marque-96.webp" type="image/webp" />
               <img
                 src="/media/diako-marque-96.png"
@@ -96,11 +103,11 @@ export function Header() {
                 className="h-9 w-9 transition-transform duration-300 hover:rotate-[-6deg] hover:scale-110 dark:invert"
               />
             </picture>
-            <span className="hidden leading-none sm:block">
-              <span className="dk-edito block text-[1.3rem] font-semibold tracking-tight text-primary">
+            <span className="block leading-none">
+              <span className="dk-edito block text-[22px] font-semibold tracking-tight text-primary-fort sm:text-[1.3rem] sm:text-primary">
                 Diako
               </span>
-              <span className="dk-etiquette block text-[0.55rem] leading-none">
+              <span className="dk-etiquette hidden text-[0.55rem] leading-none sm:block">
                 Madagasikara
               </span>
             </span>
@@ -194,11 +201,20 @@ export function Header() {
               </div>
             </div>
           ) : (
+            /* 🔴 SOUS 640 PX, UN ROND BORDÉ ET NON UN APLAT TEAL (18/09/2026).
+                  « Connexion » en plein teal était l'élément le plus fort de
+                  CHAQUE premier écran — plus fort que le contenu qu'on venait
+                  lire. Sur téléphone il devient une icône de 44 px ; le libellé
+                  plein revient dès 640 px, où la barre a la place.
+               ⚠ Le nom accessible reprend le libellé visible (« Connexion ») :
+                 un nom différent du texte affiché trompe la commande vocale. */
             <Link
               to="/auth"
-              className="flex h-9 shrink-0 items-center rounded-full bg-primary px-3.5 text-sm font-medium text-primary-foreground md:px-4"
+              aria-label="Connexion"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-input text-foreground hover:bg-muted sm:flex sm:h-9 sm:w-auto sm:items-center sm:border-transparent sm:bg-primary sm:px-3.5 sm:text-sm sm:font-medium sm:text-primary-foreground sm:hover:bg-primary md:px-4"
             >
-              Connexion
+              <User className="h-5 w-5 sm:hidden" aria-hidden="true" />
+              <span className="hidden sm:inline">Connexion</span>
             </Link>
           )}
         </div>

@@ -67,6 +67,20 @@ function extrait(?string $t, int $max = 200): string {
     return ($p !== false ? mb_substr($c, 0, $p) : $c) . '…';
 }
 
+/** Majuscule initiale : un résumé Wikidata commence souvent par une minuscule. */
+function majuscule(string $t): string {
+    $t = trim($t);
+    return $t === '' ? $t : mb_strtoupper(mb_substr($t, 0, 1)) . mb_substr($t, 1);
+}
+
+/** Une image de vignette doit être une URL ABSOLUE : les robots de partage ne
+ *  résolvent pas les chemins relatifs et n'affichent alors aucune image. */
+function absolue(string $u, string $base): string {
+    $u = trim($u);
+    if (preg_match('#^https?://#i', $u)) return $u;
+    return $base . '/' . ltrim($u, '/');
+}
+
 /** Formate un montant comme le site : « 93 000 Ar », espace insécable fine. */
 function ariary($n): string {
     if ($n === null || $n === '') return '';
@@ -103,14 +117,41 @@ if (preg_match('#^/p/([a-z0-9\-]+)$#i', $chemin, $m)) {
         $type  = 'article';
     }
 } elseif (preg_match('#^/lieu/([a-z0-9\-]+)$#i', $chemin, $m)) {
+    /* 🔴 LE REPLI PROMETTAIT CE QUI N'EXISTE PAS. « hébergements, tables et
+          accès réels depuis Antananarivo » s'écrivait aussi sur les lieux sans
+          une adresse ni un trajet relevé — et la vignette circule sans la page
+          pour la démentir. Le repli dit maintenant ce que c'est : une fiche.
+       ⚠ La photo du lieu devient l'image de la vignette quand il en a une ;
+         sinon, la bannière. */
     $r = lire($sbUrl . '/rest/v1/places?slug=eq.' . urlencode($m[1])
-              . '&select=name_fr,region,summary&limit=1', $headers);
+              . '&select=name_fr,region,summary,cover_url&limit=1', $headers);
     if ($r) {
         $l     = $r[0];
         $titre = $l['name_fr'] . ' — où dormir et où manger · Diako';
         $desc  = extrait($l['summary'] ?: ($l['name_fr']
-                 . ($l['region'] ? ' (' . $l['region'] . ')' : '')
-                 . ' : hébergements, tables et accès réels depuis Antananarivo.'));
+                 . (!empty($l['region']) ? ' (' . $l['region'] . ')' : '')
+                 . ' — la fiche du lieu sur Diako.'));
+        if (!empty($l['cover_url'])) $image = absolue($l['cover_url'], $base);
+        $type  = 'article';
+    }
+} elseif (preg_match('#^/site/([a-z0-9\-]+)$#i', $chemin, $m)) {
+    /* ⚠ LES DIX PAGES /site DE LA SÉRIE FACEBOOK N'AVAIENT PAS DE BRANCHE : leur
+         vignette était celle de l'accueil. Même mécanique que /lieu.
+       ⚠ Un résumé Wikidata de moins de 40 caractères (« lac malgache ») ne dit
+         rien à qui voit passer le lien : on prend alors la description. Même
+         règle que l'accroche de Site.tsx. */
+    $r = lire($sbUrl . '/rest/v1/attractions?slug=eq.' . urlencode($m[1])
+              . '&is_published=eq.true&select=name,summary,description,cover_url&limit=1', $headers);
+    if ($r) {
+        $s      = $r[0];
+        $titre  = $s['name'] . ' · Diako';
+        $resume = trim((string) ($s['summary'] ?? ''));
+        $descr  = trim((string) ($s['description'] ?? ''));
+        $texte  = mb_strlen($resume) >= 40 ? $resume
+                  : ($descr !== '' ? $descr : $s['name'] . ' — la fiche du site sur Diako.');
+        $desc   = extrait(majuscule($texte));
+        if (!empty($s['cover_url'])) $image = absolue($s['cover_url'], $base);
+        $type   = 'article';
     }
 } elseif (preg_match('#^/plat/([a-z0-9\-]+)$#i', $chemin, $m)) {
     $r = lire($sbUrl . '/rest/v1/dishes?slug=eq.' . urlencode($m[1])

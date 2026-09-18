@@ -116,7 +116,7 @@ export function ProposerPhoto({
         type="button"
         onClick={() => champ.current?.click()}
         disabled={envoi}
-        className="inline-flex min-h-10 items-center gap-2 rounded-full border border-input px-4 text-sm font-semibold disabled:opacity-60"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-4 text-sm font-semibold disabled:opacity-60"
       >
         {envoi ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

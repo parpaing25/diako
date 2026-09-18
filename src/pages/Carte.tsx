@@ -146,6 +146,32 @@ const nombre = (n: number) => n.toLocaleString("fr-FR");
 const autourDe = (lieu: string): string =>
   /^[aeiouyàâäéèêëîïôöùûü]/i.test(lieu) ? `autour d'${lieu}` : `autour de ${lieu}`;
 
+/**
+ * La vue demandée par l'adresse : /carte?lat=…&lng=…&z=…
+ *
+ * 🔴 LES FICHES ENVOYAIENT SUR TOUT MADAGASCAR. « Voir sur la carte » de /site
+ *    n'envoyait aucun paramètre, celui de /lieu envoyait `?lieu=` que personne
+ *    ne lisait : on arrivait sur le pays entier et il fallait retrouver le lieu
+ *    à la main. Les fiches envoient désormais leurs coordonnées.
+ * ⚠ UN PARAMÈTRE ABSENT N'EST PAS ZÉRO : `Number(null)` et `Number("")` valent
+ *   0, soit un point au large du Gabon. On exige deux chaînes non vides, des
+ *   nombres finis et des bornes de latitude/longitude valides ; sinon, rien.
+ * ⚠ Le zoom est borné (3 à 18) et vaut 11 par défaut — le seuil où la carte
+ *   montre les adresses une par une.
+ */
+function lireVue(p: URLSearchParams): { lat: number; lng: number; z: number } | null {
+  const brutLat = p.get("lat")?.trim();
+  const brutLng = p.get("lng")?.trim();
+  if (!brutLat || !brutLng) return null;
+  const lat = Number(brutLat);
+  const lng = Number(brutLng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
+    return null;
+  const brutZ = Number(p.get("z"));
+  const z = Number.isFinite(brutZ) && brutZ >= 3 && brutZ <= 18 ? Math.round(brutZ) : ZOOM_DETAIL;
+  return { lat, lng, z };
+}
+
 export default function Carte() {
   useSEO({
     titre: "Carte des hôtels, restaurants et sites de Madagascar",
@@ -160,6 +186,8 @@ export default function Carte() {
   const carte = useRef<L.Map | null>(null);
   const couche = useRef<L.LayerGroup | null>(null);
   const cibleRef = useRef<string | null>(params.get("focus"));
+  /** Lue une fois, comme `focus` : l'initialisation de la carte ne se rejoue pas. */
+  const vueDemandee = useRef(lireVue(params));
 
   const [points, setPoints] = useState<PointCarte[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -346,6 +374,11 @@ export default function Carte() {
       attributionControl: true,
     });
     m.fitBounds(CADRE_MADAGASCAR, { padding: [12, 12] });
+    // ⚠ APRÈS l'ajustement au pays, et AVANT l'écoute de `moveend` : la
+    //   première requête (`chargerZone` plus bas) porte donc directement sur la
+    //   bonne zone. `focus`, lui, se pose plus tard sur son point.
+    const vue = vueDemandee.current;
+    if (vue) m.setView([vue.lat, vue.lng], vue.z);
     L.control.zoom({ position: "bottomright" }).addTo(m);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
@@ -624,7 +657,7 @@ export default function Carte() {
   const totalLegende = useMemo(() => totalComposition(zone), [zone]);
 
   return (
-    <div className="fixed inset-0 z-10 flex flex-col bg-background pt-[var(--header-h,3.5rem)]">
+    <div className="fixed inset-0 z-10 flex flex-col bg-background pt-[var(--dk-entete,61px)]">
       <div className="border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
         <div className="flex items-center gap-2">
           <button

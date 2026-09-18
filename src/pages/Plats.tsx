@@ -183,9 +183,20 @@ export default function Plats() {
           <Chiffre n={stats?.plats} quoi="plats" />
           <Chiffre n={stats?.variantes} quoi="variantes" />
           <Chiffre n={stats?.familles} quoi="familles" />
-          {/* ⚠ Ce zéro est le plus important de l'écran : il dit ce qui manque
-              au produit, et c'est lui qui doit donner envie d'agir. */}
-          <Chiffre n={stats?.cartes} quoi="carte de restaurant saisie" alerte />
+          {/* ⚠ CE CHIFFRE COMPTE DES LIGNES DE `menu_items`, pas des cartes :
+              « 76 carte de restaurant saisie » était faux deux fois — l'accord,
+              et le sens (93 lignes pour 40 restaurants le 18/09/2026, compte
+              administrateur ; l'anonyme n'en voit qu'une partie). On dit donc
+              ce qui est compté : des plats relevés sur des cartes. */}
+          <Chiffre
+            n={stats?.cartes}
+            quoi={
+              (stats?.cartes ?? 0) > 1
+                ? "plats relevés sur des cartes de restaurant"
+                : "plat relevé sur une carte de restaurant"
+            }
+            alerte
+          />
         </div>
 
         {/* Recherche + filtres repliés sous xl. */}

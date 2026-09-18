@@ -28,8 +28,11 @@ export function SideNav() {
       /* ⚠ ENTRE EN `xl`, PAS EN `lg` — et 256 px fixes (gabarit v4). En dessous
          de 1280, la place va au contenu et la navigation reste la barre du bas,
          qui bascule au MEME seuil : les deux ne doivent jamais disparaître
-         ensemble, sinon la fenêtre 1024–1280 n'a plus aucune navigation. */
-      className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-64 shrink-0 overflow-y-auto border-r border-border px-2 py-4 xl:block"
+         ensemble, sinon la fenêtre 1024–1280 n'a plus aucune navigation.
+         ⚠ `--dk-entete` (61 px, index.css) et non `top-14` (56) : calé 5 px
+           trop haut, le rail débordait d'autant en bas et « Commencer » était
+           coupé sur un écran de 900 px de haut. */
+      className="sticky top-[var(--dk-entete)] hidden h-[calc(100dvh_-_var(--dk-entete))] w-64 shrink-0 overflow-y-auto border-r border-border px-2 py-4 xl:block"
     >
       {/* ⚠ LES TROIS GESTES QU'ON FAIT SANS Y PENSER restent en tete, hors
           groupe : les ranger sous un intitule les ralentirait pour rien. */}

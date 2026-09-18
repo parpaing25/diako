@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { flagActif } from "@/lib/flags";
+import { lireSuite, oublierSuite } from "@/lib/suite";
 import { useSEO } from "@/hooks/useSEO";
 
 type Mode = "connexion" | "inscription";
@@ -20,7 +21,22 @@ const TURNSTILE_CLE = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 export default function Auth() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const [mode, setMode] = useState<Mode>("connexion");
+  /* ⭐ « Créer un compte » peut ouvrir directement le bon onglet :
+       /auth?mode=inscription. Sans lui, la personne qui venait de toucher
+       « Créer un compte » tombait sur « Se connecter » et devait chercher. */
+  const [params] = useSearchParams();
+  const [mode, setMode] = useState<Mode>(() =>
+    params.get("mode") === "inscription" ? "inscription" : "connexion"
+  );
+  /* ⭐ LA PAGE OÙ REVENIR, lue UNE fois à l'arrivée (voir src/lib/suite.ts).
+     ⚠ Lue à l'arrivée et non au moment de partir : l'effet « déjà connecté »
+       et la fin de `submit` partent tous deux après la connexion, et le premier
+       qui oublie la suite ne doit pas envoyer l'autre sur l'accueil. */
+  const [suite] = useState(() => lireSuite());
+  const partir = useCallback(() => {
+    oublierSuite();
+    navigate(suite ?? "/", { replace: true });
+  }, [navigate, suite]);
   const [captcha, setCaptcha] = useState<string | null>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
 
@@ -107,8 +123,8 @@ export default function Auth() {
   useSEO({ titre: mode === "connexion" ? "Connexion" : "Inscription", noindex: true });
 
   useEffect(() => {
-    if (!loading && user) navigate("/", { replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) partir();
+  }, [user, loading, partir]);
 
   // Le bouton Google n'apparaît que si le drapeau est levé EN BASE : tant que
   // les identifiants OAuth ne sont pas configurés, un bouton qui échoue est
@@ -150,7 +166,7 @@ export default function Auth() {
           options: { captchaToken: captcha ?? undefined },
         });
         if (error) throw error;
-        navigate("/", { replace: true });
+        partir();
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur inconnue";
@@ -278,7 +294,9 @@ export default function Auth() {
         </>
       )}
 
-      <Link to="/" className="mt-8 text-center text-sm text-muted-foreground">
+      {/* ⚠ SANS COMPTE, ON REVIENT OÙ L'ON ÉTAIT — pas sur l'accueil : la
+          personne venait de toucher « Garder » sur une fiche, elle y retourne. */}
+      <Link to={suite ?? "/"} className="mt-8 text-center text-sm text-muted-foreground">
         Continuer sans compte
       </Link>
     </div>

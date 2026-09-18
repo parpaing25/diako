@@ -82,6 +82,53 @@
     window.__dkFil = null;
   }
 
+  // ── 1 ter. LA PAGE D'ARRIVÉE ET SA PHOTO, DEMANDÉES AVANT REACT ─────────
+  // Mesuré le 18/09/2026 (5 passes, réseau réel de Tana, CPU x4) : sur
+  // /lieu/andasibe, l'image du haut attendait le JS (2,8 s), puis le morceau de
+  // page, puis fiche_destination — elle arrivait à 5,8 s. Ce sont les pages
+  // d'arrivée des publications Facebook : on demande la fiche et on précharge
+  // la photo dès le HTML. Gain mesuré : LCP 4,5 → 3,3 s sur /lieu.
+  // ⚠ GET avec la clé en paramètre : requête CORS « simple », sans préambule.
+  // ⚠ Le preload DOIT porter le même srcset/sizes que CouvertureFiche
+  //   (src/components/Arrivee.tsx : plafond 960, "(min-width:1280px) 620px,
+  //   100vw"), sinon le navigateur télécharge l'image deux fois.
+  // ⚠ Jamais pour un visiteur connecté, comme le fil.
+  try {
+    var mf = location.pathname.match(/^\/(lieu|site)\/([^\/?#]+)\/?$/);
+    var co2 = false;
+    try { co2 = !!localStorage.getItem("sb-eifrwecaszzqrdwjjjbu-auth-token"); } catch (e) {}
+    if (mf && !co2 && typeof fetch === "function") {
+      var CLE2 = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZnJ3ZWNhc3p6cXJkd2pqamJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NTM5OTYsImV4cCI6MjA3MDAyOTk5Nn0.Ks8epc1CiOyj7Y4AYGL9zRHHoZscQJ7_nWbqwMNcVMQ";
+      var R = "https://eifrwecaszzqrdwjjjbu.supabase.co/rest/v1/";
+      var slug2 = decodeURIComponent(mf[2]);
+      var s2 = encodeURIComponent(slug2);
+      var u2 = mf[1] === "lieu"
+        ? R + "rpc/fiche_destination?p_slug=" + s2
+        : R + "attractions?select=cover_url&is_published=eq.true&limit=1&slug=eq." + s2;
+      window.__dkFicheCle = mf[1] + ":" + slug2;
+      window.__dkFiche = fetch(u2 + "&apikey=" + CLE2)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+      window.__dkFiche.then(function (d) {
+        if (Array.isArray(d)) d = d[0];
+        if (!d) return;
+        var url = d.lieu ? d.lieu.cover_url : d.cover_url;
+        if (!url || url.indexOf("/uploads/") < 0) return;
+        var q = (url.match(/(\?.*)$/) || [""])[0];
+        var b = url.replace(/\.(jpe?g|png|webp)(\?.*)?$/i, "");
+        var l = document.createElement("link");
+        l.rel = "preload";
+        l.as = "image";
+        l.setAttribute("fetchpriority", "high");
+        l.setAttribute("imagesrcset", b + ".thumb.webp" + q + " 480w, " + b + ".w960.webp" + q + " 960w");
+        l.setAttribute("imagesizes", "(min-width:1280px) 620px, 100vw");
+        document.head.appendChild(l);
+      });
+    }
+  } catch (e) {
+    window.__dkFiche = null;
+  }
+
   // ── 2. Service worker, en différé ──────────────────────────────────────
   // Jamais sur localhost (le SW masque les changements pendant le dev).
   var isLocal =

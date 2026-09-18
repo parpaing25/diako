@@ -55,6 +55,23 @@ const MODES: { cle: ModeClassique; label: string }[] = [
 ];
 
 /**
+ * ⚠ LES THÈMES QUE LES CATÉGORIES DE L'ACCUEIL PORTENT DÉJÀ.
+ *
+ * 🔴 VÉRIFIÉ LE 18/09/2026 dans `categories.ts` : sur ordinateur, l'accueil
+ *    empile trois bandes de commandes avant le premier récit — les catégories
+ *    (DiakoHero), le composeur, puis cette barre — et « Hôtels » et
+ *    « Restaurants » y figurent DEUX fois, menant au même annuaire. Les quatre
+ *    autres thèmes (Plats, Lieux, Location voiture, Voyages organisés) et les
+ *    trois modes n'ont pas d'équivalent là-haut : on ne retire que le doublon.
+ * ⚠ `md:hidden` ET NON `xl:hidden` : les catégories s'affichent dès 768 px
+ *   (useEstMobile, Index.tsx) ; le doublon commence là. Sous 768 px il n'y a
+ *   pas de catégories, les deux pastilles restent.
+ * ⚠ La pastille ACTIVE reste toujours visible : masquer l'onglet dans lequel
+ *   on se trouve ferait perdre le moyen de savoir où l'on est.
+ */
+const DOUBLONS_DES_CATEGORIES = new Set<ModeFil>(["th_hotels", "th_restaurants"]);
+
+/**
  * LA BARRE DES FILTRES.
  *
  * 🔴 LES THEMES N'APPARAISSENT QUE SI LE SERVEUR LES CONNAIT (`comptes`). Ce
@@ -110,7 +127,7 @@ function BarreFil({
       className={cn(
         "flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         flottante
-          ? "fixed inset-x-0 top-14 z-30 bg-gradient-to-b from-black/60 to-transparent px-3 py-2"
+          ? "fixed inset-x-0 top-[var(--dk-entete)] z-30 bg-gradient-to-b from-black/60 to-transparent px-3 py-2"
           : "mb-4 px-4 pb-1 md:flex-wrap md:overflow-visible md:px-0"
       )}
       role="group"
@@ -143,7 +160,10 @@ function BarreFil({
           key={t.cle}
           onClick={() => onChoisir(t.cle)}
           aria-pressed={mode === t.cle}
-          className={pastille(mode === t.cle)}
+          className={cn(
+            pastille(mode === t.cle),
+            !flottante && mode !== t.cle && DOUBLONS_DES_CATEGORIES.has(t.cle) && "md:hidden"
+          )}
         >
           {t.label}
         </button>
@@ -376,11 +396,13 @@ export function Feed() {
 
   /* ⚠ LA BARRE RESTE SOUS LA MAIN, SANS RECOUVRIR LA PHOTO. Elle flottait
      par-dessus l'image parce que le fil était un conteneur `fixed` ; en flux
-     ordinaire elle se colle simplement sous l'en-tête (56 px), avec un fond
+     ordinaire elle se colle simplement sous l'en-tête, avec un fond
      opaque — un fond translucide sur une photo qui défile rend les libellés
-     illisibles la moitié du temps. */
+     illisibles la moitié du temps.
+     ⚠ SOUS L'EN-TÊTE = 61 px (`--dk-entete`), pas 56 : `top-14` glissait la
+       barre de 5 px sous la frise et la bordure. */
   const barreCollante = (
-    <div className="sticky top-14 z-30 border-b border-border bg-background pt-2 [&>div]:mb-2">
+    <div className="sticky top-[var(--dk-entete)] z-30 border-b border-border bg-background pt-2 [&>div]:mb-2">
       {barre()}
     </div>
   );

@@ -34,6 +34,7 @@ import {
 } from "@/lib/api";
 import { METIERS_PRO, libelleMetier } from "@/lib/metiersPro";
 import { cn } from "@/lib/utils";
+import { lireSuite, oublierSuite } from "@/lib/suite";
 
 /**
  * MON COMPTE — le hub, gabarit G6.
@@ -635,6 +636,7 @@ function OngletProfil({ onEnregistre }: { onEnregistre: () => Promise<void> | vo
  *   déjà pro ne touche que `metier_pro`.
  */
 function BlocMetierPro({ onChange }: { onChange: () => Promise<void> | void }) {
+  const navigate = useNavigate();
   const { profile } = useUserData();
   const estPro = profile?.account_type === "pro";
   const declare = profile?.metier_pro ?? null;
@@ -662,6 +664,12 @@ function BlocMetierPro({ onChange }: { onChange: () => Promise<void> | void }) {
     toast.success(
       estPro ? "Métier mis à jour." : "Votre compte est maintenant professionnel."
     );
+    // Venu de sa fiche pour la reprendre : on l'y ramène, le formulaire s'ouvrira.
+    const suite = lireSuite();
+    if (!estPro && suite && suite.includes("reprendre=1")) {
+      oublierSuite();
+      navigate(suite);
+    }
   }
 
   const choixMetier = (

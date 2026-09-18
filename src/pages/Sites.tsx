@@ -311,7 +311,7 @@ function NiveauRegions() {
           pas d'argument de mot-clé) : on dit donc ce que la boîte fait, à
           l'endroit où on s'apprête à taper. */}
       <p className="dk-secondaire mt-1.5">
-        Cette recherche filtre les régions et les villes ci-dessous — pas les noms de sites.
+        Tapez le nom d'une région ou d'une ville. Pour un site précis, ouvrez sa région.
       </p>
 
       {/* ── LES RACCOURCIS PAR TYPE ──────────────────────────────────────── */}
@@ -338,8 +338,8 @@ function NiveauRegions() {
           {typeArme && (
             <p className="dk-secondaire mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>
-                Filtre armé sur «&nbsp;{libelleType(typeArme)}&nbsp;» : ouvrez une région, il
-                la suivra.
+                Filtre «&nbsp;{libelleType(typeArme)}&nbsp;» choisi : il s'appliquera à la
+                région que vous ouvrirez.
               </span>
               <button
                 onClick={() => poser("type", "")}
@@ -353,15 +353,27 @@ function NiveauRegions() {
       )}
 
       {/* ── CE QUI EST DOCUMENTÉ ─────────────────────────────────────────── */}
+      {/* 🔴 REPLIÉ (18/09/2026). Ouvert d'office, ce bloc affichait « 12 % »,
+            « 6 % » en tête de page, avant la moindre région : un bilan de
+            couverture, utile à qui veut savoir d'où viennent les fiches, lu par
+            tout le monde comme « le site est vide ». Les chiffres restent vrais
+            et à un geste ; ils ne sont plus la première chose qu'on voit. */}
       {etat === "ok" && liste.length > 0 && (
-        <section className="mt-5 rounded-2xl border border-border bg-card p-4">
-          <h2 className="dk-etiquette">Ce qui est documenté</h2>
+        <details className="group mt-5 rounded-2xl border border-border bg-card">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+            Comment cette liste est faite
+            <ChevronRight
+              className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="px-4 pb-4">
           {/* ⚠ LES QUATRE TUILES PARTAGENT LE MÊME DÉNOMINATEUR — les sites rangés
               par région. Mélanger le total national (qui compte les fiches sans
               lieu) et des parts calculées sur les fiches rattachées donnerait
               quatre nombres qui ne s'additionnent pas entre eux. L'écart, lui,
               est dit en toutes lettres juste en dessous. */}
-          <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <dl className="mt-1 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Compteur t="Sites rangés par région" n={bilan.sites} />
             <Compteur t="Avec une photo" n={bilan.photo} sur={bilan.sites} />
             <Compteur t="Avec une description" n={bilan.description} sur={bilan.sites} />
@@ -387,7 +399,8 @@ function NiveauRegions() {
               </>
             )}
           </p>
-        </section>
+          </div>
+        </details>
       )}
 
       {/* ── LE FILTRE PAR GRANDE RÉGION ──────────────────────────────────── */}

@@ -92,6 +92,12 @@
 
     --radius: 0.75rem;
 
+    /* ⚠ LA HAUTEUR RÉELLE DE L'EN-TÊTE : frise 4 + barre h-14 (56) + bordure 1.
+       Les colonnes collantes se calaient sur `top-14` (56 px) : 5 px passaient
+       sous l'en-tête, et le bas du rail gauche (« Commencer ») sortait de
+       l'écran à 900 px de haut. Un seul chiffre, lu par tous les collants. */
+    --dk-entete: 61px;
+
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 191 47% 12%;
     --sidebar-primary: 185 81% 29%;
@@ -266,17 +272,24 @@ table {
   outline: none;
 }
 
-/* Zone de frappe 44x44 px SANS changer le visuel du bouton. */
-.dk-tap {
-  position: relative;
-}
-.dk-tap::after {
-  content: "";
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
+/* Zone de frappe 44x44 px SANS changer le visuel du bouton.
+   ⚠ DANS @layer components, JAMAIS en dehors : écrite hors couche, après
+   `@tailwind utilities`, la règle `position: relative` battait la classe
+   `absolute` des boutons posés sur une image (retour de /p tombé dans le flux,
+   couverture rognée de 40 px sur les 3 412 fiches). Un utilitaire doit pouvoir
+   la surcharger. */
+@layer components {
+  .dk-tap {
+    position: relative;
+  }
+  .dk-tap::after {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -631,6 +644,63 @@ table {
   background-size: 12px 4px, 12px 4px, 100% 4px;
 }
 
+/* ═══ LE LAMBA — couverture des fiches SANS PHOTO ═══════════════════════
+   94 % des fiches n'ont pas de photo (3 219 sur 3 412 le 18/09/2026). Leur
+   couverture n'est donc pas un cas de secours : c'est LA couverture du site.
+   Des rayures de lamba, une teinte par famille, AUCUN texte dessus (le corail
+   et l'or ne portent jamais de texte). Ce n'est pas une image inventée : c'est
+   un motif, et il ne prétend rien montrer de l'établissement.
+   ════════════════════════════════════════════════════════════════════════ */
+@layer components {
+  .dk-lamba {
+    --l1: hsl(var(--primary));
+    --l2: hsl(var(--gold));
+    --l3: hsl(var(--primary-fort));
+    background-color: hsl(var(--secondary));
+    background-image:
+      repeating-linear-gradient(90deg,
+        var(--l1) 0 14px, transparent 14px 20px,
+        var(--l2) 20px 23px, transparent 23px 29px,
+        var(--l3) 29px 33px, transparent 33px 52px),
+      repeating-linear-gradient(0deg, hsl(0 0% 100% / 0.10) 0 1px, transparent 1px 4px);
+  }
+  /* Tables : brique et encre. */
+  .dk-lamba--table { --l1: hsl(var(--accent-strong)); --l3: hsl(var(--foreground)); }
+  /* Route (agences, transport, guides) : encre et teal. */
+  .dk-lamba--route { --l1: hsl(var(--foreground)); --l3: hsl(var(--primary)); }
+
+  /* ═══ LE BILLET — temps de route réels ═════════════════════════════════
+     La seule donnée que personne d'autre ne publie : on la montre comme un
+     ticket de taxi-brousse, avec son talon. */
+  .dk-ticket {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border));
+    border-radius: 14px;
+    background: hsl(var(--card));
+    padding: 16px;
+  }
+  .dk-ticket__talon {
+    position: relative;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1.5px dashed hsl(var(--border));
+  }
+  .dk-ticket__talon::before,
+  .dk-ticket__talon::after {
+    content: "";
+    position: absolute;
+    top: -10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+  }
+  .dk-ticket__talon::before { left: -27px; }
+  .dk-ticket__talon::after { right: -27px; }
+}
+
 /* Le liseré or d'une carte mise en avant. */
 .dk-liseré-or {
   box-shadow: inset 0 0 0 1px hsl(var(--or) / 0.45);
@@ -878,7 +948,10 @@ button:not(:disabled):active,
      16 px — en dessous, iOS zoome tout seul à la mise au point et l'écran
      part de travers. C'est écrit dans la maquette, et c'est vrai.
    ════════════════════════════════════════════════════════════════════════ */
-.dk-titre      { font-size: 1.75rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+.dk-titre      {
+  font-family: Georgia, "Iowan Old Style", "Noto Serif", "Droid Serif", "Times New Roman", serif;
+  font-size: 1.875rem; font-weight: 700; line-height: 1.12; letter-spacing: -0.01em;
+}
 .dk-sous-titre { font-size: 1.0625rem; font-weight: 600; line-height: 1.3; }
 .dk-corps      { font-size: 0.9375rem; font-weight: 400; line-height: 1.55; }
 .dk-secondaire { font-size: 0.8125rem; font-weight: 400; line-height: 1.45; color: hsl(var(--muted-foreground)); }

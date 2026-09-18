@@ -28,13 +28,23 @@ import { useRetour } from "@/hooks/useRetour";
  *   se rabattre, mais afficher une flèche « retour » à quelqu'un qui vient
  *   d'arriver est un mensonge : il n'y a pas de page précédente. On préfère ne
  *   rien montrer.
+ *
+ * 🔴 NI SUR LES PAGES QUI ONT LEUR PROPRE RETOUR (18/09/2026). « Deux
+ *    affordances ne se gênent pas » était faux à l'écran : sur une fiche, deux
+ *    flèches identiques à 60 px d'écart, l'une dans l'en-tête, l'autre posée
+ *    sur la couverture — on ne sait plus laquelle toucher, et l'en-tête perd
+ *    44 px de recherche pour rien. Les pages ci-dessous portent un retour
+ *    toujours rendu, au même `useRetour` : l'en-tête s'efface devant elles.
+ *    ⚠ Une page ajoutée à cette liste DOIT garder son propre bouton.
  */
+const A_SON_PROPRE_RETOUR = /^\/(?:(?:p|lieu|site|post)\/|pro\/[^/]+|carte(?:\/|$))/;
+
 export function RetourEntete() {
   const { pathname } = useLocation();
   const retour = useRetour("/");
   const profond = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
 
-  if (pathname === "/" || !profond) return null;
+  if (pathname === "/" || !profond || A_SON_PROPRE_RETOUR.test(pathname)) return null;
 
   return (
     <button

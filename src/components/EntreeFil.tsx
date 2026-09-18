@@ -11,6 +11,8 @@ import { ImageProgressive } from "@/components/ImageProgressive";
 import { basculerFavori, basculerReaction, type Post } from "@/lib/api";
 import { gabarit, ratioDe } from "@/lib/gabaritPhotos";
 import { decouperRecit } from "@/lib/recit";
+import { adoucirCapitales } from "@/lib/casse";
+import { provenanceCourte } from "@/lib/provenance";
 import { cn } from "@/lib/utils";
 
 /**
@@ -116,9 +118,18 @@ export function EntreeFil({
        est alors le seul endroit qui dit où l'on est, et elle passe en prose. */
   const blocs = useMemo(() => decouperRecit(post.body, { lieuConnu: !!post.place }), [post.body, post.place]);
   /* Un paragraphe par bloc : la citation de l'auteur d'abord, puis ce que
-     le bot a ajouté. `whitespace-pre-line` rend la séparation visible. */
-  const SEPARATEUR = "\n\n";
-  const texte = [blocs.citation, ...blocs.prose].filter(Boolean).join(SEPARATEUR).trim();
+     le bot a ajouté. `whitespace-pre-line` rend la séparation visible.
+     ⚠ LES PARAGRAPHES TOUT EN CAPITALES passent en casse de phrase, à
+       l'affichage seulement (src/lib/casse.ts) ; le lieu et le plat, connus
+       par leurs colonnes, retrouvent leur majuscule. */
+  const texte = useMemo(
+    () =>
+      adoucirCapitales(
+        [blocs.citation, ...blocs.prose].filter(Boolean).join("\n\n").trim(),
+        [post.place, post.dish]
+      ),
+    [blocs, post.place, post.dish]
+  );
 
   /* ⚠ ON MESURE LE DÉBORDEMENT, ON NE LE DEVINE PAS. Un seuil en caractères se
      trompe dans les deux sens : le malgache a des mots plus longs, et la
@@ -144,19 +155,17 @@ export function EntreeFil({
 
   /* ⚠ « page_name » N'EST PAS UN ÉTABLISSEMENT. C'est le nom de la page
      Facebook d'origine (« Dimanche le 30 août 2026 »). On le présente comme
-     une provenance, jamais comme un hôtel ou un restaurant. */
-  const provenance = blocs.source ?? (post.page_name ? `Vu sur Facebook — ${post.page_name}` : null);
+     une provenance, jamais comme un hôtel ou un restaurant.
+     🔴 SOUS LE TITRE, PLUS EN BAS (18/09/2026) : « X · JJ/MM · via Facebook ».
+        En pied de carte, on lisait tout le récit avant de savoir qui parlait. */
+  const provenance = provenanceCourte(blocs.source, post.page_name);
 
-  const genre =
-    post.kind === "alerte"
-      ? { texte: "Alerte", classe: "bg-[#FFF6E5] text-[#8A6412]" }
-      : post.kind === "assiette"
-        ? { texte: "Assiette", classe: "bg-accent/10 text-accent-strong" }
-        : post.kind === "avis"
-          ? { texte: "Avis", classe: "bg-muted text-muted-foreground" }
-          : post.kind === "photo"
-            ? { texte: "Photo", classe: "bg-primary/10 text-primary-fort" }
-            : { texte: "Récit", classe: "bg-primary/10 text-primary-fort" };
+  /* 🔴 UN SEUL BADGE DE TYPE, CELUI QUI CHANGE QUELQUE CHOSE (18/09/2026).
+        Chaque carte portait « RÉCIT », « AVIS », « PHOTO »… — le même mot sur
+        213 cartes n'apprend rien, et le type est parfois faux (« AVIS » sur un
+        concert). Seule l'alerte mérite d'arrêter l'œil. Jetons `warn` et non
+        des couleurs écrites en dur : le mode sombre les inverse. */
+  const estAlerte = post.kind === "alerte";
 
   /** Le créneau réel de la colonne, dit au navigateur pour qu'il choisisse. */
   const LARGEUR_PLEINE = "(min-width:768px) 620px, calc(100vw - 32px)";
@@ -166,7 +175,7 @@ export function EntreeFil({
   return (
     <article
       ref={racine}
-      className="relative border-b border-border bg-card pb-3.5 dk-reveal"
+      className={cn("relative border-b border-border bg-card pb-3.5", !prioritaire && "dk-reveal")}
     >
       {partage && (
         <PartagerMenu
@@ -218,14 +227,18 @@ export function EntreeFil({
         </div>
       )}
 
-      <span
-        className={cn(
-          "mx-4 mb-2 inline-block rounded-full px-2.5 py-[3px] text-[11px] font-bold uppercase leading-normal tracking-[0.1em]",
-          genre.classe
-        )}
-      >
-        {genre.texte}
-      </span>
+      {/* Qui parle, sous le titre — et non plus en pied de carte. */}
+      {provenance && (
+        <p className="mx-4 mb-2 truncate text-[13px] leading-snug text-muted-foreground">
+          {provenance}
+        </p>
+      )}
+
+      {estAlerte && (
+        <span className="mx-4 mb-2 inline-block rounded-full bg-warn-soft px-2.5 py-[3px] text-[11px] font-bold uppercase leading-normal tracking-[0.1em] text-warn">
+          Alerte
+        </span>
+      )}
 
       {/* ── 2. LE TEXTE, AVANT LA PHOTO ─────────────────────────────────── */}
       {texte && (
@@ -233,16 +246,21 @@ export function EntreeFil({
           <p
             ref={corpsRef}
             className={cn(
-              "mx-4 mb-3 whitespace-pre-line text-[15px] leading-[1.62] text-foreground/90",
-              !deplie && "line-clamp-5"
+              "mx-4 whitespace-pre-line text-[15px] leading-[1.62] text-foreground/90",
+              !deplie && "line-clamp-5",
+              !deplie && deborde ? "mb-1" : "mb-3"
             )}
           >
             {texte}
           </p>
+          {/* ⚠ UN LIEN EN LIGNE, PAS UN BLOC DE 44 PX. La règle des 44 px porte
+              sur la CIBLE : `dk-tap` la pose en ::after sans épaissir la carte.
+              `min-h-0` défait le plancher de 44 px que index.css met à tous les
+              boutons sous 640 px. */}
           {!deplie && deborde && (
             <button
               onClick={() => setDeplie(true)}
-              className="relative z-10 mx-4 mb-1 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+              className="dk-tap relative z-10 mx-4 mb-3 block min-h-0 text-sm font-semibold text-primary-fort hover:underline"
             >
               Lire la suite
             </button>
@@ -345,58 +363,42 @@ export function EntreeFil({
       )}
 
       {/* ── 4. CE QUI CONVERTIT, EN FORT ────────────────────────────────── */}
+      {/* 🔴 LE LIEU ÉTAIT ÉCRIT TROIS FOIS PAR CARTE (18/09/2026) : le titre,
+            ce bloc de deux lignes avec son rond, et une pastille juste en
+            dessous. Le titre reste — c'est lui le lien principal ; la pastille
+            part ; ce bloc tient en UNE ligne de 44 px. */}
       {versLieu && lieu && (
         <Link
           to={versLieu}
           onClick={() => interesse(2)}
-          className="relative z-10 mx-4 mb-3 flex min-h-11 items-center gap-3 rounded-xl border border-border bg-muted/60 px-3.5 py-3"
+          className="relative z-10 mx-4 mb-3 flex min-h-11 items-center gap-2 rounded-xl border border-border bg-muted/60 px-3.5"
         >
-          <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full border border-border bg-card text-primary">
-            <Compass className="h-[17px] w-[17px]" aria-hidden="true" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-semibold leading-snug text-foreground">
-              Ouvrir {lieu}
-            </span>
-            <span className="block truncate text-[13px] leading-snug text-muted-foreground">
-              ce que Diako sait de ce lieu
-            </span>
+          <Compass className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-snug text-foreground">
+            Ouvrir {lieu}
           </span>
           <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />
         </Link>
       )}
 
-      {/* Les trois tags, honnêtes : on ouvre le manque au lieu de le taire. */}
-      <div className="mx-4 mb-2.5 flex min-h-11 flex-wrap items-center gap-1.5">
-        {lieu && versLieu && (
-          <Link
-            to={versLieu}
-            className="dk-tap relative z-10 inline-flex min-h-8 items-center rounded-full bg-primary/10 px-3 text-[13px] font-semibold text-primary-fort"
-          >
-            {lieu}
-          </Link>
-        )}
-        {post.dish ? (
+      {/* 🔴 LE PLAT, SEULEMENT QUAND IL EXISTE (18/09/2026). Une pastille en
+            pointillés « Plat à rattacher » s'affichait sur les 213 cartes :
+            une étiquette de travail interne, montrée au public, qui ne lui
+            apprenait rien. */}
+      {post.dish && (
+        <div className="mx-4 mb-2.5 flex min-h-11 flex-wrap items-center gap-1.5">
           <Link
             to={`/recherche?q=${encodeURIComponent(post.dish)}`}
             className="dk-tap relative z-10 inline-flex min-h-8 items-center rounded-full bg-accent/10 px-3 text-[13px] font-semibold text-accent-strong"
           >
             {post.dish}
           </Link>
-        ) : (
-          <Link
-            to="/plats"
-            className="dk-tap relative z-10 inline-flex min-h-8 items-center rounded-full border border-dashed border-accent-strong/40 bg-accent/5 px-3 text-[13px] font-semibold text-accent-strong"
-          >
-            Plat à rattacher
-          </Link>
-        )}
-      </div>
+        </div>
+      )}
 
-      {(blocs.repere || provenance) && (
+      {blocs.repere && (
         <div className="mx-4 mb-2.5 border-t border-border/60 pt-2.5 text-[13px] leading-snug text-muted-foreground">
-          {blocs.repere && <p className="mb-1 text-foreground/80">🧭 {blocs.repere}</p>}
-          {provenance && <p>{provenance}</p>}
+          <p className="text-foreground/80">🧭 {blocs.repere}</p>
         </div>
       )}
 

@@ -1,8 +1,11 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { TagRow } from "@/components/TagRow";
 import { PartagerMenu } from "@/components/PartagerMenu";
 import { noterLieu } from "@/lib/affinites";
+import { decouperRecit } from "@/lib/recit";
+import { adoucirCapitales } from "@/lib/casse";
+import { provenanceCourte } from "@/lib/provenance";
 import { useVu } from "@/hooks/useVu";
 import { toast } from "sonner";
 import { useConnexionRequise } from "@/hooks/useConnexionRequise";
@@ -272,7 +275,25 @@ export function PostCard({
   }
 
   const estMien = user?.id === post.author.id;
-  const texte = post.body ?? "";
+  /* 🔴 LE MÊME NETTOYAGE QUE SUR TÉLÉPHONE (18/09/2026, EntreeFil.tsx). Le
+        corps brut répétait en tête la ligne 📍 (le lieu, déjà écrit au-dessus)
+        et collait prix, téléphone et provenance au pied ; les paragraphes en
+        capitales s'affichaient tels quels. `decouperRecit` est testé : on le
+        réutilise plutôt que d'écrire un second nettoyeur. */
+  const blocs = useMemo(
+    () => decouperRecit(post.body, { lieuConnu: !!post.place }),
+    [post.body, post.place]
+  );
+  const texte = useMemo(
+    () =>
+      adoucirCapitales(
+        [blocs.citation, ...blocs.prose].filter(Boolean).join("\n\n").trim(),
+        [post.place, post.dish]
+      ),
+    [blocs, post.place, post.dish]
+  );
+  /* Qui parle, sous le nom du compte : « X · JJ/MM · via Facebook ». */
+  const provenance = provenanceCourte(blocs.source, post.page_name);
   /* ⚠ SUR SA PROPRE PAGE, UN RÉCIT NE SE COUPE PAS. On y est venu POUR le
        lire : le tronquer à 240 caractères et proposer « plus » y ajoute un
        geste sans rien économiser — il n'y a pas de fil à ne pas perdre. */
@@ -293,7 +314,7 @@ export function PostCard({
       {partage && (
         <PartagerMenu
           url={`${window.location.origin}/post/${post.id}`}
-          texte={post.body ?? post.place ?? ""}
+          texte={texte || post.place || ""}
           onFermer={() => setPartage(false)}
         />
       )}
@@ -344,6 +365,9 @@ export function PostCard({
               <MapPin className="h-3 w-3" aria-hidden="true" />
               {post.place}
             </Link>
+          )}
+          {provenance && (
+            <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{provenance}</p>
           )}
         </div>
 
@@ -552,10 +576,16 @@ export function PostCard({
             — taguer un lieu, un etablissement, un plat — n'etaient donc
             jamais lisibles d'un coup. Code couleur constant : teal le lieu,
             encre l'etablissement, corail le plat. */}
+        {/* 🔴 PLUS D'ÉTABLISSEMENT TIRÉ DE `page_name` (18/09/2026). C'est le
+              nom de la page Facebook d'origine, pas un hôtel : le tag encre
+              affichait « Des images en mémoire de Tsitakaka… » comme une
+              adresse, et menait à une recherche vide. La publication ne porte
+              aucune colonne d'établissement vérifié : le tag attendra qu'elle
+              en ait une. `page_name` vit désormais dans la provenance. */}
         <TagRow
           className="mt-2.5"
           lieu={post.place ? { nom: post.place, slug: post.place_slug } : null}
-          etablissement={post.page_name ? { nom: post.page_name } : null}
+          etablissement={null}
           plat={post.dish ? { nom: post.dish } : null}
         />
 

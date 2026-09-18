@@ -525,8 +525,7 @@ export default function Recherche() {
         {lieu && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-            Périmètre : {lieu.name_fr} et ses environs — annoncé, jamais deviné en
-            silence.
+            Résultats à {lieu.name_fr} et dans ses environs.
           </p>
         )}
 

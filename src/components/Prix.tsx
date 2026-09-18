@@ -155,7 +155,16 @@ export function Prix({
   if (montant === null || etat === "perime") {
     return (
       <span className={cn("inline-flex flex-col gap-0.5", className)}>
-        <span className="dk-sous-titre text-muted-foreground">
+        {/* ⚠ EN TAILLE COMPACTE (cartes de liste), L'ABSENCE SE DIT EN PETIT.
+            En `dk-sous-titre` (17 px, graisse 600), « Tarif non communiqué »
+            était le plus gros texte de la carte, plus visible que le nom de
+            l'établissement : l'absence d'un prix prenait la place d'un prix. */}
+        <span
+          className={cn(
+            "text-muted-foreground",
+            taille === "compacte" ? "text-sm" : "dk-sous-titre"
+          )}
+        >
           {montant === null ? "Tarif non communiqué" : "Nous consulter"}
         </span>
         {/* ⚠ ON DIT CE QU'ON SAIT, SANS LE PRÉSENTER COMME ACTUEL. Un tarif

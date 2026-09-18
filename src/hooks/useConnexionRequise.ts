@@ -41,7 +41,7 @@ export function useConnexionRequise() {
       if (user) return true;
       toast("Connexion requise", {
         description: `Créez un compte pour ${quoi}.`,
-        action: { label: "Créer un compte", onClick: () => navigate("/auth") },
+        action: { label: "Créer un compte", onClick: () => navigate("/auth?mode=inscription") },
       });
       return false;
     },

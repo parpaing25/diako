@@ -1,30 +1,37 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AlertTriangle, Backpack, Clock, MapPin, Ticket, Trees, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Backpack, Clock, Compass, Ticket, Trees, Users } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { useReveal } from "@/hooks/useReveal";
+import { useRetour } from "@/hooks/useRetour";
 import { EtatErreur, Squelettes } from "@/components/Etats";
-import { ImageProgressive } from "@/components/ImageProgressive";
+import { AdressesProches } from "@/components/AdressesProches";
+import { BoutonPartager, CouvertureFiche, LigneAccueil } from "@/components/Arrivee";
 import { ariary } from "@/lib/etablissements";
 import { chargerSite, type SiteListe } from "@/lib/decouverte";
+import { libelleTypeCourt, normaliser } from "@/lib/sites";
+import { SITE_URL, lienCarte, majuscule, venuDuSite } from "@/lib/arrivee";
 
 /**
  * LA FICHE D'UN SITE OU D'UN PARC — /site/:slug (écran N2 du design final).
  *
- * ⚠ LES DEUX TARIFS D'ENTRÉE SONT LA PREMIÈRE CHOSE MONTRÉE, et ils sont
- *   nommés. Les parcs malgaches facturent un tarif résident et un tarif
- *   étranger, avec un écart de un à cinq ou dix. C'est l'information la plus
- *   consultée de la page, et la plus dangereuse à approximer.
+ * ⚠ C'EST UNE PAGE D'ARRIVÉE. Depuis le 19/09/2026, des publications Facebook
+ *   renvoient vers dix pages /site : on y arrive sans compte, sans historique,
+ *   dans le navigateur intégré de Facebook. La page dit donc ce qu'est Diako,
+ *   se partage d'un geste, et ne s'arrête plus sur « Voir sur la carte » : elle
+ *   mène aux adresses les plus proches et à la fiche du lieu.
+ *
+ * ⚠ LES DEUX TARIFS D'ENTRÉE SONT NOMMÉS quand ils existent. Les parcs
+ *   malgaches facturent un tarif résident et un tarif étranger, avec un écart
+ *   de un à cinq ou dix. Quand AUCUN n'est relevé — 2 444 sites sur 2 451 le
+ *   18/09/2026 —, une seule ligne le dit, au lieu de deux « non communiqué »
+ *   et d'une « date de relevé inconnue » qui faisaient trois fois le même aveu.
  *
  * ⚠ LE GUIDE SE FACTURE PAR GROUPE, ET L'ÉCRAN L'ÉCRIT. Une famille de cinq
- *   paie le même guide qu'un couple. Le lire comme un prix par personne
- *   multiplierait l'estimation par cinq — c'est exactement le genre d'erreur
- *   qui fait renoncer à une visite.
+ *   paie le même guide qu'un couple.
  *
- * ⚠ LES FADY ONT LEUR PROPRE BLOC, en doré, avant « à emporter ». Les interdits
- *   locaux ne figurent sur aucun site concurrent : les reléguer en bas de page
- *   reviendrait à les traiter comme une curiosité, alors que c'est une marque
- *   de respect autant qu'une information pratique.
+ * ⚠ LES FADY ONT LEUR PROPRE BLOC, en doré, avant « à emporter » : c'est une
+ *   marque de respect autant qu'une information pratique.
  */
 
 interface SiteComplet extends SiteListe {
@@ -43,15 +50,48 @@ interface SiteComplet extends SiteListe {
 const MOIS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
 /**
- * D'ou vient le texte de cette fiche.
+ * L'accroche et le texte qui la suit.
  *
- * ⚠ TROIS PROVENANCES, TROIS REGIMES. Wikipedia est en CC BY-SA : citer et lier
- *   la licence est OBLIGATOIRE. Wikidata est en CC0 : rien n'est exige, mais on
- *   cite quand meme — un lecteur qui voit une erreur doit savoir ou la corriger.
- *   OpenStreetMap est en ODbL : l'attribution est exigee aussi.
- * ⚠ LA CHAINE STOCKEE EST « <Source> · <reference> ». On n'affiche un lien que
- *   si la reference est une URL ou un identifiant qu'on sait resoudre ; sinon
- *   on affiche le texte brut plutot qu'un lien casse.
+ * 🔴 L'ACCROCHE ÉTAIT LE RÉSUMÉ WIKIDATA — « lac malgache », « Phare ». Une
+ *    description Wikidata dit ce QU'EST la chose pour la distinguer d'un
+ *    homonyme ; elle ne donne aucune raison d'y aller. Sous 40 caractères, on
+ *    prend donc la description, et le même texte n'est jamais écrit deux fois.
+ */
+function textes(s: SiteComplet): { accroche: string | null; suite: string | null } {
+  const resume = s.summary?.trim() || null;
+  const description = s.description?.trim() || null;
+  const accroche = resume && resume.length >= 40 ? resume : description ?? resume;
+  const suite = accroche === resume && description && description !== resume ? description : null;
+  return {
+    accroche: accroche ? majuscule(accroche) : null,
+    suite: suite ? majuscule(suite) : null,
+  };
+}
+
+/**
+ * Le site relève-t-il de Madagascar National Parks ?
+ *
+ * ⚠ LE TYPE NE SUFFIT PAS. `reserve` couvre aussi des réserves PRIVÉES
+ *   (Berenty) et des forêts communautaires : leur annoncer le doublement des
+ *   droits des parcs nationaux serait faux. On ne le dit qu'aux sites dont le
+ *   gestionnaire ou le nom désigne un parc national, une réserve spéciale ou
+ *   MNP — comparés sans accents ni casse.
+ */
+const AIRE_MNP = /\b(parcs? nationa(l|ux)|reserves? speciales?|madagascar national parks?|mnp)\b/;
+function estAireMnp(s: SiteComplet): boolean {
+  return AIRE_MNP.test(normaliser(`${s.manager ?? ""} ${s.name}`));
+}
+
+/**
+ * D'où vient le texte de cette fiche.
+ *
+ * ⚠ TROIS PROVENANCES, TROIS RÉGIMES. Wikipédia est en CC BY-SA : citer et lier
+ *   la licence est OBLIGATOIRE. Wikidata est en CC0 : rien n'est exigé, mais on
+ *   cite quand même — un lecteur qui voit une erreur doit savoir où la corriger.
+ *   OpenStreetMap est en ODbL : l'attribution est exigée aussi.
+ * ⚠ LA CHAÎNE STOCKÉE EST « <Source> · <référence> ». On n'affiche un lien que
+ *   si la référence est une URL ou un identifiant qu'on sait résoudre ; sinon
+ *   on affiche le texte brut plutôt qu'un lien cassé.
  */
 function Attribution({ source }: { source: string }) {
   const [origine, ref] = source.split(" · ");
@@ -87,7 +127,7 @@ function Attribution({ source }: { source: string }) {
           </a>
         </>
       )}
-      . Une erreur&nbsp;? Corrigez-la à la source, elle reviendra ici.
+      . Une erreur dans ce texte&nbsp;? Elle se corrige sur Wikipédia.
     </p>
   );
 }
@@ -96,6 +136,11 @@ export default function Site() {
   const { slug } = useParams<{ slug: string }>();
   const [s, setS] = useState<SiteComplet | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absent" | "erreur">("chargement");
+  /** Arrivé directement (Facebook, WhatsApp) : on dit en une ligne ce qu'est Diako. */
+  const [interne] = useState(venuDuSite);
+  /* ⚠ RetourEntete s'efface sur /site/ (la page porte son propre retour) :
+     sans ce bouton, une arrivée depuis /sites ou /lieu n'avait plus de retour. */
+  const retour = useRetour("/sites");
   useReveal(s?.id);
 
   const charger = useCallback(async () => {
@@ -119,10 +164,9 @@ export default function Site() {
     titre: s ? `${s.name} — tarifs, guide et fady` : "Site à visiter",
     // Une fiche inexistante rend HTTP 200 (repli SPA) : `noindex` évite le soft 404 (audit 05/09/2026).
     noindex: etat === "absent",
-    description:
-      s?.summary ??
-      (s ? `${s.name} : entrée résident et non-résident, guide, meilleurs mois et fady.` : undefined),
+    description: s ? textes(s).accroche ?? `${s.name} — la fiche du site sur Diako.` : undefined,
     image: s?.cover_url ?? undefined,
+    type: s ? "article" : "website",
     url: slug ? `/site/${slug}` : undefined,
   });
 
@@ -156,68 +200,74 @@ export default function Site() {
       </div>
     );
 
+  const { accroche, suite } = textes(s);
+  const type = libelleTypeCourt(s.kind);
+  // ⚠ Le lien vers le lieu répétait le titre quand les deux portent le même
+  //   nom (« Isalo » sous « Isalo ») : il n'est écrit ici que s'il apporte
+  //   quelque chose. La fiche du lieu reste proposée en bas de page.
+  const lieuDifferent = s.place !== null && normaliser(s.place.name_fr) !== normaliser(s.name);
+  const etiquette = [s.place?.region, s.manager].filter(Boolean).join(" · ") || "Site à visiter";
+  const sansTarif =
+    s.fee_resident_ar == null &&
+    s.fee_nonresident_ar == null &&
+    !s.guide_required &&
+    s.ticket_validity_days == null;
+  const bandeauMnp = estAireMnp(s) && s.fee_nonresident_ar == null;
+
   return (
-    <div className="px-4 py-5 xl:flex xl:items-start xl:gap-5">
-      <div className="min-w-0 flex-1">
-        {s.cover_url && (
-          <figure className="mb-4">
-            <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
-              <ImageProgressive src={s.cover_url} alt={s.name} prioritaire ajustement="cover" />
-            </div>
-            {/* 🔴 LE CREDIT EST SOUS LA PHOTO, PAS EN PIED DE SITE. Les images
-                viennent de Wikimedia Commons, sous licences variees dont la
-                plupart exigent de nommer l'auteur ET la licence. Une fiche
-                partagee ou indexee seule doit emporter son credit : le reléguer
-                dans un pied de page global, c'est le perdre des le premier
-                partage. */}
-            {s.cover_credit && (
-              <figcaption className="dk-secondaire mt-1.5 px-1">
-                Photo&nbsp;: {s.cover_credit}
-                {s.cover_licence ? ` · ${s.cover_licence}` : ""}
-                {s.cover_source && (
-                  <>
-                    {" · "}
-                    <a
-                      href={s.cover_source}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="underline"
-                    >
-                      Wikimedia Commons
-                    </a>
-                  </>
-                )}
-              </figcaption>
-            )}
-          </figure>
+    <div className="px-4 pb-5 pt-2 sm:pt-5 xl:flex xl:items-start xl:gap-5">
+      <div className="min-w-0 flex-1 xl:max-w-[620px]">
+        {interne ? (
+          <button
+            onClick={retour}
+            className="mb-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Retour
+          </button>
+        ) : (
+          <LigneAccueil className="mb-2" />
         )}
 
-        <p className="dk-etiquette">
-          {s.kind}
-          {s.manager ? ` · ${s.manager}` : ""}
-        </p>
+        {/* 🔴 LE CRÉDIT EST SUR LA PHOTO, PAS EN PIED DE SITE. Les images
+            viennent en partie de Wikimedia Commons, sous licences dont la
+            plupart exigent de nommer l'auteur ET la licence : une fiche
+            partagée seule doit emporter son crédit. */}
+        <CouvertureFiche
+          src={s.cover_url}
+          alt={s.name}
+          credit={s.cover_credit}
+          licence={s.cover_licence}
+          source={s.cover_source}
+        />
+
+        <p className="dk-etiquette">{etiquette}</p>
         <h1 className="dk-titre mt-1">{s.name}</h1>
-        {s.place && (
-          <p className="dk-secondaire mt-0.5">
-            <Link to={`/lieu/${s.place.slug}`} className="inline-flex items-center gap-1 text-primary">
-              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-              {s.place.name_fr}
-            </Link>
-          </p>
-        )}
-        {s.summary && <p className="dk-corps mt-3 max-w-[70ch]">{s.summary}</p>}
-        {s.description && (
-          <p className="dk-corps mt-3 max-w-[70ch] text-muted-foreground">{s.description}</p>
-        )}
+        <p className="dk-secondaire mt-0.5">
+          {type}
+          {lieuDifferent && s.place && (
+            <>
+              {" · "}
+              <Link
+                to={`/lieu/${s.place.slug}`}
+                className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+              >
+                {s.place.name_fr}
+              </Link>
+            </>
+          )}
+        </p>
+
+        <div className="mt-3">
+          <BoutonPartager url={`${SITE_URL}/site/${s.slug}`} texte={`${s.name} sur Diako`} />
+        </div>
+
+        {accroche && <p className="dk-corps mt-4 max-w-[70ch]">{accroche}</p>}
+        {suite && <p className="dk-corps mt-3 max-w-[70ch] text-muted-foreground">{suite}</p>}
 
         {/* 🔴 L'ATTRIBUTION EST UNE OBLIGATION, PAS UNE POLITESSE. Le texte de
-            ces fiches vient de Wikipédia (CC BY-SA) ou de Wikidata (CC0). La
-            CC BY-SA impose de citer la source ET de lier la licence : afficher
-            l'extrait sans ce bloc serait une violation, pas une négligence de
-            forme. Le lien pointe l'article PRÉCIS, pas la page d'accueil —
-            c'est lui qui porte l'historique des auteurs.
-            ⚠ Elle est DANS la page, pas en pied de site : une fiche partagée ou
-              indexée seule doit emporter sa source avec elle. */}
+            ces fiches vient de Wikipédia (CC BY-SA) ou de Wikidata (CC0). Elle
+            est DANS la page : une fiche partagée seule emporte sa source. */}
         {s.source && <Attribution source={s.source} />}
 
         {/* ── LES FADY ─────────────────────────────────────────────────── */}
@@ -305,6 +355,28 @@ export default function Site() {
             </dl>
           </section>
         )}
+
+        {/* ── Les adresses les plus proches — la page ne s'arrête plus sur
+            « Voir sur la carte » ─────────────────────────────────────────── */}
+        {s.lat != null && s.lng != null && <AdressesProches lat={s.lat} lng={s.lng} nom={s.name} />}
+
+        {/* ── La fiche du lieu, quand le site en a un ──────────────────── */}
+        {s.place && (
+          <Link
+            to={`/lieu/${s.place.slug}`}
+            className="mt-6 flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary"
+          >
+            <Compass className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="dk-etiquette block">Le lieu</span>
+              <span className="block font-semibold">
+                {s.place.name_fr}
+                {s.place.region ? ` · ${s.place.region}` : ""}
+              </span>
+              <span className="dk-secondaire block">Où dormir, où manger, y aller et quand partir.</span>
+            </span>
+          </Link>
+        )}
       </div>
 
       {/* ── Les repères, colonne de droite (gabarit G3) ─────────────────── */}
@@ -314,62 +386,66 @@ export default function Site() {
             <Ticket className="h-4 w-4" aria-hidden="true" />
             Entrer
           </h2>
-          <dl className="mt-3 space-y-2 text-sm">
-            <Ligne t="Entrée · résident">
-              {s.fee_resident_ar != null ? ariary(s.fee_resident_ar) : "non communiqué"}
-            </Ligne>
-            <Ligne t="Entrée · non-résident">
-              {s.fee_nonresident_ar != null ? ariary(s.fee_nonresident_ar) : "non communiqué"}
-            </Ligne>
-            {s.guide_required && (
-              <Ligne t="Guide obligatoire">
-                {s.guide_fee_group_ar != null ? ariary(s.guide_fee_group_ar) : "—"}
-                <span className="block text-xs font-normal text-muted-foreground">
-                  par groupe et par circuit
-                </span>
+
+          {sansTarif ? (
+            /* ⚠ LE BLOC RESTE, et il dit une seule fois ce qui manque. */
+            <p className="mt-3 text-sm">
+              Tarif d'entrée : pas encore relevé sur Diako, à demander sur place.
+            </p>
+          ) : (
+            <dl className="mt-3 space-y-2 text-sm">
+              <Ligne t="Entrée · résident">
+                {s.fee_resident_ar != null ? ariary(s.fee_resident_ar) : "non communiqué"}
               </Ligne>
-            )}
-            {s.ticket_validity_days != null && (
-              <Ligne t="Validité du billet">
-                {s.ticket_validity_days} jour{s.ticket_validity_days > 1 ? "s" : ""}
+              <Ligne t="Entrée · non-résident">
+                {s.fee_nonresident_ar != null ? ariary(s.fee_nonresident_ar) : "non communiqué"}
               </Ligne>
-            )}
-          </dl>
+              {s.guide_required && (
+                <Ligne t="Guide obligatoire">
+                  {s.guide_fee_group_ar != null ? ariary(s.guide_fee_group_ar) : "—"}
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    par groupe et par circuit
+                  </span>
+                </Ligne>
+              )}
+              {s.ticket_validity_days != null && (
+                <Ligne t="Validité du billet">
+                  {s.ticket_validity_days} jour{s.ticket_validity_days > 1 ? "s" : ""}
+                </Ligne>
+              )}
+            </dl>
+          )}
 
           {/* 🔴 UN FAIT DATÉ VAUT MIEUX QU'UN PRIX INVENTÉ. Madagascar National
               Parks a annoncé en mai 2026 le DOUBLEMENT des droits d'entrée,
-              applicable au 1ᵉʳ novembre 2026 — les tarifs n'avaient pas bougé
-              depuis douze ans. Aucune table officielle par parc n'est publiée :
-              les sources de presse donnent des FOURCHETTES (5 000–15 000 Ar pour
-              un Malgache, 45 000–130 000 Ar pour un étranger) et se
-              contredisent sur les résidents.
-              ⚠ On ne remplit donc AUCUN tarif de parc. Poser 45 000 Ar sur
-                255 fiches à partir d'une fourchette fabriquerait la donnée la
-                plus consultée et la plus coûteuse à se tromper de tout l'écran.
-                Ce bandeau dit ce qu'on sait, avec sa date et sa source — ce qui
-                est plus utile à un voyageur qu'un chiffre faux. */}
-          {(s.kind === "reserve" || s.kind === "parc") &&
-            s.fee_nonresident_ar == null && (
-              <p className="mt-3 flex gap-2 rounded-xl border border-gold bg-gold-soft p-3 text-xs leading-relaxed">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" aria-hidden="true" />
-                <span>
-                  Nous n'avons pas de tarif vérifié pour ce parc, et nous
-                  préférons ne rien afficher plutôt qu'un prix approximatif.
-                  À savoir&nbsp;: Madagascar National Parks a annoncé en mai 2026
-                  le <strong>doublement des droits d'entrée</strong> de ses parcs,
-                  applicable au <strong>1ᵉʳ novembre 2026</strong>. Demandez le
-                  tarif du jour à l'entrée ou à votre guide.{" "}
-                  <a
-                    href="https://www.lexpress.mg/2026/05/aires-protegees-les-tarifs-dentree-dans.html"
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="underline"
-                  >
-                    L'Express de Madagascar, mai 2026
-                  </a>
-                </span>
+              applicable au 1ᵉʳ novembre 2026. Aucune table officielle par parc
+              n'est publiée : on ne remplit donc AUCUN tarif de parc.
+              ⚠ Replié par défaut, intitulé par sa nouvelle : sur un téléphone,
+                le paragraphe entier poussait tout le reste hors de l'écran.
+              ⚠ Seulement pour les aires de MNP (voir `estAireMnp`). */}
+          {bandeauMnp && (
+            <details className="mt-3 rounded-xl border border-gold bg-gold-soft text-sm leading-relaxed">
+              <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 font-semibold">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-warn" aria-hidden="true" />
+                Droits d'entrée des parcs nationaux doublés au 1ᵉʳ novembre 2026
+              </summary>
+              <p className="px-3 pb-3">
+                Madagascar National Parks a annoncé en mai 2026 le doublement des
+                droits d'entrée de ses parcs, applicable au 1ᵉʳ novembre 2026. Nous
+                n'avons pas de tarif vérifié pour ce site, et nous préférons ne rien
+                afficher plutôt qu'un prix approximatif. Demandez le tarif du jour à
+                l'entrée ou à votre guide.{" "}
+                <a
+                  href="https://www.lexpress.mg/2026/05/aires-protegees-les-tarifs-dentree-dans.html"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="underline"
+                >
+                  L'Express de Madagascar, mai 2026
+                </a>
               </p>
-            )}
+            </details>
+          )}
 
           {/* ⚠ Le guide par GROUPE, redit en clair : c'est l'erreur de lecture
               la plus coûteuse de cet écran. */}
@@ -381,18 +457,19 @@ export default function Site() {
             </p>
           )}
 
-          {s.rates_checked_at ? (
-            <p className="dk-secondaire mt-3">
-              Tarifs relevés le {new Date(s.rates_checked_at).toLocaleDateString("fr-FR")}.
-            </p>
-          ) : (
-            <p className="dk-secondaire mt-3">Date de relevé inconnue — à confirmer sur place.</p>
-          )}
+          {!sansTarif &&
+            (s.rates_checked_at ? (
+              <p className="dk-secondaire mt-3">
+                Tarifs relevés le {new Date(s.rates_checked_at).toLocaleDateString("fr-FR")}.
+              </p>
+            ) : (
+              <p className="dk-secondaire mt-3">Date de relevé inconnue — à confirmer sur place.</p>
+            ))}
         </div>
 
         {s.lat != null && s.lng != null && (
           <Link
-            to="/carte"
+            to={lienCarte(s.lat, s.lng)}
             className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-input text-sm font-semibold"
           >
             <Trees className="h-4 w-4" aria-hidden="true" />

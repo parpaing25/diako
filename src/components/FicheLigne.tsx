@@ -1,21 +1,16 @@
 import { Link } from "react-router-dom";
 import { MapPin, Star } from "lucide-react";
 import { BadgeVerification } from "@/components/Badges";
+import { IconeCategorie } from "@/components/IconeCategorie";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { Prix } from "@/components/Prix";
-import { unite as libelleUnite, type ResultatPage } from "@/lib/etablissements";
+import {
+  lambaDe,
+  libelleCategories,
+  unite as libelleUnite,
+  type ResultatPage,
+} from "@/lib/etablissements";
 import { cn } from "@/lib/utils";
-
-const LIBELLE: Record<string, string> = {
-  hotel: "Hôtel",
-  restaurant: "Restaurant",
-  agence_voyage: "Agence",
-  guide: "Guide",
-  transporteur: "Transport",
-  location_vehicule: "Location",
-  site_attraction: "Site",
-  organisateur_evenement: "Événementiel",
-};
 
 /**
  * UN RÉSULTAT DE RECHERCHE EN LIGNE LARGE — écran W2 de la maquette.
@@ -29,6 +24,11 @@ const LIBELLE: Record<string, string> = {
  *
  * ⚠ La description et les équipements ne tiennent que sur cette forme. En
  *   vignette, ils étaient tronqués à deux mots ou absents.
+ *
+ * ⭐ SANS PHOTO (94 % des fiches), LA COLONNE D'IMAGE DEVIENT UNE BANDE DE
+ *   8 px au motif lamba. Elle réservait 150 × 168 px à un aplat beige qui
+ *   répétait le nom écrit juste à côté. La ligne rétrécit, le médaillon dit la
+ *   famille, et la colonne des prix reste alignée d'une ligne à l'autre.
  */
 export function FicheLigne({
   fiche,
@@ -44,6 +44,7 @@ export function FicheLigne({
 }) {
   const platTrouve = platCherche && fiche.prix_du_plat != null;
   const montant = platTrouve ? fiche.prix_du_plat! : fiche.price_min_ar;
+  const avecPhoto = !!fiche.cover_url;
 
   return (
     <Link
@@ -51,50 +52,65 @@ export function FicheLigne({
       onMouseEnter={() => onSurvol?.(fiche.slug)}
       onMouseLeave={() => onSurvol?.(null)}
       className={cn(
-        "dk-reveal dk-carte grid grid-cols-[150px_minmax(0,1fr)] overflow-hidden rounded-2xl border bg-card",
+        "dk-reveal dk-carte grid overflow-hidden rounded-2xl border bg-card",
+        avecPhoto ? "grid-cols-[150px_minmax(0,1fr)]" : "grid-cols-[8px_minmax(0,1fr)]",
         surligne ? "border-primary shadow-md" : "border-border"
       )}
     >
-      <div className="dk-zoom relative min-h-[168px] bg-muted">
-        {fiche.cover_url ? (
-          <ImageProgressive src={fiche.cover_url} alt={fiche.name} ajustement="cover"
-              largeurAffichee={"(min-width:768px) 180px, 45vw"}
-            />
-        ) : (
-          <div className="grid h-full w-full place-items-center bg-gradient-to-br from-secondary to-secondary/40">
-            <span className="px-3 text-center text-xs font-medium text-primary">{fiche.name}</span>
-          </div>
-        )}
-        {fiche.verification_status !== "none" && (
-          <BadgeVerification
-            niveau={fiche.verification_status}
-            className="absolute left-2 top-2"
+      {avecPhoto ? (
+        <div className="dk-zoom relative min-h-[168px] bg-muted">
+          <ImageProgressive
+            src={fiche.cover_url!}
+            alt={fiche.name}
+            ajustement="cover"
+            largeurAffichee={"(min-width:768px) 180px, 45vw"}
           />
-        )}
-      </div>
+          {fiche.verification_status !== "none" && (
+            <BadgeVerification
+              niveau={fiche.verification_status}
+              className="absolute left-2 top-2"
+            />
+          )}
+        </div>
+      ) : (
+        <div aria-hidden="true" className={cn("dk-lamba h-full w-full", lambaDe(fiche.categories))} />
+      )}
 
       <div className="flex gap-4 p-4">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[17px] font-bold leading-tight">{fiche.name}</h3>
-          <p className="dk-secondaire mt-1">
-            {[
-              fiche.categories?.map((c) => LIBELLE[c] ?? c).join(" · "),
-              fiche.place_name,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-
-          {fiche.short_desc && (
-            <p className="dk-corps mt-2.5 line-clamp-2 text-muted-foreground">{fiche.short_desc}</p>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {!avecPhoto && (
+            <span
+              aria-hidden="true"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-soft text-primary-fort"
+            >
+              <IconeCategorie categories={fiche.categories} className="h-5 w-5" />
+            </span>
           )}
-
-          {fiche.landmark && (
-            <p className="dk-secondaire mt-2 inline-flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-              {fiche.landmark}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-1.5">
+              <h3 className="min-w-0 flex-1 text-[17px] font-bold leading-tight">{fiche.name}</h3>
+              {/* Sans photo, le badge n'a plus d'image où se poser : il suit le nom. */}
+              {!avecPhoto && fiche.verification_status !== "none" && (
+                <BadgeVerification niveau={fiche.verification_status} className="mt-0.5 shrink-0" />
+              )}
+            </div>
+            <p className="dk-secondaire mt-1">
+              {[libelleCategories(fiche.categories, 3), fiche.place_name]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
-          )}
+
+            {fiche.short_desc && (
+              <p className="dk-corps mt-2.5 line-clamp-2 text-muted-foreground">{fiche.short_desc}</p>
+            )}
+
+            {fiche.landmark && (
+              <p className="dk-secondaire mt-2 inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                {fiche.landmark}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* ⚠ LA COLONNE DE PRIX, séparée par un filet. C'est elle qui rend la
@@ -111,12 +127,16 @@ export function FicheLigne({
             <span className="text-xs text-muted-foreground">Pas encore d'avis</span>
           )}
 
+          {/* ⚠ « Tarif non communiqué » en petit : en taille normale il
+              s'écrivait aussi gros que le nom de l'établissement, et c'était
+              le texte le plus visible de la ligne. Un montant réel, lui,
+              garde la taille qui l'aligne sur ses voisins. */}
           <Prix
             montant={montant}
             unite={platTrouve ? "portion" : null}
             base={platTrouve ? null : libelleUnite(fiche.price_min_unit)}
             aPartirDe={!platTrouve && montant != null}
-            taille="normale"
+            taille={montant == null ? "compacte" : "normale"}
             className="mt-4 items-end text-right"
           />
 

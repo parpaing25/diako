@@ -29,7 +29,11 @@ export function getThumbUrl(url: string | undefined | null): string {
 export function jeuDeTailles(
   url: string | null | undefined,
   w?: number,
-  h?: number
+  h?: number,
+  /** Plus grande variante proposée. 960 pour une image de tête : le 1600 ne
+   *  sert qu'en plein écran, et un téléphone de densité 2,6 le prenait pour un
+   *  bandeau de 224 px (521 Ko au lieu de 170, mesuré le 18/09/2026). */
+  plafond = 1600
 ): string | null {
   if (!url || !url.includes("/uploads/")) return null;
   const base = url.replace(/\.(jpe?g|png|webp)(\?.*)?$/i, "");
@@ -62,6 +66,7 @@ export function jeuDeTailles(
     [`${base}.w960.webp${q}`, 960],
     [`${base}.w1600.webp${q}`, 1600],
   ] as [string, number][]) {
+    if (cote > plafond) continue;
     const reelle = largeurReelle(cote);
     if (vues.has(reelle)) continue;
     vues.add(reelle);

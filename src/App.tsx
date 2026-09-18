@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { chargerPage } from "@/lib/chargerPage";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -16,6 +16,8 @@ import { AgentDiako } from "@/components/AgentDiako";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { installerJournalErreurs } from "@/lib/journalErreurs";
 import { trackView } from "@/lib/pageviews";
+import { lireSuite, memoriserSuite, oublierSuite } from "@/lib/suite";
+import { supabase } from "@/integrations/supabase/client";
 
 import Index from "./pages/Index";
 import { useRevealFilet } from "@/hooks/useReveal";
@@ -90,10 +92,66 @@ function PageLoader() {
   );
 }
 
+/**
+ * Le retour d'une connexion Google porte la session dans l'adresse :
+ * `#access_token=…` (flux implicite, celui du client) ou `?code=…` (PKCE).
+ */
+function estRetourDeConnexion(search: string, hash: string): boolean {
+  const q = new URLSearchParams(search);
+  if (q.has("code") || q.has("error_description")) return true;
+  return /(?:^#|&)(?:access_token|error_description)=/.test(hash);
+}
+
+/**
+ * ⚠ LU UNE FOIS, AU CHARGEMENT DU MODULE, avant que supabase-js ne nettoie
+ *   l'adresse (il le fait après un aller-retour réseau). C'est la seule preuve
+ *   fiable qu'on revient de Google : l'événement SIGNED_IN, lui, est aussi émis
+ *   quand on revient simplement sur l'onglet.
+ */
+let arriveeParConnexion =
+  typeof window !== "undefined" &&
+  estRetourDeConnexion(window.location.search, window.location.hash);
+
+/** Pages qui ne sont jamais « la page où revenir » : on en sort justement. */
+const HORS_SUITE = /^\/(auth|bienvenue|compte)(\/|$)/;
+
 /** Audience anonyme, retour en haut, focus rendu au contenu à chaque page. */
 function RouteEffects() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
   const [annonce, setAnnonce] = useState("");
+
+  /* ⭐ LA PAGE OÙ REVENIR APRÈS LA CONNEXION (18/09/2026). Toute connexion
+     renvoyait à l'accueil : le visiteur arrivé de Facebook sur /lieu/andasibe
+     qui touchait « Garder » perdait sa page, le gérant qui touchait « C'est mon
+     établissement » perdait sa fiche. On retient donc la DERNIÈRE page vue,
+     à chaque changement d'adresse, et /auth et /bienvenue la relisent.
+     ⚠ Jamais l'adresse de retour de Google elle-même : elle porte un jeton, et
+       elle écraserait la vraie page d'origine juste avant qu'on la relise. */
+  useEffect(() => {
+    if (HORS_SUITE.test(pathname)) return;
+    if (estRetourDeConnexion(search, "")) return;
+    if (arriveeParConnexion && pathname === "/") return;
+    memoriserSuite(pathname + search);
+  }, [pathname, search]);
+
+  /* ⭐ RETOUR DE GOOGLE SUR L'ACCUEIL. `redirectTo` vise /bienvenue, mais
+     Supabase retombe sur l'adresse du site (« / ») dès qu'une adresse n'est pas
+     dans sa liste blanche : c'est ici qu'on rattrape la page d'origine.
+     ⚠ INITIAL_SESSION AUSSI : si la session a été lue avant que cet effet
+       s'abonne, SIGNED_IN est déjà passé et seul INITIAL_SESSION arrive. */
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((evenement, session) => {
+      if (!arriveeParConnexion || !session) return;
+      if (evenement !== "SIGNED_IN" && evenement !== "INITIAL_SESSION") return;
+      arriveeParConnexion = false;
+      if (window.location.pathname !== "/") return;
+      const suite = lireSuite();
+      oublierSuite();
+      if (suite && suite.split(/[?#]/)[0] !== "/") navigate(suite, { replace: true });
+    });
+    return () => data.subscription.unsubscribe();
+  }, [navigate]);
 
   /* ⚠ Le focus n'est rendu au contenu QU'APRÈS une navigation interne : au
      premier chargement, le forcer faisait sauter le lien d'évitement et
@@ -231,10 +289,17 @@ function Shell() {
             ensemble : la coque ici, la grille dans le fil. */}
       <div className="mx-auto flex w-full max-w-[1850px] flex-1 gap-4 px-0 lg:px-3 xl:px-4">
         <SideNav />
+        {/* ⚠ PLUS DE `dk-has-bottomnav` ICI : la réserve de la barre du bas
+            est portée par le pied de page (Footer.tsx), rendu sur toutes les
+            pages qui ont cette barre. Posée ici, elle s'ajoutait à la marge du
+            pied — ~150 px de vide avant lui — sans protéger la ligne « © »,
+            qui finissait sous la barre. */}
         <main
           id="contenu"
           tabIndex={-1}
-          className="dk-has-bottomnav min-w-0 flex-1 outline-none xl:pb-0"
+          /* min-h : le pied de page ne remonte pas dans l'écran pendant les
+             squelettes (3 décalages mesurés, CLS 0,2 → 0,001). */
+          className="min-h-[100dvh] min-w-0 flex-1 outline-none"
         >
           <ErrorBoundary key={pathname}>
             <Suspense fallback={<PageLoader />}>{routes}</Suspense>

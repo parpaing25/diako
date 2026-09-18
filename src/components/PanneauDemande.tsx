@@ -145,7 +145,7 @@ export function PanneauDemande({
           className="dk-onde mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-strong text-[15px] font-semibold text-accent-foreground"
         >
           <MessageCircle className="h-4 w-4" aria-hidden="true" />
-          {restaurant && !hebergement ? "Réserver une table" : "Demander la disponibilité"}
+          {restaurant && !hebergement ? "Demander une table" : "Demander un séjour"}
         </button>
 
         <div className="mt-2 grid grid-cols-2 gap-2">
@@ -196,7 +196,7 @@ export function PanneauDemande({
           )}
           {fiche.lat != null && fiche.lng != null && (
             <Link
-              to={`/carte?fiche=${fiche.slug}`}
+              to={`/carte?focus=${fiche.slug}`}
               className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
             >
               <MapPin className="h-4 w-4" aria-hidden="true" />
@@ -219,8 +219,11 @@ export function PanneauDemande({
         peutRevendiquer && (
         <div className="rounded-2xl border border-dashed border-border p-4">
           <p className="text-sm font-semibold">Vous gérez cet établissement ?</p>
+          {/* Les mêmes mots que le bloc de l'onglet Infos : deux promesses
+              différentes pour le même geste feraient douter des deux. */}
           <p className="dk-secondaire mt-1 leading-relaxed">
-            Réclamez la page pour corriger vos tarifs et répondre aux demandes.
+            Reprenez cette fiche, c'est gratuit. Vous ajouterez vos photos, vos
+            chambres et vos tarifs, et recevrez les messages des voyageurs.
           </p>
           <button
             onClick={onRevendiquer}

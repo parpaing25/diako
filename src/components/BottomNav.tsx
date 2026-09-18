@@ -4,9 +4,15 @@ import { prechargerRoute } from "@/lib/prechargerRoute";
 import { cn } from "@/lib/utils";
 
 /**
- * Barre du bas — jusqu'à 1024 px (au-delà, le rail latéral prend le relais).
- * 5 emplacements pour que « Publier » tombe pile au centre, en bouton surélevé,
- * exactement comme sur Fonenako.
+ * Barre du bas — jusqu'à 1279 px (`xl:hidden` ; à 1280, le rail latéral prend
+ * le relais). 5 emplacements pour que « Publier » tombe pile au centre, en
+ * bouton surélevé, exactement comme sur Fonenako.
+ *
+ * ⚠ ELLE EST `fixed` : ce qui touche le bas de l'écran doit lui réserver
+ *   4rem + la zone de sécurité. Cette réserve est portée par le pied de page
+ *   (Footer.tsx), et la bulle de l'agent se pose juste au-dessus (AgentDiako).
+ *   Tout élément flottant ajouté en bas d'écran doit viser `xl:` — pas `lg:` —
+ *   pour ne pas retomber sur elle entre 1024 et 1279 px.
  */
 export function BottomNav() {
   const { pathname } = useLocation();

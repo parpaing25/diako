@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   Bookmark,
+  Camera,
   Clock,
   Flag,
   Globe,
@@ -14,6 +15,10 @@ import {
   Star,
 } from "lucide-react";
 import { BadgeVerification } from "@/components/Badges";
+import { IconeCategorie } from "@/components/IconeCategorie";
+import { PartagerMenu } from "@/components/PartagerMenu";
+import { ProposerPhoto } from "@/components/ProposerPhoto";
+import { memoriserSuite } from "@/lib/suite";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserData } from "@/contexts/UserDataContext";
 import { useRetour } from "@/hooks/useRetour";
@@ -33,9 +38,12 @@ import {
   avisDe,
   basculerFicheGardee,
   chargerFiche,
+  descriptionPropre,
   ficheEstGardee,
   deposerAvis,
   ecrireALEtablissement,
+  lambaDe,
+  libelleCategories,
   LIBELLE_VEHICULE,
   recitsMentionnant,
   revendiquer,
@@ -49,6 +57,16 @@ import { signaler } from "@/lib/api";
 import { Revendication } from "@/components/Revendication";
 import { afficherNumero, lienAppel, lienWhatsApp, peutRecevoirWhatsApp } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
+
+/** Libellés des moyens de paiement (codes de `pages.payment_methods`). */
+const LIBELLE_PAIEMENT: Record<string, string> = {
+  especes: "Espèces",
+  mvola: "MVola",
+  orange_money: "Orange Money",
+  airtel_money: "Airtel Money",
+  carte: "Carte bancaire",
+  virement: "Virement",
+};
 
 const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
@@ -115,8 +133,13 @@ export default function PagePro() {
   const { user } = useAuth();
   /** ⚠ Le PROFIL, pas seulement la session : c'est `account_type` qui decide
    *  qui peut revendiquer, et cette page ne le chargeait pas du tout. */
-  const { profile } = useUserData();
+  const { profile, loading: profilEnCours, refresh: relireProfil } = useUserData();
   const estPro = profile?.account_type === "pro";
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  /** `?reprendre=1` : le gérant revient de la connexion pour reprendre SA
+   *  fiche (voir `revendiquerFiche`). */
+  const reprendre = params.get("reprendre") === "1";
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
   const [etat, setEtat] = useState<"chargement" | "ok" | "absente" | "erreur">("chargement");
@@ -130,6 +153,18 @@ export default function PagePro() {
   const [gardee, setGardee] = useState(false);
   /** La grille du loueur (0114) — chargée à part, voir `charger()`. */
   const [vehicules, setVehicules] = useState<OffreVehicule[]>([]);
+  const [partageOuvert, setPartageOuvert] = useState(false);
+  const fermerPartage = useCallback(() => setPartageOuvert(false), []);
+  /** Vrai dès qu'un onglet a été CHOISI (clic, lien de reprise) : la grille
+   *  des véhicules, qui arrive après la fiche, ne doit plus le remplacer sous
+   *  les yeux de la personne. */
+  const ongletChoisi = useRef(false);
+  const blocReprise = useRef<HTMLElement>(null);
+  const titreReprise = useRef<HTMLHeadingElement>(null);
+  /** Compteur de demandes de défilement vers le bloc de reprise. */
+  const [defiler, setDefiler] = useState(0);
+  const repriseTraitee = useRef(false);
+  const [profilRelu, setProfilRelu] = useState(false);
 
   /**
    * ⚠ LE REPLI N'EST PAS L'ACCUEIL. Cette fiche est ce qui se partage le plus
@@ -199,6 +234,9 @@ export default function PagePro() {
   const charger = useCallback(async () => {
     if (!slug) return;
     setEtat("chargement");
+    // Une autre fiche (même composant, autre slug) repart de zéro.
+    ongletChoisi.current = false;
+    repriseTraitee.current = false;
     try {
       const f = await chargerFiche(slug);
       if (!f) {
@@ -231,7 +269,7 @@ export default function PagePro() {
             setVehicules(v);
             // Un loueur n'a ni chambres ni carte : sans ceci, sa fiche
             // ouvrirait sur « Infos » alors que sa grille est LE contenu.
-            if (v.length && ongletDefaut === "infos") setOnglet("vehicules");
+            if (v.length && ongletDefaut === "infos" && !ongletChoisi.current) setOnglet("vehicules");
           })
           .catch(() => undefined);
       }
@@ -247,13 +285,74 @@ export default function PagePro() {
     void charger();
   }, [charger]);
 
+  /** La description longue sans le chrome de Facebook recopié avec elle —
+   *  à l'affichage seulement, la base garde le texte brut. */
+  const description = useMemo(() => descriptionPropre(fiche?.long_desc), [fiche?.long_desc]);
+
+  /**
+   * ⭐ LE RETOUR DU GÉRANT : `/p/<slug>?reprendre=1`.
+   *
+   * 🔴 AUCUNE REPRISE N'A JAMAIS ABOUTI (3 412 fiches, `owner_id` nul
+   *    partout, relevé le 18/09/2026). Le gérant qui touchait « C'est mon
+   *    établissement » recevait un toast de 4 s, partait sur /auth, tombait
+   *    sur l'onglet Connexion alors qu'il n'avait pas de compte, puis sur
+   *    « Réservé aux professionnels » — et avait perdu sa fiche en route.
+   *    Désormais la connexion le ramène ICI (`memoriserSuite`), et on reprend
+   *    là où il s'était arrêté : le formulaire s'il est professionnel, le bloc
+   *    qui explique la marche à suivre s'il ne l'est pas encore.
+   *
+   * ⚠ LE PROFIL EST RELU UNE FOIS avant de conclure « voyageur » : il vient
+   *   peut-être de se déclarer professionnel sur /bienvenue, et un profil lu
+   *   avant ce choix lui dirait le contraire de ce qu'il vient de faire.
+   */
+  useEffect(() => {
+    if (!reprendre || repriseTraitee.current) return;
+    if (etat !== "ok" || !fiche || profilEnCours) return;
+    if (user && !estPro && !profilRelu) {
+      void relireProfil().finally(() => setProfilRelu(true));
+      return;
+    }
+    repriseTraitee.current = true;
+    // Le paramètre a servi : un rechargement ou un retour arrière ne doit pas
+    // rouvrir le formulaire.
+    const reste = new URLSearchParams(params);
+    reste.delete("reprendre");
+    setParams(reste, { replace: true });
+    if (fiche.owner_id) return;
+    ongletChoisi.current = true;
+    setOnglet("infos");
+    if (user && estPro) setRevendicationOuverte(true);
+    else setDefiler((n) => n + 1);
+  }, [reprendre, etat, fiche, profilEnCours, user, estPro, profilRelu, relireProfil, params, setParams]);
+
+  // Défilement vers le bloc de reprise, APRÈS le rendu de l'onglet Infos.
+  useEffect(() => {
+    if (!defiler) return;
+    blocReprise.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    titreReprise.current?.focus({ preventScroll: true });
+  }, [defiler]);
+
+  /** Ouvre l'onglet Infos et amène le bloc « Vous gérez… ? » sous les yeux. */
+  function allerAuBlocReprise() {
+    ongletChoisi.current = true;
+    setOnglet("infos");
+    setDefiler((n) => n + 1);
+  }
+
+  /**
+   * Envoie vers la connexion en mémorisant la page, pour y revenir ensuite.
+   * ⚠ SANS TOAST : il disparaissait avant d'être lu, dans le même geste que
+   *   le départ vers /auth. C'est le retour sur la page qui dit que ça a marché.
+   */
+  function seConnecterPuisRevenir() {
+    memoriserSuite(location.pathname + location.search);
+    navigate("/auth");
+  }
+
   async function ecrire() {
     if (!fiche) return;
     if (!user) {
-      toast("Connexion requise", {
-        description: "Créez un compte pour écrire à cet établissement.",
-      });
-      navigate("/auth");
+      seConnecterPuisRevenir();
       return;
     }
     try {
@@ -268,26 +367,26 @@ export default function PagePro() {
    *  l'onglet « infos » et celui du panneau collant. Dupliquer la logique les
    *  aurait laisses diverger au premier changement. */
   function revendiquerFiche() {
+    if (!fiche) return;
+    // ⚠ SANS COMPTE : on part créer un compte (onglet Inscription) en
+    //   mémorisant la fiche ET l'intention. Au retour, `?reprendre=1` rouvre
+    //   le formulaire ; /bienvenue y lit aussi qu'il faut proposer
+    //   « professionnel » d'abord.
     if (!user) {
-      toast("Connexion requise", {
-        description: "Créez un compte pour revendiquer votre établissement.",
-        action: { label: "Créer un compte", onClick: () => navigate("/auth") },
-      });
+      memoriserSuite(`/p/${fiche.slug}?reprendre=1`);
+      navigate("/auth?mode=inscription");
       return;
     }
     // 🔴 LA BASE REFUSE DEJA (migration 0070), MAIS ELLE REFUSE EN POSTGRES.
     //    Sans ce test, un voyageur qui clique recevait l'exception brute
     //    « Seuls les comptes professionnels peuvent revendiquer un
-    //    etablissement » dans un toast. On lui dit la meme chose en francais,
-    //    et surtout on lui donne le geste qui debloque.
+    //    etablissement ». Le refus n'est plus un toast de quatre secondes :
+    //    c'est une phrase dans le bloc de reprise, qui dit comment passer
+    //    professionnel et reste à l'écran le temps qu'il faut pour la lire.
     // ⚠ Ce n'est PAS le controle de securite — celui-la est en base. C'est
     //   l'explication. Cacher un bouton n'a jamais empeche un appel d'API.
     if (!estPro) {
-      toast("Réservé aux professionnels", {
-        description:
-          "Déclarez-vous hôtelier, restaurateur, guide ou agence pour revendiquer un établissement.",
-        action: { label: "Je suis un pro", onClick: () => navigate("/compte") },
-      });
+      allerAuBlocReprise();
       return;
     }
     setRevendicationOuverte(true);
@@ -308,10 +407,7 @@ export default function PagePro() {
   async function signalerFiche() {
     if (!fiche) return;
     if (!user) {
-      toast("Connexion requise", {
-        description: "Créez un compte pour signaler une erreur.",
-        action: { label: "Créer un compte", onClick: () => navigate("/auth") },
-      });
+      seConnecterPuisRevenir();
       return;
     }
     const motif = window.prompt(
@@ -328,23 +424,10 @@ export default function PagePro() {
     }
   }
 
-  async function partager() {
-    const url = `${window.location.origin}/p/${slug}`;
-    try {
-      if (navigator.share) await navigator.share({ title: fiche?.name ?? "Diako", url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Lien copié");
-      }
-    } catch {
-      /* annulé */
-    }
-  }
-
   async function noter() {
     if (!fiche || maNote < 1) return;
     if (!user) {
-      navigate("/auth");
+      seConnecterPuisRevenir();
       return;
     }
     setEnvoi(true);
@@ -363,7 +446,9 @@ export default function PagePro() {
   if (etat === "chargement") {
     return (
       <div className="space-y-4 px-4 py-5">
-        <div className="dk-skeleton h-40 w-full rounded-2xl md:h-56" />
+        {/* À la hauteur de la bande sans photo : c'est ce que 94 % des fiches
+            afficheront, et un squelette plus haut fait sauter la page. */}
+        <div className="dk-skeleton h-20 w-full rounded-2xl md:h-28" />
         <div className="dk-skeleton h-7 w-2/3" />
         <div className="dk-skeleton h-4 w-1/3" />
         <div className="dk-skeleton h-32 w-full rounded-xl" />
@@ -377,7 +462,7 @@ export default function PagePro() {
         <p className="font-medium">La fiche n'a pas pu être chargée</p>
         <button
           onClick={() => void charger()}
-          className="mt-4 min-h-10 rounded-full border border-input px-5 text-sm font-medium"
+          className="mt-4 min-h-11 rounded-full border border-input px-5 text-sm font-medium"
         >
           Réessayer
         </button>
@@ -412,29 +497,54 @@ export default function PagePro() {
   }
 
 
+  /* ⚠ L'ONGLET OUVERT PAR DÉFAUT EST TOUJOURS LE PREMIER DE LA BARRE. « Avis »
+     passait avant « Infos » alors qu'« Infos » s'ouvrait par défaut sur 94 %
+     des fiches, et qu'il n'existe aucun avis en base : le premier onglet de
+     la barre était un onglet vide, le second celui qu'on lisait. L'ordre suit
+     désormais celui de `ongletDefaut` dans `charger()`. */
   const onglets: { cle: Onglet; label: string; visible: boolean }[] = [
     { cle: "chambres", label: "Chambres", visible: fiche.rooms.length > 0 },
-    { cle: "vehicules", label: "Véhicules et tarifs", visible: vehicules.length > 0 },
     {
       cle: "carte",
       label: "Carte",
       visible: fiche.menu_items.length > 0 || fiche.menu_photos.length > 0,
     },
-    { cle: "activites", label: "Activités", visible: fiche.activities.length > 0 },
     { cle: "circuits", label: "Circuits", visible: fiche.tours.length > 0 },
+    { cle: "activites", label: "Activités", visible: fiche.activities.length > 0 },
+    { cle: "vehicules", label: "Véhicules et tarifs", visible: vehicules.length > 0 },
+    { cle: "infos", label: "Infos", visible: true },
     {
       cle: "avis",
       label: `Avis${fiche.rating_count ? ` (${fiche.rating_count})` : ""}`,
       visible: true,
     },
-    { cle: "infos", label: "Infos", visible: true },
   ];
 
   const aujourdhui = fiche.hours.find((h) => h.jour === new Date().getDay());
+  const avecCouverture = !!fiche.cover_url;
+  /** « HÔTEL · RESTAURANT · AMPEFY » — ce qu'est l'endroit, et où. */
+  const etiquette = [libelleCategories(fiche.categories), fiche.place?.name]
+    .filter(Boolean)
+    .join(" · ");
+  /** Voyageur CONNECTÉ = non : la base refuserait sa revendication. Le
+   *  visiteur sans compte, lui, peut encore se déclarer professionnel. */
+  const peutRevendiquer = !user || estPro;
+  /** Même condition que le lien « Voir sur la carte » de PanneauDemande. */
+  const carteDansPanneau = !!(fiche.place || fiche.landmark) && fiche.lat != null && fiche.lng != null;
 
   return (
     <div className="pb-8">
-      <div className="relative h-40 w-full overflow-hidden bg-muted md:h-64 md:rounded-2xl">
+      {/* ⭐ SANS PHOTO (94 % des fiches), UNE BANDE DE LAMBA, SANS TEXTE.
+          C'était un aplat teal de 160 px qui répétait le nom en blanc juste
+          au-dessus du h1, sans rien dire de ce qu'était l'endroit. La bande
+          est un motif (la teinte suit la famille), le médaillon dessous porte
+          l'icône, et le nom n'est écrit qu'une fois. */}
+      <div
+        className={cn(
+          "relative w-full overflow-hidden md:rounded-2xl",
+          avecCouverture ? "h-40 bg-muted md:h-64" : ["dk-lamba h-20 md:h-28", lambaDe(fiche.categories)]
+        )}
+      >
         {/* 🔴 CET ÉCRAN N'AVAIT AUCUN RETOUR. C'est pourtant celui qu'on ouvre
             depuis un lien reçu : sur téléphone, la seule sortie était le geste
             système, et le rater fait quitter le site.
@@ -451,12 +561,19 @@ export default function PagePro() {
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </button>
-        {fiche.cover_url ? (
-          <ImageProgressive src={fiche.cover_url} alt={fiche.name} prioritaire ajustement="cover" />
-        ) : (
-          <div className="grid h-full w-full place-items-center bg-primary">
-            <span className="px-6 text-center text-xl font-semibold text-primary-foreground">{fiche.name}</span>
-          </div>
+        {/* ⚠ LE PARTAGE EN MIROIR DU RETOUR. Il était seul sur sa ligne sous
+            les boutons de contact, et sans `navigator.share` (navigateur
+            intégré de Facebook sur Android, ordinateur) il copiait le lien EN
+            SILENCE. Il ouvre maintenant le menu Facebook / WhatsApp / lien. */}
+        <button
+          onClick={() => setPartageOuvert(true)}
+          aria-label="Partager"
+          className="dk-tap absolute right-2 top-2 z-10 grid h-10 w-10 place-items-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur"
+        >
+          <Share2 className="h-5 w-5" aria-hidden="true" />
+        </button>
+        {fiche.cover_url && (
+          <ImageProgressive src={fiche.cover_url} alt={fiche.name} prioritaire ajustement="cover" plafond={960} />
         )}
       </div>
 
@@ -466,10 +583,23 @@ export default function PagePro() {
           retrouve d'un geste. */}
       <div className="px-4 xl:flex xl:items-start xl:gap-6">
         <div className="min-w-0 flex-1">
-        <div className="mt-4 flex items-start gap-2">
-          <h1 className="min-w-0 flex-1 text-2xl font-semibold leading-tight">{fiche.name}</h1>
+        {/* Le médaillon mord sur la bande (`-mt-8`). ⚠ `relative` : sans lui,
+            la bande — positionnée — se peindrait PAR-DESSUS. */}
+        {!avecCouverture && (
+          <div
+            aria-hidden="true"
+            className="relative z-[1] -mt-8 grid h-16 w-16 place-items-center rounded-2xl border-4 border-background bg-card text-primary shadow-sm"
+          >
+            <IconeCategorie categories={fiche.categories} className="h-7 w-7" />
+          </div>
+        )}
+        {etiquette && (
+          <p className={cn("dk-etiquette", avecCouverture ? "mt-4" : "mt-3")}>{etiquette}</p>
+        )}
+        <div className={cn("flex items-start gap-2", etiquette ? "mt-1" : avecCouverture ? "mt-4" : "mt-3")}>
+          <h1 className="dk-titre min-w-0 flex-1 break-words">{fiche.name}</h1>
           {fiche.verification_status !== "none" && (
-            <BadgeVerification niveau={fiche.verification_status} className="mt-1.5 shrink-0" />
+            <BadgeVerification niveau={fiche.verification_status} className="mt-2 shrink-0" />
           )}
         </div>
 
@@ -548,12 +678,7 @@ export default function PagePro() {
               c'est l'hotel ou on pense dormir. */}
           <button
             onClick={async () => {
-              if (!user) {
-                toast("Connexion requise", {
-                  description: "Créez un compte pour garder cette adresse.",
-                });
-                return navigate("/auth");
-              }
+              if (!user) return seConnecterPuisRevenir();
               const avant = gardee;
               setGardee(!avant);
               try {
@@ -574,14 +699,29 @@ export default function PagePro() {
             <Bookmark className={cn("h-4 w-4", gardee && "fill-current")} aria-hidden="true" />
             {gardee ? "Gardé" : "Garder"}
           </button>
-          <button
-            onClick={() => void partager()}
-            aria-label="Partager"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-4 text-sm font-medium"
-          >
-            <Share2 className="h-4 w-4" aria-hidden="true" />
-          </button>
         </div>
+
+        {/* ⭐ LA PORTE DU GÉRANT, EN HAUT DE LA FICHE. Le bloc de reprise est
+            au bas de l'onglet Infos : un hôtelier qui trouve sa fiche ne le
+            voyait pas sans savoir qu'il existait. Cette ligne y mène.
+            ⚠ Masquée à partir de `xl` quand le panneau de droite porte déjà
+              son propre bouton ; laissée au voyageur connecté, à qui le bloc
+              explique comment passer professionnel. */}
+        {!fiche.owner_id && (
+          <button
+            type="button"
+            onClick={allerAuBlocReprise}
+            className={cn(
+              "mt-1 inline-flex min-h-11 flex-wrap items-center gap-x-1 text-left text-sm text-muted-foreground",
+              peutRevendiquer && "xl:hidden"
+            )}
+          >
+            <span>Vous gérez {fiche.name} ?</span>
+            <span className="font-semibold text-primary underline underline-offset-4">
+              Reprendre la fiche
+            </span>
+          </button>
+        )}
 
         {fiche.gallery.length > 0 && (
           <div className="mt-5 aspect-[16/10] w-full overflow-hidden rounded-2xl">
@@ -601,7 +741,10 @@ export default function PagePro() {
              plusieurs hauteurs d'écran : sans cela, passer des avis aux
              chambres oblige à remonter tout en haut. Le fond est opaque —
              translucide, le texte qui défile dessous les rendait illisibles. */
-          className="sticky top-14 z-20 -mx-4 mt-6 flex gap-1 overflow-x-auto border-b border-border bg-background px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          /* ⚠ `top-[61px]` ET NON `top-14` : l'en-tête fait 61 px (frise 4 +
+             barre 56 + bordure 1). À 56 px, la barre d'onglets glissait de
+             5 px sous lui. */
+          className="sticky top-[61px] z-20 -mx-4 mt-6 flex gap-1 overflow-x-auto border-b border-border bg-background px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {onglets
             .filter((o) => o.visible)
@@ -610,7 +753,10 @@ export default function PagePro() {
                 key={o.cle}
                 role="tab"
                 aria-selected={onglet === o.cle}
-                onClick={() => setOnglet(o.cle)}
+                onClick={() => {
+                  ongletChoisi.current = true;
+                  setOnglet(o.cle);
+                }}
                 className={cn(
                   "shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition",
                   onglet === o.cle
@@ -970,7 +1116,7 @@ export default function PagePro() {
                   <button
                     onClick={() => void noter()}
                     disabled={maNote < 1 || envoi}
-                    className="mt-2 min-h-10 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                    className="mt-2 min-h-11 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground disabled:opacity-50"
                   >
                     {envoi ? "Envoi…" : "Publier mon avis"}
                   </button>
@@ -1024,8 +1170,54 @@ export default function PagePro() {
 
           {onglet === "infos" && (
             <div className="space-y-5">
-              {fiche.long_desc && (
-                <p className="whitespace-pre-line text-[15px] leading-relaxed">{fiche.long_desc}</p>
+              {/* ⚠ NETTOYÉE (`descriptionPropre`) : 164 des 251 descriptions
+                  publiées portaient « Voir moins », « Écrivez un commentaire
+                  public… », « · Suivre » ou « Audio d'origine », recopiés de
+                  Facebook avec le texte. */}
+              {description && (
+                <p className="whitespace-pre-line text-[15px] leading-relaxed">{description}</p>
+              )}
+
+              {/* L'ÉTAT VIDE D'ABORD : dire ce qui manque, offrir une action.
+                  ⚠ La photo proposée passe par la file de modération (0098) :
+                    `dk_poser_photo` sait poser une couverture d'établissement,
+                    rien n'est publié sans relecture. */}
+              {!avecCouverture && fiche.gallery.length === 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold">Photos</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Pas encore de photo de {fiche.name}.
+                  </p>
+                  {user ? (
+                    <ProposerPhoto
+                      className="mt-3"
+                      cibleType="etablissement"
+                      cible={fiche.id}
+                      nom={fiche.name}
+                    />
+                  ) : (
+                    /* ⚠ PAS le lien nu de ProposerPhoto : il part sur /auth
+                       sans mémoriser la fiche, et la connexion ramènerait à
+                       l'accueil. */
+                    <button
+                      type="button"
+                      onClick={seConnecterPuisRevenir}
+                      className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-4 text-sm font-semibold"
+                    >
+                      <Camera className="h-4 w-4" aria-hidden="true" />
+                      Connectez-vous pour proposer une photo
+                    </button>
+                  )}
+                  {!fiche.owner_id && (
+                    <button
+                      type="button"
+                      onClick={allerAuBlocReprise}
+                      className="mt-1 flex min-h-11 items-center text-left text-sm font-medium text-primary underline underline-offset-4"
+                    >
+                      C'est votre établissement ? Ajoutez vos photos en reprenant la fiche.
+                    </button>
+                  )}
+                </section>
               )}
 
               {/* Le repère en clair : l'adressage normalisé n'existe pas à
@@ -1037,9 +1229,16 @@ export default function PagePro() {
                   {fiche.landmark && (
                     <p className="mt-1 text-sm text-muted-foreground">{fiche.landmark}</p>
                   )}
+                  {/* ⚠ `xl:hidden` QUAND LE PANNEAU DE DROITE PORTE DÉJÀ CE
+                      LIEN — deux fois à l'écran, c'était un de trop. Le
+                      panneau ne le montre qu'avec des coordonnées : sans
+                      elles, celui-ci reste le seul. */}
                   <Link
                     to={`/carte?focus=${fiche.slug}`}
-                    className="mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-medium"
+                    className={cn(
+                      "mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-medium",
+                      carteDansPanneau && "xl:hidden"
+                    )}
                   >
                     <MapPin className="h-4 w-4" aria-hidden="true" />
                     Voir sur la carte
@@ -1083,11 +1282,14 @@ export default function PagePro() {
                 </section>
               )}
 
-              {fiche.payment_methods.length > 0 && (
+              {/* ⚠ `payment_methods` vaut ['especes'] PAR DÉFAUT (0007). Sur une
+                  fiche éditoriale, ce n'est pas un fait : on ne l'affiche que si
+                  le gérant tient sa fiche. */}
+              {fiche.owner_id && fiche.payment_methods.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold">Paiement accepté</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {fiche.payment_methods.join(" · ")}
+                    {fiche.payment_methods.map((m) => LIBELLE_PAIEMENT[m] ?? m).join(" · ")}
                   </p>
                 </section>
               )}
@@ -1163,7 +1365,7 @@ export default function PagePro() {
                     n'avait aucun moyen d'etre corrige. */}
               <button
                 onClick={() => void signalerFiche()}
-                className="inline-flex min-h-10 items-center gap-1.5 self-start rounded-full border border-input px-4 text-xs font-medium text-muted-foreground hover:text-foreground"
+                className="inline-flex min-h-11 items-center gap-1.5 self-start rounded-full border border-input px-4 text-xs font-medium text-muted-foreground hover:text-foreground"
               >
                 <Flag className="h-3.5 w-3.5" aria-hidden="true" />
                 Signaler une erreur sur cette fiche
@@ -1175,14 +1377,69 @@ export default function PagePro() {
                   pas de la coquetterie — c'est ce qui distingue une donnée
                   relevée d'une donnée inventée, et ce projet a déjà payé pour
                   le savoir. */}
+              {/* ⚠ LE BLOC DIT CE QU'IL FAUDRA AVANT LE CLIC : numéro, photo
+                  prise sur place, NIF et STAT ou document. Le découvrir dans le
+                  formulaire, après la création du compte, faisait abandonner.
+                  🔴 `hidden={!!user && !estPro}` NE CACHAIT RIEN : la classe
+                     `inline-flex` bat l'attribut `[hidden]`. Le bouton s'affiche
+                     désormais par rendu conditionnel, et le voyageur lit à sa
+                     place comment passer professionnel. */}
               {!fiche.owner_id && (
-                <section className="rounded-2xl border border-border bg-secondary/40 p-4">
-                  <p className="text-sm font-medium">Cette fiche est tenue par Diako</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Nous l'avons créée pour que l'établissement soit trouvable.
-                    Le gérant peut la reprendre à tout moment : il ajoutera alors
-                    ses chambres, ses tarifs, ses photos, et recevra les messages
+                <section
+                  ref={blocReprise}
+                  aria-labelledby="titre-reprise"
+                  className="rounded-2xl border border-border bg-secondary/40 p-4"
+                >
+                  <h3
+                    id="titre-reprise"
+                    ref={titreReprise}
+                    tabIndex={-1}
+                    className="text-sm font-semibold focus:outline-none"
+                  >
+                    Vous gérez {fiche.name} ?
+                  </h3>
+                  <p className="mt-1 text-sm">
+                    Reprenez cette fiche, c'est gratuit. Vous ajouterez vos
+                    photos, vos chambres et vos tarifs, et recevrez les messages
                     des voyageurs.
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    Il vous faudra un numéro où vous rappeler, une photo du lieu
+                    prise sur place, et votre NIF et STAT ou un document à votre
+                    nom. Nous vérifions chaque dossier à la main, puis nous vous
+                    appelons.
+                  </p>
+
+                  {user && profilEnCours ? null : peutRevendiquer ? (
+                    /* `xl:hidden` : à partir de `xl`, le panneau de droite
+                       porte le même bouton. */
+                    <button
+                      type="button"
+                      onClick={revendiquerFiche}
+                      className="mt-3 inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground xl:hidden"
+                    >
+                      C'est mon établissement
+                    </button>
+                  ) : (
+                    <div className="mt-3 rounded-xl border border-border bg-card p-3">
+                      <p className="text-sm">
+                        Votre compte est un compte voyageur. Pour reprendre cette
+                        fiche, passez-le d'abord en compte professionnel : dans
+                        Mon compte, onglet Mon profil, touchez « Devenir
+                        professionnel », puis revenez sur cette page.
+                      </p>
+                      <Link
+                        to="/compte?onglet=profil"
+                        className="mt-2 inline-flex min-h-11 items-center rounded-full border border-primary px-5 text-sm font-semibold text-primary"
+                      >
+                        Passer en compte professionnel
+                      </Link>
+                    </div>
+                  )}
+
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Cette fiche est tenue par Diako : nous l'avons créée pour que
+                    l'établissement soit trouvable.
                   </p>
                   {/* 🔴 LA SOURCE DOIT ETRE CLIQUABLE. Une partie des textes de
                       ces fiches vient de Wikivoyage, en CC BY-SA : la licence
@@ -1191,13 +1448,6 @@ export default function PagePro() {
                       satisfait pas cette obligation, et personne ne la recopie
                       a la main. */}
                   {fiche.source && <SourceLiee texte={fiche.source} />}
-                  <button
-                    onClick={revendiquerFiche}
-                    hidden={!!user && !estPro}
-                    className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
-                  >
-                    C'est mon établissement
-                  </button>
                 </section>
               )}
             </div>
@@ -1209,12 +1459,20 @@ export default function PagePro() {
           fiche={fiche}
           onEcrire={() => void ecrire()}
           onRevendiquer={revendiquerFiche}
-          peutRevendiquer={!user || estPro}
+          peutRevendiquer={peutRevendiquer}
         />
       </div>
 
       {revendicationOuverte && (
         <Revendication ficheId={fiche.id} ficheNom={fiche.name} onFerme={() => setRevendicationOuverte(false)} />
+      )}
+
+      {partageOuvert && (
+        <PartagerMenu
+          url={`${window.location.origin}/p/${fiche.slug}`}
+          texte={fiche.place ? `${fiche.name} — ${fiche.place.name}` : fiche.name}
+          onFermer={fermerPartage}
+        />
       )}
     </div>
   );
@@ -1237,7 +1495,9 @@ function PlatLigne({ plat }: { plat: Fiche["menu_items"][number] }) {
         <p className="text-sm font-medium">
           {plat.name}
           {plat.is_signature && (
-            <span className="ml-1.5 rounded-full bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
+            // ⚠ `text-accent-strong` : le corail #F4633A ne porte jamais de
+            //   texte (3,14:1). #BF4118 sur ce fond corail à 10 % : 4,7:1.
+            <span className="ml-1.5 rounded-full bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent-strong">
               spécialité
             </span>
           )}

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { journaliser } from "@/lib/journalErreurs";
 
 // ============================================================================
 // Chaîne d'images DIAKO — reprise telle quelle de Fonenako (cf. TDR §10.2).
@@ -37,9 +38,19 @@ function fileToBase64(file: File): Promise<string> {
 
 /**
  * Téléverse un fichier vers o2switch, avec repli en cascade :
- *   1. multipart direct  (le plus rapide, aucune conversion)
- *   2. JSON base64       (si un proxy casse le multipart)
+ *   1. JSON base64       (le seul mode qui passe le pare-feu d'o2switch)
+ *   2. multipart direct  (repli, le jour où le pare-feu le laisse passer)
  * Les deux passent par le même endpoint authentifié.
+ *
+ * 🔴 L'ORDRE A ÉTÉ INVERSÉ LE 19/09/2026. Depuis début septembre, le pare-feu
+ *    de l'hébergeur refuse en 406 (page HTML, avant PHP) TOUTE requête
+ *    multipart qui porte un fichier sur diako.fonenako.mg — même un texte de
+ *    7 octets, même une image de 8 × 8. Le JSON base64, lui, passe. Chaque
+ *    photo partait donc DEUX fois : en entier en multipart pour rien, puis en
+ *    base64 — le double du temps d'envoi en 3G. Le base64 coûte 33 % de plus
+ *    qu'un multipart qui marche, mais moitié moins qu'un multipart refusé.
+ * ⚠ Un échec final est JOURNALISÉ : jusque-là, un envoi raté ne laissait
+ *   aucune trace, et le blocage est resté invisible deux semaines.
  */
 export async function uploadToO2Switch(
   file: File,
@@ -59,8 +70,33 @@ export async function uploadToO2Switch(
       .slice(2, 8)}.${ext}`;
 
     const endpoint = `${getBaseUrl()}/api/o2upload.php`;
+    const essais: string[] = [];
 
-    // ── 1. multipart ────────────────────────────────────────────────────
+    // ── 1. base64 ───────────────────────────────────────────────────────
+    try {
+      const base64 = await fileToBase64(file);
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ file: base64, filename, folder }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) return { success: true, url: data.url };
+      // Un refus rendu PAR PHP (fichier invalide, non autorisé, trop gros) ne se
+      // rattrape pas en changeant de mode : on le rend tel quel.
+      if (data?.error && res.status >= 400 && res.status < 500) {
+        void journaliser({ message: `Téléversement refusé (${res.status}) : ${data.error}`, source: "o2switchUpload" });
+        return { success: false, error: data.error };
+      }
+      essais.push(`base64 HTTP ${res.status}`);
+    } catch (e) {
+      essais.push(`base64 ${e instanceof Error ? e.message : "erreur"}`);
+    }
+
+    // ── 2. multipart ────────────────────────────────────────────────────
     try {
       const form = new FormData();
       form.append("file", file);
@@ -73,24 +109,17 @@ export async function uploadToO2Switch(
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.success) return { success: true, url: data.url };
-    } catch {
-      /* on tente le repli */
+      essais.push(`multipart HTTP ${res.status}`);
+      if (data?.error) {
+        void journaliser({ message: `Téléversement refusé : ${essais.join(" · ")} — ${data.error}`, source: "o2switchUpload" });
+        return { success: false, error: data.error };
+      }
+    } catch (e) {
+      essais.push(`multipart ${e instanceof Error ? e.message : "erreur"}`);
     }
 
-    // ── 2. base64 ───────────────────────────────────────────────────────
-    const base64 = await fileToBase64(file);
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ file: base64, filename, folder }),
-    });
-    const data = await res.json().catch(() => null);
-    if (res.ok && data?.success) return { success: true, url: data.url };
-
-    return { success: false, error: data?.error || `Échec du téléversement (HTTP ${res.status})` };
+    void journaliser({ message: `Téléversement impossible : ${essais.join(" · ")}`, source: "o2switchUpload" });
+    return { success: false, error: "L'envoi de la photo a échoué. Réessayez dans un instant." };
   } catch (e) {
     return {
       success: false,

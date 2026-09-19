@@ -219,6 +219,12 @@ export function EntreeFil({
           </span>
           <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />
         </Link>
+      ) : provenance ? (
+        /* ⚠ SANS LIEU, PAS LE NOM DU COMPTE EN TITRE. Les publications collectées
+           sont postées par le compte « Diako » : le titre disait donc « Diako »
+           au-dessus du texte de Cyrille Cornu (19/09/2026). La provenance, juste
+           dessous, nomme déjà la vraie personne. */
+        <div className="pt-3" />
       ) : (
         <div className="flex min-h-[52px] items-center gap-2.5 px-4 pb-0.5 pt-1.5">
           <span className="min-w-0 flex-1 truncate text-[22px] font-bold leading-tight tracking-tight text-foreground">

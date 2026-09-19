@@ -2,11 +2,36 @@
 
 Mis à jour le 18/09/2026.
 
-## ⏳ Contenu — audit du 18/09/2026 : fait en partie, le reste attend l'ordre d'Andry
+## ✅ Contenu — audit du 18/09/2026 : APPLIQUÉ le 19/09 sur ordre d'Andry (« continu »), sauf D7
 
 Audit « le site paraît creux » du 18/09 (quatre agents : look, vitesse, contenu,
 parcours du visiteur venu de Facebook). Chaque chiffre ci-dessous a été recompté
 en base le 18/09 par un SELECT, pas repris d'un rapport.
+
+### ✅ Le 19/09, après l'ordre d'Andry — tout compté en base, avant/après
+
+- **D4 + D4 bis** : 35 fiches dépubliées (3 412 → 3 377 publiées), Bellevue
+  Hotel débarrassé du texte, du téléphone et de la photo de l'hôtel de Yaoundé.
+  Le même préambule admin, refusé la veille, est passé sur l'ordre explicite.
+- **D5** : 30 publications du fil masquées (213 → 183).
+- **D6** : 5 publications rattachées à leur vrai lieu, 3 fausses « alertes »
+  remises en récit ; le baobab Tsitakakantsa n'est plus rattaché à Hell-Ville
+  (lieu retiré, et sa ligne 📍 « — Hell-Ville » ôtée du corps) — son vrai lieu
+  reste à trouver, il n'existe pas dans `places`.
+- **D8** : 16 doublons de sites dépubliés (Tsingy Rouge ×3, Katsepy ×3,
+  Tritriva ×2, Lokobe ×2, Rova ×2, Andafiavaratra ×2, Ilafy, Andraikiba) ; le
+  Palais royal Ilafy reçoit le texte Wikipédia de la colline (il y parle du
+  Rovan'Ilafy), avec sa source.
+- **D9** : « Ankarongana;GENDARMERIE ANKARONGANA » → « Ankarongana ».
+- **Couvertures** : Kirindy (fossa) et Zafimaniry (Antoetra) posées ; et les
+  6 lieux de la série dont la couverture était une photo Facebook « reprise
+  avec attribution » (Ampefy, Andringitra, Pangalanes, Ankarana, Nosy Hara,
+  Nosy Mangabe) prennent la photo Commons de leur publication, crédits repris
+  de `marketing/atelier/sortie/*/fiche.json`. **Les 20 lieux de la série ont
+  une photo sous licence.**
+- **Non fait, volontairement : D7** (49 fiches rattachées à une région →
+  village le plus proche). Heuristique de distance, risque de faux
+  rattachement ; « Les adresses les plus proches » de /lieu couvre le besoin.
 
 ### ✅ Appliqué le 18/09 depuis la session
 
@@ -28,7 +53,7 @@ en base le 18/09 par un SELECT, pas repris d'un rapport.
   essai sans effet : l'apostrophe en base n'était pas celle de la requête — la
   garde compare maintenant après avoir ramené ’ à '.
 
-### ⚠ Couvertures Kirindy (29/09) et Zafimaniry (04/10) : envoi BLOQUÉ par o2switch
+### ⚠ Envoi d'images : le MULTIPART est bloqué par o2switch — contourné, pas réglé
 
 Photos choisies et vérifiées à l'œil par la session marketing :
 `marketing/atelier/photos/kirindy.jpg` (fossa, « File:Fossa 03.JPG », Heinonlein,
@@ -48,6 +73,18 @@ refus du domaine diako) ; la clé de 64 caractères (55 documentés pour Diako
 dans `photos_archives.py`) reste à comparer à `/home2/anfa7857/.env_diako`
 une fois le 406 levé. Une fois l'envoi rétabli : poser `places.cover_url`,
 `cover_credit`, `cover_licence`, `cover_source` sur `kirindy` et `zafimaniry`.
+
+**Mesuré le 19/09** : ce n'est pas propre à `o2upload.php`. TOUTE requête
+multipart portant un fichier, sur n'importe quelle adresse de
+diako.fonenako.mg (même `/partage.php`), rend 406 — un texte de 7 octets, une
+image de 8 × 8. Sans fichier, la requête atteint PHP. **Le mode JSON base64
+d'`o2upload.php` passe** : c'est lui qui a servi aux 8 couvertures du 19/09,
+et le site l'emploie désormais EN PREMIER (`src/lib/o2switchUpload.ts`,
+commit 5ffab1a). Fonenako et AKORA, même hébergeur, ne sont pas touchés.
+Dernier envoi réussi relevé en base : 01/09. **Reste à Andry** : trouver dans
+le cPanel ce qui refuse le multipart sur le seul domaine diako (ModSecurity,
+ou effet de la désactivation de Tiger Protect du 06/09) — tant que ce n'est
+pas réglé, chaque photo coûte 33 % de plus à envoyer.
 
 ### ⛔ Refusé depuis la session (usurpation du compte admin), à lancer sur ordre
 

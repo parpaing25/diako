@@ -30,6 +30,7 @@ import importlib.util
 import re
 import sys
 import unicodedata
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,12 @@ from .site import _sql
 
 DOSSIER = config.DOSSIER_DONNEES / "photos"
 LARGEUR_MINI = 1200          # en dessous, l'affiche 1080 px serait floue
+# Ce qui part sur la page est une PHOTO, pas un fond d'affiche : elle se
+# regarde en plein ecran sur un telephone recent. Mesure du 20/09/2026 : notre
+# copie de site du parc Masoala fait 648x1152, son original Wikimedia
+# 4224x3168. Le plancher ci-dessous vaut pour TOUS les chemins, y compris nos
+# propres couvertures — c'est precisement celui qui manquait.
+LARGEUR_HD = 1600
 UA = {"User-Agent": "DiakoBot/1.0 (https://diako.fonenako.mg; contact.diako@gmail.com)"}
 PAS_UNE_LICENCE = "publication facebook"
 
@@ -131,6 +138,44 @@ def _depuis_commons(sujet: str, combien: int = 8) -> list[dict]:
     return sorted(vus.values(), key=lambda c: -(c.get("largeur") or 0))[:combien]
 
 
+# ── Remonter à l'ORIGINAL quand nous n'avons qu'une vignette ──────────────
+def _titre_commons(source: str) -> str:
+    """« …/wiki/File:Masoala,_Madagascar.jpg » -> « File:Masoala,_Madagascar.jpg »."""
+    m = re.search(r"/wiki/(File:[^?#]+)", source or "")
+    return urllib.parse.unquote(m.group(1)) if m else ""
+
+
+def _original(candidat: dict) -> dict:
+    """Remplace l'URL d'une couverture par celle de l'ORIGINAL Wikimedia.
+
+    Nos couvertures sont des copies REDIMENSIONNÉES hébergées sur o2switch —
+    c'est ce que le site affiche, et c'est très bien pour le site. Mais
+    publier cela sur une page de 14 409 abonnés donne une photo molle. La
+    colonne `cover_source` porte la page Wikimedia du fichier : on y reprend
+    la même photo, le même auteur, la même licence, en pleine résolution.
+    Si la résolution ne se lit pas, on garde ce qu'on avait : une photo un
+    peu petite vaut mieux que pas de photo.
+    """
+    titre = _titre_commons(candidat.get("source") or "")
+    if not titre:
+        return candidat
+    module = _commons()
+    if module is None:
+        return candidat
+    try:
+        infos = module.infos([titre])
+    except Exception:
+        return candidat
+    for f in infos:
+        if not f.get("url") or not (f.get("largeur") or 0):
+            continue
+        return {**candidat, "url": f["url"], "largeur": f.get("largeur"),
+                "hauteur": f.get("hauteur"), "origine": "original wikimedia",
+                "credit": candidat.get("credit") or f.get("auteur") or "",
+                "licence": candidat.get("licence") or f.get("licence") or ""}
+    return candidat
+
+
 # ── Le téléchargement ─────────────────────────────────────────────────────
 def telecharger(candidat: dict) -> Path | None:
     """Range la photo dans data/photos et rend son chemin (ou None)."""
@@ -150,12 +195,31 @@ def telecharger(candidat: dict) -> Path | None:
     if chemin.stat().st_size < 20_000:      # une image de 20 Ko n'est pas une photo
         chemin.unlink(missing_ok=True)
         return None
+    # ON MESURE, on ne suppose pas. Le poids ne dit rien de la définition :
+    # notre copie de Marojejy fait 148 Ko pour 1280x857, celle d'Ankarana
+    # 862 Ko pour 1200x1600. Seuls les pixels comptent.
+    try:
+        from PIL import Image
+        with Image.open(chemin) as im:
+            largeur, hauteur = im.size
+    except Exception:
+        return chemin                       # illisible ici, pas forcément mauvaise
+    candidat["largeur"], candidat["hauteur"] = largeur, hauteur
+    if max(largeur, hauteur) < LARGEUR_HD:
+        chemin.unlink(missing_ok=True)
+        return None
     return chemin
 
 
 def candidats(sujet: str, combien: int = 6) -> list[dict]:
-    """Les photos possibles pour un sujet : les nôtres d'abord, puis Commons."""
-    trouves = _depuis_base(sujet)
+    """Les photos possibles, chacune ramenée à sa PLUS GRANDE version connue.
+
+    Nos couvertures viennent en premier — ce sont les photos que le site
+    montre déjà, choisies pour le lieu. Mais chacune passe par `_original`,
+    qui remonte à la version Wikimedia pleine résolution : même photo, même
+    crédit, sans le redimensionnement d'o2switch.
+    """
+    trouves = [_original(c) for c in _depuis_base(sujet)]
     if len(trouves) < combien:
         trouves += _depuis_commons(sujet, combien - len(trouves))
     return trouves[:combien]
@@ -210,10 +274,22 @@ def photo_pour(sujet: str) -> dict | None:
     aucune photo — il ne doit jamais avoir à taper un chemin de fichier.
     """
     for piste in _pistes(sujet):
+        retenues = []
         for candidat in candidats(piste, 4):
-            chemin = telecharger(candidat)
+            chemin = telecharger(candidat)      # mesure et refuse sous LARGEUR_HD
             if chemin:
-                return {**candidat, "chemin": str(chemin), "piste": piste}
+                retenues.append({**candidat, "chemin": str(chemin), "piste": piste})
+        if not retenues:
+            continue
+        # NOTRE photo d'abord, en pleine résolution — pas la plus grande.
+        # Nos couvertures ont été choisies pour le lieu, une par une, et c'est
+        # ce que le site montre. Mesuré le 20/09/2026 sur Ankarana : la nôtre
+        # est une vraie photo des tsingy (3000x4000), et une candidate Commons
+        # créditée « NASA Johnson Space Center » fait 8256x5504 — le plus gros
+        # fichier aurait remplacé le parc par une vue satellite.
+        notres = [c for c in retenues if c.get("genre") != "commons"]
+        lot = notres or retenues
+        return max(lot, key=lambda c: (c.get("largeur") or 0))
     return None
 
 

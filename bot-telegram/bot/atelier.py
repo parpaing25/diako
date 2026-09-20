@@ -546,24 +546,42 @@ def preparer_publication(titre: str = "", sujet: str = "", texte: str = "", sous
     #    puis les photos, chacune avec son crédit ──
     rubrique_lisible = redaction.RUBRIQUES.get(rubrique, redaction.RUBRIQUES["lieu"])[1]
     pages: list[tuple[str, Path, int, int]] = []
-    html_affiche = gabarit_affiche(
-        titre=titre, sous_titre=sous_titre_mg, rubrique=rubrique_lisible, lien=lien,
-        photo=retenues[0]["fichier"] if retenues else None,
-        credit=_ligne_credit(retenues[0]) if retenues else "", largeur=1080, hauteur=1350)
-    (dossier / "affiche-fil.html").write_text(html_affiche, encoding="utf-8")
-    pages.append((html_affiche, dossier / "affiche-fil.png", 1080, 1350))
-    defauts_charte = defauts_de_charte(html_affiche)
+    defauts_charte: list[str] = []
+    images: list[Path] = []
+    erreur_rendu = ""
 
-    _, f2 = _gabarits_atelier()
-    total = min(5, max(1, len(retenues)))
-    for rang, photo_dict in enumerate(retenues[1:5], 2):
-        html = _gabarit_photo(f2, photo_dict, titre=titre, lien=lien, rang=rang, total=total,
-                              rubrique=rubrique_lisible)
-        (dossier / f"fil-{rang}.html").write_text(html, encoding="utf-8")
-        pages.append((html, dossier / f"fil-{rang}.png", 1080, 1350))
-
-    images, erreur_rendu = ([], "rendu non demandé") \
-        if _texte(rendu).lower().startswith("non") else _rendre(pages)
+    if retenues:
+        # LES PHOTOS TELLES QUELLES. Consigne d'Andry du 20/09/2026 : « il faut
+        # qu'ils sont des vraies photo hd et des photos pas modifies ». Les 60
+        # publications alors programmées portaient 209 images, toutes des
+        # rendus 1080×1350 — pas une seule photo. On copie les fichiers dans
+        # le dossier de la publication, sans cadre, sans titre incrusté, à
+        # leur définition d'origine. Les crédits vivent dans le TEXTE, qui est
+        # la forme correcte d'attribution sur Facebook.
+        import shutil
+        for rang, photo_dict in enumerate(retenues[:5], 1):
+            source = Path(photo_dict["fichier"])
+            if not source.is_file():
+                continue
+            cible = dossier / f"photo-{rang}{source.suffix.lower() or '.jpg'}"
+            try:
+                shutil.copyfile(source, cible)
+            except OSError:
+                continue
+            images.append(cible)
+        if not images:
+            erreur_rendu = "aucune photo copiée"
+    else:
+        # Aucune photo : une publication sur une fonction du site ou un agenda
+        # n'a rien à montrer. Une carte titrée vaut mieux qu'un mur de texte.
+        html_affiche = gabarit_affiche(
+            titre=titre, sous_titre=sous_titre_mg, rubrique=rubrique_lisible, lien=lien,
+            photo=None, credit="", largeur=1080, hauteur=1350)
+        (dossier / "affiche-fil.html").write_text(html_affiche, encoding="utf-8")
+        pages.append((html_affiche, dossier / "affiche-fil.png", 1080, 1350))
+        defauts_charte = defauts_de_charte(html_affiche)
+        images, erreur_rendu = ([], "rendu non demandé") \
+            if _texte(rendu).lower().startswith("non") else _rendre(pages)
 
     # ── brouillon.txt et fiche.json, dans la forme que verifier.py lit ──
     (dossier / "brouillon.txt").write_text(post + "\n", encoding="utf-8")

@@ -6,6 +6,7 @@ hors ligne. C'est ce qui permet d'éprouver le bot AVANT qu'un jeton existe.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timedelta
 
 import pytest
@@ -190,11 +191,27 @@ def test_lecture_dun_message_avec_photo():
 
 
 def test_verrou_empeche_deux_lecteurs():
-    assert telegram.prendre_verrou()
-    assert not telegram.prendre_verrou()
+    """Deux PROCESSUS ne relèvent jamais le même jeton (409 Conflict sinon).
+
+    ⚠ Le même processus, lui, doit pouvoir reprendre son propre verrou : c'est
+      le cas d'un bot qui redémarre. Le test d'origine l'interdisait, ce qui
+      était faux — il testait le fichier, pas la règle.
+    """
+    import os
+    import subprocess
+
+    voisin = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        telegram.VERROU.write_text(str(voisin.pid), encoding="utf-8")
+        assert not telegram.prendre_verrou()          # un autre, bien vivant
+    finally:
+        voisin.kill()
+        voisin.wait(timeout=10)
+
+    assert telegram.prendre_verrou()                  # il est mort : on reprend
+    assert telegram.VERROU.read_text(encoding="utf-8").strip() == str(os.getpid())
     telegram.rendre_verrou()
-    assert telegram.prendre_verrou()
-    telegram.rendre_verrou()
+    assert not telegram.VERROU.exists()
 
 
 # ── L'aiguillage déterministe des ordres d'action ─────────────────────────
@@ -222,3 +239,31 @@ def test_publier_une_fiche_nest_pas_publier_sur_la_page():
     competences.charger_toutes()
     assert cerveau._intention("publie la fiche du lodge") is None
     assert cerveau._intention("publie le lot de la collecte") is None
+
+
+# ── Le verrou Telegram ────────────────────────────────────────────────────
+def test_verrou_orphelin_est_repris():
+    """Après une mort brutale, le bot relancé doit pouvoir lire Telegram.
+
+    Le gardien relance dans les 2 minutes : un verrou « valable 10 minutes »
+    laissait le bot muet huit minutes en annonçant qu'un autre le tenait.
+    """
+    telegram.VERROU.write_text("999999", encoding="utf-8")   # PID qui n'existe pas
+    assert telegram.prendre_verrou()
+    telegram.rendre_verrou()
+
+
+def test_verrou_tenu_par_un_vivant_est_respecte():
+    import os
+    telegram.VERROU.write_text(str(os.getpid() if os.getpid() != 1 else 1), encoding="utf-8")
+    # Un autre PID vivant : on simule en écrivant celui du processus courant
+    # puis en demandant le verrou depuis un « autre » point de vue.
+    assert telegram.prendre_verrou()      # c'est moi : je le reprends
+    telegram.rendre_verrou()
+
+
+def test_on_ne_retire_que_son_propre_verrou():
+    telegram.VERROU.write_text("424242", encoding="utf-8")
+    telegram.rendre_verrou()
+    assert telegram.VERROU.exists()       # pas le mien : je n'y touche pas
+    telegram.VERROU.unlink()

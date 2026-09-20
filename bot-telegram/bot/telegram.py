@@ -19,6 +19,7 @@ Trois principes, tirés de ce qui a déjà coûté cher sur les autres bots :
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -203,20 +204,49 @@ class Telegram:
         return r.json() if r.ok else {"ok": False, "erreur": r.text[:300]}
 
 
-def prendre_verrou() -> bool:
-    """Empêche deux relevés sur le même jeton (409 Conflict garanti sinon)."""
-    config.DOSSIER_DONNEES.mkdir(parents=True, exist_ok=True)
-    try:
-        VERROU.touch(exist_ok=False)
-        return True
-    except FileExistsError:
-        # Un verrou de plus de 10 minutes est un reste de plantage, pas un bot vivant.
-        age = time.time() - VERROU.stat().st_mtime
-        if age > 600:
-            VERROU.touch()
-            return True
+def _pid_vivant(pid: int) -> bool:
+    """Ce PID tourne-t-il encore ? (sans psutil : le bot doit démarrer partout)"""
+    if pid <= 0:
         return False
+    try:
+        import subprocess
+        sortie = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                                capture_output=True, text=True, timeout=10).stdout
+        return str(pid) in sortie
+    except Exception:
+        return True  # dans le doute, on respecte le verrou
+
+
+def prendre_verrou() -> bool:
+    """Empêche deux relevés sur le même jeton (409 Conflict garanti sinon).
+
+    🔴 UN VERROU QUI SURVIT À SON PROCESSUS BÂILLONNE LE BOT. Première version :
+       un fichier daté, tenu pour valable 10 minutes. Or le gardien relance le
+       bot dans les 2 minutes qui suivent une mort brutale : le bot repartait
+       donc SANS lire Telegram pendant huit minutes, en annonçant « un autre
+       programme relève déjà ce jeton » — une phrase juste et fausse à la fois.
+       Le verrou porte maintenant le PID : s'il a disparu, on le reprend.
+    """
+    config.DOSSIER_DONNEES.mkdir(parents=True, exist_ok=True)
+    moi = os.getpid()
+    if VERROU.exists():
+        try:
+            tenant = int(VERROU.read_text(encoding="utf-8").strip() or 0)
+        except (ValueError, OSError):
+            tenant = 0
+        if tenant and tenant != moi and _pid_vivant(tenant):
+            return False
+    try:
+        VERROU.write_text(str(moi), encoding="utf-8")
+    except OSError:
+        return False
+    return True
 
 
 def rendre_verrou() -> None:
-    VERROU.unlink(missing_ok=True)
+    """On ne retire QUE son propre verrou : sinon on libère celui d'un autre."""
+    try:
+        if VERROU.exists() and VERROU.read_text(encoding="utf-8").strip() == str(os.getpid()):
+            VERROU.unlink(missing_ok=True)
+    except OSError:
+        pass

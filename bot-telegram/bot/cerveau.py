@@ -51,6 +51,23 @@ Tu disposes d'outils. Règles absolues :
 """
 
 
+def sans_markdown(texte: str) -> str:
+    """Retire les marques de gras, d'italique et de code du texte du modèle.
+
+    ⚠ ON ENVOIE DU TEXTE BRUT, ET C'EST VOULU : en mode Markdown, un nom
+      d'établissement qui contient « _ » ou « * » fait échouer l'ENVOI ENTIER,
+      et la réponse est perdue. Mais le modèle écrit spontanément « **Gestion
+      Facebook** » — vu tel quel dans Telegram le 20/09/2026, premier échange
+      réel. On enlève donc les marques au lieu d'activer le Markdown.
+    """
+    if not texte:
+        return texte
+    texte = re.sub(r"\*\*(.+?)\*\*", r"\1", texte, flags=re.S)   # **gras**
+    texte = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"\1", texte, flags=re.S)
+    texte = re.sub(r"__(.+?)__", r"\1", texte, flags=re.S)
+    texte = re.sub(r"`{1,3}([^`]+)`{1,3}", r"\1", texte, flags=re.S)
+    return texte
+
 @dataclass
 class Reponse:
     """Ce que le bot renvoie à Telegram pour un message reçu."""
@@ -353,7 +370,7 @@ def traiter(chat_id: str, texte: str, rappel: str | None = None) -> Reponse:
 
     blocs = reponse_modele.get("content", [])
     appels = [b for b in blocs if b.get("type") == "tool_use"]
-    dits = " ".join(b.get("text", "") for b in blocs if b.get("type") == "text").strip()
+    dits = sans_markdown(" ".join(b.get("text", "") for b in blocs if b.get("type") == "text").strip())
 
     if appels:
         appel = appels[0]  # une action à la fois : Andry doit pouvoir suivre

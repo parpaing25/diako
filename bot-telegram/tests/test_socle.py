@@ -267,3 +267,14 @@ def test_on_ne_retire_que_son_propre_verrou():
     telegram.rendre_verrou()
     assert telegram.VERROU.exists()       # pas le mien : je n'y touche pas
     telegram.VERROU.unlink()
+
+
+def test_les_marques_markdown_du_modele_sont_retirees():
+    """Telegram reçoit du texte brut : « **Gestion** » s'y affichait tel quel."""
+    assert cerveau.sans_markdown("**Gestion Facebook**") == "Gestion Facebook"
+    assert cerveau.sans_markdown("voir `etat_page` d'abord") == "voir etat_page d'abord"
+    assert cerveau.sans_markdown("__important__ : la file") == "important : la file"
+    # Un astérisque isolé (multiplication, note de bas de page) n'est pas touché.
+    assert cerveau.sans_markdown("3 * 4 publications") == "3 * 4 publications"
+    # Un nom qui porte un souligné reste intact : c'est pour lui qu'on est en brut.
+    assert cerveau.sans_markdown("la page Di'ako_MDG") == "la page Di'ako_MDG"

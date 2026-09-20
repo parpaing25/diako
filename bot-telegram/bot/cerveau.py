@@ -46,7 +46,12 @@ Tu disposes d'outils. Règles absolues :
 - Tu n'inventes AUCUN chiffre, aucun nom d'établissement, aucune date : tout vient d'un outil.
 - Pour agir (publier, programmer, répondre, déployer), tu appelles l'outil ; Andry confirmera
   lui-même par un bouton, tu n'as pas à le lui demander.
-- Si la demande est ambiguë ou s'il manque un paramètre, tu poses UNE question courte.
+- Andry écrit depuis son TÉLÉPHONE : il n'a ni chemin de fichier, ni slug, ni identifiant.
+  Tu ne lui demandes JAMAIS un fichier, un chemin, un auteur de photo ou une licence.
+  Si tu n'as pas de photo, laisse le paramètre VIDE : le bot en cherche une libre et
+  créditée tout seul, dans la base Diako puis sur Wikimedia Commons.
+- Si la demande est ambiguë sur le FOND (quel lieu, quelle date), tu poses UNE question
+  courte. Jamais sur la technique.
 - Si aucun outil ne convient, tu réponds en une ou deux phrases, et tu dis ce qui manque.
 """
 
@@ -149,7 +154,19 @@ COMMANDES = {
 
 
 # ── Le modèle ─────────────────────────────────────────────────────────────
-def _outils() -> list[dict]:
+def _outils(seulement: str | None = None) -> list[dict]:
+    """Les outils proposés au modèle. `seulement` n'en envoie qu'UN.
+
+    🔴 IMPOSER UN OUTIL NE SUFFIT PAS, IL FAUT ÊTRE LE SEUL. Mesuré le
+       20/09/2026 : avec les 37 outils dans la requête et `tool_choice` sur
+       `preparer_publication`, gpt-oss a quand même appelé `chercher_photo`, et
+       Groq a rejeté TOUTE la requête (400 « tool call validation failed »). Le
+       bot tombait alors au repli et réclamait un titre. En n'envoyant que
+       l'outil visé, le modèle ne peut plus se tromper — et la requête passe de
+       5 700 à quelques dizaines de jetons de schéma.
+    """
+    if seulement and seulement in competences.REGISTRE:
+        return [competences.REGISTRE[seulement].schema()]
     return [comp.schema() for comp in competences.REGISTRE.values()]
 
 
@@ -162,7 +179,7 @@ def _appeler_claude(fil: list[dict], outil_impose: str | None = None) -> dict | 
         "model": reglages.get("modele_anthropic", "claude-sonnet-5"),
         "max_tokens": 1200,
         "system": CONSIGNE,
-        "tools": _outils(),
+        "tools": _outils(outil_impose),
         "messages": fil,
     }
     if outil_impose:
@@ -180,6 +197,26 @@ def _appeler_claude(fil: list[dict], outil_impose: str | None = None) -> dict | 
     return r.json()
 
 
+def _rattraper_groq(reponse) -> dict | None:
+    """Ce que Groq a jeté avec un 400 « tool_use_failed » : appel ou phrase."""
+    try:
+        erreur = reponse.json().get("error", {})
+    except ValueError:
+        return None
+    if erreur.get("code") != "tool_use_failed":
+        return None
+    rejete = (erreur.get("failed_generation") or "").strip()
+    if not rejete:
+        return None
+    try:
+        appel = json.loads(rejete)
+        if isinstance(appel, dict) and appel.get("name") in competences.REGISTRE:
+            return {"content": [{"type": "tool_use", "name": appel["name"],
+                                 "input": appel.get("arguments") or {}, "id": "rattrape"}]}
+    except json.JSONDecodeError:
+        pass
+    return {"content": [{"type": "text", "text": rejete}]}
+
 def _appeler_groq(fil: list[dict], outil_impose: str | None = None) -> dict | None:
     """Repli gratuit. Format OpenAI : les outils y ont une autre forme."""
     cle = config._lire(config.CLE_GROQ)
@@ -189,7 +226,7 @@ def _appeler_groq(fil: list[dict], outil_impose: str | None = None) -> dict | No
         {"type": "function",
          "function": {"name": o["name"], "description": o["description"],
                       "parameters": o["input_schema"]}}
-        for o in _outils()
+        for o in _outils(outil_impose)
     ]
     messages = [{"role": "system", "content": CONSIGNE}]
     for tour in fil:
@@ -213,7 +250,13 @@ def _appeler_groq(fil: list[dict], outil_impose: str | None = None) -> dict | No
     )
     if not r.ok:
         print(f"[cerveau] Groq {r.status_code} : {r.text[:300]}")
-        return None
+        # 🔴 400 « tool_use_failed » N'EST PAS UNE PANNE. Quand on impose un
+        #    outil et que le modèle préfère poser une question (« quel titre
+        #    veux-tu ? ») ou appeler un AUTRE outil, Groq rejette toute la
+        #    requête — et le bot annonçait « modèle indisponible » alors que la
+        #    réponse était là, dans `failed_generation`. Mesuré le 20/09/2026 :
+        #    une demande sur deux passait, l'autre était perdue.
+        return _rattraper_groq(r)
     choix = r.json()["choices"][0]["message"]
     blocs: list[dict] = []
     if choix.get("content"):
@@ -236,6 +279,8 @@ def _appeler_groq(fil: list[dict], outil_impose: str | None = None) -> dict | No
 #    modèle choisir : on lui IMPOSE l'outil et il ne remplit que les arguments.
 #    Le reste de la conversation continue de passer par son choix libre.
 INTENTIONS: list[tuple[str, str]] = [
+    # « fais une publication… » = préparer (texte + photo + affiche), pas publier.
+    (r"\b(fais|fait|faire|fabrique|cr[ée]e|monte|pr[ée]pare|pr[ée]parer)\b.{0,30}\b(publication|post|affiche|visuel)\b", "preparer_publication"),
     (r"\b(programme|programmer|planifie|planifier)\b", "programmer_page"),
     (r"\b(publie|publier|poste|poster)\b(?!.{0,20}\b(fiche|lot)\b)", "publier_page"),
     (r"\b(r[ée]ponds?|r[ée]pondre)\b.{0,40}\bcommentaire", "repondre_commentaire"),
@@ -301,6 +346,20 @@ def _sans_modele(texte: str) -> Reponse:
                "des demandes simples.\n\n" + _aide())
     )
 
+
+def _arguments_de_secours(nom: str, message: str) -> dict[str, str]:
+    """De quoi lancer une compétence quand le modèle n'a rien rempli.
+
+    La demande d'Andry, telle qu'il l'a écrite, fait un sujet parfaitement
+    utilisable : les compétences en tirent le titre, le lieu et la photo.
+    """
+    comp = competences.REGISTRE.get(nom)
+    if comp is None:
+        return {}
+    for champ in ("sujet", "texte", "question", "recherche", "nom"):
+        if champ in comp.parametres:
+            return {champ: message}
+    return {}
 
 # ── Exécution d'une compétence, avec validation si elle sort en public ────
 def _lancer(nom: str, arguments: dict[str, Any]) -> Reponse:
@@ -379,6 +438,16 @@ def traiter(chat_id: str, texte: str, rappel: str | None = None) -> Reponse:
         if dits and not reponse.texte.startswith(dits[:20]):
             reponse.texte = (dits + "\n\n" + reponse.texte).strip()
         return reponse
+
+    # 🔴 UN ORDRE NE SE TERMINE PAS PAR UNE QUESTION TECHNIQUE. Mesuré le
+    #    20/09/2026, trois fois de suite : à « fais une publication photo de Nosy
+    #    Be », le modèle répondait « donne-moi le chemin, l'auteur, la licence »
+    #    — exactement ce qu'Andry reprochait au bot. Quand un verbe d'action a
+    #    imposé un outil et que le modèle cause au lieu d'agir, on lance la
+    #    compétence avec la demande comme sujet : elle sait se débrouiller.
+    if impose:
+        _noter_fil(chat_id, fil + [{"role": "assistant", "content": f"[{impose}]"}])
+        return _lancer(impose, _arguments_de_secours(impose, texte))
 
     _noter_fil(chat_id, fil + [{"role": "assistant", "content": dits}])
     return Reponse(texte=dits or "Je n'ai pas compris. /aide pour la liste.")

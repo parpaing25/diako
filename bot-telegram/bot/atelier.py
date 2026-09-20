@@ -49,6 +49,7 @@ from pathlib import Path
 from typing import Any
 
 from . import config, redaction
+from . import photos as photos_libres
 from .competences import Resultat, competence
 from .redaction import _blocs, _entier, _texte, cle_de
 
@@ -417,9 +418,13 @@ def _ligne_credit(fiche: dict) -> str:
         "sujet": "de quoi elle parle, si le texte reste à écrire",
         "texte": "le texte déjà écrit (sinon il est rédigé)",
         "sous_titre_mg": "le sous-titre malgache de la première ligne",
+        "question": ("la question posée au public en fin de publication — REPRENDS "
+                     "celle d'Andry telle qu'il l'a posée, ne la reformule pas"),
         "rubrique": "lieu, site, legende, evenement, culture, plat, musique, histoire, conseil",
         "lien": "le chemin de la page du site, ex. /lieu/ampefy",
-        "photos": "une photo par ligne : chemin | auteur | licence | source",
+        "photos": ("une photo par ligne : chemin | auteur | licence | source. "
+                   "LAISSE VIDE si tu n'as pas de VRAI fichier sur ce disque : "
+                   "je chercherai alors une photo libre et créditée moi-même. N'invente jamais un chemin, un auteur ni une licence."),
         "jour": "le jour visé (AAAA-MM-JJ) ; le premier créneau libre sinon",
         "heure": "l'heure visée (HH:MM) ; 16:00 par défaut, les autres heures sont prises",
         "chiffres": "les nombres déjà comptés, avec leur source",
@@ -428,18 +433,26 @@ def _ligne_credit(fiche: dict) -> str:
         "cle": "la clé de la publication ; déduite du titre sinon",
         "rendu": "« non » pour n'écrire que les gabarits HTML, sans navigateur",
     },
-    obligatoires=("titre",),
+    obligatoires=(),
     exemples=("prépare la publication sur Ampefy avec la photo ampefy.jpg",
               "prépare le post du lac Andraikiba pour le 25/09 à 16 h"),
     famille="marketing",
 )
-def preparer_publication(titre: str, sujet: str = "", texte: str = "", sous_titre_mg: str = "",
-                         rubrique: str = "lieu", lien: str = "", photos: Any = "",
+def preparer_publication(titre: str = "", sujet: str = "", texte: str = "", sous_titre_mg: str = "",
+                         question: str = "", rubrique: str = "lieu", lien: str = "", photos: Any = "",
                          jour: str = "", heure: str = "", chiffres: Any = "", faits: Any = "",
                          langue: str = "fr", cle: str = "", rendu: str = "") -> Resultat:
     # ⚠ le paramètre s'appelle « jour » et non « date » : `date` est la classe importée
     #   en tête de module, et un paramètre du même nom la masquerait dans la fonction.
+    # 🔴 LE TITRE N'EST PAS OBLIGATOIRE. « Il me manque : titre » n'est pas une
+    #    réponse acceptable quand Andry écrit « fais une publication sur Nosy
+    #    Be » (mesuré le 20/09/2026, deux fois). À défaut, il se déduit du sujet,
+    #    par ses noms propres.
     titre = _texte(titre)
+    if not titre:
+        sujet_net = _texte(sujet) or _texte(texte)[:60]
+        pistes = photos_libres._pistes(sujet_net)
+        titre = (pistes[0] if pistes else sujet_net or "Publication Diako").strip()
     cle = cle_de(_texte(cle) or titre)
     jour = _texte(jour)
     heure = _texte(heure) or HEURE_PAR_DEFAUT
@@ -460,17 +473,60 @@ def preparer_publication(titre: str, sujet: str = "", texte: str = "", sous_titr
     # ── les photos AVANT le texte : leurs auteurs entrent dans la ligne de crédits,
     #    et une photo sans crédit arrête tout avant qu'on ait écrit quoi que ce soit ──
     retenues, refus = _lire_photos(photos)
+    # 🔴 ON NE DEMANDE PAS UN CHEMIN DE FICHIER À QUELQU'UN QUI ÉCRIT DEPUIS SON
+    #    TÉLÉPHONE. Le 20/09/2026, à « fais une publication photo belle de Nosy
+    #    Be », le bot a répondu « Quel(s) fichier(s) photo(s) veux-tu joindre ? ».
+    #    Sans photo fournie, on en cherche une LIBRE et créditée (notre base
+    #    d'abord, Wikimedia Commons ensuite) et on le dit dans le résultat.
+    #    ⚠ LE MODÈLE INVENTE AUSSI DES PHOTOS. Mesuré le 20/09/2026 :
+    #      « photos/nosy_be_beautiful.jpg | Jean Rakoto | CC-BY |
+    #      https://example.com/… » — fichier, auteur et source fabriqués. Un
+    #      chemin introuvable n'arrête donc plus la préparation : on cherche une
+    #      vraie photo libre, et on DIT que celle du modèle n'existait pas.
+    photo_trouvee, photo_inventee = None, []
+    if not retenues:
+        photo_inventee = refus
+        photo_trouvee = photos_libres.photo_pour(_texte(sujet) or titre)
+        if photo_trouvee:
+            retenues, refus = _lire_photos(photos_libres.ligne_photo(photo_trouvee))
     if refus:
         return Resultat(texte="\n".join(refus), ok=False)
 
+    # ⚠ LA PUBLICATION DOIT MENER QUELQUE PART. Quand la photo vient de notre
+    #   base, on connaît la page du lieu ou du site : c'est un bien meilleur
+    #   lien que l'accueil, et `rediger_publication` le vérifie ensuite.
+    cta_auto = ""
+    if not lien and photo_trouvee and photo_trouvee.get("slug"):
+        route = {"lieu": "/lieu/", "site": "/site/"}.get(photo_trouvee.get("genre"), "")
+        if route:
+            lien = route + photo_trouvee["slug"]
+            # L'appel nomme le LIEU, pas le titre de la publication : « la fiche
+            # Bon dimanche depuis Nosy Be » ne veut rien dire.
+            cta_auto = f"La fiche {photo_trouvee.get('nom', '')} sur Diako".strip()
+
     # ── le texte ──
+    # 🔴 UN TEXTE FOURNI PASSE QUAND MÊME PAR LE GABARIT. Le modèle écrit une
+    #    jolie phrase, mais sans l'icône de rubrique, sans le lien suivi, sans la
+    #    ligne 🙋 ni les hashtags : `verifier.py` la REFUSE (mesuré le
+    #    20/09/2026, deux préparations de suite). On lui donne donc son texte
+    #    comme CORPS, et la maison met la forme autour.
     if _texte(texte):
-        post = _texte(texte)
-        origine_texte, defauts_texte = "fourni", []
+        ecrit = redaction.rediger_publication(
+            sujet=_texte(sujet) or titre, titre=titre, rubrique=rubrique, langue=langue,
+            lien=lien, chiffres=chiffres, faits=faits, sous_titre_mg=sous_titre_mg, cle=cle,
+            corps=_texte(texte), question=_texte(question), cta=cta_auto,
+            auteurs_photos=[p["auteur"] for p in retenues])
+        post = ecrit.donnees.get("texte", "")
+        sous_titre_mg = sous_titre_mg or ecrit.donnees.get("sous_titre_mg", "")
+        origine_texte = "texte d'Andry, mis en forme"
+        defauts_texte = list(ecrit.donnees.get("defauts", []))
     else:
         ecrit = redaction.rediger_publication(
             sujet=_texte(sujet) or titre, titre=titre, rubrique=rubrique, langue=langue,
             lien=lien, chiffres=chiffres, faits=faits, sous_titre_mg=sous_titre_mg, cle=cle,
+            # ⚠ LA QUESTION D'ANDRY EST DANS SA DEMANDE. Sans ce passage, le
+            #   gabarit en inventait une autre et la sienne était perdue.
+            question=_texte(question), cta=cta_auto,
             auteurs_photos=[p["auteur"] for p in retenues])
         post = ecrit.donnees.get("texte", "")
         sous_titre_mg = sous_titre_mg or ecrit.donnees.get("sous_titre_mg", "")
@@ -531,6 +587,13 @@ def preparer_publication(titre: str, sujet: str = "", texte: str = "", sous_titr
               f"Photos créditées : {len(retenues)}"]
     for p in retenues:
         lignes.append(f"  · {p['fichier'].name} — {p['auteur']} · {p['licence']}")
+    if photo_trouvee:
+        origine = {"lieu": "notre base (lieu)", "site": "notre base (site)",
+                   "commons": "Wikimedia Commons"}.get(photo_trouvee.get("genre"), "")
+        lignes.append(f"Photo choisie par moi dans {origine} : {photo_trouvee.get('nom','')}"
+                      f" ({photo_trouvee.get('licence','')}).")
+    for manquante in photo_inventee:
+        lignes.append(f"  ⚠ {manquante}")
     for d in defauts_texte:
         lignes.append(f"  ✗ texte : {d}")
     for d in defauts_charte:
@@ -549,6 +612,11 @@ def preparer_publication(titre: str, sujet: str = "", texte: str = "", sous_titr
                  "verdicts": verdicts},
         suites=[{"texte": "Vérifier à fond",
                  "action": "faire:verifier_publication|" + json.dumps({"cle": cle})},
+                # Andry juge une photo à l'œil : il doit pouvoir en voir d'autres
+                # sans retaper sa demande.
+                {"texte": "Autres photos",
+                 "action": "faire:chercher_photo|" + json.dumps(
+                     {"sujet": _texte(sujet) or titre, "combien": "3"}, ensure_ascii=False)},
                 {"texte": "Voir le calendrier", "action": "faire:calendrier_publications|"}],
     )
 

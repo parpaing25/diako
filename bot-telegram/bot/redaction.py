@@ -206,6 +206,27 @@ def defaut_particule_ve(question: str) -> str:
     return "question fermée malgache sans la particule « ve »"
 
 
+def _meme_question(bloc: str, question: str) -> bool:
+    """Ce paragraphe REPOSE-T-IL la question ? (mots partages, pas texte exact)
+
+    Le modele reformule : « Et vous, vous preferez partir juste apres la foule ? »
+    face a « Preferez-vous partir juste apres les personnes ? ». Comparer les
+    textes ne suffit pas ; on compare les mots longs.
+    """
+    if "?" not in bloc:
+        return False
+    mots = lambda t: {m for m in _sans_ponctuation(t).split() if len(m) > 3}
+    a, b = mots(bloc), mots(question)
+    if not b:
+        return False
+    return len(a & b) / len(b) >= 0.55
+
+
+def _sans_ponctuation(texte: str) -> str:
+    """Le texte réduit à ses lettres et chiffres, pour comparer deux phrases."""
+    return re.sub(r"[^\w]+", " ", (texte or "").lower()).strip()
+
+
 def controler_texte(texte: str, *, cle: str, lien: str = "", chiffres: Any = "",
                     noms_propres: Any = (), lignes_malgaches: Any = ()) -> list[str]:
     """Les défauts d'un texte de publication, dans l'ordre où ils se corrigent.
@@ -452,13 +473,18 @@ def rediger_publication(sujet: str, titre: str = "", rubrique: str = "lieu", lan
     emoji = _texte(emoji) or "🌍"
     # Sans page precise, on ne promet pas « la fiche » : le lien mene a l accueil.
     cta = _texte(cta) or (f"La fiche {titre} sur Diako" if lien
-                          else "Diako, le voyage a Madagascar")
+                          else "Diako, le voyage à Madagascar")
     blocs = _blocs(corps)
     question = _texte(question)
     sous_titre_mg = _texte(sous_titre_mg)
     notes: list[str] = []
     if note_lien:
         notes.append(note_lien)
+    # 🔴 LA QUESTION ÉTAIT POSÉE DEUX FOIS. Le modèle la glisse dans le corps
+    #    (« 👉 Vous préférez… ? ») et la maison la remet sur la ligne 🙋 : le
+    #    lecteur la lisait deux fois à trois lignes d'écart (20/09/2026).
+    if question and blocs:
+        blocs = [b for b in blocs if not _meme_question(b, question)]
     origine = "gabarit"
 
     # ── le modèle, quand il y a une clé et qu'il manque quelque chose ──

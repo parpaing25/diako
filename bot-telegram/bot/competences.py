@@ -137,7 +137,7 @@ def charger_toutes() -> None:
     # « redaction » est importé par « atelier », mais on le nomme quand même :
     # un module qui ne tient qu'à l'import d'un autre disparaît le jour où
     # cette ligne-là bouge, et la compétence s'évapore sans erreur.
-    for module in ("meta", "site", "redaction", "atelier", "collecte", "general"):
+    for module in ("meta", "site", "redaction", "photos", "atelier", "collecte", "general"):
         try:
             __import__(f"{__package__}.{module}")
         except Exception as e:  # noqa: BLE001 — on veut la liste, pas un plantage

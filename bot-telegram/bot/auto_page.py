@@ -156,19 +156,28 @@ def commentaires(publications=25):
             continue                           # pour les réponses d'Andry
         if registre.deja_fait(PAGE, "commentaire", c["id"]):
             continue
-        if c["age_heures"] is not None and c["age_heures"] > AGE_MAX_HEURES:
-            continue
-
         avis = _avis(c["texte"])
+        vieux = c["age_heures"] is not None and c["age_heures"] > AGE_MAX_HEURES
 
+        # Ce qui demande un humain remonte QUEL QUE SOIT L'ÂGE. L'âge borne
+        # ce que le bot DIT, pas ce qu'il MONTRE : le 20/09/2026 sur Di'ako,
+        # neuf questions de clients — dont « Tarif Bungalow ? Repas ? » —
+        # n'atteignaient jamais Andry parce que la page dormait depuis août.
+        # Le veilleur ne signale chaque demande qu'une fois.
         if avis["humeur"] in POUR_ANDRY:
             compte["pour_andry"].append({
                 "quoi": "commentaire", "id": c["id"], "auteur": c["auteur"],
                 "texte": c["texte"][:200], "humeur": avis["humeur"],
-                "permalien": c.get("permalien") or ""})
+                "permalien": c.get("permalien") or "",
+                "age_jours": round((c["age_heures"] or 0) / 24, 1)})
             continue
         if avis["humeur"] in SILENCE or not avis["repondre"]:
             compte["muets"] += 1
+            continue
+
+        # Répondre à un commentaire de deux mois est étrange : on se tait.
+        if vieux:
+            compte["trop_vieux"] = compte.get("trop_vieux", 0) + 1
             continue
 
         if plein:

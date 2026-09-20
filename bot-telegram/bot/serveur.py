@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import cerveau, competences, config, telegram, validation
+from . import cerveau, competences, config, telegram, validation, veilleur
 
 RACINE = Path(__file__).resolve().parent.parent
 app = FastAPI(title="Bot Di'ako")
@@ -31,6 +31,21 @@ _etat = {
     "telegram": "non démarré",
 }
 _canal: telegram.Telegram | None = None
+
+
+def _prevenir_andry(texte: str) -> None:
+    """Porte un mot à Andry sur Telegram. LÈVE si le canal est muet.
+
+    L'exception est VOULUE : le veilleur ne marque une demande « signalée »
+    que si l'envoi a réussi. Sans cela, une panne de Telegram ferait
+    disparaître en silence la question d'un client.
+    """
+    if _canal is None or _canal.simulation or not _canal.id_autorise:
+        raise RuntimeError("Telegram indisponible")
+    _canal.envoyer(_canal.id_autorise, texte)
+
+
+VEILLEUR = veilleur.Veilleur(_prevenir_andry)
 
 
 # ── La boucle Telegram ────────────────────────────────────────────────────
@@ -85,6 +100,9 @@ def _demarrer() -> None:
     competences.charger_toutes()
     validation.purger()
     threading.Thread(target=_boucle, daemon=True, name="telegram").start()
+    # La page répond seule : commentaires et messages, toutes les ~25 min.
+    # Voir bot/veilleur.py et bot/auto_page.py.
+    VEILLEUR.demarrer()
 
 
 # ── L'API ─────────────────────────────────────────────────────────────────
@@ -97,6 +115,7 @@ def etat() -> dict:
         "port": config.PORT,
         **_etat,
         "competences": len(competences.REGISTRE),
+        "veille_page": VEILLEUR.etat(),
         "en_attente": len(validation.en_attente()),
         "page": config.PAGE_DIAKO,
         "jeton_page": bool(config.jeton_page()),

@@ -280,7 +280,11 @@ def messages(conversations=40):
 
 
 # ──────────────────────────────────────────────────── une tournée complète
-def tournee(publications=25, conversations=40):
+def tournee(publications=40, conversations=40):
+    # 40 et pas 25 : la requete la plus large dépasse ce que Facebook accepte
+    # et le lecteur redescend d'un palier. Partie de 25 elle retombe à 12
+    # publications (34 commentaires, 3 demandes vues) ; partie de 40 elle
+    # retombe à 20 (74 commentaires, 9 demandes vues). Mesuré le 20/09/2026.
     """Commentaires puis messages. L'échec de l'un n'emporte pas l'autre."""
     rendu = {}
     for nom, fonction, arg in (("commentaires", commentaires, publications),

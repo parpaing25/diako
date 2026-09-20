@@ -1,0 +1,1048 @@
+{
+ "serie": "Découvrir Madagascar avec Diako",
+ "heure": "12:00",
+ "debut": "2026-09-20",
+ "utm": "utm_source=facebook&utm_medium=post&utm_campaign=decouvrir-diako&utm_content={cle}",
+ "comptes_releves": "Chiffres du site relevés en base le 19/09/2026 vers 21 h (Supabase eifrwecaszzqrdwjjjbu) et sur les pages en ligne : 3 377 pages publiées (1 476 hôtels, 1 904 restaurants, 80 agences de voyage), 2 435 sites, 95 plats / 254 variantes / 9 familles, 88 événements, 508 villes et villages, 61 destinations, carte 5 810 adresses et sites. Arrondis vers le bas dans les textes (« plus de »).",
+ "publications": [
+  {
+   "cle": "d-quoi",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Diako, c'est quoi ?",
+   "mg": "Ny tranonkala hitsangatsanganana eto Madagasikara",
+   "emoji": "🌍",
+   "corps": [
+    "Diako, c'est le réseau social du voyage à Madagascar. Un seul site pour préparer une sortie, un week-end ou un grand voyage dans l'île. 🇲🇬",
+    "Dedans, aujourd'hui :\n🏨 plus de 1 400 hôtels et 1 900 restaurants\n🏞️ plus de 2 400 sites et parcs\n🍲 95 plats malgaches, et où les trouver\n📅 les fêtes, festivals et saisons de l'année\n🗺️ une carte de plus de 5 800 adresses et sites",
+    "Gratuit, sans compte pour lire. Et chacun peut y raconter son voyage."
+   ],
+   "question": "Et vous, vous cherchez quoi en premier avant de partir : où dormir, où manger ou quoi visiter ?",
+   "lien": "/",
+   "attendu": "Diako",
+   "cta": "Découvrir Diako",
+   "hashtags": [
+    "#Diako",
+    "#Madagascar",
+    "#VoyageMadagascar",
+    "#TourismeMadagascar",
+    "#Mitsangatsangana"
+   ],
+   "captures": [
+    {
+     "f": "explorer",
+     "legende": "61 destinations, des îles du Nord aux parcs du Sud"
+    },
+    {
+     "f": "lieu-nosy-be",
+     "legende": "Une fiche par lieu : où dormir, où manger, les récits"
+    },
+    {
+     "f": "plats",
+     "legende": "L'atlas des plats malgaches"
+    },
+    {
+     "f": "carte",
+     "legende": "La carte : hôtels, restaurants et sites"
+    }
+   ]
+  },
+  {
+   "cle": "requins-baleines",
+   "type": "photos",
+   "rubrique": "Saisons et fêtes",
+   "icone": "📅",
+   "photos": "s2-requins",
+   "titre": "Les requins-baleines de Nosy Be",
+   "ou": "Nosy Be · Diana · septembre à décembre",
+   "mg": "Ny antsantsa goavana any Nosy Be",
+   "emoji": "🦈",
+   "corps": [
+    "Le plus grand poisson du monde passe la fin d'année au large de Nosy Be. 🌊",
+    "Selon le Madagascar Whale Shark Project, la saison des requins-baleines à Nosy Be dure environ trois mois, de septembre à décembre. Un géant tacheté qui se nourrit de plancton : il est immense, et totalement inoffensif pour l'homme.",
+    "Pour les approcher, on passe par un opérateur local, et on respecte les consignes : garder ses distances, ne pas toucher."
+   ],
+   "question": "Nager à côté d'un requin-baleine : vous oseriez, ou vous restez sur le bateau ? 😄",
+   "lien": "/evenements",
+   "attendu": "requins-baleines",
+   "cta": "Les saisons à ne pas rater, sur l'agenda Diako",
+   "hashtags": [
+    "#Diako",
+    "#NosyBe",
+    "#RequinBaleine",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "https://www.madawhalesharks.org/fr/actualite/press/ (« three-month 2019 season (September to December) »)"
+   ]
+  },
+  {
+   "cle": "ibonia",
+   "type": "recit",
+   "rubrique": "Angano · légendes",
+   "icone": "📖",
+   "photos": null,
+   "titre": "Ibonia, le héros de l'épopée",
+   "ou": "Tradition orale malgache",
+   "mg": "Ilay mahery fo tamin'ny angano fahiny",
+   "emoji": "⚔️",
+   "corps": [
+    "Avant les livres, il y avait les voix. Et parmi les récits que les Malgaches se transmettaient de bouche à oreille, l'un des plus longs et des plus importants s'appelle Ibonia. 📖",
+    "C'est un poème épique. Sa récitation pouvait durer plusieurs heures. Il raconte toute la vie d'un héros : sa naissance, attendue par une mère d'abord stérile, son enfance, les épreuves qu'il doit vaincre pour retrouver son épouse, son mariage, et sa mort.",
+    "Le récit est si ancien qu'il est déjà résumé par Étienne de Flacourt en 1657. Vers 1830, un lettré malgache resté anonyme l'écrit en entier, dans sa langue. Et il en existe des versions jusqu'à Mayotte."
+   ],
+   "cartes": [
+    "Il était une fois un récit si long qu'il fallait plusieurs heures pour le dire.\n\nOn l'appelle Ibonia.",
+    "Il raconte la vie d'un héros : sa naissance, attendue par une mère d'abord stérile, puis son enfance, ses épreuves, la quête de son épouse, son mariage et sa mort.",
+    "1657 : Étienne de Flacourt en publie un résumé.\nVers 1830 : un lettré malgache anonyme l'écrit en entier, en malgache.",
+    "Chaque région a sa version. Il en existe même une à Mayotte.\n\nConnaissiez-vous Ibonia ?"
+   ],
+   "question": "Quelqu'un chez vous connaît-il encore l'histoire d'Ibonia ? Racontez-nous votre version en commentaire 👇",
+   "lien": "/explorer",
+   "attendu": "Destinations",
+   "cta": "Les lieux de Madagascar, fiche par fiche",
+   "hashtags": [
+    "#Diako",
+    "#Angano",
+    "#Ibonia",
+    "#CultureMalgache",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ibonia"
+   ]
+  },
+  {
+   "cle": "d-fil",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Le fil, trié pour vous",
+   "mg": "Safidio izay tianao hojerena",
+   "emoji": "🔎",
+   "corps": [
+    "Sur Diako, le fil ne mélange plus tout. En haut, des boutons : Hôtels, Restaurants, Plats, Lieux, Location voiture, Voyages organisés. Un geste, et le fil ne montre que ça. 👆",
+    "Et le bouton « Près de moi » : il remonte ce qui se passe autour de vous. En balade à Tana ou en route vers le Sud, vous voyez d'abord ce qui est à côté.",
+    "Plus de 1 400 hôtels, 1 900 restaurants et 80 agences de voyage y sont déjà référencés."
+   ],
+   "question": "Quel bouton vous ouvrez en premier ? 🏨 🍽️ 🧳",
+   "lien": "/",
+   "attendu": "Près de moi",
+   "cta": "Essayer les filtres du fil",
+   "hashtags": [
+    "#Diako",
+    "#Madagascar",
+    "#HotelMadagascar",
+    "#RestaurantMadagascar",
+    "#VoyageMadagascar"
+   ],
+   "captures": [
+    {
+     "f": "fil-hotels",
+     "legende": "« Hôtels » : 1 476 hôtels référencés"
+    },
+    {
+     "f": "fil-restaurants",
+     "legende": "« Restaurants » : les tables de l'île"
+    },
+    {
+     "f": "fil-voyages",
+     "legende": "« Voyages organisés » : 80 agences"
+    },
+    {
+     "f": "fil-pres",
+     "legende": "« Près de moi » : ce qui est autour de vous"
+    }
+   ]
+  },
+  {
+   "cle": "zombitse",
+   "type": "photos",
+   "rubrique": "Parcs et réserves",
+   "icone": "📍",
+   "photos": "s2-zombitse",
+   "titre": "Zombitse-Vohibasia",
+   "ou": "Atsimo-Andrefana · sur la RN7",
+   "mg": "Ala maina eo amoron'ny lalana RN7",
+   "emoji": "🌳",
+   "corps": [
+    "Sur la RN7, entre Ihosy et Toliara, la route traverse une forêt. Beaucoup passent sans s'arrêter. C'est une erreur. 🌳",
+    "Le parc national de Zombitse-Vohibasia couvre 36 308 hectares, en trois forêts. Il abrite un lémurien qu'on ne trouve nulle part ailleurs : le lépilémur de Hubbard, ou lépilémur de Zombitse. 🐒",
+    "Son bureau est à Sakaraha, à 10 km de l'entrée. Forêt protégée depuis 1962, parc national depuis 2002. Et un paradis pour les oiseaux : le coua géant s'y promène au sol."
+   ],
+   "question": "Vous vous êtes déjà arrêté à Zombitse, ou vous l'avez toujours traversé en voiture ?",
+   "lien": "/site/parc-national-de-zombitse-vohibasia",
+   "attendu": "Zombitse",
+   "cta": "La fiche du parc et les adresses les plus proches",
+   "hashtags": [
+    "#Diako",
+    "#Zombitse",
+    "#RN7",
+    "#ParcNational",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://en.wikipedia.org/wiki/Zombitse-Vohibasia_National_Park"
+   ]
+  },
+  {
+   "cle": "d-yaller",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Tana → Isalo : 15 heures de route",
+   "mg": "Firy ora marina ny dia ?",
+   "emoji": "🚐",
+   "corps": [
+    "Tana – Isalo, 698 km. Combien de temps de route ? Sur Diako : 15 heures, pauses non comprises. Et c'est un minimum. 😮",
+    "La page « Y aller » de Diako ne calcule pas une vitesse théorique : elle met bout à bout des tronçons de route relevés sur le terrain.",
+    "Dites d'où vous partez, où vous allez et à quelle heure. Diako vous dit à quelle heure vous arrivez, et surtout si vous arrivez avant ou après le coucher du soleil. Parce que rouler de nuit sur les routes de Madagascar, c'est croiser des piétons, des zébus et des véhicules sans feux. 🌙"
+   ],
+   "question": "Votre pire trajet en taxi-brousse, il a duré combien d'heures ? 😅",
+   "lien": "/y-aller",
+   "attendu": "Y aller",
+   "cta": "Calculer mon trajet",
+   "hashtags": [
+    "#Diako",
+    "#RN7",
+    "#TaxiBrousse",
+    "#RoadTripMadagascar",
+    "#Madagascar"
+   ],
+   "captures": [
+    {
+     "f": "yaller-haut",
+     "legende": "Des temps de route relevés sur le terrain"
+    },
+    {
+     "f": "yaller-trajet",
+     "legende": "Tana → Isalo : 6 tronçons relevés, 15 h, 698 km"
+    }
+   ]
+  },
+  {
+   "cle": "hira-gasy",
+   "type": "photos",
+   "rubrique": "Kolontsaina · culture",
+   "icone": "🎭",
+   "photos": "s2-hiragasy",
+   "titre": "Le hira gasy",
+   "ou": "Hautes Terres · patrimoine UNESCO depuis 2023",
+   "mg": "Hira sy dihy ary kabary eny an-kianja",
+   "emoji": "🥁",
+   "corps": [
+    "Tuniques rouge vif, chapeaux de paille, robes claires, lamba sur l'épaule, et les pieds nus. Quand une troupe de hira gasy entre en scène, on le sait tout de suite. 🥁🎻",
+    "Chants, danses, acrobaties et discours : le hira gasy est né vers la fin du XVIIIe siècle sur les Hautes Terres. Le roi Andrianampoinimerina s'en servait pour parler à ses sujets. Chaque spectacle cache une leçon de vie, souvent avec humour.",
+    "Une représentation dure au moins 1 h 30. Deux troupes ou plus débattent d'un même thème, et c'est le public qui désigne le vainqueur, aux applaudissements. Depuis décembre 2023, le hira gasy est inscrit au patrimoine culturel immatériel de l'humanité par l'UNESCO. 🇲🇬"
+   ],
+   "question": "Vous avez déjà vu un hira gasy en vrai ? C'était où ?",
+   "lien": "/lieu/antananarivo-2",
+   "attendu": "Antananarivo",
+   "cta": "Où dormir et où manger à Antananarivo",
+   "hashtags": [
+    "#Diako",
+    "#HiraGasy",
+    "#CultureMalgache",
+    "#UNESCO",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Hiragasy"
+   ]
+  },
+  {
+   "cle": "romazava",
+   "type": "photos",
+   "rubrique": "Sakafo · saveurs",
+   "icone": "🍲",
+   "photos": "s2-romazava",
+   "titre": "Le romazava",
+   "ou": "Cuisine malgache",
+   "mg": "Laoka nentin-drazana",
+   "emoji": "🍲",
+   "corps": [
+    "Un bouillon de viande et de brèdes, une assiette de riz blanc, un peu de piment à côté. Et ce petit fourmillement sur la langue qui fait sourire la première fois. 😄",
+    "Ce fourmillement, ce sont les fleurs de brède mafana. Plus il y en a, plus la sensation est forte : un léger engourdissement de la langue et du palais.",
+    "Le romazava se fait le plus souvent avec du zébu, parfois avec du poulet ou du poisson. La viande mijote, puis les brèdes rejoignent la marmite pour au moins une demi-heure."
+   ],
+   "question": "Vous connaissez LA bonne adresse pour un romazava ? Dites-le sur Diako, bouton « Je sais où en trouver » 👇",
+   "lien": "/plat/romazava",
+   "attendu": "Romazava",
+   "cta": "La fiche du romazava dans l'atlas des plats",
+   "hashtags": [
+    "#Diako",
+    "#Romazava",
+    "#CuisineMalgache",
+    "#SakafoMalagasy",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Romazava"
+   ]
+  },
+  {
+   "cle": "d-carte",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Toute l'île sur une carte",
+   "mg": "Ny sarintany feno toerana",
+   "emoji": "🗺️",
+   "corps": [
+    "Où dormir près d'un parc ? Où manger en arrivant dans une ville ? La carte de Diako montre plus de 5 800 adresses et sites d'un coup d'œil. 🗺️",
+    "Des filtres en haut : où dormir, où manger, plages, nature et eau, sommets, culture. On zoome, et chaque point devient une fiche.",
+    "Idéal pour préparer un itinéraire, ou pour trouver une adresse quand on est déjà sur la route."
+   ],
+   "question": "Sur la carte, vous cherchez quoi en premier : une plage ou une bonne table ? 🏖️🍽️",
+   "lien": "/carte",
+   "attendu": "Carte",
+   "cta": "Ouvrir la carte",
+   "hashtags": [
+    "#Diako",
+    "#Madagascar",
+    "#CarteMadagascar",
+    "#VoyageMadagascar",
+    "#Itineraire"
+   ],
+   "captures": [
+    {
+     "f": "carte",
+     "legende": "Plus de 5 800 adresses et sites"
+    },
+    {
+     "f": "site-zombitse",
+     "legende": "Chaque point ouvre une fiche"
+    }
+   ]
+  },
+  {
+   "cle": "rapeto",
+   "type": "recit",
+   "rubrique": "Angano · légendes",
+   "icone": "📖",
+   "photos": "s2-rapeto",
+   "titre": "Rapeto, le géant de l'Imamo",
+   "ou": "Itasy · traditions merina",
+   "mg": "Ilay goavambe tamin'ny tantara fahiny",
+   "emoji": "👣",
+   "corps": [
+    "Il traversait tout le pays merina en quelques instants, à grandes enjambées. Sa force était celle d'un géant. Son nom : Rapeto. 👣",
+    "Selon les traditions merina, Rapeto est le fondateur du royaume de l'Imamo, à l'ouest de l'Imerina. Il vivait dans la région du lac Itasy et aurait étendu son autorité sur tout le pays.",
+    "Il aurait vécu il y a très longtemps, vraisemblablement vers le XIIe siècle. Si longtemps que sa vie s'est mêlée à la légende. Près de Tana, une localité porte encore son nom : Ambohidrapeto, « la ville de Rapeto »."
+   ],
+   "cartes": [
+    "Il traversait tout le pays merina en quelques instants, à grandes enjambées.\n\nOn l'appelait Rapeto.",
+    "Les traditions merina en font le fondateur du royaume de l'Imamo, à l'ouest de l'Imerina. Il vivait près du lac Itasy.",
+    "Il aurait vécu vers le XIIe siècle. Si loin que sa vie s'est mêlée à la légende.\n\nPrès de Tana, Ambohidrapeto porte encore son nom."
+   ],
+   "question": "Chez vous, quelle légende de géant raconte-t-on ? 👇",
+   "lien": "/lieu/lac-itasy",
+   "attendu": "Itasy",
+   "cta": "Le lac Itasy sur Diako",
+   "hashtags": [
+    "#Diako",
+    "#Angano",
+    "#Rapeto",
+    "#Itasy",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Rapeto"
+   ]
+  },
+  {
+   "cle": "tsimbazaza",
+   "type": "photos",
+   "rubrique": "Parcs et réserves",
+   "icone": "📍",
+   "photos": "s2-tsimbazaza",
+   "titre": "Le parc de Tsimbazaza",
+   "ou": "Antananarivo · quartier de Fiadanana",
+   "mg": "Zaridaina sy biby eto an-drenivohitra",
+   "emoji": "🌿",
+   "corps": [
+    "Un coin de forêt en pleine capitale. 🌿 Le parc botanique et zoologique de Tsimbazaza, à Fiadanana, a été fondé en 1925. Mais son lac est plus ancien : le roi Radama Ier l'avait déjà fait creuser pour le bain de ses soldats.",
+    "Le jardin rassemble les végétations des régions de l'île : le ravinala, l'arbre du voyageur, pour la région de Tamatave, les plantes épineuses pour le Sud, des fougères arborescentes, des orchidées, des baobabs. 🌴",
+    "Côté zoo : lémuriens, oiseaux, reptiles. Et deux musées, l'un de paléontologie, l'autre d'ethnographie."
+   ],
+   "question": "Tsimbazaza, souvenir d'une sortie d'école ? Racontez-nous 😊",
+   "lien": "/site/parc-botanique-et-zoologique-de-tsimbazaza",
+   "attendu": "Tsimbazaza",
+   "cta": "La fiche du parc sur Diako",
+   "hashtags": [
+    "#Diako",
+    "#Tsimbazaza",
+    "#Antananarivo",
+    "#Tana",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Parc_botanique_et_zoologique_de_Tsimbazaza"
+   ]
+  },
+  {
+   "cle": "d-evenements",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "L'agenda de l'île",
+   "mg": "Ny fety sy ny vanim-potoana tsy tokony hohadinoina",
+   "emoji": "📅",
+   "corps": [
+    "Octobre commence. Sur Diako, l'agenda « Événements » rassemble ce qui revient chaque année : les fêtes, les festivals et les rendez-vous de la nature. 📅",
+    "Les baleines, les jacarandas en fleur, les récoltes, les festivals de musique… Pour chacun : la période, le lieu, et la source d'où vient l'information.",
+    "Quand la date exacte n'est pas encore publiée par les organisateurs, Diako l'écrit. On préfère « à confirmer » à une date inventée."
+   ],
+   "question": "Quel événement de l'île vous ne rateriez pour rien au monde ?",
+   "lien": "/evenements",
+   "attendu": "Événements",
+   "cta": "L'agenda des fêtes et des saisons",
+   "hashtags": [
+    "#Diako",
+    "#AgendaMadagascar",
+    "#FestivalMadagascar",
+    "#Madagascar",
+    "#Octobre"
+   ],
+   "captures": [
+    {
+     "f": "evenements-jaca",
+     "legende": "Les rendez-vous qui reviennent chaque année"
+    },
+    {
+     "f": "evenements-requins",
+     "legende": "Pour chacun : la période, le lieu, la source"
+    },
+    {
+     "f": "evenements-baleines",
+     "legende": "Les baleines, les récoltes, les festivals…"
+    }
+   ]
+  },
+  {
+   "cle": "jacarandas",
+   "type": "photos",
+   "rubrique": "Saisons et fêtes",
+   "icone": "📅",
+   "photos": "s2-jacaranda",
+   "titre": "Tana en violet",
+   "ou": "Antananarivo · fin septembre à novembre",
+   "mg": "Rehefa mamony ireo hazo volomparasy",
+   "emoji": "💜",
+   "corps": [
+    "C'est le moment. Chaque année, de fin septembre à novembre, les jacarandas de Tana se couvrent de fleurs violettes, avec un pic autour d'octobre. 💜",
+    "Autour du lac Anosy et dans les quartiers du centre, les rues changent de couleur. Mais la pleine floraison ne dure qu'environ trois semaines, et sa date exacte change d'une année à l'autre.",
+    "Alors ne remettez pas la balade à plus tard."
+   ],
+   "question": "Envoyez-nous votre plus belle photo de jacaranda en commentaire 📸💜",
+   "lien": "/evenements",
+   "attendu": "jacarandas",
+   "cta": "La floraison sur l'agenda Diako",
+   "hashtags": [
+    "#Diako",
+    "#Jacaranda",
+    "#Antananarivo",
+    "#Tana",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://www.villamahefa.com/tourisme-jacaranda/ (via la fiche événement Diako)"
+   ]
+  },
+  {
+   "cle": "d-plats",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "95 plats malgaches, et où les trouver",
+   "mg": "Karazana sakafo malagasy 95",
+   "emoji": "🍛",
+   "corps": [
+    "Ravitoto, romazava, koba, mofo gasy, akoho sy voanio… Diako a construit un atlas de la cuisine malgache : 95 plats, rangés en 9 familles. 🍛",
+    "Et comme chaque plat s'écrit de plusieurs façons, l'atlas en connaît 254 orthographes. Taper « ravi-toto » ou « ravitoto », c'est trouver le même plat.",
+    "Pour chaque plat : ce qu'il y a dedans, s'il contient du porc, du bœuf ou des fruits de mer, et les restaurants qui le servent. Il y a même un carnet pour noter ceux que vous avez goûtés. 😋"
+   ],
+   "question": "Quel plat malgache manque le plus quand on est loin de chez soi ?",
+   "lien": "/plats",
+   "attendu": "95 plats",
+   "cta": "L'atlas des plats malgaches",
+   "hashtags": [
+    "#Diako",
+    "#CuisineMalgache",
+    "#SakafoMalagasy",
+    "#Ravitoto",
+    "#Madagascar"
+   ],
+   "captures": [
+    {
+     "f": "plats",
+     "legende": "95 plats, 254 orthographes, 9 familles"
+    },
+    {
+     "f": "plats-familles",
+     "legende": "Chaque plat a sa fiche"
+    },
+    {
+     "f": "gouts",
+     "legende": "Votre carnet de goûts"
+    }
+   ]
+  },
+  {
+   "cle": "darafify",
+   "type": "recit",
+   "rubrique": "Angano · légendes",
+   "icone": "📖",
+   "photos": "s2-darafify",
+   "titre": "Darafify et la vache rouge",
+   "ou": "Sud-Est · traditions orales",
+   "mg": "Ilay goavambe sy ny ombiny mena",
+   "emoji": "🐂",
+   "corps": [
+    "Une vieille histoire du Sud-Est raconte un long voyage. Celui de Darafify, de sa femme Ramaliavaratra, et d'une vache rouge. 🐂",
+    "Partis de la côte nord, ils descendent la côte est à la recherche d'un endroit où s'installer. À chaque village, Darafify et la vache trouvent quelque chose à redire. Pas assez bien. On continue.",
+    "Jusqu'à la pointe sud de l'île. Là, ils s'exclament : « le pays des bœufs par excellence ! » Et ils s'y installent. Les Andriana du Sud-Est disent descendre de lui. Et chez les Antemoro, Darafify devient un géant qui affronte un autre géant, Fatrapaitatana."
+   ],
+   "cartes": [
+    "Il était une fois un voyageur, Darafify, sa femme Ramaliavaratra… et une vache rouge.",
+    "Partis de la côte nord, ils descendent la côte est. À chaque village, ils trouvent à redire. Pas assez bien. On continue.",
+    "Jusqu'à la pointe sud de l'île. Là, ils s'écrient :\n« Le pays des bœufs par excellence ! »\n\nEt ils s'y installent."
+   ],
+   "question": "Connaissez-vous d'autres versions de l'histoire de Darafify ? 👇",
+   "lien": "/lieu/androy",
+   "attendu": "Androy",
+   "cta": "L'Androy, le Grand Sud, sur Diako",
+   "hashtags": [
+    "#Diako",
+    "#Angano",
+    "#Darafify",
+    "#GrandSud",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://en.wikipedia.org/wiki/Darafify"
+   ]
+  },
+  {
+   "cle": "peyrieras",
+   "type": "photos",
+   "rubrique": "Parcs et réserves",
+   "icone": "📍",
+   "photos": "s2-peyrieras",
+   "titre": "La réserve Peyrieras",
+   "ou": "Marozevo · RN2, à 75 km de Tana",
+   "mg": "Fonenan'ny biby mandady sy ny sahona",
+   "emoji": "🦎",
+   "corps": [
+    "Sur la RN2, entre Manjakandriana et Moramanga, à 75 km de Tana, il y a une halte que les amoureux de caméléons connaissent bien. 🦎",
+    "La réserve Peyrieras, aussi appelée Madagascar Exotic, a été fondée par l'entomologiste français André Peyriéras. On y voit des caméléons, des geckos, des grenouilles, des crocodiles et des papillons, avec un guide.",
+    "C'est une étape populaire sur la route du parc d'Andasibe-Mantadia. Et dans la forêt voisine vivent des lémuriens habitués à la présence des visiteurs."
+   ],
+   "question": "Caméléon ou gecko à queue feuille : lequel vous impressionne le plus ?",
+   "lien": "/site/reserve-peyrieras",
+   "attendu": "Peyrieras",
+   "cta": "La réserve sur Diako",
+   "hashtags": [
+    "#Diako",
+    "#Cameleon",
+    "#RN2",
+    "#Andasibe",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://en.wikipedia.org/wiki/Peyrieras_Reptile_Reserve"
+   ]
+  },
+  {
+   "cle": "d-quand-partir",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Quand partir, et pourquoi",
+   "mg": "Volana inona no tsara indrindra ?",
+   "emoji": "☀️",
+   "corps": [
+    "« Déconseillé en février. » D'accord, mais pourquoi ? Les pistes coupées ? La chaleur ? Les baleines déjà reparties ? 🤔",
+    "Sur Diako, « Quand partir où » donne pour chaque destination les douze mois de l'année, chacun avec sa note et sa raison. Par exemple, en septembre : Sainte-Marie, c'est idéal, pour les baleines et leurs baleineaux. 🐋",
+    "Pour l'instant, 5 destinations sont documentées : Isalo, Mahajanga, Nosy Be, Sainte-Marie et les Tsingy de Bemaraha. Ce sont des faits, pas des avis, et n'importe quel voyageur qui connaît un endroit peut le documenter."
+   ],
+   "question": "Quelle destination devrait-on documenter en premier ? Dites-le en commentaire 👇",
+   "lien": "/quand-partir",
+   "attendu": "Quand partir",
+   "cta": "Le calendrier mois par mois",
+   "hashtags": [
+    "#Diako",
+    "#QuandPartir",
+    "#Saison",
+    "#VoyageMadagascar",
+    "#Madagascar"
+   ],
+   "captures": [
+    {
+     "f": "quand-partir",
+     "legende": "Chaque mois avec sa note et sa raison"
+    },
+    {
+     "f": "quand-partir-2",
+     "legende": "L'année d'une destination d'un coup d'œil"
+    }
+   ]
+  },
+  {
+   "cle": "valiha",
+   "type": "photos",
+   "rubrique": "Kolontsaina · culture",
+   "icone": "🎶",
+   "photos": "s2-valiha",
+   "titre": "La valiha",
+   "ou": "Musique malgache",
+   "mg": "Zava-maneno vita amin'ny volo",
+   "emoji": "🎶",
+   "corps": [
+    "Un tube de bambou, des cordes tout autour, et un son qui vous prend au cœur. C'est la valiha. 🎶",
+    "C'est une cithare tubulaire, jouée dans tout Madagascar, dont les origines sont indonésiennes. Le bambou mesure de 60 à 130 cm. Autrefois, les cordes étaient taillées dans l'écorce même du bambou. Aujourd'hui, elles sont en acier.",
+    "On en joue debout ou assis, l'instrument coincé sous le bras, les deux mains libres pour pincer les cordes."
+   ],
+   "question": "Un morceau de valiha que tout le monde devrait écouter ? Partagez-le en commentaire 👇",
+   "lien": "/evenements",
+   "attendu": "valiha",
+   "cta": "Les festivals de musique sur l'agenda Diako",
+   "hashtags": [
+    "#Diako",
+    "#Valiha",
+    "#MusiqueMalgache",
+    "#Kanto",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Valiha",
+    "Photo n°1 : description Commons « groupe Rajery avec son instrument de musique traditionnelle Valiha », Jazz Tohatohabato, août 2023"
+   ],
+   "legendes_photos": {
+    "1": "Le groupe Rajery et sa valiha, Jazz Tohatohabato 2023",
+    "2": "Joueur de valiha, Ambohimahasoa",
+    "3": "Valiha, musée d'Aquitaine",
+    "4": "Valiha, musée Lovako, Nosy Komba"
+   }
+  },
+  {
+   "cle": "madajazzcar",
+   "type": "photos",
+   "rubrique": "Saisons et fêtes",
+   "icone": "📅",
+   "photos": "s2-jazz",
+   "titre": "Madajazzcar",
+   "ou": "Antananarivo · chaque année en octobre",
+   "mg": "Fetiben'ny jazz eto an-drenivohitra",
+   "emoji": "🎷",
+   "corps": [
+    "Octobre à Tana, c'est aussi le mois du jazz. 🎷 Le festival Madajazzcar a été mis sur pied en 1989, et il revient chaque année en octobre, sur une dizaine de jours.",
+    "Des artistes malgaches et des groupes étrangers, des scènes à Antananarivo, et des dates en province. Le nom vient d'un album d'Arnaud Razafy, sorti bien avant le festival.",
+    "Les dates 2026 n'étaient pas encore publiées au moment où nous écrivons : suivez les annonces des organisateurs."
+   ],
+   "question": "Jazz, salegy ou hira gasy : c'est quoi votre son du week-end ? 🎶",
+   "lien": "/lieu/antananarivo-2",
+   "attendu": "Madajazzcar",
+   "cta": "Le festival, et où dormir et manger à Tana, sur Diako",
+   "hashtags": [
+    "#Diako",
+    "#Madajazzcar",
+    "#Jazz",
+    "#Antananarivo",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Jazz_%C3%A0_Madagascar",
+    "https://www.lexpress.mg/2025/09/musique-madajazzcar-ouvre-ses-portes.html (via la fiche événement Diako)"
+   ],
+   "note_photos": "Les photos montrent le Jazz Tohatoha-bato d'Antaninarenina (août 2023) et le percussionniste Olombelo Ricky — pas le Madajazzcar : la légende le dit.",
+   "legendes_photos": {
+    "1": "Jazz Tohatoha-bato, Antaninarenina, août 2023",
+    "2": "Olombelo Ricky",
+    "3": "Vilon'Androy au Jazz Tohatoha-bato, 2023"
+   },
+   "note_texte": "Photos du Jazz Tohatoha-bato d'Antaninarenina (2023), pas du Madajazzcar"
+  },
+  {
+   "cle": "d-sites",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Plus de 2 400 sites à visiter",
+   "mg": "Toerana an'arivony hotsidihina",
+   "emoji": "🏞️",
+   "corps": [
+    "Parcs nationaux, réserves, cascades, grottes, musées, plages, sommets… Diako recense plus de 2 400 sites à visiter à Madagascar. 🏞️",
+    "Pour que la liste reste lisible, on l'ouvre par région : Nord, Hauts Plateaux, Côte Est, Ouest, Sud. Chaque site a sa fiche, avec ses voisins : les hôtels et restaurants les plus proches.",
+    "Il y a les grands noms, et il y a les pépites que seuls les gens du coin connaissent."
+   ],
+   "question": "Un site peu connu près de chez vous qui mérite d'être sur Diako ? Dites-nous lequel 👇",
+   "lien": "/sites",
+   "attendu": "Sites et parcs",
+   "cta": "Tous les sites et parcs",
+   "hashtags": [
+    "#Diako",
+    "#ParcNational",
+    "#SitesTouristiques",
+    "#VisitMadagascar",
+    "#Madagascar"
+   ],
+   "captures": [
+    {
+     "f": "sites",
+     "legende": "Plus de 2 400 sites recensés"
+    },
+    {
+     "f": "sites-bas",
+     "legende": "Région par région"
+    },
+    {
+     "f": "site-zombitse",
+     "legende": "Une fiche par site, avec les adresses proches"
+    }
+   ]
+  },
+  {
+   "cle": "babakoto",
+   "type": "recit",
+   "rubrique": "Angano · légendes",
+   "icone": "📖",
+   "photos": "s2-babakoto",
+   "titre": "Babakoto, l'ancêtre de la forêt",
+   "ou": "Andasibe · forêts de l'Est",
+   "mg": "Ny tantaran'ny babakoto",
+   "emoji": "🐒",
+   "corps": [
+    "Dans les forêts de l'Est, un chant puissant traverse les arbres le matin. C'est l'indri. Les Malgaches l'appellent babakoto. 🐒",
+    "Babakoto se traduit souvent par « ancêtre » ou « père ». Et il y a une raison : les légendes le relient presque toutes à l'homme.",
+    "L'une raconte qu'un homme parti chasser en forêt n'est jamais revenu. Son fils part le chercher, et disparaît à son tour. Les villageois ne trouvent que deux grands lémuriens assis dans les arbres. Dans certaines versions, le chant du babakoto, ce sont les pleurs du père pour son fils perdu. C'est pour cela qu'il est protégé par des fady : on ne le chasse pas, on ne lui fait pas de mal."
+   ],
+   "cartes": [
+    "Un homme part chasser dans la forêt.\nIl ne revient pas.",
+    "Son fils part le chercher.\nIl ne revient pas non plus.",
+    "Les villageois ne trouvent que deux grands lémuriens, assis dans les arbres.\n\nLe père et le fils étaient devenus les premiers babakoto."
+   ],
+   "question": "Vous avez déjà entendu chanter un babakoto ? 🎶",
+   "lien": "/lieu/andasibe",
+   "attendu": "Andasibe",
+   "cta": "Andasibe sur Diako : où dormir, où manger",
+   "hashtags": [
+    "#Diako",
+    "#Babakoto",
+    "#Indri",
+    "#Andasibe",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Indri_indri",
+    "https://en.wikipedia.org/wiki/Indri"
+   ]
+  },
+  {
+   "cle": "mofo-gasy",
+   "type": "photos",
+   "rubrique": "Sakafo · saveurs",
+   "icone": "🍲",
+   "photos": "s2-mofogasy",
+   "titre": "Mofo gasy, le goût du matin",
+   "ou": "Hautes Terres · dans la rue",
+   "mg": "Sakafo maraina eny an-dalambe",
+   "emoji": "☕",
+   "corps": [
+    "Le matin, au coin de la rue, une marchande et ses moules en fonte. Et cette odeur. ☕",
+    "Mofo gasy, littéralement « pain malgache » : un petit gâteau léger à base de farine de riz, de sucre et de levain, originaire des Hautes Terres. On le mange au petit-déjeuner ou au goûter, avec un café ou un thé.",
+    "On le confond souvent avec le mokary. La différence est dans la cuisson : le mofo gasy est cuit dans des moules en fonte, le mokary est plus épais et peut se cuire à la poêle."
+   ],
+   "question": "Team mofo gasy ou team mokary ? ☕😋",
+   "lien": "/plat/mofo-gasy",
+   "attendu": "Mofo gasy",
+   "cta": "Le mofo gasy dans l'atlas des plats",
+   "hashtags": [
+    "#Diako",
+    "#MofoGasy",
+    "#CuisineMalgache",
+    "#SakafoMalagasy",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Mofo_gasy"
+   ]
+  },
+  {
+   "cle": "d-destination",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Une fiche par destination",
+   "mg": "Aiza no hatoriana, aiza no hisakafoana ?",
+   "emoji": "📍",
+   "corps": [
+    "Vous partez à Nosy Be ? Sur Diako, la fiche Nosy Be dit tout en un seul écran : pourquoi y aller, où dormir, où manger, et ce qu'il y a autour. 📍",
+    "Les plages d'Andilana et de Madirokely, l'archipel de Komba, Sakatia, Tanikely et Iranja, les sites à moins de 20 km… Et les récits des voyageurs qui y sont allés avant vous.",
+    "Pareil pour chaque destination de l'île."
+   ],
+   "question": "Quelle destination on vous prépare en prochain exemple ?",
+   "lien": "/lieu/nosy-be",
+   "attendu": "Nosy Be",
+   "cta": "La fiche Nosy Be",
+   "hashtags": [
+    "#Diako",
+    "#NosyBe",
+    "#OuDormir",
+    "#OuManger",
+    "#Madagascar"
+   ],
+   "captures": [
+    {
+     "f": "lieu-nosy-be",
+     "legende": "Pourquoi y aller, où dormir, où manger"
+    },
+    {
+     "f": "lieu-nosy-be-2",
+     "legende": "Ce qu'il y a à voir autour"
+    }
+   ]
+  },
+  {
+   "cle": "sorabe",
+   "type": "photos",
+   "rubrique": "Kolontsaina · culture",
+   "icone": "📜",
+   "photos": "s2-sorabe",
+   "titre": "Le sorabe",
+   "ou": "Sud-Est · écriture ancienne",
+   "mg": "Soratra arabo-malagasy fahiny",
+   "emoji": "📜",
+   "corps": [
+    "Avant l'alphabet latin, le malgache s'écrivait déjà. En lettres arabes. 📜",
+    "Le sorabe, « grandes écritures », est une écriture tirée de l'alphabet arabe pour noter le malgache, notamment chez les Antemoro du Sud-Est. Quelques centaines de manuscrits anciens nous sont parvenus, reliés en cuir. Beaucoup contiennent des formules magiques, d'autres racontent l'origine de peuples du Sud-Est.",
+    "À la fin du XVIIIe siècle, le roi Andrianampoinimerina fait venir des scribes antemoro pour enseigner la lecture et l'écriture aux enfants de sa cour. C'est ainsi que le futur roi Radama Ier apprend à lire et à écrire en sorabe. L'alphabet latin arrivera en 1823."
+   ],
+   "question": "Vous saviez que le malgache s'était d'abord écrit en lettres arabes ? 🤯",
+   "lien": "/explorer",
+   "attendu": "Destinations",
+   "cta": "Les lieux et l'histoire de Madagascar sur Diako",
+   "hashtags": [
+    "#Diako",
+    "#Sorabe",
+    "#HistoireDeMadagascar",
+    "#Antemoro",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://en.wikipedia.org/wiki/Sorabe_alphabet"
+   ]
+  },
+  {
+   "cle": "girofle",
+   "type": "photos",
+   "rubrique": "Saisons et fêtes",
+   "icone": "📅",
+   "photos": "s2-girofle",
+   "titre": "La saison du girofle",
+   "ou": "Analanjirofo · octobre à décembre",
+   "mg": "Fotoanan'ny jirofo",
+   "emoji": "🌿",
+   "corps": [
+    "Sur la côte est, une région porte le nom d'une épice. Analanjirofo, « dans la forêt des girofliers ». 🌿",
+    "La récolte du girofle s'y fait d'octobre à décembre. Et c'est à ce moment-là que les Betsimisaraka célèbrent le tsaboraha, une cérémonie traditionnelle pour honorer les ancêtres et fêter les liens familiaux, dans une grande liesse populaire.",
+    "Les clous sèchent au soleil, et toute la côte sent l'épice."
+   ],
+   "question": "Le parfum du girofle, ça vous rappelle quoi ? 🌿",
+   "lien": "/lieu/fenoarivo-atsinanana",
+   "attendu": "Fénérive",
+   "cta": "Fénérive-Est sur Diako",
+   "hashtags": [
+    "#Diako",
+    "#Girofle",
+    "#Analanjirofo",
+    "#Betsimisaraka",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.mongabay.com/2025/07/pour-une-production-durable-du-girofle-sans-la-deforestation-sur-la-cote-est-de-madagascar/"
+   ]
+  },
+  {
+   "cle": "d-pro",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Hôteliers, restaurateurs, guides",
+   "mg": "Ho an'ny tompon'ny hotely sy trano fisakafoanana",
+   "emoji": "🏨",
+   "corps": [
+    "Vous tenez un hôtel, un restaurant, une agence de voyage, ou vous êtes guide ? Votre établissement est peut-être déjà sur Diako. 🏨",
+    "Créez votre compte dans l'Espace professionnel pour publier votre fiche, vos tarifs et votre carte. Les voyageurs voient des informations à jour, venues de vous.",
+    "Plus de 3 300 établissements sont déjà référencés : cherchez le vôtre."
+   ],
+   "question": "Vous connaissez un établissement qui devrait être sur Diako ? Identifiez-le en commentaire 👇",
+   "lien": "/pro",
+   "attendu": "Espace professionnel",
+   "cta": "L'Espace professionnel",
+   "hashtags": [
+    "#Diako",
+    "#HotelMadagascar",
+    "#RestaurantMadagascar",
+    "#TourismeMadagascar",
+    "#Madagascar"
+   ],
+   "captures": [
+    {
+     "f": "pro",
+     "legende": "L'Espace professionnel"
+    },
+    {
+     "f": "fil-hotels",
+     "legende": "Plus de 1 400 hôtels déjà référencés"
+    }
+   ]
+  },
+  {
+   "cle": "fady",
+   "type": "recit",
+   "rubrique": "Kolontsaina · culture",
+   "icone": "🙏",
+   "photos": null,
+   "titre": "Azafady, et les fady",
+   "ou": "Culture malgache",
+   "mg": "Ny fady sy ny fanajana azy",
+   "emoji": "🙏",
+   "corps": [
+    "Vous le dites dix fois par jour : « azafady ». S'il vous plaît, excusez-moi. Mais savez-vous ce que le mot veut dire, mot à mot ? 🙏",
+    "« Puisse-t-il ne pas être fady pour moi. » Le fady, c'est l'interdit. Il peut concerner une personne, un lieu, un geste, un aliment, et varier d'une région, d'un village ou même d'une famille à l'autre. Beaucoup sont liés au respect des ancêtres.",
+    "Ne pas montrer un tombeau du doigt, ne pas manger tel aliment dans tel village… Pour le voyageur, la règle est simple : demander, et respecter le fady du lieu."
+   ],
+   "cartes": [
+    "« Azafady. »\n\nOn le dit dix fois par jour.\nMais que veut-il dire, mot à mot ?",
+    "« Puisse-t-il ne pas être fady pour moi. »\n\nLe fady, c'est l'interdit.",
+    "Il peut toucher une personne, un lieu, un geste, un aliment. Il change d'une région, d'un village, d'une famille à l'autre.",
+    "Ne pas montrer un tombeau du doigt. Ne pas manger tel aliment dans tel village.\n\nEn voyage : demander, et respecter."
+   ],
+   "question": "Un fady de votre région que les voyageurs devraient connaître ? 👇",
+   "lien": "/",
+   "attendu": "Diako",
+   "cta": "Voyager à Madagascar avec Diako",
+   "hashtags": [
+    "#Diako",
+    "#Fady",
+    "#Azafady",
+    "#CultureMalgache",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Fady"
+   ]
+  },
+  {
+   "cle": "d-villes",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Plus de 500 villes et villages",
+   "mg": "Tanàna sy tanàna ambanivohitra",
+   "emoji": "🏘️",
+   "corps": [
+    "Toamasina, Fianarantsoa, Ambositra… et les villages dont on ne trouve le nom nulle part ailleurs. Diako référence plus de 500 villes et villages, dans les 23 régions de l'île. 🏘️",
+    "On ouvre une région, puis une ville, pour voir ce qu'il y a à y faire, où dormir et où manger.",
+    "Et pour les lieux à visiter, la page Destinations rassemble 61 lieux emblématiques, des îles du Nord aux parcs du Sud."
+   ],
+   "question": "Votre ville ou votre village est-il sur Diako ? Allez vérifier et dites-nous 👇",
+   "lien": "/villes",
+   "attendu": "Villes et villages",
+   "cta": "Toutes les villes et villages",
+   "hashtags": [
+    "#Diako",
+    "#Madagascar",
+    "#Tanana",
+    "#Regions",
+    "#VoyageMadagascar"
+   ],
+   "captures": [
+    {
+     "f": "villes",
+     "legende": "23 régions, plus de 500 villes et villages"
+    },
+    {
+     "f": "explorer-2",
+     "legende": "61 destinations emblématiques"
+    }
+   ]
+  },
+  {
+   "cle": "makua",
+   "type": "photos",
+   "rubrique": "Saisons et fêtes",
+   "icone": "📅",
+   "photos": "s2-makua",
+   "titre": "Makua Festival Music",
+   "ou": "Toamasina · du 29 octobre au 1er novembre",
+   "mg": "Fetiben'ny mozika any Toamasina",
+   "emoji": "🎤",
+   "corps": [
+    "Fin octobre, c'est Toamasina qui vibre. 🎤 Le Makua Festival Music revient du 29 octobre au 1er novembre 2026.",
+    "Un festival créé par la chanteuse Denise : quatre jours de concerts, un carnaval pour ouvrir la fête le 29 octobre, et des artistes des îles voisines. Rossy est annoncé en tête d'affiche.",
+    "Pour ceux qui montent de Tana, c'est le moment de réserver le trajet et l'hébergement."
+   ],
+   "question": "Vous y serez ? Taguez la personne qui vient avec vous 🎶",
+   "lien": "/lieu/toamasina",
+   "attendu": "Toamasina",
+   "cta": "Où dormir et où manger à Toamasina",
+   "hashtags": [
+    "#Diako",
+    "#MakuaFestival",
+    "#Toamasina",
+    "#Tamatave",
+    "#Madagascar"
+   ],
+   "sources": [
+    "https://newsmada.com/2026/08/13/makua-festival-music-la-musique-malgache-veut-conquerir-le-monde/"
+   ],
+   "note_photos": "Photos de la ville de Toamasina (boulevard, plage, port), pas du festival : la légende le dit.",
+   "legendes_photos": {
+    "1": "Toamasina, boulevard Labourdonnais",
+    "2": "Toamasina, plage",
+    "3": "Toamasina",
+    "4": "Toamasina, le port"
+   },
+   "note_texte": "Photos de la ville de Toamasina, pas du festival"
+  },
+  {
+   "cle": "d-recit",
+   "type": "site",
+   "rubrique": "Découvrir Diako",
+   "icone": "🧭",
+   "titre": "Racontez votre voyage",
+   "mg": "Zarao aminay ny dianao",
+   "emoji": "✍️",
+   "corps": [
+    "Un mois de découvertes avec nous. Maintenant, c'est à vous. ✍️",
+    "Sur Diako, chacun peut publier : un voyage, une adresse, un bon plan. Votre récit aide le prochain voyageur à choisir.",
+    "Et sous chaque récit, un bouton « J'y suis allé » pour dire que vous connaissez l'endroit, vous aussi."
+   ],
+   "question": "Votre plus beau souvenir de voyage à Madagascar, c'était où ? Racontez-le ici, puis sur Diako 👇",
+   "lien": "/publier",
+   "attendu": "publier",
+   "cta": "Publier mon récit",
+   "hashtags": [
+    "#Diako",
+    "#RecitDeVoyage",
+    "#Madagascar",
+    "#VoyageMadagascar",
+    "#Fitsangatsanganana"
+   ],
+   "captures": [
+    {
+     "f": "publier",
+     "legende": "Un compte, et vous publiez"
+    },
+    {
+     "f": "lieu-nosy-be",
+     "legende": "Vos récits rejoignent la fiche du lieu"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,157 @@
+{
+ "serie": "Lieux emblématiques de Madagascar",
+ "heure": "18:00",
+ "utm": "utm_source=facebook&utm_medium=post&utm_campaign=lieux-emblematiques&utm_content={cle}",
+ "sources_faits": "Chaque fait vient de la base Diako (places.summary, why_go, place_access, attractions.description = extrait Wikipédia) relue le 18/09/2026, ou d'un fait établi et non chiffré. Deux chiffres contradictoires dans la base (Pangalanes 600 ou 700 km ; Ambohimanga 20 ou 24 km de Tana) ne sont PAS repris.",
+ "publications": [
+  {"cle": "mer-emeraude", "titre": "Mer d'Émeraude", "mg": "Ny ranomasina maitso manga", "ou": "Près de Diego-Suarez · Diana", "emoji": "🌊",
+   "corps": ["Imagine une eau si turquoise qu'on la croirait éclairée par en dessous. 💎", "La Mer d'Émeraude, c'est un grand lagon abrité par une barrière de récif, près de Diego-Suarez. On y part en boutre depuis Ramena, voile au vent. ⛵", "🐠 Masque, tuba, sable blanc et poisson grillé : la journée parfaite existe."],
+   "question": "Efa nilomano tao amin'ny Mer d'Émeraude ve ianao ? 🙋‍♀️🙋‍♂️",
+   "hashtags": ["#Diako", "#MerDEmeraude", "#DiegoSuarez", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "andasibe", "titre": "Andasibe", "mg": "Ny alan'ny babakoto", "ou": "Alaotra-Mangoro · à 3 h de Tana", "emoji": "🌿", "adresses": true,
+   "corps": ["Au petit matin, un chant monte de la forêt. Long, puissant, presque humain. 🎶", "C'est l'indri — le babakoto — le plus grand lémurien vivant. Et c'est à Andasibe qu'on l'entend. 🐒", "🚗 À 3 heures de route de Tana par le goudron : faisable en une journée, idéal en week-end.", "🌙 La nuit, la balade sur la route forestière dévoile un autre monde : caméléons, grenouilles, microcèbes."],
+   "question": "Efa nandre ny hiran'ny babakoto ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Andasibe", "#Indri", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "rova-antananarivo", "titre": "Rova d'Antananarivo", "mg": "Ny Rovan'i Manjakamiadana", "ou": "Haute-Ville · Antananarivo", "emoji": "👑",
+   "corps": ["Tout en haut de la Haute-Ville, il veille sur Tana depuis des siècles. 🏰", "Le Rova, c'est l'ancienne enceinte royale de la capitale. Son grand palais, Manjakamiadana — le « palais de la Reine » — se voit de presque toute la ville.", "📸 De là-haut, Tana s'étale à tes pieds : les collines, le lac Anosy, les rizières au loin."],
+   "question": "Efa niakatra tany amin'ny Rova ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Rova", "#Antananarivo", "#PatrimoineMalagasy", "#Madagascar"]},
+
+  {"cle": "tritriva", "titre": "Lac Tritriva", "mg": "Ny farihy eo an-tampon'ny tendrombohitra", "ou": "Près d'Antsirabe · Vakinankaratra", "emoji": "💚",
+   "corps": ["Un lac… posé au sommet d'une montagne. 🏔️", "Tritriva occupe le cratère d'un ancien volcan, à quelques kilomètres d'Antsirabe. Ses eaux vert sombre, presque immobiles, descendent à environ 160 mètres de profondeur. 😮", "🌳 Autour : les parois, la forêt, et une légende d'amoureux que les guides du coin racontent mieux que personne."],
+   "question": "Efa nahita ny farihy Tritriva ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#LacTritriva", "#Antsirabe", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "tsingy-rouges", "titre": "Tsingy Rouges", "mg": "Ny vato mena voasokitry ny orana", "ou": "Près de Diego-Suarez · Diana", "emoji": "🔴",
+   "corps": ["On se croirait sur une autre planète. 🪐", "Près de Diego-Suarez, la pluie et le temps ont sculpté la terre rouge en une forêt d'aiguilles, de crêtes et de cheminées.", "🌅 Viens en fin de journée : avec la lumière rasante, les Tsingy Rouges passent de l'orange au rouge feu."],
+   "question": "Efa tonga tany amin'ny Tsingy Mena ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#TsingyRouges", "#DiegoSuarez", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "berenty", "titre": "Berenty", "mg": "Ny tanin'ny sifaka mandihy", "ou": "Près de Fort-Dauphin · Anosy", "emoji": "🐒",
+   "corps": ["Ici, les lémuriens dansent. Vraiment. 💃", "À Berenty, dans l'extrême sud, le sifaka — le propithèque de Verreaux — traverse le sable en bonds de côté, les bras en l'air. Un spectacle qu'on ne voit qu'à Madagascar.", "🌵 Autour : la forêt épineuse du sud, et les makis catta qui ne te quittent pas des yeux.", "🚗 À environ deux heures de route de Fort-Dauphin (Tolagnaro)."],
+   "question": "Efa nahita sifaka mandihy ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Berenty", "#Sifaka", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "ambohimanga", "titre": "Ambohimanga", "mg": "Ny havoana masina", "ou": "Au nord de Tana · Analamanga", "emoji": "🌳",
+   "corps": ["Au nord de Tana, une colline boisée garde la mémoire des rois de l'Imerina. 👑", "Ambohimanga est la colline royale inscrite au patrimoine mondial de l'UNESCO. On y entre par d'anciennes portes, que l'on fermait autrefois en roulant un grand disque de pierre.", "🏡 En haut : le rova, les maisons royales en bois, et une vue immense sur les Hautes Terres."],
+   "question": "Efa niakatra tany Ambohimanga ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Ambohimanga", "#UNESCO", "#PatrimoineMalagasy", "#Madagascar"]},
+
+  {"cle": "tanikely", "titre": "Nosy Tanikely", "mg": "Ny nosy kely sy ny haran-dranomasina", "ou": "Archipel de Nosy Be · Diana", "emoji": "🐢",
+   "corps": ["Tu mets la tête sous l'eau… et tu ne veux plus la sortir. 🤿", "Nosy Tanikely est un parc national marin de l'archipel de Nosy Be, réputé pour la clarté de son eau. Coraux, poissons de toutes les couleurs, et souvent des tortues.", "⛵ Le meilleur masque-tuba qu'on puisse faire en une demi-journée depuis Nosy Be."],
+   "question": "Efa nilomano tany Nosy Tanikely ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#NosyTanikely", "#NosyBe", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "andringitra", "titre": "Andringitra", "mg": "Ny tendrombohitra avo faharoa eto Madagasikara", "ou": "Au sud d'Ambalavao · Haute Matsiatra", "emoji": "⛰️",
+   "corps": ["Pour les marcheurs, c'est LE rendez-vous. 🥾", "Le parc national d'Andringitra abrite le pic Boby — Imarivolanitra — deuxième sommet de Madagascar et le plus haut qu'on puisse gravir à pied. Parois de granite, cirques, nuits fraîches sous les étoiles. ✨", "🚗 On y accède depuis Ambalavao : environ 2 h 30 de piste."],
+   "question": "Iza no efa niakatra tany an-tampon'i Boby ? 🙋",
+   "hashtags": ["#Diako", "#Andringitra", "#PicBoby", "#Randonnée", "#Madagascar"]},
+
+  {"cle": "pangalanes", "titre": "Canal des Pangalanes", "mg": "Ny lakandrano amoron-dranomasina", "ou": "Côte Est · jusqu'à Toamasina", "emoji": "🛶",
+   "corps": ["Et si tu longeais la côte Est… sans jamais prendre la mer ? 🌊", "Le canal des Pangalanes relie lagunes, lacs et rivières le long de l'océan Indien, jusqu'à Toamasina. Des centaines de kilomètres d'eau calme, bordés de villages de pêcheurs et de forêt.", "🚤 En pirogue ou en bateau, c'est une autre façon de voir Madagascar : lentement."],
+   "question": "Efa nandeha sambo tamin'ny lakandranon'i Pangalanes ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Pangalanes", "#Toamasina", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "kirindy", "titre": "Kirindy", "mg": "Ny alan'ny fosa", "ou": "Au nord de Morondava · Menabe", "emoji": "🐾",
+   "corps": ["Le plus grand prédateur de Madagascar vit ici. 👀", "La forêt sèche de Kirindy, dans le Menabe, est l'un des meilleurs endroits pour voir le fosa — ce « félin »… qui n'en est pas un. Et à la nuit tombée, les minuscules microcèbes sortent. 🌙", "🚗 À environ 2 heures de piste de Morondava — et sur la route, les baobabs."],
+   "question": "Efa nahita fosa ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Kirindy", "#Fosa", "#Morondava", "#Madagascar"]},
+
+  {"cle": "ilafy", "titre": "Palais d'Ilafy", "mg": "Ny havoana masin'Ilafy", "ou": "Nord-est de Tana · Analamanga", "emoji": "🏛️",
+   "corps": ["À deux pas de Tana, un palais de bois garde le souvenir des rois. 👑", "Le palais royal d'Ilafy se dresse sur la colline sacrée d'Ilafy, l'une des collines historiques de l'Imerina. Sa silhouette sombre, tout en bois, ne ressemble à aucune autre.", "🌳 Un lieu calme, à l'ombre des grands arbres, loin du bruit de la ville."],
+   "question": "Efa tonga tany Ilafy ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Ilafy", "#Antananarivo", "#PatrimoineMalagasy", "#Madagascar"]},
+
+  {"cle": "nosy-ve", "titre": "Nosy Ve", "mg": "Ny nosy masina tandrifin'i Anakao", "ou": "Au large d'Anakao · Sud-Ouest", "emoji": "🏝️",
+   "corps": ["Un banc de sable blanc au milieu d'un lagon turquoise. Et le silence. 🤍", "Nosy Ve est un îlot sacré au large d'Anakao, dans le sud-ouest. Il abrite une colonie de pailles-en-queue, ces oiseaux blancs à longue queue rouge. 🕊️", "🛶 Une vingtaine de minutes de pirogue depuis Anakao.", "🙏 C'est un lieu sacré : on y respecte les fady."],
+   "question": "Iza no te handeha any Nosy Ve ? 🙋‍♀️🙋‍♂️",
+   "hashtags": ["#Diako", "#NosyVe", "#Anakao", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "ankarana", "titre": "Ankarana", "mg": "Ny tsingy sy ny lava-bato", "ou": "Entre Diego et Ambanja · Diana", "emoji": "🦇",
+   "corps": ["Au-dessus : des lames de calcaire. En dessous : des grottes et des rivières qui coulent sous la terre. 🕳️", "La réserve spéciale de l'Ankarana, entre Diego-Suarez et Ambanja, est un monde à deux étages : pont suspendu au-dessus des tsingy, lémuriens dans la forêt, chauves-souris dans les grottes.", "🚗 À environ 2 h 30 de Diego par le goudron."],
+   "question": "Efa nidina tao anaty lava-baton'Ankarana ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Ankarana", "#Tsingy", "#DiegoSuarez", "#Madagascar"]},
+
+  {"cle": "ampefy", "titre": "Ampefy", "mg": "Ny riandranon'ny Lily", "ou": "Itasy · à 2 h 30 de Tana", "emoji": "💦", "adresses": true,
+   "corps": ["À 2 h 30 de Tana, un week-end qui ressemble à un voyage. 🚗", "Ampefy, c'est le lac Itasy dans son paysage volcanique, les étonnants geysers d'Analavory, et la chute de la Lily qui gronde au milieu des champs. 🌋", "🏡 Et il y a de quoi dormir et manger sur place."],
+   "question": "Efa tonga tany Ampefy ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Ampefy", "#Itasy", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "zafimaniry", "titre": "Pays Zafimaniry", "mg": "Ny tanin'ny mpanao sokitra hazo", "ou": "Près d'Ambositra · Amoron'i Mania", "emoji": "🪵",
+   "corps": ["Des villages de bois, assemblés sans un seul clou. 🏡", "Près d'Ambositra, dans la forêt des Hautes Terres, les Zafimaniry travaillent le bois comme personne. Leur savoir-faire est inscrit au patrimoine culturel immatériel de l'UNESCO. ✨", "🥾 On y entre par Antoetra, puis à pied, de village en village."],
+   "question": "Efa nahita ny sokitra zafimaniry ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Zafimaniry", "#Ambositra", "#UNESCO", "#Madagascar"]},
+
+  {"cle": "lokobe", "titre": "Lokobe", "mg": "Ny ala taloha an'i Nosy Be", "ou": "Sud-est de Nosy Be · Diana", "emoji": "🐒",
+   "corps": ["Nosy Be, ce n'est pas que les plages. 🌴", "Au sud-est de l'île, Lokobe protège une forêt ancienne, classée réserve dès 1927 et aujourd'hui parc national. On y croise le lémur macaco — le mâle est noir, la femelle rousse — et des caméléons de toutes les tailles.", "🛶 On y arrive souvent en pirogue, par le village d'Ampasipohy."],
+   "question": "Efa niditra tany an'ala Lokobe ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Lokobe", "#NosyBe", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "katsepy", "titre": "Katsepy", "mg": "Ny jiro fanilo tandrifin'i Mahajanga", "ou": "Face à Mahajanga · Boeny", "emoji": "🗼",
+   "corps": ["De l'autre côté de la baie de Majunga, une autre ambiance. ⛴️", "On traverse la baie de Bombetoka en bac, et on arrive à Katsepy : un village tranquille, une plage, et son phare blanc qui veille sur l'entrée de la baie. 🌅", "Le bon plan pour une journée loin de la ville."],
+   "question": "Efa nita ny helodrano nankany Katsepy ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Katsepy", "#Mahajanga", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "masoala", "titre": "Masoala", "mg": "Ny ala mihaona amin'ny ranomasina", "ou": "Près de Maroantsetra · Sava", "emoji": "🌿",
+   "corps": ["Là-bas, la forêt tropicale descend jusqu'à la plage. 😍", "Masoala est la plus grande aire protégée de Madagascar : une forêt humide qui plonge directement dans l'océan, au nord-est de l'île.", "🚤 On y accède en bateau depuis Maroantsetra, à travers la baie d'Antongil."],
+   "question": "Efa nahita ny alan'i Masoala ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Masoala", "#Maroantsetra", "#ParcNational", "#Madagascar"]},
+
+  {"cle": "lac-anosy", "titre": "Lac Anosy", "mg": "Ny farihy eo afovoan'ny renivohitra", "ou": "Cœur d'Antananarivo", "emoji": "💜",
+   "corps": ["En octobre, Tana se met au violet. 💜", "Autour du lac Anosy, les jacarandas fleurissent, et le monument aux morts, sur son îlot, semble flotter au milieu des fleurs. C'est LE moment de la balade — en plein cœur de la capitale.", "📸 Sors le téléphone : chaque angle est une carte postale."],
+   "question": "Efa naka sary teo amin'ny farihy Anosy ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#LacAnosy", "#Jacaranda", "#Antananarivo", "#Madagascar"]},
+
+  {"cle": "nosy-hara", "titre": "Nosy Hara", "mg": "Ny nosy vato sy ny ranomasina manga", "ou": "Au nord-ouest de Diego · Diana", "emoji": "🦎",
+   "corps": ["Des îlots de calcaire posés sur une mer bleu profond. 🌊", "Au nord-ouest de Diego-Suarez, Nosy Hara et ses douze îlots forment un parc marin : plages désertes, falaises sculptées… et l'un des plus petits caméléons du monde, le Brookesia micra, qui ne vit que là. 🔍"],
+   "question": "Efa nandre momba ny Nosy Hara ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#NosyHara", "#DiegoSuarez", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "anja", "titre": "Anja", "mg": "Ny tanin'ny maky", "ou": "Près d'Ambalavao · RN7", "emoji": "🐒",
+   "corps": ["Des dizaines de makis catta, à quelques mètres de toi. 😍", "Anja est une réserve communautaire, gérée par les villageois, au pied des grands rochers de granite qu'on appelle les « Trois Sœurs ». Les makis y vivent en liberté, entre la forêt et les rochers.", "🚗 À une vingtaine de minutes d'Ambalavao, sur la RN7.", "💡 En visitant Anja, tu fais vivre directement le village qui la protège."],
+   "question": "Efa nahita maky tany Anja ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Anja", "#Ambalavao", "#RN7", "#Madagascar"]},
+
+  {"cle": "belo-sur-mer", "titre": "Belo-sur-Mer", "mg": "Ny tanànan'ny mpanamboatra sambo", "ou": "Au sud de Morondava · Menabe", "emoji": "⛵",
+   "corps": ["Ici, on construit encore les grands voiliers à la main. 🔨", "Au bout de la piste, au sud de Morondava, Belo-sur-Mer est un village de charpentiers de marine et de sauniers. Sur la plage, les boutres en bois prennent forme, planche après planche. 🪵", "🌅 Et le soir, le soleil se couche sur le canal du Mozambique."],
+   "question": "Efa nahita sambo lehibe vita tanana ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#BeloSurMer", "#Morondava", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "ankarafantsika", "titre": "Ankarafantsika", "mg": "Ny ala maina sy ny farihy Ravelobe", "ou": "Sur la RN4 · Boeny", "emoji": "🦜",
+   "corps": ["Sur la route de Majunga, un arrêt s'impose. 🛑", "Le parc national d'Ankarafantsika, c'est une forêt sèche pleine de vie et le lac Ravelobe, où se reposent les oiseaux… et les crocodiles. Le propithèque de Coquerel y saute d'arbre en arbre. 🐒", "🚗 Sur la RN4 entre Tana et Majunga, à environ 2 heures de Majunga."],
+   "question": "Efa nijanona tany Ankarafantsika ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Ankarafantsika", "#Mahajanga", "#ParcNational", "#Madagascar"]},
+
+  {"cle": "foulpointe", "titre": "Foulpointe", "mg": "Ny moron-dranomasina sy ny manda taloha", "ou": "Au nord de Toamasina · Atsinanana", "emoji": "🏖️", "adresses": true,
+   "corps": ["La plage préférée des Tamataviens le week-end. ☀️", "À Foulpointe (Mahavelona), une barrière de corail protège un lagon calme où l'on se baigne sans craindre les vagues. Et à deux pas, les murs ronds du vieux fort Manda racontent une autre histoire. 🏰", "🏡 Hôtels et restaurants sur place."],
+   "question": "Efa nilomano tany Foulpointe ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Foulpointe", "#Toamasina", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "andafiavaratra", "titre": "Palais d'Andafiavaratra", "mg": "Ny lapan'ny Praiminisitra", "ou": "Haute-Ville · Antananarivo", "emoji": "🏛️",
+   "corps": ["Juste en dessous du Rova, un palais aux tours rouges. 🔴", "Le palais d'Andafiavaratra était la résidence du Premier ministre Rainilaiarivony, l'homme fort du royaume au XIXe siècle. C'est aujourd'hui un monument historique et un musée, au cœur de la Haute-Ville de Tana. 🖼️"],
+   "question": "Efa niditra tao amin'ny lapan'Andafiavaratra ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Andafiavaratra", "#Antananarivo", "#PatrimoineMalagasy", "#Madagascar"]},
+
+  {"cle": "nosy-mangabe", "titre": "Nosy Mangabe", "mg": "Ny nosin'ny aiay", "ou": "Baie d'Antongil · Maroantsetra", "emoji": "🦎",
+   "corps": ["Une île couverte de forêt, où la nature a le dernier mot. 🌿", "Dans la baie d'Antongil, face à Maroantsetra, Nosy Mangabe est le refuge de l'aye-aye — l'aiay — le plus mystérieux des lémuriens.", "👀 Et si tu as l'œil, tu trouveras le gecko à queue plate, parfaitement camouflé contre son tronc."],
+   "question": "Efa nandre momba ny aiay ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#NosyMangabe", "#Maroantsetra", "#AyeAye", "#Madagascar"]},
+
+  {"cle": "andraikiba", "titre": "Lac Andraikiba", "mg": "Ny farihy akaikin'Antsirabe", "ou": "À l'ouest d'Antsirabe · Vakinankaratra", "emoji": "🌊",
+   "corps": ["À quelques minutes d'Antsirabe, le calme d'un grand lac. 🌿", "Le lac Andraikiba s'étend au pied des collines, à l'ouest de la ville. Balade autour de l'eau, pique-nique, et l'air frais des Hautes Terres.", "🔁 Et si tu enchaînais avec le lac Tritriva, un peu plus loin sur la même route ?"],
+   "question": "Efa nitsangatsangana teo amin'ny farihy Andraikiba ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Andraikiba", "#Antsirabe", "#Madagascar", "#VoyageMadagascar"]},
+
+  {"cle": "marojejy", "titre": "Marojejy", "mg": "Ny tendrombohitra rakotra ala", "ou": "Près d'Andapa · Sava", "emoji": "⛰️",
+   "corps": ["Des montagnes entièrement couvertes de forêt primaire. 🌧️", "Dans la Sava, au nord-est, le massif du Marojejy culmine à 2 132 mètres. Classé au patrimoine mondial, il abrite le propithèque soyeux, l'un des lémuriens les plus rares au monde. 🐒", "🥾 Une randonnée exigeante, pour ceux qui veulent la vraie forêt."],
+   "question": "Iza no vonona hiakatra ny Marojejy ? 🙋",
+   "hashtags": ["#Diako", "#Marojejy", "#Sava", "#ParcNational", "#Madagascar"]},
+
+  {"cle": "anjajavy", "titre": "Anjajavy", "mg": "Ny honko sy ny ala maina", "ou": "Côte nord-ouest · Sofia", "emoji": "🌳",
+   "corps": ["Vu du ciel, c'est un dessin. ✈️", "Sur la côte nord-ouest, dans la région Sofia, Anjajavy mêle forêt sèche, mangroves et baies. Les rivières serpentent entre les palétuviers jusqu'à la mer. 🌊"],
+   "question": "Efa tonga tany Anjajavy ve ianao ? 🙋",
+   "hashtags": ["#Diako", "#Anjajavy", "#Sofia", "#Madagascar", "#VoyageMadagascar"]}
+ ]
+}

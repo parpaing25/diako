@@ -1,0 +1,775 @@
+{
+ "note": "Reels Di'ako en français, lieux emblématiques. Décision du 19/09/2026 (Andry : « tranche par toi-même ») : musique + texte à l'écran, SANS voix (format des reels de paysage, regardés souvent sans le son ; la voix de synthèse écorcherait des noms malgaches qu'on ne peut pas faire écouter). 15 reels, un tous les deux jours à 20 h, au moins 7 jours après la publication photo du même lieu. Faits : série 1 (serie.json, sourcés) et sources/*.txt.",
+ "heure": "20:00",
+ "reels": [
+  {
+   "cle": "r-baobabs",
+   "date": "2026-09-20",
+   "photos": "r-baobabs",
+   "lieu": "Allée des Baobabs",
+   "accroche": "Des arbres de plus de 800 ans",
+   "musique": "16-emotion-lifes-a-movie.mp3",
+   "lien": "/lieu/morondava",
+   "cta": "Où dormir et où manger à Morondava, sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "pano-g",
+     "texte": "L'Allée des Baobabs",
+     "sous": "Morondava · ouest de Madagascar"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "Des géants de 30 mètres"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano",
+     "texte": "« Renala »",
+     "sous": "la mère de la forêt"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano-g",
+     "texte": "Les témoins d'une forêt disparue"
+    },
+    {
+     "photo": 6,
+     "mouv": "zoom",
+     "texte": "Et au coucher du soleil… 🌅"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Morondava ?<br>Tout est sur"
+   },
+   "description": "🌅 L'Allée des Baobabs, près de Morondava 🇲🇬\n\nDes baobabs de 30 mètres, âgés de plus de 800 ans. On les appelle renala, « la mère de la forêt » : les derniers témoins d'une forêt dense aujourd'hui disparue.\n\nVous y êtes déjà allé au coucher du soleil ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#AlleeDesBaobabs",
+    "#Morondava",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/All%C3%A9e_des_baobabs",
+    "https://en.wikipedia.org/wiki/Avenue_of_the_Baobabs"
+   ],
+   "ecarte": "« une douzaine d'arbres » (fr) contre « 20 à 25 » (en) : nombre non cité."
+  },
+  {
+   "cle": "r-tsingy",
+   "date": "2026-09-22",
+   "photos": "r-tsingy",
+   "lieu": "Tsingy de Bemaraha",
+   "accroche": "Une forêt… de pierre",
+   "musique": "14-emotion-discover.mp3",
+   "lien": "/lieu/tsingy-de-bemaraha",
+   "cta": "Comment y aller et où dormir, sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "Tsingy de Bemaraha",
+     "sous": "Melaky · ouest de Madagascar"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom-out",
+     "texte": "Des passerelles au-dessus du vide"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano-g",
+     "texte": "Patrimoine mondial de l'UNESCO",
+     "sous": "depuis 1990"
+    },
+    {
+     "photo": 6,
+     "mouv": "zoom",
+     "texte": "Des espèces qu'on ne voit nulle part ailleurs"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano",
+     "texte": "Ouvert de juin à novembre",
+     "sous": "à la saison sèche"
+    }
+   ],
+   "fin": {
+    "texte": "Comment y aller, où dormir ?<br>Tout est sur"
+   },
+   "description": "🪨 Les Tsingy de Bemaraha 🇲🇬\n\nUne forêt d'aiguilles de calcaire dans l'ouest de Madagascar, inscrite au patrimoine mondial de l'UNESCO depuis 1990. La réserve se visite à la saison sèche, de juin à novembre.\n\nVous oseriez traverser les passerelles ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Tsingy",
+    "#Bemaraha",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/R%C3%A9serve_naturelle_int%C3%A9grale_du_Tsingy_de_Bemaraha",
+    "https://en.wikipedia.org/wiki/Tsingy_de_Bemaraha_National_Park"
+   ],
+   "ecarte": "Sens de « tsingy » : « aiguille » (fr) contre « où l'on ne marche pas pieds nus » (en). Vidéo Commons « Veed ai » : provenance douteuse."
+  },
+  {
+   "cle": "r-isalo",
+   "date": "2026-09-24",
+   "photos": "r-isalo",
+   "lieu": "Isalo",
+   "accroche": "Des canyons à perte de vue",
+   "musique": "12-confiance-raising-me-higher.mp3",
+   "lien": "/lieu/ranohira",
+   "cta": "Où dormir et où manger à Ranohira, sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "pano-g",
+     "texte": "Parc national de l'Isalo",
+     "sous": "Ihorombe · sud-ouest de Madagascar"
+    },
+    {
+     "photo": 4,
+     "mouv": "zoom",
+     "texte": "Des canyons profonds, des pics de grès"
+    },
+    {
+     "photo": 3,
+     "mouv": "pano",
+     "texte": "Parc national depuis 1999"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano-g",
+     "texte": "Le parc le plus visité",
+     "sous": "par les voyageurs venus de l'étranger"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Ranohira ?<br>Tout est sur"
+   },
+   "description": "🏜️ Le parc national de l'Isalo 🇲🇬\n\nUn massif de grès entaillé de canyons profonds et hérissé de pics, dans le sud-ouest. Parc national depuis 1999, c'est le parc le plus visité de Madagascar par les voyageurs venus de l'étranger.\n\nIsalo, c'est sur votre liste ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Isalo",
+    "#RN7",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Parc_national_de_l%27Isalo"
+   ],
+   "ecarte": "Superficie : 81 000 à 86 570 ha selon les sources — non citée."
+  },
+  {
+   "cle": "r-saintemarie",
+   "date": "2026-09-26",
+   "photos": "r-saintemarie",
+   "lieu": "Sainte-Marie",
+   "accroche": "L'île des pirates",
+   "musique": "18-afro-zanzibar.mp3",
+   "lien": "/lieu/nosy-boraha",
+   "cta": "Où dormir et où manger à Sainte-Marie, sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "Sainte-Marie · Nosy Boraha",
+     "sous": "49 km de long, 5 km de large"
+    },
+    {
+     "photo": 2,
+     "mouv": "pano",
+     "texte": "Et au sud, l'île aux Nattes"
+    },
+    {
+     "photo": 4,
+     "mouv": "zoom",
+     "texte": "Le cimetière des pirates",
+     "sous": "Ambodifotatra"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano-g",
+     "texte": "Plages, lagon… et baleines à bosse 🐋"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Sainte-Marie ?<br>Tout est sur"
+   },
+   "description": "🏴‍☠️ Sainte-Marie, Nosy Boraha 🇲🇬\n\nUne île de 49 km de long au large de la côte est, ancien repaire de pirates aux XVIIe et XVIIIe siècles : leur cimetière se visite encore à Ambodifotatra. Juste au sud, l'île aux Nattes. Et au large, les baleines à bosse.\n\nPlutôt plage ou plutôt histoire de pirates ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#SainteMarie",
+    "#NosyBoraha",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/%C3%8Ele_Sainte-Marie"
+   ]
+  },
+  {
+   "cle": "r-mer-emeraude",
+   "date": "2026-09-28",
+   "photos": "mer-emeraude",
+   "lieu": "Mer d'Émeraude",
+   "accroche": "Une eau couleur émeraude 💎",
+   "musique": "13-emotion-follow-me-home.mp3",
+   "lien": "/lieu/mer-d-emeraude",
+   "cta": "La Mer d'Émeraude sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Un grand lagon abrité par un récif",
+     "sous": "près de Diego-Suarez"
+    },
+    {
+     "photo": 3,
+     "mouv": "pano",
+     "texte": "On y part en boutre ⛵",
+     "sous": "depuis Ramena"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano-g",
+     "texte": "Masque, tuba, sable blanc 🐠"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Diego ?<br>Tout est sur"
+   },
+   "description": "💎 La Mer d'Émeraude, près de Diego-Suarez 🇲🇬\n\nUn grand lagon abrité par une barrière de récif. On y part en boutre depuis Ramena, voile au vent : masque, tuba, sable blanc et poisson grillé.\n\nQui a déjà fait la traversée ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#MerDEmeraude",
+    "#DiegoSuarez",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-andasibe",
+   "date": "2026-09-30",
+   "photos": "andasibe",
+   "lieu": "Andasibe",
+   "accroche": "Le plus grand lémurien vivant 🐒",
+   "musique": "02-tuto-serene-view.mp3",
+   "lien": "/lieu/andasibe",
+   "cta": "Où dormir et où manger à Andasibe, sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "zoom"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom-out",
+     "texte": "Andasibe",
+     "sous": "à 3 heures de route de Tana"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano",
+     "texte": "La forêt humide de l'Est 🌿"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "Des caméléons…"
+    },
+    {
+     "photo": 4,
+     "mouv": "zoom",
+     "texte": "… et des geckos à queue feuille"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Andasibe ?<br>Tout est sur"
+   },
+   "description": "🐒 Andasibe, à 3 heures de Tana 🇲🇬\n\nAu petit matin, le chant de l'indri, le babakoto, monte de la forêt : c'est le plus grand lémurien vivant. Et la nuit, la forêt dévoile caméléons, grenouilles et microcèbes.\n\nVous l'avez déjà entendu chanter ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Andasibe",
+    "#Indri",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-tritriva",
+   "date": "2026-10-02",
+   "photos": "tritriva",
+   "lieu": "Lac Tritriva",
+   "accroche": "Un lac au sommet d'une montagne 🏔️",
+   "musique": "15-emotion-romantic.mp3",
+   "lien": "/site/lac-tritriva",
+   "cta": "Le lac Tritriva sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Le lac Tritriva",
+     "sous": "près d'Antsirabe"
+    },
+    {
+     "photo": 3,
+     "mouv": "pano-g",
+     "texte": "Dans le cratère d'un ancien volcan"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano",
+     "texte": "Environ 160 mètres de profondeur"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Antsirabe ?<br>Tout est sur"
+   },
+   "description": "🏔️ Le lac Tritriva, près d'Antsirabe 🇲🇬\n\nUn lac vert sombre dans le cratère d'un ancien volcan, profond d'environ 160 mètres. Autour : les parois, la forêt, et une légende d'amoureux que les guides racontent mieux que personne.\n\nVous connaissez la légende ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Tritriva",
+    "#Antsirabe",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-tsingy-rouges",
+   "date": "2026-10-04",
+   "photos": "tsingy-rouges",
+   "lieu": "Tsingy Rouges",
+   "accroche": "On se croirait sur une autre planète 🪐",
+   "musique": "09-confiance-motivating-mornings.mp3",
+   "lien": "/site/tsingy-rouge",
+   "cta": "Les Tsingy Rouges sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Les Tsingy Rouges",
+     "sous": "près de Diego-Suarez"
+    },
+    {
+     "photo": 3,
+     "mouv": "pano-g",
+     "texte": "La terre rouge sculptée par la pluie"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano",
+     "texte": "Aiguilles, crêtes et cheminées"
+    },
+    {
+     "photo": 5,
+     "mouv": "zoom",
+     "texte": "À voir en fin de journée 🌅"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Diego ?<br>Tout est sur"
+   },
+   "description": "🪐 Les Tsingy Rouges, près de Diego-Suarez 🇲🇬\n\nLa pluie et le temps ont sculpté la terre rouge en une forêt d'aiguilles, de crêtes et de cheminées. En fin de journée, la lumière rasante les fait passer de l'orange au rouge feu.\n\nVous y êtes allé à quelle heure ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#TsingyRouges",
+    "#DiegoSuarez",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-berenty",
+   "date": "2026-10-06",
+   "photos": "berenty",
+   "lieu": "Berenty",
+   "accroche": "Ici, les lémuriens dansent 💃",
+   "musique": "20-afro-kumasi-groove.mp3",
+   "lien": "/site/reserve-de-berenty",
+   "cta": "La réserve de Berenty sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "zoom"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Berenty",
+     "sous": "près de Fort-Dauphin"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano",
+     "texte": "Le sifaka avance en bonds de côté"
+    },
+    {
+     "photo": 3,
+     "mouv": "pano-g",
+     "texte": "À 2 heures de route de Fort-Dauphin"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Fort-Dauphin ?<br>Tout est sur"
+   },
+   "description": "💃 Berenty, dans l'extrême sud 🇲🇬\n\nLe sifaka, le propithèque de Verreaux, traverse le sable en bonds de côté, les bras en l'air. Autour : la forêt épineuse du sud et les makis catta. À environ deux heures de route de Fort-Dauphin.\n\nVous avez déjà vu danser un sifaka ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Berenty",
+    "#Sifaka",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-tanikely",
+   "date": "2026-10-08",
+   "photos": "tanikely",
+   "lieu": "Nosy Tanikely",
+   "accroche": "Tu mets la tête sous l'eau… 🤿",
+   "musique": "07-annonce-its-love.mp3",
+   "lien": "/lieu/nosy-tanikely",
+   "cta": "Nosy Tanikely sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Nosy Tanikely",
+     "sous": "archipel de Nosy Be"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "Un parc national marin"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano-g",
+     "texte": "Une eau d'une clarté rare"
+    },
+    {
+     "photo": 5,
+     "mouv": "zoom-out",
+     "texte": "Une demi-journée depuis Nosy Be ⛵"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Nosy Be ?<br>Tout est sur"
+   },
+   "description": "🤿 Nosy Tanikely, archipel de Nosy Be 🇲🇬\n\nUn parc national marin réputé pour la clarté de son eau : coraux, poissons de toutes les couleurs, et souvent des tortues. Le meilleur masque-tuba qu'on puisse faire en une demi-journée depuis Nosy Be.\n\nTortue ou poisson-clown, vous avez vu quoi ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#NosyTanikely",
+    "#NosyBe",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-andringitra",
+   "date": "2026-10-10",
+   "photos": "andringitra",
+   "lieu": "Andringitra",
+   "accroche": "Le rendez-vous des marcheurs 🥾",
+   "musique": "10-confiance-close-up.mp3",
+   "lien": "/lieu/andringitra",
+   "cta": "Andringitra sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "pano-g",
+     "texte": "Andringitra",
+     "sous": "au sud d'Ambalavao"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "Des parois de granite"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano",
+     "texte": "Cirques, pics et nuits sous les étoiles ✨"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano-g",
+     "texte": "Le pic Boby, 2e sommet de Madagascar",
+     "sous": "le plus haut qu'on puisse gravir à pied"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Ambalavao ?<br>Tout est sur"
+   },
+   "description": "🥾 Andringitra, au sud d'Ambalavao 🇲🇬\n\nLe parc abrite le pic Boby, Imarivolanitra : deuxième sommet de Madagascar et le plus haut qu'on puisse gravir à pied. Parois de granite, cirques, nuits fraîches sous les étoiles.\n\nVous avez déjà fait l'ascension ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Andringitra",
+    "#PicBoby",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-pangalanes",
+   "date": "2026-10-12",
+   "photos": "pangalanes",
+   "lieu": "Canal des Pangalanes",
+   "accroche": "La côte Est… sans prendre la mer 🌊",
+   "musique": "17-afro-allada.mp3",
+   "lien": "/lieu/canal-des-pangalanes",
+   "cta": "Le canal des Pangalanes sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "pano-g",
+     "texte": "Le canal des Pangalanes",
+     "sous": "côte Est, jusqu'à Toamasina"
+    },
+    {
+     "photo": 3,
+     "mouv": "pano",
+     "texte": "Lagunes, lacs et rivières reliés"
+    },
+    {
+     "photo": 4,
+     "mouv": "zoom",
+     "texte": "Des villages, de la forêt… et des lémuriens"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano-g",
+     "texte": "En pirogue, lentement 🛶"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir sur la côte Est ?<br>Tout est sur"
+   },
+   "description": "🌊 Le canal des Pangalanes 🇲🇬\n\nIl relie lagunes, lacs et rivières le long de l'océan Indien, jusqu'à Toamasina : des centaines de kilomètres d'eau calme, bordés de villages de pêcheurs et de forêt. En pirogue ou en bateau, c'est une autre façon de voir Madagascar : lentement.\n\nVous l'avez déjà parcouru ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Pangalanes",
+    "#Toamasina",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ],
+   "ecarte": "Longueur du canal : 600 ou 700 km selon la base — non citée."
+  },
+  {
+   "cle": "r-nosy-ve",
+   "date": "2026-10-14",
+   "photos": "nosy-ve",
+   "lieu": "Nosy Ve",
+   "accroche": "Un banc de sable au milieu du lagon 🤍",
+   "musique": "11-confiance-my-little-prince.mp3",
+   "lien": "/lieu/nosy-ve",
+   "cta": "Nosy Ve sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Nosy Ve",
+     "sous": "au large d'Anakao"
+    },
+    {
+     "photo": 5,
+     "mouv": "zoom",
+     "texte": "La colonie de pailles-en-queue"
+    },
+    {
+     "photo": 4,
+     "mouv": "zoom-out",
+     "texte": "Un îlot sacré : on respecte les fady 🙏"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Anakao ?<br>Tout est sur"
+   },
+   "description": "🤍 Nosy Ve, au large d'Anakao 🇲🇬\n\nUn îlot sacré au milieu d'un lagon turquoise, à une vingtaine de minutes de pirogue d'Anakao. Il abrite une colonie de pailles-en-queue, ces oiseaux blancs à longue queue rouge. On y respecte les fady.\n\nVous y êtes allé en pirogue ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#NosyVe",
+    "#Anakao",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-ankarana",
+   "date": "2026-10-16",
+   "photos": "ankarana",
+   "lieu": "Ankarana",
+   "accroche": "Un monde à deux étages 🕳️",
+   "musique": "19-afro-tafi-maradi.mp3",
+   "lien": "/lieu/ankarana",
+   "cta": "L'Ankarana sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "Ankarana",
+     "sous": "entre Diego-Suarez et Ambanja"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Des lémuriens dans la forêt"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano-g",
+     "texte": "Des rivières qui coulent sous la terre"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano",
+     "texte": "À 2 h 30 de Diego par le goudron"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir près de l'Ankarana ?<br>Tout est sur"
+   },
+   "description": "🕳️ La réserve spéciale de l'Ankarana 🇲🇬\n\nAu-dessus : des lames de calcaire et un pont suspendu. En dessous : des grottes et des rivières qui coulent sous la terre. Entre Diego-Suarez et Ambanja, à environ 2 h 30 de Diego par le goudron.\n\nPlutôt grottes ou plutôt pont suspendu ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Ankarana",
+    "#DiegoSuarez",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  },
+  {
+   "cle": "r-masoala",
+   "date": "2026-10-18",
+   "photos": "masoala",
+   "lieu": "Masoala",
+   "accroche": "La forêt descend jusqu'à la plage 😍",
+   "musique": "04-tuto-relax-beat.mp3",
+   "lien": "/lieu/masoala",
+   "cta": "Masoala sur Diako",
+   "plans": [
+    {
+     "photo": 1,
+     "mouv": "pano"
+    },
+    {
+     "photo": 2,
+     "mouv": "zoom",
+     "texte": "Masoala",
+     "sous": "près de Maroantsetra"
+    },
+    {
+     "photo": 3,
+     "mouv": "zoom",
+     "texte": "La plus grande aire protégée de Madagascar"
+    },
+    {
+     "photo": 4,
+     "mouv": "pano-g",
+     "texte": "On y arrive en bateau",
+     "sous": "depuis Maroantsetra"
+    },
+    {
+     "photo": 5,
+     "mouv": "pano",
+     "texte": "À travers la baie d'Antongil 🚤"
+    }
+   ],
+   "fin": {
+    "texte": "Où dormir à Maroantsetra ?<br>Tout est sur"
+   },
+   "description": "😍 Masoala, au nord-est de l'île 🇲🇬\n\nLa plus grande aire protégée de Madagascar : une forêt humide qui plonge directement dans l'océan. On y accède en bateau depuis Maroantsetra, à travers la baie d'Antongil.\n\nMasoala, c'est pour quand ? 👇",
+   "hashtags": [
+    "#Diako",
+    "#Masoala",
+    "#Maroantsetra",
+    "#Madagascar",
+    "#VisitMadagascar"
+   ],
+   "sources": [
+    "serie.json (série 1, faits relus le 18/09/2026)"
+   ]
+  }
+ ]
+}

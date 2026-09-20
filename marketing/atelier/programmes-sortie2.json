@@ -1,0 +1,418 @@
+{
+ "2026-09-20-d-quoi": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077880418322644",
+  "photos": 4,
+  "quand": "2026-09-20T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1789894800,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:24.822739+03:00"
+ },
+ "2026-09-21-requins-baleines": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077880831655936",
+  "photos": 4,
+  "quand": "2026-09-21T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1789981200,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-22-ibonia": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077881101655909",
+  "photos": 5,
+  "quand": "2026-09-22T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790067600,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-23-d-fil": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077881331655886",
+  "photos": 4,
+  "quand": "2026-09-23T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790154000,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-24-zombitse": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077882171655802",
+  "photos": 5,
+  "quand": "2026-09-24T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790240400,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-25-d-yaller": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077882361655783",
+  "photos": 3,
+  "quand": "2026-09-25T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790326800,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-26-hira-gasy": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077882778322408",
+  "photos": 5,
+  "quand": "2026-09-26T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790413200,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-27-romazava": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077883594988993",
+  "photos": 4,
+  "quand": "2026-09-27T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790499600,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-28-d-carte": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077883838322302",
+  "photos": 3,
+  "quand": "2026-09-28T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790586000,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-29-rapeto": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077884378322248",
+  "photos": 5,
+  "quand": "2026-09-29T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790672400,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-09-30-tsimbazaza": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077884981655521",
+  "photos": 5,
+  "quand": "2026-09-30T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790758800,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-01-d-evenements": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077885674988785",
+  "photos": 3,
+  "quand": "2026-10-01T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790845200,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-02-jacarandas": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077886068322079",
+  "photos": 4,
+  "quand": "2026-10-02T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1790931600,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-03-d-plats": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077886271655392",
+  "photos": 3,
+  "quand": "2026-10-03T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791018000,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-04-darafify": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077886621655357",
+  "photos": 4,
+  "quand": "2026-10-04T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791104400,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-05-peyrieras": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077887158321970",
+  "photos": 5,
+  "quand": "2026-10-05T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791190800,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-06-d-quand-partir": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077887418321944",
+  "photos": 3,
+  "quand": "2026-10-06T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791277200,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-07-valiha": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077888084988544",
+  "photos": 4,
+  "quand": "2026-10-07T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791363600,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-08-madajazzcar": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077888464988506",
+  "photos": 3,
+  "quand": "2026-10-08T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791450000,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-09-d-sites": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077888674988485",
+  "photos": 3,
+  "quand": "2026-10-09T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791536400,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-10-babakoto": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077889221655097",
+  "photos": 5,
+  "quand": "2026-10-10T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791622800,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-11-mofo-gasy": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077889558321730",
+  "photos": 4,
+  "quand": "2026-10-11T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791709200,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-12-d-destination": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077889844988368",
+  "photos": 3,
+  "quand": "2026-10-12T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791795600,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-13-sorabe": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077890321654987",
+  "photos": 3,
+  "quand": "2026-10-13T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791882000,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-14-girofle": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077890801654939",
+  "photos": 4,
+  "quand": "2026-10-14T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1791968400,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-15-d-pro": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077891014988251",
+  "photos": 3,
+  "quand": "2026-10-15T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1792054800,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-16-fady": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077891544988198",
+  "photos": 5,
+  "quand": "2026-10-16T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1792141200,
+   "is_published": false,
+   "photos_envoyees": 5,
+   "photos_relues": 5
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-17-d-villes": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077891931654826",
+  "photos": 3,
+  "quand": "2026-10-17T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1792227600,
+   "is_published": false,
+   "photos_envoyees": 3,
+   "photos_relues": 3
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-18-makua": {
+  "etat": "programmée",
+  "post_id": "108742855158464_1077892241654795",
+  "photos": 4,
+  "quand": "2026-10-18T12:00:00+03:00",
+  "relu": {
+   "texte_identique": true,
+   "heure": 1792314000,
+   "is_published": false,
+   "photos_envoyees": 4,
+   "photos_relues": 4
+  },
+  "le": "2026-09-19T21:48:47.236187+03:00"
+ },
+ "2026-10-19-d-recit": {
+  "etat": "REFUS publication",
+  "detail": "HTTP 400 code 100/None : (#100) The specified scheduled publish time is invalid.",
+  "photos": [
+   "1078184261625593",
+   "1078184314958921",
+   "1078184351625584"
+  ],
+  "le": "2026-09-20T07:18:52.936180+03:00"
+ }
+}

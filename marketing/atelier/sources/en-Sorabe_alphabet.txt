@@ -1,0 +1,58 @@
+SOURCE : https://en.wikipedia.org/wiki/Sorabe_alphabet
+RELEVÉ : 2026-09-19
+
+Sorabe or Sora-be (سُرَبِ, Malagasy pronunciation: [suˈrabe]) is an abjad based on Arabic, formerly used to transcribe the Malagasy language (belonging to the Malayo-Polynesian language family) and the Antemoro Malagasy dialect, dating from the 15th century.
+
+
+== History ==
+Researchers are still hypothesizing about the origins of the Sorabe alphabet. "Sorabe" means literally "large writings" from Arabic "sura" (writing) and Malagasy "be" (large). This denomination might point to the existence of a previous writing system with smaller characters of Sanskrit origin used in South East Asia as it is evidenced in some Malagasy words.
+
+Traditionally, researchers have speculated that this writing system was introduced through commercial contacts of the Malagasy with Arab Muslims. However, more recent studies claim that this writing scheme might have been introduced by Javanese Muslims. There are striking similarities between "Sorabe" and the "Pegon script", which is the Javanese variant of the Arabic script.
+A couple of hundred old manuscripts written in the Sorabe alphabet have survived to this day, though the oldest manuscript may have been written no earlier than the 17th century. Those "Sorabe" are bound in leather and the texts are named after the colour of the skin. Most of the texts contain magical formulas, but there are also some historical texts concerning the origin of some of the southeastern tribes of the island of Madagascar. These origins are traced to Mecca or the Prophet Muhammad even though the practice of Islam is nowhere seen in the texts.
+Sorabe eventually spread across the island beginning in the 17th century and, at the end of the 18th century, the Merina king Andrianampoinimerina called for Antemoro scribes to teach the children of his court to read and write. This was how the future king Radama I learned to read and write in Sorabe from his childhood.
+Nowadays, Malagasy is written using a Latin alphabet, introduced in 1823.
+
+
+== Alphabet ==
+Pegon uses the original letters of Arabic script. Unlike many languages that have adopted Arabic script, no new letters were created in Sorabe script in order to make it suitable for Malagasy phonology. However, in order to actually accommodate Malagasy phonology, two other ways have historically been employed in manuscripts.
+Firstly, the shadda diacritic, whose original function in Arabic is gemination, has been used as a way of expressing an approximation of a prenasalized consonant, [ndr] and [tr] being expressed as a geminated [r] sound (رّ), and [mp] being expressed with a geminated [f] sound (فّـ ࢻّ).
+Another way has been to use Arabic letters in ways completely different from their Arabic sounds. For example, while Arabic letter Ṭāʾ (ط) has been adapted with a dot beneath to represent [t], the letter tāʼ (ت), normally having a [t] sound, is used for [ts] sounds. Furthermore, the letter ʿayn (ع), normally having a glottal or epiglottal sound [ʔ / ʕ] depending on language, is used to represent the voiced velar nasal sound [ŋ] (ng). It is worth mentioning that in the Pegon and Jawi scripts of the Malay world, the same sound is represented with the letter ʿayn, modified with 3 dots (ڠ).
+Similar to the Pegon script (historically, not so much in more modern conventions) from Indonesia and the Ajami script from mainland Africa, only consonants are represented by letters, but all vowels are written down as well, in the form of Arabic diacritics. Without diacritics, correct reading will not be possible. For example, the word او can either mean tuber (اُوِ, ovy) or "some who comes" (اَوِ, avy).
+
+
+=== Consonants ===
+The table below lists all the consonants used for the writing of Malagasy in Sorabe script. The script doesn't fully represent all aspects of Malagasy phonology. For example, it makes no distinction between plain and prenasalized consonants.  An interesting fact about this script is the use of the letter ي for what is represented in Latin with "z". This is the Arabic Ya' letter, and it represents the [y] sound.  Other Arabic letters may be seen in manuscripts, but their usage has been limited to Arabic quotes or loanwords.
+
+
+=== Vowels and sequences ===
+
+In Sorabe manuscripts, vowel sequences and some syllables at the end of words are written following certain conventions. Below is a summary chart. Examples for each are shown as well.
+
+Notes
+At ends of words
+
+
+== Sample text ==
+The following is a sample text in Malagasy of Article 1 of the Universal Declaration of Human Rights.
+
+
+== See also ==
+Madagascar
+Malagasy
+
+
+== References ==
+
+
+== Bibliography ==
+(in English) Adelaar K.A. & Himmelmann N. (2004), The Austronesian Language of Asia and Madagascar, Routledge [1] .
+(in French) Ferrand, Gabriel (1905). Les migrations musulmanes et juives à Madagascar. Paris: Revue de l'histoire des religions.
+Kasanga Fernand (1990), Fifindra-monina, Librairie FLM, Antananarivo.
+(in French) Simon P. (2006) La langue des ancêtres. Ny Fitenin-drazana. Une périodisation du malgache des origines au XVe siècle, L'Harmattan [2].
+
+
+== External links ==
+Book containing Malagasy manuscripts in Sorabe alphabet, plus transliteration and translation (1906) Un Texte Arabico-Malgache Du XVIe siècle By FERRAND, Gabriel http://ia800309.us.archive.org/29/items/untextearabicoma00pariuoft/untextearabicoma00pariuoft.pdf
+La Case, les Sorabe, l'Histoire
+Arabic in Madagascar, Kees Versteegh, Bulletin of the School of Oriental and African Studies, 2001
+East Barito: Who Were the Malayo-Polynesian Migrants to Madagascar?

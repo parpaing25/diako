@@ -1,0 +1,20 @@
+SOURCE : https://en.wikipedia.org/wiki/HD_153950
+RELEVÉ : 2026-09-19
+
+HD 153950 is a star in the southern constellation of Scorpius, positioned about 1.2° to the west of Eta Scorpii. It has the proper name Rapeto, which was selected in the NameExoWorlds campaign by Madagascar, during the 100th anniversary of the IAU. Rapeto is a giant creature from Malagasy tales. This star is visible in a small telescope, having an apparent visual magnitude of 7.39. It is located at a distance of 158 light-years from the Sun based on parallax. The star is drifting further away with a radial velocity of 33.2 km/s.
+The stellar classification of F8V suggests HD 153950 is an F-type main-sequence star. However, given its position on the H-R diagram, this star has likely already started to evolve off the main sequence. It is about 4.7 billion years old and is spinning with a projected rotational velocity of 3.0 km/s, giving it a rotation period of ~14 days. The star has 12% more mass than the Sun and a 28% greater radius. The abundance of iron, what astronomers term the star's metallicity, is equal to the Sun within the margin of error. It is radiating more than double the luminosity of the Sun from its photosphere at an effective temperature of 6,076 K.
+
+
+== Planetary system ==
+In October 2008, an exoplanet of this star was discovered. This object was detected using the radial velocity method by search programs conducted using the HARPS spectrograph. It is a super-Jupiter with an eccentric orbit that has a period of 1.37 years. Although the semimajor axis of 1.28 AU lies near the inner edge of the extended habitable zone, about half the orbit lies within the moist greenhouse limit. At periapsis, the exoplanet comes as close as 0.84 AU to its parent star.
+
+
+== See also ==
+List of extrasolar planets
+
+
+== References ==
+
+
+== External links ==
+"HD 153950". Exoplanets. Archived from the original on 2009-11-25. Retrieved 2009-06-12.

@@ -1,0 +1,23 @@
+# Atelier de la page Di'ako : le CODE se suit, les images et les videos non.
+# Le depot parpaing25/diako est PUBLIC, et ces dossiers pesent des centaines de Mo
+# (photos Commons, ~150 images 1080x1350, 15 reels de 12 a 26 Mo). Tout se refabrique
+# par collecter_lieux.py, commons.py --prendre (choix/), fabriquer.py, fabriquer2.py,
+# captures_plan.py et reels/reel.py : ce sont les scenarios (serie.json, serie2.json,
+# reels.json) et les credits (choix/) qui font foi.
+photos/
+sortie/
+sortie2/
+ecartees/
+captures/
+reels/hd/
+reels/travail/
+reels/sortie/
+planche-*
+retenues-*
+pl-*
+qa-*
+t-*.jpg
+*.log
+ETAT-FILE.md
+.verrou-*
+__pycache__/

@@ -1,0 +1,8 @@
+fastapi>=0.110
+uvicorn>=0.27
+pydantic>=2.5
+requests>=2.31
+Pillow>=10.0
+
+# Rendu des affiches (déjà installé pour l'atelier et les autres bots).
+playwright>=1.40

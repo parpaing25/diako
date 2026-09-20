@@ -1,0 +1,8 @@
+# Tout ce que le bot fabrique ou reçoit reste local : file d'attente, fil de
+# conversation, notes, affiches, journaux d'envoi. Le dépôt parpaing25/diako
+# est PUBLIC — un journal Telegram y serait une fuite.
+data/
+logs/
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bot Di'ako — poste de commande</title>
+<style>
+  :root{--papier:#FBF7F1;--encre:#10262B;--teal:#0E7C86;--brique:#BF4118;--bord:#E6DED2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--papier);color:var(--encre);
+       font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;gap:12px;align-items:baseline;padding:14px 16px;border-bottom:1px solid var(--bord)}
+  h1{font:700 20px/1.2 Georgia,"Noto Serif",serif;margin:0}
+  main{max-width:1000px;margin:0 auto;padding:16px;display:grid;gap:16px}
+  section{background:#fff;border:1px solid var(--bord);border-radius:14px;padding:14px}
+  h2{font:600 13px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
+     color:#5B6E72;margin:0 0 10px}
+  .grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .carte{border:1px solid var(--bord);border-radius:10px;padding:10px}
+  .chiffre{font:700 22px/1 Georgia,serif}
+  .muted{color:#5B6E72;font-size:13px}
+  .comp{padding:6px 0;border-bottom:1px dashed var(--bord)}
+  .comp:last-child{border:0}
+  .pub{color:var(--brique);font-weight:600}
+  input,button,textarea{font:inherit}
+  input,textarea{width:100%;padding:10px;border:1px solid var(--bord);border-radius:10px;background:#fff}
+  button{min-height:44px;padding:0 16px;border:0;border-radius:10px;background:var(--teal);color:#fff;
+         font-weight:600;cursor:pointer}
+  pre{white-space:pre-wrap;word-break:break-word;background:#F7EFE3;padding:10px;border-radius:10px;margin:8px 0 0}
+  code{font:12px ui-monospace,monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bot Di'ako</h1>
+  <span class="muted" id="sous-titre">chargement…</span>
+</header>
+
+<main>
+  <section>
+    <h2>État</h2>
+    <div class="grille" id="etat"></div>
+  </section>
+
+  <section>
+    <h2>Banc d'essai — sans Telegram</h2>
+    <p class="muted">Ce que tu tapes ici suit exactement le même chemin qu'un message Telegram.</p>
+    <div style="display:flex;gap:8px">
+      <input id="question" placeholder="ex. l'état de la page" />
+      <button onclick="essayer()">Envoyer</button>
+    </div>
+    <pre id="reponse" hidden></pre>
+  </section>
+
+  <section>
+    <h2>En attente de confirmation</h2>
+    <div id="validations" class="muted">—</div>
+  </section>
+
+  <section>
+    <h2>Compétences</h2>
+    <div id="competences"></div>
+  </section>
+
+  <section>
+    <h2>Journal des envois</h2>
+    <pre id="journal" class="muted">—</pre>
+  </section>
+</main>
+
+<script>
+async function json(url, options) { const r = await fetch(url, options); return r.json(); }
+
+async function rafraichir() {
+  const e = await json('/api/etat');
+  document.getElementById('sous-titre').textContent =
+    `port ${e.port} · Telegram : ${e.telegram}`;
+  document.getElementById('etat').innerHTML = [
+    ['Messages traités', e.messages_traites],
+    ['Compétences', e.competences],
+    ['En attente', e.en_attente],
+    ['Erreurs', e.erreurs],
+    ['Jeton de page', e.jeton_page ? 'présent' : 'absent'],
+    ['Démarré', (e.demarre_a || '').replace('T', ' ')],
+  ].map(([t, v]) => `<div class="carte"><div class="muted">${t}</div><div class="chiffre">${v ?? '—'}</div></div>`).join('');
+
+  const v = await json('/api/validations');
+  document.getElementById('validations').innerHTML = v.attente.length
+    ? v.attente.map(a => `· ${a.resume} <span class="muted">(${a.cree_a.slice(11,16)})</span>`).join('<br>')
+    : 'Rien en attente.';
+
+  const c = await json('/api/competences');
+  document.getElementById('competences').innerHTML = Object.entries(c.familles).map(([f, l]) =>
+    `<div class="comp"><b>${f}</b> — ${l.length}</div>` +
+    l.map(x => `<div class="comp">${x.titre}${x.publique ? ' <span class="pub">✋ confirmation</span>' : ''}
+       <div class="muted">${x.description}</div></div>`).join('')).join('');
+
+  const j = await json('/api/journal?lignes=25');
+  document.getElementById('journal').textContent = j.lignes.join('\n') || '—';
+}
+
+async function essayer() {
+  const texte = document.getElementById('question').value.trim();
+  if (!texte) return;
+  const pre = document.getElementById('reponse');
+  pre.hidden = false; pre.textContent = '…';
+  const r = await json('/api/simuler', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({texte})
+  });
+  pre.textContent = r.texte + (r.boutons?.length ? '\n\n[boutons] ' + JSON.stringify(r.boutons) : '')
+    + (r.images?.length ? '\n[images] ' + r.images.join(', ') : '');
+  rafraichir();
+}
+
+document.getElementById('question').addEventListener('keydown', e => { if (e.key === 'Enter') essayer(); });
+rafraichir();
+setInterval(rafraichir, 15000);
+</script>
+</body>
+</html>

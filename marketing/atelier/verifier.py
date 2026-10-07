@@ -34,7 +34,8 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 ICI = Path(__file__).resolve().parent
 SORTIE = ICI / (sys.argv[sys.argv.index("--sortie") + 1] if "--sortie" in sys.argv else "sortie")
 # les autres séries de la page : une photo déjà publiée par l'une ne repart pas dans l'autre
-AUTRES_SERIES = [d for d in (ICI / "sortie", ICI / "sortie2") if d != SORTIE and d.exists()]
+AUTRES_SERIES = [d for d in (ICI / "sortie", ICI / "sortie2", ICI / "sortie3")
+                 if d != SORTIE and d.exists()]
 ICONES = {"📍", "🧭", "📖", "📅", "🎭", "🍲", "🎶", "📜", "🙏"}
 
 TEL = re.compile(r"(?<!\d)(?:\+?261[\s.]?|0)3[2-9](?:[\s.]?\d){7}(?!\d)")
@@ -43,7 +44,9 @@ HORS_ALPHABET = re.compile(r"[cquwxç]", re.I)
 # noms propres et mots étrangers admis dans les lignes malgaches
 NOMS = {"mer", "d'émeraude", "boby", "pangalanes", "foulpointe", "lily", "masoala", "tsingy",
         "ankarana", "anosy", "andraikiba", "marojejy", "anjajavy", "katsepy", "mahajanga", "anakao",
-        "ilafy", "ampefy", "lokobe", "tritriva", "andafiavaratra", "zafimaniry", "ravelobe", "nosy", "hara"}
+        "ilafy", "ampefy", "lokobe", "tritriva", "andafiavaratra", "zafimaniry", "ravelobe", "nosy", "hara",
+        # série 3 : les villes et leurs noms coloniaux ou étrangers
+        "tuléar", "fort-dauphin", "faradofay", "rn1", "rn2", "rn7", "isalo"}
 
 
 def cle_photo(source: str) -> str:
@@ -121,7 +124,8 @@ def verifier() -> int:
             if question.startswith("Efa ") and " ve " not in question:
                 r.append("question fermée malgache sans la particule « ve »")
             mg_lignes = [texte.splitlines()[0].split(" — ", 1)[-1]]
-            if SORTIE.name == "sortie":        # série 1 : la question est en malgache ; série 2 : en français
+            if SORTIE.name in ("sortie", "sortie3"):   # séries 1 et 3 : la question est en
+                                               # malgache ; série 2 : en français
                 mg_lignes.append(question)
             etrangers = sorted({w for l in mg_lignes for w in re.findall(r"[\w'’]+", l.lower())
                                 if HORS_ALPHABET.search(w) and w.strip("'’") not in NOMS and not w.isdigit()})

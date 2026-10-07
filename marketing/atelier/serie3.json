@@ -1,0 +1,1381 @@
+{
+ "serie": "Tanàna tsirairay — ville par ville",
+ "heure": "15:00",
+ "debut": "2026-10-20",
+ "utm": "utm_source=facebook&utm_medium=post&utm_campaign=tanana-tsirairay&utm_content={cle}",
+ "angle": "Séries 1 et 2 ont montré les lieux un par un, puis le site et la culture. Le troisième axe, jamais pris : les VILLES — ce que dit leur nom quand une source l'établit, et ce que Diako connaît sur place. C'est le seul angle où chaque chiffre se recalcule depuis le miroir local propre du référentiel (noms de lieux et fiches d'établissements).",
+ "chiffres": "Tous les nombres de cette série viennent de chiffres3.json, écrit par chiffres3.py depuis bot-diako/data/bot.db en lecture seule. Aucun nombre n'est tapé à la main : les textes portent des gabarits ({hotels}, {restaurants}, {motif_nombre}…) remplis au rendu. Référentiel chargé le 06/10/2026 à 09:57.",
+ "prudence": "ref_pages est chargé SANS filtre is_published : on écrit « référencés sur Diako », jamais « publiés ». ref_sites (doublons, entrées nommées « 10 ») et ref_lieux.touristique (posé sur des quartiers de Tana) ne sont pas utilisés. Une étymologie n'est publiée que si la source la donne : Mahajanga (« qui guérit », marqué [réf. nécessaire]), Toamasina, Toliara et Tôlanaro n'en portent donc aucune.",
+ "publications": [
+  {
+   "cle": "antananarivo",
+   "type": "photos",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": "s3-antananarivo",
+   "titre": "Antananarivo",
+   "ou": "Analamanga · la capitale",
+   "mg": "Ny tanànan'ny arivo",
+   "emoji": "🏙️",
+   "decoupe": "An · tanàna · arivo",
+   "sens": "la Ville des Mille",
+   "motif": "tana",
+   "corps": [
+    "Tout le monde dit « Tana ». Mais le nom entier raconte une histoire. 🏙️",
+    "Antananarivo signifie « La Ville des Mille » : an-, le préfixe de lieu, tanàna, la ville ou le village, et arivo, mille. Mille guerriers, restés là à la demande de Radama Ier pour garder le domaine royal d'Analamanga.",
+    "Dans le référentiel de Diako, {motif_nombre} noms de lieux commencent comme elle par « {motif} ». Et sur place, Diako référence aujourd'hui {hotels} hôtels et {restaurants} restaurants — le plus gros annuaire de l'île."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Firy taona ianao no efa monina na efa nandalo tao Antananarivo ?",
+   "lien": "/lieu/antananarivo-2",
+   "attendu": "Antananarivo",
+   "cta": "Où dormir et où manger à Antananarivo",
+   "hashtags": [
+    "#Diako",
+    "#Antananarivo",
+    "#Tana",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Antananarivo (§ Toponymie : « La Ville des Mille » — an, tanana, arivo ; les mille guerriers de Radama Ier)"
+   ],
+   "defs": {
+    "An": "à, le lieu de",
+    "tanàna": "la ville, le village",
+    "arivo": "mille"
+   }
+  },
+  {
+   "cle": "ambohidratrimo",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Ambohidratrimo",
+   "ou": "Analamanga · à 15 km de Tana",
+   "mg": "Iray amin'ny tendrombohitra masina",
+   "emoji": "⛰️",
+   "decoupe": "Ambohi · dratrimo",
+   "motif": "ambohi",
+   "corps": [
+    "Vous passez devant en allant à l'aéroport. Vous ne vous arrêtez jamais. Erreur. ⛰️",
+    "Ambohidratrimo est l'une des douze collines sacrées de l'Imerina, à quinze kilomètres d'Antananarivo. Son nom commence par Ambohi-, « à la colline » — et ce n'est pas un hasard.",
+    "C'est le début de nom le plus fréquent de tout le pays : {motif_nombre} lieux du référentiel Diako commencent par « {motif} », sur {total_lieux} noms en tout. Madagascar est un pays de collines, et sa carte le dit."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Ambohidratrimo est l'une des douze collines sacrées de l'Imerina.\n\nElle se trouve à quinze kilomètres d'Antananarivo."
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Misy anarana manomboka amin'ny Ambohi- ve eo akaikinao ? Lazao anay 👇",
+   "lien": "/lieu/ambohidratrimo",
+   "attendu": "Ambohidratrimo",
+   "cta": "Où dormir et où manger à Ambohidratrimo",
+   "hashtags": [
+    "#Diako",
+    "#Ambohidratrimo",
+    "#Imerina",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ambohidratrimo (« Ambohidratrimo est une des douze collines sacrées de l'Imerina », « à quinze kilomètres d'Antananarivo »)"
+   ]
+  },
+  {
+   "cle": "maintirano",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Maintirano",
+   "ou": "Melaky · côte ouest",
+   "mg": "Tsy hoe rano mainty akory",
+   "emoji": "💧",
+   "decoupe": "Maito · rano",
+   "sens": "l'eau coupée",
+   "motif": "rano_f",
+   "corps": [
+    "Presque tout le monde se trompe sur ce nom. Y compris nous, au début. 💧",
+    "En entendant Maintirano, on comprend « eau noire » : mainty, noir, et rano, l'eau. Wikipédia dit pourtant autre chose : le nom viendrait de maito, « coupé », et de rano, « l'eau ». L'eau coupée, pas l'eau noire.",
+    "L'eau est partout sur la carte malgache : {motif_nombre} noms de lieux du référentiel Diako finissent par « {motif} ». Sur place, Diako référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nandeha tany Maintirano ve ianao ? Lazao anay ny dia 👇",
+   "lien": "/lieu/maintirano-2",
+   "attendu": "Maintirano",
+   "cta": "Où dormir et où manger à Maintirano",
+   "hashtags": [
+    "#Diako",
+    "#Maintirano",
+    "#Melaky",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Maintirano (« Maintirano vient de l'ensemble de deux mots : maito (coupé) rano (eau). La plupart des personnes qui entendent ce nom pensent tout de suite que c'est la couleur de l'eau […] qui est noire (mainty) »)"
+   ],
+   "defs": {
+    "Maito": "coupé — et non mainty, noir",
+    "rano": "l'eau"
+   }
+  },
+  {
+   "cle": "antsirabe",
+   "type": "photos",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": "s3-antsirabe",
+   "titre": "Antsirabe",
+   "ou": "Vakinankaratra · les hautes terres",
+   "mg": "Be sira ny tany",
+   "emoji": "♨️",
+   "decoupe": "An · sira · be",
+   "sens": "là où il y a beaucoup de sel",
+   "motif": "antsira",
+   "corps": [
+    "La ville des pousse-pousse porte dans son nom ce qui l'a fait naître. ♨️",
+    "Antsirabe signifie littéralement « là où il y a beaucoup de sel » : an-, le préfixe de lieu, sira, le sel, et betsaka, beaucoup. Ce sont ses eaux minérales qui lui ont donné son nom — et ses thermes.",
+    "Seuls {motif_nombre} noms de lieux du référentiel Diako commencent par « {motif} » : le sel est rare sur la carte. Sur place, Diako référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nisotro ny rano mineraly tao Antsirabe ve ianao ?",
+   "lien": "/lieu/antsirabe",
+   "attendu": "Antsirabe",
+   "cta": "Où dormir et où manger à Antsirabe",
+   "hashtags": [
+    "#Diako",
+    "#Antsirabe",
+    "#Vakinankaratra",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Antsirabe (§ Toponymie : « là où il y a beaucoup de sel » — an locatif, sira \"sel\", betsaka \"grand\" ou \"beaucoup\")"
+   ],
+   "defs": {
+    "An": "à, le lieu de",
+    "sira": "le sel",
+    "be": "beaucoup (betsaka)"
+   }
+  },
+  {
+   "cle": "ambatondrazaka",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Ambatondrazaka",
+   "ou": "Alaotra-Mangoro · le grenier à riz",
+   "mg": "Teo amin'ny vaton-dRazaka",
+   "emoji": "🌾",
+   "decoupe": "Ambato · Razaka",
+   "sens": "au rocher de Razaka",
+   "motif": "ambato",
+   "corps": [
+    "Un homme, une pierre levée, un serment. Et une ville qui en garde le nom. 🌾",
+    "Ambatondrazaka est faite de deux mots : vato, la pierre, et Razaka. Razaka, resté sans descendance, adopta les enfants de ses deux sœurs en prêtant serment devant une pierre levée, à Andohatanjona. La ville porte ce serment depuis.",
+    "La pierre est partout : {motif_nombre} noms de lieux du référentiel Diako commencent par « {motif} ». Et autour du lac Alaotra, Diako référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nahita ny tanimbary manodidina ny Alaotra ve ianao ?",
+   "lien": "/lieu/ambatondrazaka",
+   "attendu": "Ambatondrazaka",
+   "cta": "Où dormir et où manger à Ambatondrazaka",
+   "hashtags": [
+    "#Diako",
+    "#Ambatondrazaka",
+    "#Alaotra",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ambatondrazaka (§ Toponymie : vato « pierre » + Razaka ; « en prêtant serment devant une pierre levée […] à Andohatanjona »)"
+   ],
+   "defs": {
+    "Ambato": "au rocher (vato, la pierre)",
+    "Razaka": "celui qui prêta serment"
+   }
+  },
+  {
+   "cle": "antsohihy",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Antsohihy",
+   "ou": "Sofia · nord-ouest",
+   "mg": "Teo amin'ny hazo sohihy",
+   "emoji": "🌳",
+   "decoupe": "An · sohihy",
+   "sens": "là où il y a plusieurs sohihy",
+   "corps": [
+    "Une ville entière porte le nom d'un arbre. Et l'arbre était là avant elle. 🌳",
+    "Antsohihy veut dire « là où il y a plusieurs sohihy ». Le sohihy est un grand arbre : il en poussait un à l'emplacement de la première place de la ville, et c'est de lui que le nom est venu.",
+    "Chef-lieu de la région Sofia, sur la route du Nord. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "fait",
+     "t": "Le sohihy est un grand arbre.\n\nIl en poussait un à l'emplacement de la première place de la ville : c'est lui qui a donné son nom à Antsohihy."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Misy hazo lehibe manome anarana ny tanànanao ve ?",
+   "lien": "/lieu/antsohihy",
+   "attendu": "Antsohihy",
+   "cta": "Où dormir et où manger à Antsohihy",
+   "hashtags": [
+    "#Diako",
+    "#Antsohihy",
+    "#Sofia",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Antsohihy (« Antsohihy veut littéralement dire \"là où il y a plusieurs de sohihy\" […] là y pousse un grand arbre appelé Sohihy d'où la ville a pris son nom »)"
+   ],
+   "defs": {
+    "An": "à, le lieu de",
+    "sohihy": "un grand arbre"
+   }
+  },
+  {
+   "cle": "fianarantsoa",
+   "type": "photos",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": "s3-fianarantsoa",
+   "titre": "Fianarantsoa",
+   "ou": "Haute Matsiatra · les hautes terres du Sud",
+   "mg": "Toerana ianarana ny tsara",
+   "emoji": "📚",
+   "decoupe": "Fianarana · tsoa",
+   "sens": "là où on apprend le bien",
+   "motif": "soa",
+   "corps": [
+    "Peu de villes au monde portent un nom aussi ambitieux. 📚",
+    "Fianarantsoa signifie littéralement « là où on apprend le bien ». Et la colline sur laquelle la vieille ville est bâtie, Ivoneana, veut dire « où on se cache ».",
+    "Le bien, soa, revient souvent sur la carte : {motif_nombre} noms de lieux du référentiel Diako commencent par « {motif} ». Sur place, Diako référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa niakatra tany amin'ny tanàna ambony tao Fianarantsoa ve ianao ?",
+   "lien": "/lieu/fianarantsoa",
+   "attendu": "Fianarantsoa",
+   "cta": "Où dormir et où manger à Fianarantsoa",
+   "hashtags": [
+    "#Diako",
+    "#Fianarantsoa",
+    "#Betsileo",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Fianarantsoa (§ Étymologie : « là où on apprend le bien » ; « Ivoneana, nom de la colline où la vieille ville est bâtie, signifie \"où on se cache\" »)"
+   ],
+   "defs": {
+    "Fianarana": "l'apprentissage",
+    "tsoa": "le bien (soa)"
+   }
+  },
+  {
+   "cle": "ranomafana",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Ranomafana",
+   "ou": "Vatovavy · la forêt de l'Est",
+   "mg": "Rano mafana tokoa",
+   "emoji": "♨️",
+   "decoupe": "Rano · mafana",
+   "sens": "(source d')eau chaude",
+   "motif": "rano",
+   "corps": [
+    "Certains noms n'ont aucun secret. Celui-ci dit exactement ce qu'on y trouve. ♨️",
+    "Ranomafana, c'est « l'eau chaude » : rano, l'eau, mafana, chaude. Des sources thermales, au milieu de la forêt humide de l'Est.",
+    "Seuls {motif_nombre} noms de lieux du référentiel Diako commencent par « {motif} » — mais l'eau se cache ailleurs dans les noms, en plein milieu ou à la fin. Sur place, Diako référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nandro tamin'ny rano mafana tao Ranomafana ve ianao ?",
+   "lien": "/lieu/ranomafana-3",
+   "attendu": "Ranomafana",
+   "cta": "Où dormir et où manger à Ranomafana",
+   "hashtags": [
+    "#Diako",
+    "#Ranomafana",
+    "#Vatovavy",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ranomafana (« du mot malgache ranomafana, signifiant littéralement \"(source d')eau chaude\" »)"
+   ],
+   "defs": {
+    "Rano": "l'eau",
+    "mafana": "chaude"
+   }
+  },
+  {
+   "cle": "ambilobe",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Ambilobe",
+   "ou": "Diana · sur la route du Nord",
+   "mg": "Be ny voly eo",
+   "emoji": "🌾",
+   "decoupe": "Ambilo · be",
+   "sens": "là où l'on trouve beaucoup de plantations",
+   "motif": "be",
+   "corps": [
+    "Un nom qui finit par -be annonce toujours quelque chose en grand. 🌾",
+    "Ambilobe signifie littéralement « là où l'on trouve beaucoup de plantations ». Canne à sucre, cacao, vanille : la vallée du Mahavavy est une terre qui donne.",
+    "Be, « grand, beaucoup », est la fin de nom la plus fréquente du pays : {motif_nombre} noms de lieux du référentiel Diako finissent par « {motif} ». Sur place, Diako référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Firy ny anarana mifarana amin'ny -be fantatrao ? Lazao anay 👇",
+   "lien": "/lieu/ambilobe",
+   "attendu": "Ambilobe",
+   "cta": "Où dormir et où manger à Ambilobe",
+   "hashtags": [
+    "#Diako",
+    "#Ambilobe",
+    "#Diana",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ambilobe (§ Histoire : « Ambilobe signifie littéralement \"là où l'on trouve beaucoup de plantations\" »)"
+   ],
+   "defs": {
+    "be": "beaucoup"
+   }
+  },
+  {
+   "cle": "toliara",
+   "type": "photos",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": "s3-toliara",
+   "titre": "Toliara",
+   "ou": "Atsimo-Andrefana · le Sud-Ouest",
+   "mg": "Ny tanànan'ny masoandro",
+   "emoji": "🌞",
+   "decoupe": "Toliara · Tuléar · Toliary",
+   "corps": [
+    "Toliara, Toliary, Toleara, Tuléar : une ville, quatre façons de l'écrire. 🌞",
+    "Le nom « Tulear » apparaît dès 1689 sur la carte du cartographe Van Keulen — bien avant les orthographes d'aujourd'hui. C'est finalement Toliara qui s'est imposé officiellement, devant Toliary et Toleara.",
+    "Nous ne publions pas d'étymologie pour cette ville : aucune de nos sources n'en donne une. Ce qu'on peut dire avec certitude, c'est ce qu'on y trouve — Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Le nom « Tulear » apparaît dès 1689, sur la carte du cartographe Van Keulen.\n\nDavantage que Toliary ou Toleara, c'est Toliara qui s'est imposé officiellement."
+    },
+    {
+     "k": "fait",
+     "t": "Et le sens du nom ?\n\nAucune de nos sources ne le donne. Nous préférons le dire plutôt que d'inventer."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Inona no fiantsoanao azy : Toliara sa Tuléar ?",
+   "lien": "/lieu/toliara",
+   "attendu": "Toliara",
+   "cta": "Où dormir et où manger à Toliara",
+   "hashtags": [
+    "#Diako",
+    "#Toliara",
+    "#Tulear",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Toliara (§ Toponymie : « Le toponyme Tulear apparaît dès le XVIIe siècle sur la carte de Van Keulen en 1689 » ; « Davantage que Toliary ou que Toleara, le toponyme Toliara s'est cependant imposé officiellement »)"
+   ]
+  },
+  {
+   "cle": "farafangana",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Farafangana",
+   "ou": "Atsimo-Atsinanana · le Sud-Est",
+   "mg": "Ny farany amin'ny lalana",
+   "emoji": "🛶",
+   "decoupe": "Fara · fangana",
+   "sens": "la fin du chemin",
+   "corps": [
+    "Il y a des noms qui sonnent comme un point final. Celui-ci en est un. 🛶",
+    "Une légende rapporte que Farafangana viendrait de farany, « la fin », et de fiangana, « l'origine » ou « la marche » : la fin du chemin, le dernier chemin. Une légende — nous l'écrivons comme telle, parce que c'est ainsi que la source la donne.",
+    "Chef-lieu de l'Atsimo-Atsinanana, au bout de la côte Sud-Est. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "fait",
+     "t": "« Une légende rapporterait que le nom Farafangana vient du mot farany qui signifie fin ou dernier… »\n\nUne légende, pas une certitude. Nous le disons."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa tonga hatrany Farafangana ve ianao ?",
+   "lien": "/lieu/farafangana",
+   "attendu": "Farafangana",
+   "cta": "Où dormir et où manger à Farafangana",
+   "hashtags": [
+    "#Diako",
+    "#Farafangana",
+    "#AtsimoAtsinanana",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Farafangana (« Une légende rapporterait que le nom Farafangana vient du mot \"farany\" qui signifie fin ou dernier, et du mot \"fiangana\" qui signifie origine ou marche »)"
+   ],
+   "defs": {
+    "Fara": "farany, la fin, le dernier",
+    "fangana": "fiangana, l'origine, la marche"
+   }
+  },
+  {
+   "cle": "manakara",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Manakara",
+   "ou": "Fitovinany · la côte Sud-Est",
+   "mg": "Ny anaran'ny renirano",
+   "emoji": "🚂",
+   "decoupe": "Renirano Manakara",
+   "sens": "le nom du fleuve, repris par la ville",
+   "corps": [
+    "Ici, ce n'est pas la ville qui a nommé le fleuve. C'est l'inverse. 🚂",
+    "Manakara se tient près de l'embouchure de la rivière Manakara, et c'est d'elle qu'elle tire son nom. La ville fut jadis dotée d'un port important.",
+    "C'est aussi le terminus du train de Fianarantsoa, l'un des derniers trains de voyageurs de l'île. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "fait",
+     "t": "La ville est près de l'embouchure de la rivière Manakara, « d'où elle tire son nom ».\n\nElle fut jadis dotée d'un port important."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nandeha tamin'ny lamasinina Fianarantsoa–Manakara ve ianao ?",
+   "lien": "/lieu/manakara",
+   "attendu": "Manakara",
+   "cta": "Où dormir et où manger à Manakara",
+   "hashtags": [
+    "#Diako",
+    "#Manakara",
+    "#Fitovinany",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Manakara (« Elle est près de l'embouchure de la rivière Manakara d'où elle tire son nom et jadis dotée d'un port important »)"
+   ],
+   "defs": {}
+  },
+  {
+   "cle": "toamasina",
+   "type": "photos",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": "s3-toamasina",
+   "titre": "Toamasina",
+   "ou": "Atsinanana · le grand port de l'Est",
+   "mg": "Ny seranan-tsambo lehibe",
+   "emoji": "⚓",
+   "decoupe": "Toamasina · Tamatave",
+   "corps": [
+    "Avant de s'appeler Toamasina, le port de l'Est s'appelait « Port-aux-Prunes ». ⚓",
+    "C'est le nom qui figure sur les cartes du XVIIe siècle. Le toponyme malgache Toamasina, lui, ne semble apparaître dans aucun document européen avant 1884, dans l'Histoire et géographie de Madagascar d'Henry Descamps.",
+    "Vous connaissez peut-être l'explication qui court sur « toa masina ». Nous ne la publions pas : aucune de nos sources ne l'établit. Ce que nous savons : Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Sur les cartes du XVIIe siècle, la ville apparaît sous le nom de « Port-aux-Prunes »."
+    },
+    {
+     "k": "fait",
+     "t": "Le nom malgache Toamasina ne semble apparaître dans aucun document européen avant 1884.\n\nSon sens ? Nos sources ne le donnent pas. Nous ne l'inventons pas."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Toamasina sa Tamatave no fiantsoanao azy ?",
+   "lien": "/lieu/toamasina",
+   "attendu": "Toamasina",
+   "cta": "Où dormir et où manger à Toamasina",
+   "hashtags": [
+    "#Diako",
+    "#Toamasina",
+    "#Tamatave",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Toamasina (§ Toponymie : « Sur les cartes du XVIIe siècle apparaît le nom de \"Port-aux-Prunes\" » ; « Le toponyme malgache Toamasina semble n'apparaître dans aucun document d'origine européenne avant Histoire et géographie de Madagascar de Henry Descamps (1884) »)"
+   ]
+  },
+  {
+   "cle": "ranohira",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Ranohira",
+   "ou": "Ihorombe · la porte de l'Isalo",
+   "mg": "Ny ranon'ny maki",
+   "emoji": "🐒",
+   "decoupe": "Rano · hira",
+   "sens": "l'eau des makis",
+   "corps": [
+    "Un roi bara, une source, et des lémuriens qui venaient y boire. 🐒",
+    "Ranohira tire son nom d'une légende : des makis — hira, en parler bara — furent découverts buvant l'eau, rano, d'une source proche du village, réservée au roi. Le roi donna ce nom à son village : « l'eau des makis ».",
+    "C'est aujourd'hui la porte d'entrée du massif de l'Isalo. Diako y référence {hotels} hôtels et {restaurants} restaurants — le village vit du passage."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "fait",
+     "t": "« Le roi a ensuite donné le nom Ranohira à son village, ce qui signifie l'eau des Makis. »\n\nHira : le maki, en parler bara."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nijery ny masoandro milentika tao amin'ny Isalo ve ianao ?",
+   "lien": "/lieu/ranohira",
+   "attendu": "Ranohira",
+   "cta": "Où dormir et où manger à Ranohira",
+   "hashtags": [
+    "#Diako",
+    "#Ranohira",
+    "#Isalo",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ranohira (« Ranohira tire son nom d'une légende où des Lémur Catta ou Makis (\"Hira\" en langue locale Bara) ont été découverts en buvant de l'eau (\"Rano\" en Malgache) dans une source »)"
+   ],
+   "defs": {
+    "Rano": "l'eau",
+    "hira": "le maki, en parler bara"
+   }
+  },
+  {
+   "cle": "fenoarivo",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Fenoarivo Atsinanana",
+   "ou": "Analanjirofo · la côte des girofliers",
+   "mg": "Fenoarivo any atsinanana",
+   "emoji": "🏴‍☠️",
+   "decoupe": "Fénérive-Est · RN5",
+   "motif": "arivo",
+   "corps": [
+    "On l'appelle Fénérive-Est. Son vrai nom est Fenoarivo Atsinanana. 🏴‍☠️",
+    "Jadis, cette ville abritait un port de pirates et un comptoir de commerce. Elle est aujourd'hui sur la RN5, à 103 km au nord de Toamasina et à 58 km au sud de Soanierana Ivongo.",
+    "Mille — arivo — revient souvent à la fin des noms malgaches : {motif_nombre} noms de lieux du référentiel Diako finissent par « {motif} ». Sur place, Diako référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Jadis, cette ville abritait un port de pirates et un comptoir de commerce.\n\nAujourd'hui : RN5, à 103 km au nord de Toamasina."
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Fenoarivo sa Fénérive no fiantsoanao azy ?",
+   "lien": "/lieu/fenoarivo-atsinanana",
+   "attendu": "Fenoarivo",
+   "cta": "Où dormir et où manger à Fenoarivo Atsinanana",
+   "hashtags": [
+    "#Diako",
+    "#Fenoarivo",
+    "#Analanjirofo",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Fenoarivo_Atsinanana (« Jadis, cette ville abritait un port de pirates et un comptoir de co[mmerce] » ; « à environ 103 km au nord de la ville de Toamasina et à 58 km au sud de Soanierana Ivongo le long de la route nationale 5 »)"
+   ]
+  },
+  {
+   "cle": "mahajanga",
+   "type": "photos",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": "s3-mahajanga",
+   "titre": "Mahajanga",
+   "ou": "Boeny · la côte Nord-Ouest",
+   "mg": "Ny tanàna eo amoron-dranomasina",
+   "emoji": "🌅",
+   "decoupe": "Maha · janga",
+   "motif": "maha",
+   "corps": [
+    "La ville du baobab et de la Corniche. Mais que veut dire son nom ? 🌅",
+    "On lit parfois « qui guérit ». Nous ne l'affirmons pas : notre source donne ce sens au conditionnel et le marque elle-même comme non vérifié. Un sens non sourcé reste un sens non sourcé.",
+    "Ce qui est sûr, c'est que son nom commence par maha-, comme {motif_nombre} autres noms de lieux du référentiel Diako. Et que Diako y référence {hotels} hôtels et {restaurants} restaurants — le deuxième annuaire de l'île après Tana."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "« Le nom Mahajanga signifierait qui guérit. »\n\nAu conditionnel, et marqué comme non sourcé par Wikipédia elle-même. Nous ne l'affirmons donc pas."
+    },
+    {
+     "k": "noms"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Misy mahay ny tena dikan'ny hoe Mahajanga ve ? Lazao anay 👇",
+   "lien": "/lieu/mahajanga",
+   "attendu": "Mahajanga",
+   "cta": "Où dormir et où manger à Mahajanga",
+   "hashtags": [
+    "#Diako",
+    "#Mahajanga",
+    "#Boeny",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Mahajanga (§ Histoire : « Le nom Mahajanga signifierait \"qui guérit\"[réf. nécessaire] » — sens au conditionnel et marqué comme non sourcé, donc non repris comme un fait)"
+   ]
+  },
+  {
+   "cle": "sambava",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Sambava",
+   "ou": "Sava · le triangle de la vanille",
+   "mg": "Ny tanin'ny lavanila",
+   "emoji": "🌿",
+   "decoupe": "Lavanila · kafe · jirofo",
+   "corps": [
+    "La vanille que le monde entier achète vient d'ici, ou presque. 🌿",
+    "Sambava se trouve en pleine région de production de la vanille, du café et du girofle. Elle abrite aussi une des plus grandes cocoteraies du monde — environ 4 800 hectares — appelée Soavoanio.",
+    "Elle est au centre d'un triangle : Vohémar à 153 km au nord, Andapa à 109 km à l'ouest, Antalaha à 89 km au sud. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Une des plus grandes cocoteraies du monde se trouve ici.\n\nEnviron 4 800 hectares. Elle s'appelle Soavoanio."
+    },
+    {
+     "k": "fait",
+     "t": "Sambava est au centre d'un triangle :\n\nVohémar à 153 km au nord\nAndapa à 109 km à l'ouest\nAntalaha à 89 km au sud"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nahita voninkazon'ny lavanila ve ianao ?",
+   "lien": "/lieu/sambava",
+   "attendu": "Sambava",
+   "cta": "Où dormir et où manger à Sambava",
+   "hashtags": [
+    "#Diako",
+    "#Sambava",
+    "#Sava",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Sambava (« en pleine région de production de la vanille, du café et du girofle » ; « une des plus grandes cocoteraies du monde (environ 4 800 ha) appelée Soavoanio » ; « Vohémar à 153 km au nord, Andapa à 109 km à l'ouest et Antalaha à 89 km au sud »)"
+   ]
+  },
+  {
+   "cle": "moramanga",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Moramanga",
+   "ou": "Alaotra-Mangoro · sur la RN2",
+   "mg": "Ny tanàna tsy hay hadinoina",
+   "emoji": "🕯️",
+   "decoupe": "RN2 · 1947",
+   "corps": [
+    "On la traverse en allant à Toamasina. On devrait s'y arrêter. 🕯️",
+    "Moramanga a été l'épicentre de l'insurrection malgache de 1947. Le massacre du train de Moramanga, le 5 mai 1947, est emblématique de la répression qui a suivi. C'est une ville dont le nom est d'abord une date.",
+    "Elle est aussi au carrefour des routes vers Antananarivo, Anosibe An'ala et Ambatondrazaka — et à 30 km de la réserve d'Analamazaotra et du parc d'Andasibe-Mantadia. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Moramanga a été l'épicentre de l'insurrection malgache de 1947.\n\nLe massacre du train de Moramanga, le 5 mai 1947, est emblématique de la répression qui a suivi."
+    },
+    {
+     "k": "fait",
+     "t": "À 30 km de Moramanga :\n\nla réserve spéciale d'Analamazaotra\net le parc national d'Andasibe-Mantadia."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nijanona tao Moramanga ve ianao, sa nandalo fotsiny ?",
+   "lien": "/lieu/moramanga",
+   "attendu": "Moramanga",
+   "cta": "Où dormir et où manger à Moramanga",
+   "hashtags": [
+    "#Diako",
+    "#Moramanga",
+    "#RN2",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Moramanga (« La commune a été l'épicentre de l'insurrection malgache de 1947. Le massacre du train de Moramanga, le 5 mai 1947, est emblématique de la répression sanglante » ; « À 30 km de Moramanga se situent la réserve spéciale d'Analamazoatra et le parc national d'Andasibe-Mantadia »)"
+   ]
+  },
+  {
+   "cle": "antsiranana",
+   "type": "photos",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": "s3-antsiranana",
+   "titre": "Antsiranana",
+   "ou": "Diana · tout au nord",
+   "mg": "Ny seranana any avaratra",
+   "emoji": "⛵",
+   "decoupe": "An · tsiranana",
+   "sens": "le port",
+   "corps": [
+    "Cette ville a changé trois fois de nom. Et le premier était le plus imagé. ⛵",
+    "Son tout premier nom est Antomboko, « troué, perforé » — à cause de cette baie naturelle qui s'étend sur 156 km. Puis vinrent les navigateurs portugais Diego Dias et Fernando Suarez, qui lui laissèrent leurs noms.",
+    "Dans les années 1970, la malgachisation lui rend son nom malgache : Antsiranana, « le port ». Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "fait",
+     "t": "Son tout premier nom : Antomboko.\n\n« Troué, perforé » — à cause de la baie naturelle, qui s'étend sur 156 km."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Antsiranana sa Diego no fiantsoanao azy ?",
+   "lien": "/lieu/antsiranana",
+   "attendu": "Antsiranana",
+   "cta": "Où dormir et où manger à Antsiranana",
+   "hashtags": [
+    "#Diako",
+    "#Antsiranana",
+    "#Diana",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Antsiranana (§ Toponymie : « Le tout premier nom d'Antsiranana est Antomboko, qui signifie \"troué, perforé\", nom dû à cette baie naturelle qui s'étend sur 156 km » ; « La ville retrouve son nom malgache d'Antsiranana (mot qui signifie \"le port\" en malgache) dans les années 1970 »)"
+   ],
+   "defs": {
+    "An": "à, le lieu de"
+   }
+  },
+  {
+   "cle": "antalaha",
+   "type": "mot",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": null,
+   "titre": "Antalaha",
+   "ou": "Sava · la côte de la vanille",
+   "mg": "Ny anaran'ny hazo roa",
+   "emoji": "🌳",
+   "decoupe": "Anta Vavy · Anta lahy",
+   "sens": "le nom vient de deux arbres : Anta Vavy et Anta lahy",
+   "corps": [
+    "Deux arbres. L'un appelé « femelle », l'autre « mâle ». Et une ville née entre les deux. 🌳",
+    "L'origine du nom d'Antalaha vient de deux arbres qui s'appelaient Anta Vavy et Anta lahy. Vavy, la femelle ; lahy, le mâle. C'est de ce couple d'arbres que la ville tient son nom.",
+    "Antalaha est au bout du triangle de la vanille, à 89 km au sud de Sambava. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "fait",
+     "t": "« L'origine du nom de la ville vient des deux arbres qui s'appelaient Anta Vavy et Anta lahy. »\n\nVavy : la femelle. Lahy : le mâle."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nividy lavanila tany Antalaha ve ianao ?",
+   "lien": "/lieu/antalaha",
+   "attendu": "Antalaha",
+   "cta": "Où dormir et où manger à Antalaha",
+   "hashtags": [
+    "#Diako",
+    "#Antalaha",
+    "#Vanille",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Antalaha (§ Toponymie : « L'origine du nom de la ville vient des deux arbres qui s'appelaient \"Anta Vavy\" et \"Anta lahy\" »)"
+   ],
+   "defs": {}
+  },
+  {
+   "cle": "imerintsiatosika",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Imerintsiatosika",
+   "ou": "Itasy · à 26 km de Tana",
+   "mg": "Ny tanàna hitsangana",
+   "emoji": "🏗️",
+   "decoupe": "Tanamasoandro · 2021",
+   "corps": [
+    "Un jour, peut-être, on dira « la capitale ». Pour l'instant, on dit Imerintsiatosika. 🏗️",
+    "En 2021, les autorités ont choisi cette commune de l'Itasy pour accueillir le projet d'une nouvelle capitale, Tanamasoandro. Elle est en construction à la périphérie sud de la ville et devrait compter 200 000 habitants à son terme.",
+    "Imerintsiatosika est à 26 km à l'ouest d'Antananarivo, sur la RN1. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "En 2021, Imerintsiatosika a été choisie pour accueillir le projet d'une nouvelle capitale : Tanamasoandro.\n\n200 000 habitants prévus à son terme."
+    },
+    {
+     "k": "fait",
+     "t": "À 26 km à l'ouest d'Antananarivo, sur la RN1.\n\n53 698 habitants dans la commune."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Mino ve ianao fa hisy tanàna vaovao hitsangana ao ?",
+   "lien": "/lieu/imerintsiatosika",
+   "attendu": "Imerintsiatosika",
+   "cta": "Où dormir et où manger à Imerintsiatosika",
+   "hashtags": [
+    "#Diako",
+    "#Imerintsiatosika",
+    "#Itasy",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Imerintsiatosika (« Imerintsiatosika est choisie par les autorités, en 2021, pour accueillir le projet d'une nouvelle capitale, Tanamasoandro […] devrait compter à son terme 200 000 habitants » ; « à 26 km à l'ouest d'Antananarivo, sur la route nationale 1 » ; « La commune abrite 53 698 habitants »)"
+   ]
+  },
+  {
+   "cle": "morondava",
+   "type": "photos",
+   "rubrique": "Anaran-tanàna",
+   "icone": "📜",
+   "photos": "s3-morondava",
+   "titre": "Morondava",
+   "ou": "Menabe · la côte Ouest",
+   "mg": "Morona lava",
+   "emoji": "🏖️",
+   "decoupe": "Morona · lava",
+   "sens": "la longue plage",
+   "corps": [
+    "Son nom est une contraction. Deux mots devenus un seul. 🏖️",
+    "Morondava signifie « la longue plage » : morona, la rive, et lava, long. Morona lava, prononcé vite, devient Morondava. C'est le nom le plus descriptif de la côte Ouest.",
+    "C'est aussi la ville d'où l'on part voir les baobabs. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "sens"
+    },
+    {
+     "k": "fait",
+     "t": "« Son nom signifie en langue malgache La Longue Plage, comme contraction de morona lava. »\n\nMorona : la rive. Lava : long."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nijery ny masoandro milentika tao Morondava ve ianao ?",
+   "lien": "/lieu/morondava",
+   "attendu": "Morondava",
+   "cta": "Où dormir et où manger à Morondava",
+   "hashtags": [
+    "#Diako",
+    "#Morondava",
+    "#Menabe",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Morondava (« Son nom signifie en langue malgache \"La Longue Plage\" comme contraction de \"morona lava\" »)"
+   ],
+   "defs": {
+    "Morona": "la rive",
+    "lava": "long"
+   }
+  },
+  {
+   "cle": "mananjary",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Mananjary",
+   "ou": "Vatovavy · la côte Est",
+   "mg": "Ny tanàna voazara roa",
+   "emoji": "🛶",
+   "decoupe": "RN25 · Pangalanes",
+   "corps": [
+    "Une ville coupée en deux par un canal. Et ce n'est pas une image. 🛶",
+    "Mananjary se tient à l'embouchure du fleuve Mananjary, au niveau du canal des Pangalanes — lequel divise la ville en deux parties. Le centre est posé sur un large boulevard au bord de la mer.",
+    "Elle est sur la RN25 : 177 km d'Antananarivo, 137 de Fianarantsoa, 154 de Manakara. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Le canal des Pangalanes divise la ville en deux parties.\n\nLe centre est posé sur un large boulevard au bord de la mer."
+    },
+    {
+     "k": "fait",
+     "t": "Sur la RN25 :\n\n177 km d'Antananarivo\n137 km de Fianarantsoa\n154 km de Manakara"
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nita ny lakandrano tao Mananjary ve ianao ?",
+   "lien": "/lieu/mananjary-5",
+   "attendu": "Mananjary",
+   "cta": "Où dormir et où manger à Mananjary",
+   "hashtags": [
+    "#Diako",
+    "#Mananjary",
+    "#Pangalanes",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Mananjary (« à l'embouchure du fleuve Mananjary au niveau du canal des Pangalanes, lequel divise la ville en deux parties » ; « la RN 25 […] Antananarivo (177 km), Fianarantsoa (137 km), Manakara (154 km) »)"
+   ]
+  },
+  {
+   "cle": "tsiroanomandidy",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Tsiroanomandidy",
+   "ou": "Bongolava · au bout de la RN1",
+   "mg": "Ny faran'ny lalana RN1",
+   "emoji": "🐂",
+   "decoupe": "RN1 · 219 km",
+   "corps": [
+    "La route nationale 1 s'arrête ici. Littéralement : c'est son terminus. 🐂",
+    "Tsiroanomandidy est le chef-lieu de la région Bongolava, au bout de la RN1, à 219 km à l'ouest d'Antananarivo, près des rives du Manambolo et de la limite occidentale des hautes terres.",
+    "La commune urbaine comptait 44 461 habitants en 2018. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Au bout de la RN1, à 219 km à l'ouest d'Antananarivo.\n\nPrès de la limite occidentale des hautes terres centrales."
+    },
+    {
+     "k": "fait",
+     "t": "44 461 habitants dans la commune urbaine en 2018.\n\nChef-lieu de la région Bongolava."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa tonga hatrany amin'ny faran'ny RN1 ve ianao ?",
+   "lien": "/lieu/tsiroanomandidy-2",
+   "attendu": "Tsiroanomandidy",
+   "cta": "Où dormir et où manger à Tsiroanomandidy",
+   "hashtags": [
+    "#Diako",
+    "#Tsiroanomandidy",
+    "#Bongolava",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Tsiroanomandidy (« Le ville se situe au bout de la RN 1, à 219 km à l'ouest d'Antananarivo » ; « La commune urbaine de Tsiroanomandidy comptait 44 461 habitants en 2018 »)"
+   ]
+  },
+  {
+   "cle": "ambositra",
+   "type": "photos",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": "s3-ambositra",
+   "titre": "Ambositra",
+   "ou": "Amoron'i Mania · à 1 350 m",
+   "mg": "Ny tanànan'ny mpanao sokitra",
+   "emoji": "🪵",
+   "decoupe": "RN7 · Zafimaniry",
+   "corps": [
+    "La capitale malgache de la sculpture sur bois est posée à 1 350 mètres. 🪵",
+    "Ambositra est une des villes des hautes terres centrales, entourée de rizières en terrasse et constituée de maisons typiques en briques. Elle se situe sur la RN7, entre Antsirabe et Fianarantsoa.",
+    "C'est la porte du pays zafimaniry, dont l'art du bois est inscrit au patrimoine de l'humanité. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Une des villes des hautes terres centrales, à 1 350 mètres d'altitude.\n\nEntourée de rizières en terrasse, et constituée de maisons typiques en briques."
+    },
+    {
+     "k": "fait",
+     "t": "Sur la RN7, entre Antsirabe et Fianarantsoa.\n\nC'est la porte du pays zafimaniry."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nividy sokitra hazo tao Ambositra ve ianao ?",
+   "lien": "/lieu/ambositra-2",
+   "attendu": "Ambositra",
+   "cta": "Où dormir et où manger à Ambositra",
+   "hashtags": [
+    "#Diako",
+    "#Ambositra",
+    "#Zafimaniry",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ambositra (« Une des villes des hautes terres centrales située à 1350 mètres d'altitude, entourée des rizières en terrasse et constituée de maisons typiques en briques » ; « Ambositra se situe sur la route nationale 7 entre Antsirabe et Fianarant[soa] »)"
+   ]
+  },
+  {
+   "cle": "morombe",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Morombe",
+   "ou": "Atsimo-Andrefana · le Sud-Ouest",
+   "mg": "Ny renala eo akaiky",
+   "emoji": "🌳",
+   "decoupe": "Ampanonga · reniala",
+   "corps": [
+    "À 80 km d'ici pousse une forêt que peu de voyageurs ont vue. 🌳",
+    "La forêt d'Ampanonga possède encore plusieurs centaines de baobabs. Parmi les plus beaux spécimens, l'Adansonia grandidieri, appelé reniala par les Malgaches : un arbre qui semble avoir des racines à la place de la frondaison, jusqu'à quarante mètres de haut et trois mètres de diamètre.",
+    "Morombe est le chef-lieu de son district, au nord-ouest de l'Atsimo-Andrefana. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "À 80 km de Morombe : la forêt d'Ampanonga.\n\nElle possède encore plusieurs centaines de baobabs."
+    },
+    {
+     "k": "fait",
+     "t": "L'Adansonia grandidieri, appelé reniala par les Malgaches.\n\nJusqu'à quarante mètres de haut et trois mètres de diamètre."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nahita renala tany Morombe ve ianao ?",
+   "lien": "/lieu/morombe",
+   "attendu": "Morombe",
+   "cta": "Où dormir et où manger à Morombe",
+   "hashtags": [
+    "#Diako",
+    "#Morombe",
+    "#Reniala",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Morombe (« À 80 kilomètres de Morombe se trouve la forêt d'Ampanonga qui possède encore plusieurs centaines de baobabs. Parmi les plus beaux spécimens, l'Adansonia grandidieri, appelé \"reniala\" par les Malgaches […] peut atteindre quarante mètres de haut et trois mètres de diamètre »)"
+   ]
+  },
+  {
+   "cle": "ihosy",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Ihosy",
+   "ou": "Ihorombe · le carrefour du Sud",
+   "mg": "Ny renivohitry ny Bara",
+   "emoji": "🐄",
+   "decoupe": "RN7 · RN13 · RN27",
+   "corps": [
+    "Trois routes nationales se croisent ici. C'est le carrefour du Sud. 🐄",
+    "Ihosy est la capitale du peuple Bara. La ville se trouve sur la rivière Ihosy, sur les rebords nord du plateau de l'Ihorombe. Traversée par la RN7, elle est aussi reliée à Tôlanaro par la RN13 et à Farafangana par la RN27.",
+    "À l'origine, la ville se trouvait 3 km plus haut sur la colline, mais elle fut désertée en 1806. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Ihosy est la capitale du peuple Bara.\n\nRN7, RN13 vers Tôlanaro, RN27 vers Farafangana : le carrefour du Sud."
+    },
+    {
+     "k": "fait",
+     "t": "À l'origine, la ville se trouvait 3 km plus haut sur la colline.\n\nElle fut désertée en 1806."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nandalo tao Ihosy ve ianao teny an-dalana ho any atsimo ?",
+   "lien": "/lieu/ihosy",
+   "attendu": "Ihosy",
+   "cta": "Où dormir et où manger à Ihosy",
+   "hashtags": [
+    "#Diako",
+    "#Ihosy",
+    "#Bara",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ihosy (« La ville est la capitale du peuple Bara » ; « sur la rivière d'Ihosy […] sur les rebords nord du plateau d'Ihorombe. Traversée par la RN 7, elle est également reliée à Tôlanaro par la RN 13 et à Farafangana par la RN 27 » ; « À l'origine, la ville se trouvait un peu plus haut sur la colline, à 3 km, mais fut désertée en 1806 »)"
+   ]
+  },
+  {
+   "cle": "tolagnaro",
+   "type": "photos",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": "s3-tolagnaro",
+   "titre": "Taolagnaro",
+   "ou": "Anosy · tout au sud-est",
+   "mg": "Tanàna iray, anarana maro",
+   "emoji": "🏰",
+   "decoupe": "Tôlanaro · Taolagnaro · Faradofay",
+   "corps": [
+    "C'est la ville de Madagascar qui porte le plus de noms. Nous en comptons dix. 🏰",
+    "Tôlanaro, Tolanaro, Tolagnaro, Taolagnaro, Taolanaro, Tôlagnaro, Fort-Dauphin, Faradofay, Faradifay, Anôsy : la même ville, au sud-est de l'île, à l'ombre du Pic Saint-Louis.",
+    "Dix noms pour une ville, et autant de façons de la chercher. Sur place, Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Tôlanaro · Tolanaro · Tolagnaro\nTaolagnaro · Taolanaro · Tôlagnaro\nFort-Dauphin · Faradofay\nFaradifay · Anôsy\n\nUne seule ville."
+    },
+    {
+     "k": "fait",
+     "t": "Et vous, comment l'appelez-vous ?\n\nChez nous, chaque orthographe doit mener à la même fiche. C'est tout le travail d'un annuaire."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Faradofay sa Taolagnaro no fiantsoanao azy ?",
+   "lien": "/lieu/tolagnaro",
+   "attendu": "Tolagnaro",
+   "cta": "Où dormir et où manger à Taolagnaro",
+   "hashtags": [
+    "#Diako",
+    "#Taolagnaro",
+    "#FortDauphin",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Tôlanaro (§ Toponymie : « Tôlanaro (ou Tolanaro) Tolagnaro Taolagnaro Taolanaro Fort-Dauphin Tôlagnaro Faradofay Faradifay Anôsy Farady »)"
+   ]
+  },
+  {
+   "cle": "ambanja",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Ambanja",
+   "ou": "Diana · la vallée du Sambirano",
+   "mg": "Ny lohasahan'ny Sambirano",
+   "emoji": "🍫",
+   "decoupe": "Sambirano · Ankify",
+   "corps": [
+    "Le cacao malgache que les chocolatiers du monde s'arrachent pousse ici. 🍫",
+    "Ambanja est traversée par le fleuve Sambirano. C'est une belle vallée fertile, au climat comparable à celui de la côte Est, avec une végétation dense où les arbres du voyageur côtoient le reste de la forêt primaire.",
+    "La ville se situe à 18 km du port d'Ankify, celui qui relie Nosy Be à la grande île, et à 220 km d'Antsiranana par la route — environ 6 heures. Diako y référence {hotels} hôtels et {restaurants} restaurants."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Ambanja est traversée par le fleuve Sambirano.\n\nUne vallée fertile, au climat comparable à celui de la côte Est."
+    },
+    {
+     "k": "fait",
+     "t": "À 18 km du port d'Ankify, qui relie Nosy Be à la grande île.\n\nÀ 220 km d'Antsiranana par la route : environ 6 heures."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Efa nandalo tao Ambanja ve ianao talohan'ny fiampitana ho any Nosy Be ?",
+   "lien": "/lieu/ambanja",
+   "attendu": "Ambanja",
+   "cta": "Où dormir et où manger à Ambanja",
+   "hashtags": [
+    "#Diako",
+    "#Ambanja",
+    "#Sambirano",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ambanja (« Elle se situe à 18 km du port d'Ankify, reliant l'île de Nosy be à l'île de Madagascar » ; « Elle est traversée par le fleuve Sambirano » ; « à 220 km par route d'Antsiranana (6 heures en moyenne de parcours) » ; « C'est une belle vallée fertile avec un climat comparable à celui de la côte Est malgache »)"
+   ]
+  },
+  {
+   "cle": "ambovombe",
+   "type": "mot",
+   "rubrique": "Tanàna",
+   "icone": "📍",
+   "photos": null,
+   "titre": "Ambovombe",
+   "ou": "Androy · le Grand Sud",
+   "mg": "Ny renivohitry ny Androy",
+   "emoji": "🌵",
+   "decoupe": "Androy · RN13",
+   "corps": [
+    "Pour finir cette série, la ville où Diako en sait le moins. Et c'est à vous de jouer. 🌵",
+    "Ambovombe est la capitale de la région Androy et de son district, sur la RN13, à 383 km d'Ihosy et à 110 km à l'ouest de Tôlanaro. Dépourvue de rivières et de lacs, la ville est souvent touchée par la sécheresse.",
+    "Son aire urbaine est estimée à 126 321 habitants en 2014. Et sur Diako, il n'y a pour l'instant que {hotels} hôtels et {restaurants} restaurants référencés. Si vous connaissez le Grand Sud, c'est le moment : chacun peut ajouter une adresse."
+   ],
+   "cartes": [
+    {
+     "k": "fait",
+     "t": "Capitale de la région Androy, sur la RN13.\n\nÀ 383 km d'Ihosy, 110 km à l'ouest de Tôlanaro. Dépourvue de rivières et de lacs, souvent touchée par la sécheresse."
+    },
+    {
+     "k": "fait",
+     "t": "Une aire urbaine de 126 321 habitants (2014).\n\nEt sur Diako, une poignée d'adresses. La carte du Grand Sud reste à écrire."
+    },
+    {
+     "k": "chiffres"
+    }
+   ],
+   "question": "Misy toerana fantatrao ao Androy ve ? Lazao anay 👇",
+   "lien": "/lieu/ambovombe",
+   "attendu": "Ambovombe",
+   "cta": "Ajouter une adresse à Ambovombe",
+   "hashtags": [
+    "#Diako",
+    "#Ambovombe",
+    "#Androy",
+    "#Madagascar",
+    "#VoyageMadagascar"
+   ],
+   "sources": [
+    "https://fr.wikipedia.org/wiki/Ambovombe (« Ambovombe se situe sur la route nationale 13 à 383 km d'Ihosy […] et 110 km à l'Ouest de Tôlanaro » ; « Dépourvue de rivières et lacs, la ville est souvent touchée par la sècheresse » ; « Son aire urbaine est estimée à 126 321 habitants en 2014 » ; « Ambovombe est la capitale de la région d'Androy et du district d'Ambovombe »)"
+   ]
+  }
+ ]
+}

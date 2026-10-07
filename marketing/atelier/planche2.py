@@ -3,6 +3,7 @@
 une publication par rangée, assez grande pour lire les textes.
 
     python marketing/atelier/planche2.py planche.jpg zombitse ibonia [--largeur 250]
+    python marketing/atelier/planche2.py p3.jpg antsirabe --sortie sortie3
 """
 import sys
 from pathlib import Path
@@ -15,9 +16,13 @@ a = sys.argv[1:]
 W = int(a[a.index("--largeur") + 1]) if "--largeur" in a else 250
 if "--largeur" in a:
     i = a.index("--largeur"); del a[i:i + 2]
+# --sortie : la série à relire (sortie2 par défaut, pour ne rien changer aux appels existants)
+SERIE = a[a.index("--sortie") + 1] if "--sortie" in a else "sortie2"
+if "--sortie" in a:
+    i = a.index("--sortie"); del a[i:i + 2]
 sortie, cles = Path(a[0]), a[1:]
 H, G = int(W * 1.25), 6
-dossiers = [d for c in cles for d in sorted((ICI / "sortie2").glob(f"*-{c}")) if d.name[11:] == c]
+dossiers = [d for c in cles for d in sorted((ICI / SERIE).glob(f"*-{c}")) if d.name[11:] == c]
 try:
     f = ImageFont.truetype("arial.ttf", 14)
 except Exception:

@@ -107,14 +107,35 @@ test.describe("réduire les animations", () => {
 });
 
 test.describe("mouvement normal : rien ne reste vide à l'écran", () => {
-  for (const chemin of ["/", "/villes"]) {
-    test(`${chemin} : en descendant toute la page`, async ({ page }) => {
-      await page.goto(chemin);
-      await expect(page.locator("#root h1").first()).toBeAttached({ timeout: 20_000 });
-      await page.waitForTimeout(2000);
-      expect(await videsALEcran(page)).toEqual([]);
-    });
-  }
+  test("/ : en descendant toute la page", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#root h1").first()).toBeAttached({ timeout: 20_000 });
+    await page.waitForTimeout(2000);
+    expect(await videsALEcran(page)).toEqual([]);
+  });
+
+  /* ⚠ OUVRIR LA BANDE, sinon le test ne vérifie RIEN : les 23 cartes de
+       /villes vivent dans cinq <details> fermés (Villes.tsx), écartés par
+       checkVisibility. Ouvrir, refermer, rouvrir : c'est le cas que la recette
+       B bis protège (une animation rejoue quand un ancêtre caché réapparaît). */
+  test("/villes : ouvrir une région, la refermer, la rouvrir", async ({ page }) => {
+    await page.goto("/villes");
+    const bande = page.locator("details").first();
+    await expect(bande).toBeAttached({ timeout: 20_000 });
+    const resume = bande.locator("summary");
+    for (const essai of ["ouverte", "rouverte"]) {
+      await resume.click();
+      await expect(bande).toHaveAttribute("open", "");
+      await page.waitForTimeout(900);
+      expect(await bande.locator(".dk-reveal").count(), "des cartes dans la bande").toBeGreaterThan(0);
+      expect(await videsALEcran(page), `bande ${essai}`).toEqual([]);
+      if (essai === "ouverte") {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await resume.click();
+        await expect(bande).not.toHaveAttribute("open", "");
+      }
+    }
+  });
 
   test("/sites : changer de filtre puis tout parcourir", async ({ page }) => {
     await page.goto("/sites");

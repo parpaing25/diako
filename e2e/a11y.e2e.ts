@@ -3,7 +3,8 @@ import AxeBuilder from "@axe-core/playwright";
 
 /**
  * axe-core sur six pages : aucune violation « serious » ni « critical ».
- * ⚠ Une règle écartée ici doit porter son motif ; aucune ne l'est aujourd'hui.
+ * ⚠ Une règle écartée ici doit porter son motif. Aucune ne l'est en entier ;
+ *   deux familles de NŒUDS le sont, chacune avec son motif ci-dessous.
  */
 const PAGES = ["/", "/explorer", "/p/les-trois-metis", "/lieu/mahajanga", "/auth", "/quand-partir"];
 
@@ -24,7 +25,17 @@ for (const u of PAGES) {
          cliché). On écarte ce nœud, pas la règle. */
       .exclude('article [class*="max-w-[85%]"]')
       .analyze();
-    const graves = resultats.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+    /* ⚠ DEUXIÈME MOTIF (25/10/2026) : `target-size` sur une cible `.dk-tap`.
+         Ces boutons (« Lire la suite » du fil) gardent la hauteur de leur
+         texte, 20 px, et portent une zone de toucher de 44 x 44 px en
+         `::after` (index.css, `.dk-tap`) : axe ne mesure pas les
+         pseudo-éléments et les compte à 20 px. Vu en CI le 25/10/2026 (93 x
+         20 px), seulement quand le premier récit est assez long pour avoir
+         « Lire la suite » : un échec qui dépend du contenu du jour. On écarte
+         ces nœuds-là ; la règle reste active pour tout le reste. */
+    const graves = resultats.violations
+      .map((v) => (v.id === "target-size" ? { ...v, nodes: v.nodes.filter((n) => !/\bdk-tap\b/.test(n.html)) } : v))
+      .filter((v) => (v.impact === "serious" || v.impact === "critical") && v.nodes.length > 0);
     expect(
       graves.map((v) => `${v.id} (${v.impact}) — ${v.nodes.length} nœud(s) : ${v.nodes[0]?.target.join(" ")} — ${JSON.stringify(v.nodes[0]?.any[0]?.data ?? null)}`),
       `violations graves sur ${u}`

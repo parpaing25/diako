@@ -1,8 +1,13 @@
 name: CI
 
+# 🔴 LA BRANCHE DE PRODUCTION N'ÉTAIT PAS GARDÉE (25/10/2026). Le site en ligne
+#    est construit depuis `feat/bot-collecte-diako` (seize commits d'avance sur
+#    `main`), et cette CI ne se déclenchait que sur `main` et les pull requests :
+#    aucun run entre le 07/09 et le 25/10, donc aucun des commits mis en ligne
+#    n'avait été vu par les types, le lint, les tests, l'audit ni le budget.
 on:
   push:
-    branches: [main]
+    branches: [main, feat/bot-collecte-diako]
   pull_request:
 
 jobs:
@@ -44,13 +49,24 @@ jobs:
 
       # Dépendances SERVIES en production seulement (les hautes de la chaîne de
       # build sont connues et ne s'exécutent pas chez le visiteur).
+      # ⚠ ROUGE DU 07/09 AU 25/10/2026, et pas à cause du code servi : deux
+      #   paquets étaient rangés à tort dans `dependencies`. `vite-plugin-pwa`
+      #   (outil de build) y faisait entrer Vite, son pair, et Workbox ; `zod`,
+      #   qu'aucun fichier de src/ n'importe, y restait du gabarit shadcn. Le
+      #   premier est passé en devDependencies, le second a été retiré, et les
+      #   failles transitives ont été montées au correctif (npm update ciblé,
+      #   jamais `npm audit fix --force`). Un outil de build se range en
+      #   devDependencies : sinon cette étape ne mesure plus ce qu'elle annonce.
       - name: Audit des dépendances de production
         run: npm audit --omit=dev --audit-level=high
 
-      # Parcours de lecture (7 scénarios, e2e/) sur le build, avec un agent
-      # utilisateur Android réel et axe-core. Jamais d'écriture en base.
-      - name: Navigateur pour Playwright
-        run: npx playwright install --with-deps chromium
+      # Parcours de lecture (e2e/) sur le build, avec un agent utilisateur
+      # Android réel et axe-core. Jamais d'écriture en base.
+      # ⚠ FIREFOX AUSSI (25/10/2026) : un ordre d'initialisation des modules a
+      #   déjà donné une page blanche sous Firefox seulement (vite.config.ts).
+      #   e2e/firefox.e2e.ts le vérifie ; Chromium ne le voit pas.
+      - name: Navigateurs pour Playwright
+        run: npx playwright install --with-deps chromium firefox
       - name: Parcours de bout en bout
         run: npx playwright test
       - uses: actions/upload-artifact@v4

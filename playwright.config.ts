@@ -28,12 +28,29 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: "http://127.0.0.1:4173",
-    ...devices["Pixel 7"],
-    userAgent:
-      "Mozilla/5.0 (Linux; Android 13; SM-A155F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Mobile Safari/537.36",
     locale: "fr-FR",
     trace: "retain-on-failure",
   },
+  /* ⚠ DEUX PROJETS (25/10/2026). Le réglage Pixel 7 vivait dans `use` au
+     niveau racine : tout projet en héritait, et `isMobile` fait lever Firefox
+     sous Playwright. Il passe donc dans le projet Chromium, à l'identique, et
+     Firefox ne joue que son propre fichier (la page blanche, e2e/firefox.e2e.ts). */
+  projects: [
+    {
+      name: "android-chromium",
+      testIgnore: /firefox\.e2e\.ts$/,
+      use: {
+        ...devices["Pixel 7"],
+        userAgent:
+          "Mozilla/5.0 (Linux; Android 13; SM-A155F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Mobile Safari/537.36",
+      },
+    },
+    {
+      name: "firefox",
+      testMatch: /firefox\.e2e\.ts$/,
+      use: { browserName: "firefox" },
+    },
+  ],
   webServer: {
     command: "npm run preview -- --port 4173 --host 127.0.0.1 --strictPort",
     url: "http://127.0.0.1:4173",

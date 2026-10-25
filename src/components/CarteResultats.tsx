@@ -236,7 +236,15 @@ export default function CarteResultats({
             });
             setBouge(false);
           }}
-          className="dk-reveal absolute left-1/2 top-3 z-[500] inline-flex min-h-10 -translate-x-1/2 items-center gap-2 rounded-full bg-card px-4 text-sm font-semibold shadow-lg ring-1 ring-border"
+          /* 🔴 `dk-fade-in`, PLUS `dk-reveal` (25/10/2026). Ce bouton naît
+             quand on bouge la carte, longtemps après l'arrivée sur la page :
+             aucun useReveal ne le voyait, le filet (6 s) était éteint, et il
+             restait à opacité 0 — INVISIBLE mais cliquable. Mesuré sur le
+             build en ligne : opacité 0 à 1,5 s comme à 4,5 s, et décalé de
+             115 px à droite (le `transform` de `.dk-reveal`, déclaré après
+             les utilitaires, écrasait `-translate-x-1/2`). Un fondu
+             d'opacité seule ne touche pas au centrage. */
+          className="dk-fade-in absolute left-1/2 top-3 z-[500] inline-flex min-h-10 -translate-x-1/2 items-center gap-2 rounded-full bg-card px-4 text-sm font-semibold shadow-lg ring-1 ring-border"
         >
           <Crosshair className="h-4 w-4 text-primary" aria-hidden="true" />
           Rechercher dans cette zone

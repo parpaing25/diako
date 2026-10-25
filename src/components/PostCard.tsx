@@ -306,6 +306,15 @@ export function PostCard({
       ref={racine}
       onClick={clicSurLaCarte}
       onAuxClick={clicMilieuSurLaCarte}
+      /* 🔴 MENU OUVERT = CARTE IMMOBILE (R12, mesuré le 25/10/2026). Le
+         capteur « clic dehors » du menu Options est un `fixed inset-0` DANS
+         la carte. Au survol, `.dk-carte` se soulève par un `transform` : la
+         carte devient le bloc conteneur du capteur, qui rétrécit à sa taille
+         (380 x 572 au lieu de 1920 x 1080) ; la souris n'étant plus dessus,
+         le survol cesse, le capteur regrandit, le survol reprend… 76
+         bascules en 1,5 s, et un clic hors de la carte ne fermait PLUS le
+         menu. `index.css` annule le soulèvement tant que ce drapeau est là. */
+      data-menu-ouvert={menu ? "" : undefined}
       className={cn(
         "dk-reveal dk-carte border-b border-border bg-card pb-2 md:rounded-2xl md:border",
         !surSaPage && "cursor-pointer"

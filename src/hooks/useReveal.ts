@@ -1,5 +1,8 @@
 import { useEffect } from "react";
 
+/** Pas encore vu : ni "1" (l'apparition joue) ni "2" (vu, sans animation). */
+const PAS_VU = ".dk-reveal:not([data-vu])";
+
 /**
  * Le contenu qui se pose en arrivant à l'écran.
  *
@@ -35,39 +38,46 @@ import { useEffect } from "react";
 export function useReveal(dependance?: unknown) {
   useEffect(() => {
     const doux = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const cibles = document.querySelectorAll<HTMLElement>('.dk-reveal:not([data-vu="1"])');
+    const cibles = document.querySelectorAll<HTMLElement>(PAS_VU);
     if (!cibles.length) return;
 
     // Sans observateur (navigateur ancien) ou si l'utilisateur a demandé moins
     // d'animations : on montre tout, tout de suite. Jamais de contenu caché.
+    // "2" et non "1" : vu, SANS apparition — rien ne rejoue si la préférence
+    // change en cours de visite.
     if (!doux || typeof IntersectionObserver === "undefined") {
-      cibles.forEach((el) => el.setAttribute("data-vu", "1"));
+      cibles.forEach((el) => el.setAttribute("data-vu", "2"));
       return;
     }
 
     const obs = new IntersectionObserver(
       (entrees) => {
-        entrees.forEach((e) => {
-          if (!e.isIntersecting) return;
-          const el = e.target as HTMLElement;
-          // Le décalage se calcule par rapport aux frères visibles en même
-          // temps : trois cartes qui arrivent ensemble se posent l'une après
-          // l'autre, pas toutes d'un bloc.
-          const rang = Number(el.dataset.rang ?? 0);
-          el.style.transitionDelay = `${Math.min(rang, 4) * 60}ms`;
-          el.setAttribute("data-vu", "1");
-          obs.unobserve(el);
-        });
+        /* 🔴 LE RANG SE COMPTE DANS LE LOT QUI ENTRE ENSEMBLE (25/10/2026),
+           plus dans l'ordre du document. Avant, chaque élément recevait
+           `i % 5` à l'observation : une carte qui entrait SEULE au défilement
+           attendait quand même le délai de son rang, jusqu'à 240 ms. Trois
+           cartes qui arrivent ensemble se posent toujours l'une après
+           l'autre (0, 60, 120 ms) ; une carte seule part tout de suite.
+           ⚠ `--rang` (propriété CSS), plus `style.transitionDelay` : ce délai
+             en ligne n'était jamais retiré et retardait le survol de la carte
+             pour toute la visite (mesuré : 240 ms au rang 4, rapport B §5.3).
+             La variable ne sert qu'à l'animation, et useRevealFilet l'efface
+             à sa fin. */
+        entrees
+          .filter((e) => e.isIntersecting)
+          .forEach((e, i) => {
+            const el = e.target as HTMLElement;
+            el.style.setProperty("--rang", String(Math.min(i, 4)));
+            el.setAttribute("data-vu", "1");
+            obs.unobserve(el);
+          });
       },
       // 12 % de marge basse : l'élément se pose juste avant d'être lu, pas
       // pendant qu'on le regarde déjà.
       { rootMargin: "0px 0px -12% 0px", threshold: 0.01 }
     );
 
-    cibles.forEach((el, i) => {
-      el.dataset.rang = String(i % 5);
-      obs.observe(el);
-    });
+    cibles.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
   }, [dependance]);
 }
@@ -85,16 +95,41 @@ export function useReveal(dependance?: unknown) {
  * traîne encore. Il coûte une requête DOM par navigation.
  */
 export function useRevealFilet(cle: unknown) {
+  /* ⭐ LA FIN DE L'APPARITION, ÉCOUTÉE UNE FOIS POUR TOUTE L'APPLICATION
+     (recette B bis, 25/10/2026). Une animation CSS REPART quand un ancêtre
+     repasse de `display: none` à visible (onglet, accordéon, panneau
+     `hidden xl:block` au redimensionnement) : l'élément se recachait puis
+     réapparaissait. Une fois l'apparition finie — ou annulée parce que
+     l'élément a été caché en route — il passe à `data-vu="2"`, qui n'anime
+     plus rien. On ne retire PAS la classe `dk-reveal` : React la remettrait
+     au rendu suivant, sans `data-vu`, donc cachée. */
+  useEffect(() => {
+    const fin = (ev: AnimationEvent) => {
+      if (ev.animationName !== "dk-apparait") return;
+      const el = ev.target;
+      if (!(el instanceof HTMLElement) || !el.classList.contains("dk-reveal")) return;
+      el.setAttribute("data-vu", "2");
+      el.style.removeProperty("--rang");
+    };
+    document.addEventListener("animationend", fin);
+    document.addEventListener("animationcancel", fin);
+    return () => {
+      document.removeEventListener("animationend", fin);
+      document.removeEventListener("animationcancel", fin);
+    };
+  }, []);
+
   useEffect(() => {
     const balayer = () => {
+      const doux = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       document
-        .querySelectorAll<HTMLElement>('.dk-reveal:not([data-vu="1"])')
+        .querySelectorAll<HTMLElement>(PAS_VU)
         .forEach((el) => {
           // Seulement ce qui est deja dans l'ecran ou au-dessus : ce qui est
           // plus bas reste a l'observateur, qui fera son travail au moment ou
           // on y arrive.
           if (el.getBoundingClientRect().top < window.innerHeight * 1.2)
-            el.setAttribute("data-vu", "1");
+            el.setAttribute("data-vu", doux ? "1" : "2");
         });
     };
 

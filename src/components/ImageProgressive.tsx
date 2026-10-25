@@ -29,6 +29,7 @@ export function ImageProgressive({
   largeurAffichee = "100vw",
   fondSombre = false,
   plafond,
+  onPrete,
 }: {
   src: string;
   alt: string;
@@ -50,6 +51,9 @@ export function ImageProgressive({
   fondSombre?: boolean;
   /** Plus grande variante proposée au navigateur (voir `jeuDeTailles`). */
   plafond?: number;
+  /** Appelé une fois l'image arrivée — ou abandonnée : un échec libère aussi
+   *  ce qui l'attend (`EntreeFil`, `differerPhotos`). */
+  onPrete?: () => void;
 }) {
   const [chargee, setChargee] = useState(false);
   /* 🔴 TROIS ÉTAPES, PAS DEUX. Avant : « srcSet, puis vignette ». Or depuis que
@@ -121,12 +125,18 @@ export function ImageProgressive({
         loading={prioritaire ? "eager" : "lazy"}
         fetchPriority={prioritaire ? "high" : "auto"}
         decoding="async"
-        onLoad={() => setChargee(true)}
+        onLoad={() => {
+          setChargee(true);
+          onPrete?.();
+        }}
         /* ⚠ ON RETOMBE SUR LA VIGNETTE, on ne se contente pas d'abandonner.
            `onError` se contentait de `setChargee(true)`, ce qui MASQUAIT la
            vignette déjà affichée et laissait un cadre vide avec le texte de
            remplacement — la pire des deux issues. */
         onError={() => {
+          // Le premier échec libère déjà ce qui attend cette image : le repli
+          // qui suit peut être long, le reste du fil n'a pas à le payer.
+          onPrete?.();
           const avaitSrcSet = repli === 0 && aVignette && largeurAffichee;
           if (avaitSrcSet) setRepli(1);
           else if (repli < 2 && aVignette) setRepli(2);

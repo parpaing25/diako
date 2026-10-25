@@ -65,6 +65,14 @@
   // ⚠ Jamais pour un visiteur connecté (le fil peut dépendre du compte) : on
   //   regarde si le jeton Supabase est dans localStorage.
   // ⚠ La clé est la clé PUBLIQUE anon, la même que dans le bundle.
+  // 🔴 EN GET, SANS AUCUN EN-TÊTE (25/10/2026). En POST avec `apikey`,
+  //    `Authorization` et `Content-Type: application/json`, la requête n'était
+  //    pas « simple » : le navigateur envoyait d'abord un préambule OPTIONS, un
+  //    aller-retour de plus AVANT les données du fil, donc avant la photo du
+  //    premier récit — l'élément LCP de l'accueil. Mesuré le 25/10/2026 : 54 à
+  //    252 ms de préambule (Lighthouse, quatre passes en ligne). PostgREST sert
+  //    la même réponse en GET (11 854 o, identiques octet pour octet le
+  //    25/10/2026), la clé passant en paramètre comme pour /lieu plus bas.
   try {
     var connecte = false;
     try { connecte = !!localStorage.getItem("sb-eifrwecaszzqrdwjjjbu-auth-token"); } catch (e) {}
@@ -72,14 +80,77 @@
       var CLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZnJ3ZWNhc3p6cXJkd2pqamJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NTM5OTYsImV4cCI6MjA3MDAyOTk5Nn0.Ks8epc1CiOyj7Y4AYGL9zRHHoZscQJ7_nWbqwMNcVMQ";
       var limite = window.innerWidth >= 1024 ? 12 : 8;
       window.__dkFilLimite = limite;
-      window.__dkFil = fetch("https://eifrwecaszzqrdwjjjbu.supabase.co/rest/v1/rpc/feed_filtre", {
-        method: "POST",
-        headers: { apikey: CLE, Authorization: "Bearer " + CLE, "Content-Type": "application/json" },
-        body: JSON.stringify({ p_mode: "tout", p_limite: limite })
-      }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+      window.__dkFil = fetch(
+        "https://eifrwecaszzqrdwjjjbu.supabase.co/rest/v1/rpc/feed_filtre?p_mode=tout&p_limite=" + limite + "&apikey=" + CLE
+      ).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+      window.__dkFil.then(prechargerPhotoDuFil);
     }
   } catch (e) {
     window.__dkFil = null;
+  }
+
+  // ── 1 bis (suite). LA PHOTO DU PREMIER RÉCIT, SANS ATTENDRE REACT ──────
+  // 🔴 C'EST ELLE, L'ÉLÉMENT LCP DE L'ACCUEIL AU TÉLÉPHONE (Lighthouse,
+  //    25/10/2026 : `article > div.mx-4 > div.relative > img`, 4,2 à 5,4 s pour
+  //    une cible de 2,5 s, dont 2,6 à 2,8 s d'ATTENTE avant même sa requête).
+  //    Son adresse n'est connue qu'avec les données du fil ; React, lui, n'est
+  //    prêt qu'une fois ~230 Ko de JS téléchargés et exécutés — sur un Android
+  //    d'entrée de gamme en 3G, bien après. On la précharge donc dès que le fil
+  //    répond, avec EXACTEMENT le srcset et le sizes que posera `ImageProgressive`
+  //    dans `EntreeFil` : un préchargement qui ne correspond pas à l'image
+  //    affichée est téléchargé une seconde fois.
+  // ⚠ CE QUI EST RECOPIÉ ICI, ET D'OÙ : le gabarit (`gabarit`,
+  //   src/lib/gabaritPhotos.ts : une photo ou trois et plus = pleine colonne,
+  //   deux = duo, une vidéo = carrousel, non préchargé), les largeurs RÉELLES
+  //   des variantes (`jeuDeTailles`, src/lib/imageThumb.ts, plafond 1600) et
+  //   les créneaux (`LARGEUR_PLEINE`, `LARGEUR_DUO`, src/components/EntreeFil.tsx).
+  //   Changer l'un de ces trois fichiers, c'est changer ce bloc le même jour.
+  // ⚠ RIEN SI L'ON N'EST PAS SÛR DE LA PREMIÈRE PHOTO : pas au-delà de 767 px
+  //   (l'ordinateur affiche la grille de PostCard, d'autres créneaux), ni quand
+  //   la mémoire du visiteur existe (`reordonner`, src/lib/affinites.ts,
+  //   change alors l'ordre du fil).
+  function prechargerPhotoDuFil(posts) {
+    try {
+      if (!posts || !posts.length || !posts[0]) return;
+      if (!window.matchMedia || !window.matchMedia("(max-width: 767px)").matches) return;
+      var memoire = true;
+      try {
+        var aff = localStorage.getItem("dk_affinites");
+        var vus = localStorage.getItem("dk_vus");
+        memoire = !!((aff && aff !== "{}") || (vus && vus !== "{}"));
+      } catch (e) { memoire = true; }
+      if (memoire) return;
+      var media = posts[0].media || [];
+      if (!media.length) return;
+      for (var i = 0; i < media.length; i++) if (media[i] && media[i].type === "video") return;
+      var m = media[0];
+      var url = (m && m.url) || "";
+      if (url.indexOf("/uploads/") < 0 || !/\.(jpe?g|png|webp)(\?.*)?$/i.test(url)) return;
+      var q = (url.match(/(\?.*)$/) || [""])[0];
+      var base = url.replace(/\.(jpe?g|png|webp)(\?.*)?$/i, "");
+      var w = m.w, h = m.h, deja = {}, jeu = [];
+      var variantes = [[".thumb.webp", 480], [".w960.webp", 960], [".w1600.webp", 1600]];
+      for (var j = 0; j < variantes.length; j++) {
+        var reelle = w && h ? Math.max(1, Math.round(w * Math.min(1, variantes[j][1] / Math.max(w, h)))) : variantes[j][1];
+        if (deja[reelle]) continue;
+        deja[reelle] = 1;
+        jeu.push(base + variantes[j][0] + q + " " + reelle + "w");
+      }
+      var l = document.createElement("link");
+      l.rel = "preload";
+      l.as = "image";
+      l.setAttribute("fetchpriority", "high");
+      l.setAttribute("imagesrcset", jeu.join(", "));
+      l.setAttribute(
+        "imagesizes",
+        media.length === 2
+          ? "(min-width:768px) 306px, calc((100vw - 34px) / 2)"
+          : "(min-width:768px) 620px, calc(100vw - 32px)"
+      );
+      document.head.appendChild(l);
+    } catch (e) {
+      /* un préchargement manqué ne coûte que le gain : jamais d'erreur ici */
+    }
   }
 
   // ── 1 ter. LA PAGE D'ARRIVÉE ET SA PHOTO, DEMANDÉES AVANT REACT ─────────

@@ -51,10 +51,24 @@ import { cn } from "@/lib/utils";
 export function EntreeFil({
   post,
   prioritaire = false,
+  attendrePhotoDeTete = false,
+  onPhotoPrete,
   onCommenter,
 }: {
   post: Post;
   prioritaire?: boolean;
+  /**
+   * 🔴 LE RESTE DU FIL ATTEND LA PHOTO DU PREMIER RÉCIT (25/10/2026).
+   *    Lighthouse, accueil au téléphone : cette photo — l'élément LCP — partait
+   *    en même temps que les autres images du fil, toutes sous la ligne de
+   *    flottaison, et partageait la bande avec elles (chiffres dans `Feed`).
+   *    Tant que c'est vrai : les récits suivants gardent leurs cadres vides, et
+   *    le premier retient sa planche de vignettes. Chaque cadre porte son
+   *    `aspect-ratio` ici, pas dans l'image : rien ne bouge quand elles arrivent.
+   */
+  attendrePhotoDeTete?: boolean;
+  /** Le premier récit prévient `Feed` que sa photo est là (ou abandonnée). */
+  onPhotoPrete?: () => void;
   onCommenter: (p: Post) => void;
 }) {
   const { user } = useAuth();
@@ -71,6 +85,15 @@ export function EntreeFil({
   const interesse = (poids: number) => noterLieu(post.place_slug ?? post.place, poids);
 
   const photos = useMemo(() => gabarit(post.media), [post.media]);
+  // Rien à attendre quand la tête du fil n'a pas de photo (ou une vidéo, qui
+  // part au carrousel) : on libère tout de suite le reste du fil.
+  const sansPhotoDeTete = photos.forme === "aucune" || photos.forme === "video";
+  useEffect(() => {
+    if (prioritaire && sansPhotoDeTete) onPhotoPrete?.();
+  }, [prioritaire, sansPhotoDeTete, onPhotoPrete]);
+  const quandPrete = prioritaire ? onPhotoPrete : undefined;
+  /** Les récits suivants retiennent TOUTES leurs photos ; le premier, aucune. */
+  const retenir = attendrePhotoDeTete && !prioritaire;
 
   async function reagir() {
     if (!connecte("dire que vous y êtes allé")) return;
@@ -275,16 +298,20 @@ export function EntreeFil({
       )}
 
       {/* ── 3. LES PHOTOS, AU GABARIT QU'ELLES DICTENT ──────────────────── */}
+      {/* ⚠ L'ATTENTE VIDE LES CADRES, ELLE NE LES RETIRE PAS : chaque cadre
+          porte son `aspect-ratio`, sa hauteur ne dépend pas de l'image. */}
       {photos.forme === "video" && (
         <div className="relative z-10 mx-4 mb-3 aspect-[3/2] overflow-hidden rounded-[10px]">
-          <Carrousel
-            images={photos.media}
-            alt={lieu ? `${lieu}, Madagascar` : nom}
-            prioritaire={prioritaire}
-            ajustement="contenir"
-            largeurAffichee={LARGEUR_PLEINE}
-            alClic={null}
-          />
+          {!retenir && (
+            <Carrousel
+              images={photos.media}
+              alt={lieu ? `${lieu}, Madagascar` : nom}
+              prioritaire={prioritaire}
+              ajustement="contenir"
+              largeurAffichee={LARGEUR_PLEINE}
+              alClic={null}
+            />
+          )}
         </div>
       )}
 
@@ -293,15 +320,18 @@ export function EntreeFil({
           className="mx-4 mb-3 overflow-hidden rounded-[10px] bg-muted"
           style={{ aspectRatio: ratioDe(photos.grande) }}
         >
-          <ImageProgressive
-            src={photos.grande.url}
-            alt={lieu ? `${lieu}, Madagascar` : ""}
-            w={photos.grande.w}
-            h={photos.grande.h}
-            prioritaire={prioritaire}
-            ajustement="cover"
-            largeurAffichee={LARGEUR_PLEINE}
-          />
+          {!retenir && (
+            <ImageProgressive
+              src={photos.grande.url}
+              alt={lieu ? `${lieu}, Madagascar` : ""}
+              w={photos.grande.w}
+              h={photos.grande.h}
+              prioritaire={prioritaire}
+              ajustement="cover"
+              largeurAffichee={LARGEUR_PLEINE}
+              onPrete={quandPrete}
+            />
+          )}
         </div>
       )}
 
@@ -310,18 +340,20 @@ export function EntreeFil({
           className="mx-4 mb-3 grid grid-cols-2 gap-0.5 overflow-hidden rounded-[10px] bg-muted"
           style={{ aspectRatio: `${photos.ratio * 2}` }}
         >
-          {[photos.a, photos.b].map((m, i) => (
-            <ImageProgressive
-              key={m.url}
-              src={m.url}
-              alt={i === 0 && lieu ? `${lieu}, Madagascar` : ""}
-              w={m.w}
-              h={m.h}
-              prioritaire={prioritaire && i === 0}
-              ajustement="cover"
-              largeurAffichee={LARGEUR_DUO}
-            />
-          ))}
+          {!retenir &&
+            [photos.a, photos.b].map((m, i) => (
+              <ImageProgressive
+                key={m.url}
+                src={m.url}
+                alt={i === 0 && lieu ? `${lieu}, Madagascar` : ""}
+                w={m.w}
+                h={m.h}
+                prioritaire={prioritaire && i === 0}
+                ajustement="cover"
+                largeurAffichee={LARGEUR_DUO}
+                onPrete={i === 0 ? quandPrete : undefined}
+              />
+            ))}
         </div>
       )}
 
@@ -331,15 +363,18 @@ export function EntreeFil({
             className="mx-4 mb-0.5 overflow-hidden rounded-t-[10px] bg-muted"
             style={{ aspectRatio: ratioDe(photos.grande) }}
           >
-            <ImageProgressive
-              src={photos.grande.url}
-              alt={lieu ? `${lieu}, Madagascar` : ""}
-              w={photos.grande.w}
-              h={photos.grande.h}
-              prioritaire={prioritaire}
-              ajustement="cover"
-              largeurAffichee={LARGEUR_PLEINE}
-            />
+            {!retenir && (
+              <ImageProgressive
+                src={photos.grande.url}
+                alt={lieu ? `${lieu}, Madagascar` : ""}
+                w={photos.grande.w}
+                h={photos.grande.h}
+                prioritaire={prioritaire}
+                ajustement="cover"
+                largeurAffichee={LARGEUR_PLEINE}
+                onPrete={quandPrete}
+              />
+            )}
           </div>
           <div
             className={cn(
@@ -348,17 +383,20 @@ export function EntreeFil({
             )}
             style={{ aspectRatio: `${photos.ratio * photos.suite.length}` }}
           >
-            {photos.suite.map((m) => (
-              <ImageProgressive
-                key={m.url}
-                src={m.url}
-                alt=""
-                w={m.w}
-                h={m.h}
-                ajustement="cover"
-                largeurAffichee={LARGEUR_PLANCHE}
-              />
-            ))}
+            {/* Le premier récit, lui aussi, retient ses vignettes : quatre
+                vignettes de 20 à 40 Ko partiraient avec sa grande photo. */}
+            {!attendrePhotoDeTete &&
+              photos.suite.map((m) => (
+                <ImageProgressive
+                  key={m.url}
+                  src={m.url}
+                  alt=""
+                  w={m.w}
+                  h={m.h}
+                  ajustement="cover"
+                  largeurAffichee={LARGEUR_PLANCHE}
+                />
+              ))}
           </div>
           {post.media.length > 5 && (
             <p className="mx-4 mb-2 text-[13px] leading-snug text-muted-foreground">

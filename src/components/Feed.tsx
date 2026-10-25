@@ -30,6 +30,10 @@ import { reordonner } from "@/lib/affinites";
  */
 const PAR_PAGE = PAR_PALIER;
 
+/** Au-delà, les photos du fil partent même si celle du premier récit n'est
+ *  pas arrivée : un filet, pas une règle (voir `photoTete` plus bas). */
+const ATTENTE_PHOTO_TETE_MS = 4000;
+
 /**
  * LES ENTRÉES CLASSIQUES DU FIL (maquette D1).
  *
@@ -236,6 +240,24 @@ export function Feed() {
      (`reordonner`) : lire le curseur sur la dernière carte affichée sauterait
      ou répéterait des publications. */
   const curseurRef = useRef<{ date: string | null; km: number | null }>({ date: null, km: null });
+
+  /* 🔴 LA PHOTO DU PREMIER RÉCIT D'ABORD, LE RESTE ENSUITE (25/10/2026).
+     Au téléphone, cette photo est l'élément LCP de l'accueil. Lighthouse
+     (25/10/2026, trois passes en ligne et trois en local, plus le rapport D) :
+     elle partait AVEC dix-huit autres images du fil — 546 512 o, vignettes
+     floues comprises, toutes sous la ligne de flottaison — et partageait la
+     bande avec elles : 1,3 à 3,6 s de téléchargement simulé pour 133 646 o.
+     Les récits suivants gardent donc leurs cadres vides jusqu'à ce qu'elle
+     soit là (ou abandonnée), et un filet lève l'attente au bout de
+     `ATTENTE_PHOTO_TETE_MS` quoi qu'il arrive : rien ne reste vide pour de bon. */
+  const [photoTete, setPhotoTete] = useState(false);
+  const photoTetePrete = useCallback(() => setPhotoTete(true), []);
+  const filArrive = posts.length > 0;
+  useEffect(() => {
+    if (photoTete || !filArrive) return;
+    const t = window.setTimeout(() => setPhotoTete(true), ATTENTE_PHOTO_TETE_MS);
+    return () => window.clearTimeout(t);
+  }, [photoTete, filArrive]);
 
   const [mode, setMode] = useState<ModeFil>("tout");
   const [dispo, setDispo] = useState({ abonnements: false, assiettes: false });
@@ -580,6 +602,8 @@ export function Feed() {
               key={p.id}
               post={p}
               prioritaire={i === 0}
+              attendrePhotoDeTete={!photoTete}
+              onPhotoPrete={i === 0 ? photoTetePrete : undefined}
               onCommenter={setCommentaires}
             />
           ))}

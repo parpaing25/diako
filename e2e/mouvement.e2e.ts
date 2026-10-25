@@ -91,6 +91,14 @@ test.describe("réduire les animations", () => {
     test(`${chemin} : aucune animation JS, rien de caché`, async ({ page }) => {
       await page.goto(chemin);
       await expect(page.locator("#root h1").first()).toBeAttached({ timeout: 20_000 });
+      /* 🔴 ATTENDRE LE CONTENU, sinon le test passe À VIDE. Vu le 25/10/2026
+           sur un build cassé exprès (tout `.dk-reveal` caché, même sous
+           « réduire ») : /explorer passait en 5,4 s, ses cartes n'étant pas
+           encore arrivées sur un réseau lent. Ces six pages portent toutes des
+           `.dk-reveal` (relevé du même jour : 1 à 39 au téléphone ; une page
+           /lieu/<slug> en a au moins deux, « Y aller » et « Quand y aller »,
+           toujours présentes dans Destination.tsx). */
+      await expect(page.locator(".dk-reveal").first(), "le contenu est arrivé").toBeAttached({ timeout: 30_000 });
       await page.waitForTimeout(2000);
       expect(await animationsJs(page), "animations JS au chargement").toBe(0);
       expect(await videsALEcran(page, 300), `${chemin} : vide à l'écran`).toEqual([]);
@@ -110,6 +118,7 @@ test.describe("mouvement normal : rien ne reste vide à l'écran", () => {
   test("/ : en descendant toute la page", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#root h1").first()).toBeAttached({ timeout: 20_000 });
+    await expect(page.locator(".dk-reveal").first(), "le fil est arrivé").toBeAttached({ timeout: 30_000 });
     await page.waitForTimeout(2000);
     expect(await videsALEcran(page)).toEqual([]);
   });

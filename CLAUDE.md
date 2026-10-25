@@ -61,6 +61,27 @@ La spécification de mise en œuvre est dans `DESIGN-HANDOFF.md`.
   page blanche sous Firefox) et `skipWaiting()` + `clientsClaim()` dans le service worker.
   Ne précacher que la coquille.
 
+## Design et mouvement (25/10/2026)
+
+- Règles du mouvement : **`MOUVEMENT.md`** (décision du site, puis R1 à R17). **Aucune bibliothèque
+  d'animation** (`docs/PROMPT-1-DIRECTION-DESIGN.md:92`, maintenue par Andry le 25/10/2026) : tout en CSS.
+- **La vitesse passe avant le mouvement** : LCP mobile 4,19 s le 25/10/2026 pour une cible de 2,5 s.
+- La référence visuelle reste `Diako Design Final.dc.html` et `DESIGN-HANDOFF.md` : aucun skill ne la
+  remplace.
+- **Avant de dessiner** : skill `frontend-design` (un agent sans l'outil Skill lit
+  `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/frontend-design/skills/frontend-design/SKILL.md`).
+- **Passe de finition au téléphone** : `.claude/skills/mobile-native/SKILL.md`, toujours. S'il y a du
+  mouvement : `.claude/skills/animation-performance/SKILL.md` et `.claude/skills/emil-design-eng/SKILL.md`.
+  Ces trois skills (Emil Kowalski, MIT) sont posés en local, hors git : sur un clone neuf, les recopier
+  depuis `~/Desktop/SITES-VITRINES/.claude/skills/`. Ils disent COMMENT animer, jamais SI ; quand ils
+  proposent une bibliothèque, un CDN ou une police externe, la réponse est non.
+- `ui-ux-pro-max` : grille de relecture UX seulement (`references/quick-reference.md`), jamais pour
+  choisir un style. Pour React et shadcn : `vercel:react-best-practices`, `vercel:shadcn`.
+- **Aspect « généré »** : `node ~/Desktop/SITES-VITRINES/outils/externe/taste-lint.mjs src`. Ses FAIL sont
+  des preuves à examiner, pas un verdict : ses règles sont plus dures que les nôtres.
+- Toute modification visuelle se regarde : captures à 390 px et à la taille de l'écran d'Andry, et le
+  test « mouvement réduit » (aucun `.dk-reveal` laissé à opacité 0).
+
 ## ⚠️ Chiffres PÉRIMÉS — à recompter avant tout usage
 
 **Le bloc ci-dessous date du 15/08/2026 et n'est plus vrai.** Vérifié le 30/08 : les migrations

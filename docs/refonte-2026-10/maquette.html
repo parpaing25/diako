@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diako — maquette de la refonte</title>
+<!--
+  MAQUETTE STATIQUE — refonte Diako, 27/10/2026.
+  Quatre écrans à 390 px. Aucune donnée inventée : tout ce qui est affiché a été
+  lu dans la base le 27/10/2026 (places, attractions, pages, posts).
+  Rien ici n'est du code de production : c'est une planche à regarder.
+-->
+<style>
+:root{
+  --papier:#FBF7F1; --carte:#FFFFFF; --encre:#10262B; --corps:#2B4247; --gris:#5B6E72;
+  --teal:#0E7C86; --teal-fonce:#0A5F67; --teal-doux:#E7F2F3;
+  --corail:#D0471C; --corail-deco:#F4633A; --corail-doux:#FDEDE8;
+  --or:#E8C77A; --or-fort:#8A6924; --or-doux:#FFF6E5;
+  --sable:#F7EFE3; --ligne:#E3DACE; --ligne-douce:#EFE7DB;
+  --ok:#256B3D; --ok-doux:#E9F5EC;
+  --ombre:0 18px 34px -24px rgba(16,38,43,.4);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:#DED5C8; color:var(--encre);
+  font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.planche{padding:28px 20px 60px}
+.planche > header{max-width:1700px;margin:0 auto 26px}
+.planche h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.planche p.chapeau{margin:0;color:#3C4F53;max-width:72ch;font-size:14px}
+.rangee{display:flex;gap:22px;align-items:flex-start;max-width:1700px;margin:0 auto;flex-wrap:wrap}
+.poste{width:390px;flex:0 0 390px}
+.poste > h2{font-size:13px;font-weight:700;margin:0 0 4px;color:#20383D}
+.poste > p{font-size:12.5px;line-height:1.45;color:#44585C;margin:0 0 10px;min-height:52px}
+
+/* ── le téléphone ─────────────────────────────────────────────── */
+.tel{
+  width:390px;background:var(--papier);border-radius:20px;overflow:hidden;
+  box-shadow:0 24px 50px -28px rgba(16,38,43,.55);position:relative;
+}
+.ecran{padding-bottom:70px}
+
+/* ── en-tête ──────────────────────────────────────────────────── */
+.entete{
+  display:flex;align-items:center;gap:10px;padding:12px 14px 10px;
+  background:var(--papier);border-bottom:1px solid var(--ligne-douce);
+}
+.logo{font-size:19px;font-weight:700;letter-spacing:-.03em;color:var(--teal-fonce)}
+.logo em{font-style:normal;color:var(--corail)}
+.cherche{
+  flex:1;display:flex;align-items:center;gap:7px;height:36px;padding:0 11px;
+  background:#fff;border:1px solid var(--ligne);border-radius:999px;color:var(--gris);font-size:13.5px;
+}
+.icone-h{width:20px;height:20px;flex:0 0 20px;color:var(--teal-fonce)}
+
+/* ── titre d'écran ────────────────────────────────────────────── */
+.tete-ecran{padding:14px 14px 8px}
+.tete-ecran h3{font-size:26px;font-weight:700;letter-spacing:-.022em;margin:0}
+.tete-ecran .sous{color:var(--gris);font-size:13.5px;margin:3px 0 0}
+
+/* bande tissée — un seul rappel du lamba par écran */
+.lamba{
+  height:5px;
+  background:repeating-linear-gradient(90deg,var(--or) 0 9px,transparent 9px 13px,var(--teal) 13px 17px,transparent 17px 26px);
+  opacity:.75;
+}
+
+/* ── récit du fil ─────────────────────────────────────────────── */
+.recit{background:var(--carte);border-top:1px solid var(--ligne-douce);padding:13px 14px 11px}
+.recit:first-of-type{border-top:0}
+.recit .source{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.pastille-src{
+  width:30px;height:30px;border-radius:999px;background:var(--sable);color:var(--or-fort);
+  display:grid;place-items:center;font-weight:700;font-size:12.5px;flex:0 0 30px;
+}
+.source .qui{font-size:13.5px;font-weight:600;line-height:1.25}
+.source .quand{font-size:12px;color:var(--gris)}
+.recit .texte{font-size:14.5px;line-height:1.52;color:var(--corps);margin:0 0 10px}
+.recit .texte b{font-weight:600;color:var(--encre)}
+.photo{
+  display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;background:var(--sable);
+}
+.photos-2{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.photos-2 .photo{aspect-ratio:1/1;border-radius:0}
+.photos-2 .photo:first-child{border-radius:12px 0 0 12px}
+.photos-2 .photo:last-child{border-radius:0 12px 12px 0}
+.compte-photos{
+  position:absolute;right:8px;bottom:8px;background:rgba(16,38,43,.82);color:#fff;
+  font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px;
+}
+.cadre-photo{position:relative}
+.credit{font-size:11.5px;color:var(--gris);margin:7px 0 0}
+.actions{display:flex;gap:6px;margin-top:11px}
+.action{
+  flex:1;height:36px;display:flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--ligne);border-radius:10px;background:#fff;
+  font-size:13px;font-weight:600;color:var(--corps);
+}
+
+/* ── étiquettes ───────────────────────────────────────────────── */
+.etiq{
+  display:inline-flex;align-items:center;gap:5px;height:25px;padding:0 9px;border-radius:999px;
+  font-size:12.5px;font-weight:600;white-space:nowrap;
+}
+.etiq-lieu{background:var(--teal-doux);color:var(--teal-fonce)}
+.etiq-etab{background:#E9EDED;color:var(--encre)}
+.etiq-plat{background:var(--corail-doux);color:var(--corail)}
+.etiq-or{background:var(--or-doux);color:var(--or-fort)}
+
+/* ── grappes d'envies (Explorer) ──────────────────────────────── */
+.envies{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px 4px}
+.envie{
+  display:flex;align-items:center;gap:10px;background:var(--carte);border:1px solid var(--ligne);
+  border-radius:12px;padding:10px 11px;
+}
+.glyphe{
+  width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:var(--teal-doux);
+  color:var(--teal-fonce);display:grid;place-items:center;
+}
+.glyphe svg{width:19px;height:19px}
+.envie .nom{font-size:13.5px;font-weight:600;line-height:1.2}
+.envie .nb{font-size:12px;color:var(--gris);font-variant-numeric:tabular-nums}
+
+/* ── section ──────────────────────────────────────────────────── */
+.section{padding:16px 14px 6px}
+.section > h4{font-size:19px;font-weight:700;letter-spacing:-.015em;margin:0 0 2px}
+.section > .note{font-size:12.5px;color:var(--gris);margin:0 0 11px}
+.rail{display:flex;gap:10px;overflow:hidden;padding-bottom:2px}
+
+/* carte vedette (il y a une photo) */
+.vedette{width:208px;flex:0 0 208px;background:var(--carte);border-radius:14px;overflow:hidden;box-shadow:var(--ombre)}
+.vedette .photo{aspect-ratio:3/2;border-radius:0}
+.vedette .dedans{padding:9px 11px 11px}
+.vedette .titre{font-size:15.5px;font-weight:600;line-height:1.25;margin:0 0 3px}
+.vedette .meta{font-size:12.5px;color:var(--gris)}
+
+/* ligne (pas de photo, mais des faits) */
+.lignes{background:var(--carte);border:1px solid var(--ligne);border-radius:12px;overflow:hidden}
+.ligne{display:flex;align-items:center;gap:11px;padding:11px 12px;border-top:1px solid var(--ligne-douce)}
+.ligne:first-child{border-top:0}
+.ligne .corps-l{flex:1;min-width:0}
+.ligne .nom{font-size:15px;font-weight:600;line-height:1.3;margin:0}
+.ligne .sous{font-size:12.5px;color:var(--gris);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ligne .prix{font-size:13.5px;font-weight:700;color:var(--corail);font-variant-numeric:tabular-nums;text-align:right;line-height:1.2}
+.ligne .prix small{display:block;font-size:11px;font-weight:400;color:var(--gris)}
+.ligne .aconf{font-size:12.5px;color:var(--gris);text-align:right;font-weight:600}
+.vignette{width:52px;height:52px;flex:0 0 52px;border-radius:9px;object-fit:cover;background:var(--sable)}
+
+/* puces (on ne sait que le nom) */
+.puces{display:flex;flex-wrap:wrap;gap:6px}
+.puce{
+  display:inline-flex;align-items:center;gap:6px;background:var(--carte);border:1px solid var(--ligne);
+  border-radius:999px;padding:6px 11px 6px 7px;font-size:13.5px;font-weight:500;
+}
+.puce .pg{width:22px;height:22px;border-radius:999px;background:var(--teal-doux);color:var(--teal-fonce);display:grid;place-items:center}
+.puce .pg svg{width:13px;height:13px}
+
+/* ── fiche lieu ───────────────────────────────────────────────── */
+.couv{position:relative;height:190px}
+.couv img{width:100%;height:100%;object-fit:cover;display:block}
+.couv .voile{position:absolute;inset:auto 0 0 0;height:120px;background:linear-gradient(transparent,rgba(16,38,43,.86))}
+.couv .texte{position:absolute;left:14px;right:14px;bottom:11px;color:#fff}
+.couv h3{font-size:29px;font-weight:700;letter-spacing:-.025em;margin:0;text-shadow:0 1px 10px rgba(0,0,0,.35)}
+.couv .region{font-size:13px;opacity:.93;margin-top:1px}
+.resume{padding:13px 14px 2px;font-size:14.5px;line-height:1.55;color:var(--corps)}
+.chiffres{display:flex;gap:7px;padding:12px 14px 4px;overflow:hidden}
+.chiffre{flex:1;background:var(--carte);border:1px solid var(--ligne);border-radius:11px;padding:8px 4px;text-align:center}
+.chiffre b{display:block;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.chiffre span{font-size:11.5px;color:var(--gris)}
+.pratique{background:var(--sable);border:1px solid var(--ligne);border-radius:12px;overflow:hidden;margin-top:4px}
+.pratique .item{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-top:1px solid rgba(227,218,206,.9)}
+.pratique .item:first-child{border-top:0}
+.pratique .t{font-size:14px;font-weight:600;line-height:1.3}
+.pratique .d{font-size:12.5px;color:var(--gris);margin-top:1px;line-height:1.4}
+.pratique .chev{color:var(--gris);flex:0 0 18px;margin-top:2px}
+.manque{
+  display:flex;gap:9px;align-items:flex-start;background:var(--or-doux);border:1px solid #F0E2BE;
+  border-radius:11px;padding:10px 11px;font-size:12.5px;line-height:1.45;color:#5F4A12;
+}
+.manque b{color:var(--or-fort)}
+.manque a{color:var(--or-fort);font-weight:600}
+
+/* ── filtres (Adresses) ───────────────────────────────────────── */
+.filtres{display:flex;gap:7px;padding:10px 14px 4px;overflow:hidden}
+.filtre{
+  display:inline-flex;align-items:center;gap:6px;height:33px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--ligne);background:#fff;font-size:13.5px;font-weight:600;color:var(--corps);white-space:nowrap;
+}
+.filtre.actif{background:var(--teal);border-color:var(--teal);color:#fff}
+.tri{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px 7px;
+  font-size:12.5px;color:var(--gris);
+}
+.tri b{color:var(--encre);font-weight:600}
+
+/* ── barre du bas ─────────────────────────────────────────────── */
+.barre{
+  position:absolute;left:0;right:0;bottom:0;height:62px;background:rgba(251,247,241,.97);
+  border-top:1px solid var(--ligne);display:flex;align-items:center;justify-content:space-around;
+  padding:0 6px;backdrop-filter:blur(8px);
+}
+.ong{display:flex;flex-direction:column;align-items:center;gap:3px;width:62px;color:var(--gris);font-size:10.5px;font-weight:600}
+.ong svg{width:23px;height:23px}
+.ong.actif{color:var(--teal-fonce)}
+.ong-publier{
+  width:48px;height:48px;border-radius:15px;background:var(--corail);color:#fff;display:grid;place-items:center;
+  box-shadow:0 8px 18px -8px rgba(208,71,28,.85);
+}
+.ong-publier svg{width:25px;height:25px}
+
+.legende{max-width:1700px;margin:30px auto 0;background:rgba(255,255,255,.72);border:1px solid #CDBFAE;border-radius:14px;padding:16px 18px}
+.legende h2{font-size:15px;margin:0 0 9px}
+.legende ul{margin:0;padding-left:19px;font-size:13.5px;line-height:1.62;color:#2E4247}
+.legende li{margin-bottom:3px}
+.legende code{background:#F0E9DE;border-radius:4px;padding:1px 5px;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="planche">
+<header>
+  <h1>Diako — refonte, les quatre écrans</h1>
+  <p class="chapeau">Maquette à 390 px. Tout le contenu affiché a été lu dans la base le 27/10/2026 : aucun nom,
+  aucun prix et aucun compteur n'est inventé. Les cas laids sont montrés exprès — un prix confirmé en 2017, des sites
+  sans photo, une ville où presque rien n'est renseigné.</p>
+</header>
+
+<div class="rangee">
+
+<!-- ════════════════ 1 · FIL ════════════════ -->
+<section class="poste">
+  <h2>1 · Fil</h2>
+  <p>Le seul contenu riche du site : 183 récits, tous illustrés. On ne touche donc presque pas à sa forme — on crédite la page d'origine, et aucun compteur n'est affiché tant qu'il vaut zéro.</p>
+  <div class="tel"><div class="ecran">
+
+    <div class="entete">
+      <span class="logo">Di<em>'</em>ako</span>
+      <span class="cherche">
+        <svg class="icone-h" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        Un lieu, un plat, une adresse
+      </span>
+      <svg class="icone-h" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10.5 21a2 2 0 003 0"/></svg>
+    </div>
+    <div class="lamba"></div>
+
+    <article class="recit">
+      <div class="source">
+        <span class="pastille-src">TM</span>
+        <span><span class="qui">Madagascar Tourisme</span><br><span class="quand">Boanamary · 1 sept.</span></span>
+      </div>
+      <p class="texte">Oui, oui… on peut aussi observer des <b>flamants roses à Majunga</b> ! À quelques kilomètres de la ville, du côté de Boanamary…</p>
+      <div class="cadre-photo">
+        <img class="photo" src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/01.jpg" alt="" width="362" height="272" fetchpriority="high">
+        <span class="compte-photos">1 / 3</span>
+      </div>
+      <p class="credit">Repris de la page Madagascar Tourisme</p>
+      <div class="actions">
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 5.6a5 5 0 00-7.1 0L12 7.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 21.4l8.8-8.7a5 5 0 000-7.1z"/></svg>
+          J'aime
+        </span>
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.5 8.9 8.9 0 01-4-.9L3 21l1.9-4.6A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg>
+          Commenter
+        </span>
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4.5L5 21V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          Garder
+        </span>
+      </div>
+    </article>
+
+    <article class="recit">
+      <div class="source">
+        <span class="pastille-src">TF</span>
+        <span><span class="qui">TF sary</span><br><span class="quand">Mahajanga · 1 sept.</span></span>
+      </div>
+      <p class="texte"><b>En route vers Mahajanga.</b> TF sary prend la route pour une nouvelle aventure Travel Photography. Aujourd'hui, pa…</p>
+      <div class="cadre-photo">
+        <img class="photo" src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272357/01.jpg" alt="" width="362" height="272" loading="lazy">
+        <span class="compte-photos">1 / 2</span>
+      </div>
+      <p class="credit">Repris de la page TF sary</p>
+      <div class="actions">
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 5.6a5 5 0 00-7.1 0L12 7.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 21.4l8.8-8.7a5 5 0 000-7.1z"/></svg>
+          J'aime
+        </span>
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.5 8.9 8.9 0 01-4-.9L3 21l1.9-4.6A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg>
+          Commenter
+        </span>
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4.5L5 21V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          Garder
+        </span>
+      </div>
+    </article>
+
+    <article class="recit">
+      <div class="source">
+        <span class="pastille-src">D</span>
+        <span><span class="qui">Diako</span><br><span class="quand">1 sept.</span></span>
+      </div>
+      <p class="texte">Des images en mémoire de <b>Tsitakakantsa</b>. Fin 2025, lorsque j'ai compris que le plus gros baobab connu et mesuré de l'île…</p>
+      <img class="photo" src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272829/01.jpg" alt="" width="362" height="272" loading="lazy">
+      <div class="actions">
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 5.6a5 5 0 00-7.1 0L12 7.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 21.4l8.8-8.7a5 5 0 000-7.1z"/></svg>
+          J'aime
+        </span>
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.5 8.9 8.9 0 01-4-.9L3 21l1.9-4.6A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg>
+          Commenter
+        </span>
+        <span class="action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4.5L5 21V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          Garder
+        </span>
+      </div>
+    </article>
+
+    <div class="barre">
+      <span class="ong actif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Fil</span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Explorer</span>
+      <span class="ong-publier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V10M4 10a3 3 0 003-3V3M7 7a3 3 0 003 3v11"/><path d="M16 21v-7a4 4 0 014-4V3"/></svg>Adresses</span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4.5L5 21V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>Carnet</span>
+    </div>
+
+  </div></div>
+</section>
+
+<!-- ════════════════ 2 · EXPLORER ════════════════ -->
+<section class="poste">
+  <h2>2 · Explorer</h2>
+  <p>Absorbe six anciennes portes : Destinations, Villes, Sites et parcs, Carte, Événements, Quand partir. On entre par une envie, pas par une catégorie de base de données. Les comptes sont les vrais.</p>
+  <div class="tel"><div class="ecran">
+
+    <div class="entete">
+      <span class="logo">Di<em>'</em>ako</span>
+      <span class="cherche">
+        <svg class="icone-h" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        Un lieu, un plat, une adresse
+      </span>
+      <svg class="icone-h" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10.5 21a2 2 0 003 0"/></svg>
+    </div>
+    <div class="lamba"></div>
+
+    <div class="tete-ecran">
+      <h3>Qu'est-ce qui vous attire ?</h3>
+      <p class="sous">2 435 endroits recensés dans 23 régions</p>
+    </div>
+
+    <div class="envies">
+      <span class="envie">
+        <span class="glyphe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 15c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2"/><path d="M3 20c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2"/><circle cx="17" cy="6" r="3"/></svg></span>
+        <span><span class="nom">Plages</span><br><span class="nb">318 endroits</span></span>
+      </span>
+      <span class="envie">
+        <span class="glyphe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20l6.5-11 4 6 2.5-4 5 9z"/></svg></span>
+        <span><span class="nom">Sommets</span><br><span class="nb">824 endroits</span></span>
+      </span>
+      <span class="envie">
+        <span class="glyphe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21c0-6 3-9 7-10-1 5-3 8-7 10z"/><path d="M12 21c0-6-3-9-7-10 1 5 3 8 7 10z"/><path d="M12 21v-5"/></svg></span>
+        <span><span class="nom">Parcs et réserves</span><br><span class="nb">276 endroits</span></span>
+      </span>
+      <span class="envie">
+        <span class="glyphe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h16M5 10v8M12 10v8M19 10v8M3 18h18M12 3l8 5H4z"/></svg></span>
+        <span><span class="nom">Patrimoine</span><br><span class="nb">345 endroits</span></span>
+      </span>
+      <span class="envie">
+        <span class="glyphe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3c3 4.5 5 7.3 5 10a5 5 0 01-10 0c0-2.7 2-5.5 5-10z"/></svg></span>
+        <span><span class="nom">Cascades et grottes</span><br><span class="nb">60 endroits</span></span>
+      </span>
+      <span class="envie">
+        <span class="glyphe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></span>
+        <span><span class="nom">Tout sur la carte</span><br><span class="nb">5 624 points</span></span>
+      </span>
+    </div>
+
+    <div class="section">
+      <h4>Les villes où il y a de quoi faire</h4>
+      <p class="note">Classées par ce qu'on sait vraiment d'elles</p>
+      <div class="rail">
+        <div class="vedette">
+          <img class="photo" src="https://diako.fonenako.mg/uploads/pages/diako/places/mahajanga.jpg" alt="" width="208" height="139" loading="lazy">
+          <div class="dedans">
+            <p class="titre">Mahajanga</p>
+            <p class="meta">Boeny · 14 sites · 191 adresses</p>
+          </div>
+        </div>
+        <div class="vedette">
+          <img class="photo" src="https://diako.fonenako.mg/uploads/pages/diako/places/antsiranana.jpg" alt="" width="208" height="139" loading="lazy">
+          <div class="dedans">
+            <p class="titre">Antsiranana</p>
+            <p class="meta">Diana · 37 sites</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Autour de Ranohira</h4>
+      <p class="note">21 endroits · un seul a une photo</p>
+      <div class="puces">
+        <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21c0-6 3-9 7-10-1 5-3 8-7 10z"/><path d="M12 21c0-6-3-9-7-10 1 5 3 8 7 10z"/></svg></span>Isalo National Park</span>
+        <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3c3 4.5 5 7.3 5 10a5 5 0 01-10 0c0-2.7 2-5.5 5-10z"/></svg></span>Cascade des Nymphes</span>
+        <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span>Canyon des Singes</span>
+        <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20c0-6 3.6-10 8-10s8 4 8 10"/><path d="M10 20v-4a2 2 0 014 0v4"/></svg></span>Grotte Malaso</span>
+        <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.4"/></svg></span>Ampasimaiky</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="manque">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:0 0 17px;margin-top:2px"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+        <span>Vous connaissez ces endroits ? <b>2 134 sites attendent leur première photo.</b>
+        <a href="#">En ajouter une</a></span>
+      </div>
+    </div>
+
+    <div class="barre">
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Fil</span>
+      <span class="ong actif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Explorer</span>
+      <span class="ong-publier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V10M4 10a3 3 0 003-3V3M7 7a3 3 0 003 3v11"/><path d="M16 21v-7a4 4 0 014-4V3"/></svg>Adresses</span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4.5L5 21V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>Carnet</span>
+    </div>
+
+  </div></div>
+</section>
+
+<!-- ════════════════ 3 · ADRESSES ════════════════ -->
+<section class="poste">
+  <h2>3 · Adresses</h2>
+  <p>3 380 hôtels et restaurants, dont 213 seulement ont une photo. La réponse : les mieux renseignés d'abord, et une ligne compacte — pas une grande carte vide — pour tous les autres.</p>
+  <div class="tel"><div class="ecran">
+
+    <div class="entete">
+      <span class="logo">Di<em>'</em>ako</span>
+      <span class="cherche">
+        <svg class="icone-h" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        Un lieu, un plat, une adresse
+      </span>
+      <svg class="icone-h" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10.5 21a2 2 0 003 0"/></svg>
+    </div>
+    <div class="lamba"></div>
+
+    <div class="tete-ecran">
+      <h3>Dormir et manger</h3>
+      <p class="sous">191 adresses à Mahajanga</p>
+    </div>
+
+    <div class="filtres">
+      <span class="filtre actif">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        Mahajanga
+      </span>
+      <span class="filtre">Hôtels 85</span>
+      <span class="filtre">Restaurants 109</span>
+      <span class="filtre">Prix</span>
+    </div>
+
+    <div class="tri">
+      <span>Trié par <b>les mieux renseignées</b></span>
+      <span>Carte</span>
+    </div>
+
+    <div class="section" style="padding-top:2px">
+      <div class="rail">
+        <div class="vedette">
+          <img class="photo" src="https://diako.fonenako.mg/uploads/pages/fiches/antsanitia-resort/01.jpg" alt="" width="208" height="139" loading="lazy">
+          <div class="dedans">
+            <p class="titre">Antsanitia Resort</p>
+            <p class="meta">Hôtel · bord de mer, à 25 km du centre</p>
+          </div>
+        </div>
+        <div class="vedette">
+          <img class="photo" src="https://diako.fonenako.mg/uploads/pages/fiches/c-a-appart-hotel-ambondrona/01.jpg" alt="" width="208" height="139" loading="lazy">
+          <div class="dedans">
+            <p class="titre">C&amp;A Appart Hôtel</p>
+            <p class="meta" style="color:var(--corail);font-weight:700">150 000 Ar la nuit</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="padding-top:12px">
+      <div class="lignes">
+        <div class="ligne">
+          <span class="glyphe" style="background:#E9EDED;color:var(--encre)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20V8l9-4 9 4v12"/><path d="M9 20v-6h6v6"/></svg></span>
+          <span class="corps-l">
+            <p class="nom">Hôtel du Phare</p>
+            <p class="sous">Boulevard Marcoz, La Corniche</p>
+          </span>
+          <span class="aconf">Nous<br>consulter</span>
+        </div>
+        <div class="ligne">
+          <span class="glyphe" style="background:var(--corail-doux);color:var(--corail)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v8a2.5 2.5 0 005 0V3M7.5 11v10"/><path d="M17 3c-1.5 2-2 4-2 6.5 0 1.5 1 2.5 2 2.5v9"/></svg></span>
+          <span class="corps-l">
+            <p class="nom">Fishing Résidence</p>
+            <p class="sous">Boulevard Marcoz</p>
+          </span>
+          <span class="prix">20 000 Ar<small>le plat, à confirmer</small></span>
+        </div>
+        <div class="ligne">
+          <span class="glyphe" style="background:var(--corail-doux);color:var(--corail)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v8a2.5 2.5 0 005 0V3M7.5 11v10"/><path d="M17 3c-1.5 2-2 4-2 6.5 0 1.5 1 2.5 2 2.5v9"/></svg></span>
+          <span class="corps-l">
+            <p class="nom">La Petite Cour</p>
+            <p class="sous">Boulevard Marcoz</p>
+          </span>
+          <span class="prix">20 000 Ar<small>le plat, à confirmer</small></span>
+        </div>
+        <div class="ligne">
+          <span class="glyphe" style="background:#E9EDED;color:var(--encre)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20V8l9-4 9 4v12"/><path d="M9 20v-6h6v6"/></svg></span>
+          <span class="corps-l">
+            <p class="nom">Majesty Palm Resort</p>
+            <p class="sous">Téléphone connu · adresse à compléter</p>
+          </span>
+          <span class="aconf">Appeler</span>
+        </div>
+        <div class="ligne">
+          <span class="glyphe" style="background:var(--corail-doux);color:var(--corail)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v8a2.5 2.5 0 005 0V3M7.5 11v10"/><path d="M17 3c-1.5 2-2 4-2 6.5 0 1.5 1 2.5 2 2.5v9"/></svg></span>
+          <span class="corps-l">
+            <p class="nom">C'Bon</p>
+            <p class="sous">Téléphone connu · adresse à compléter</p>
+          </span>
+          <span class="aconf">Appeler</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="padding-top:12px">
+      <div class="manque">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:0 0 17px;margin-top:2px"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+        <span>Sur 191 adresses à Mahajanga, <b>178 n'ont que leur nom.</b> Vous y êtes allé ?
+        <a href="#">Ajoutez un prix ou une photo</a></span>
+      </div>
+    </div>
+
+    <div class="barre">
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Fil</span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Explorer</span>
+      <span class="ong-publier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="ong actif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V10M4 10a3 3 0 003-3V3M7 7a3 3 0 003 3v11"/><path d="M16 21v-7a4 4 0 014-4V3"/></svg>Adresses</span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4.5L5 21V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>Carnet</span>
+    </div>
+
+  </div></div>
+</section>
+
+<!-- ════════════════ 4 · FICHE LIEU ════════════════ -->
+<section class="poste">
+  <h2>4 · La fiche d'un lieu</h2>
+  <p>Le vrai geste de la refonte : « Y aller », « Quand partir », « Louer un véhicule » et « Guides » cessent d'être quatre pages isolées et deviennent un bloc ici, là où la question se pose.</p>
+  <div class="tel"><div class="ecran">
+
+    <div class="couv">
+      <img src="https://diako.fonenako.mg/uploads/pages/diako/places/mahajanga.jpg" alt="" width="390" height="190">
+      <span class="voile"></span>
+      <span class="texte">
+        <h3>Mahajanga</h3>
+        <p class="region">Région Boeny · côte ouest</p>
+      </span>
+    </div>
+
+    <p class="resume">La ville du bord de mer et du baobab du front de mer. Longue plage, eau chaude toute
+    l'année, et la destination de vacances familiale par excellence des Tananariviens.</p>
+
+    <div class="chiffres">
+      <span class="chiffre"><b>14</b><span>à voir</span></span>
+      <span class="chiffre"><b>85</b><span>hôtels</span></span>
+      <span class="chiffre"><b>109</b><span>restos</span></span>
+      <span class="chiffre"><b>5</b><span>récits</span></span>
+    </div>
+
+    <div class="section" style="padding-top:14px">
+      <h4>Préparer la venue</h4>
+      <p class="note">Tout ce qui était ailleurs, réuni ici</p>
+      <div class="pratique">
+        <span class="item">
+          <span class="glyphe" style="width:30px;height:30px;flex:0 0 30px;background:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:17px;height:17px"><path d="M3 17h18M5 17l2-6h10l2 6M8 11V7h8v4"/><circle cx="7.5" cy="19.5" r="1.5"/><circle cx="16.5" cy="19.5" r="1.5"/></svg></span>
+          <span style="flex:1">
+            <span class="t">Y aller depuis Antananarivo</span>
+            <span class="d">570 km · RN4 goudronnée · environ 10 h</span>
+          </span>
+          <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+        <span class="item">
+          <span class="glyphe" style="width:30px;height:30px;flex:0 0 30px;background:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:17px;height:17px"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></span>
+          <span style="flex:1">
+            <span class="t">Quand partir</span>
+            <span class="d">Idéal d'avril à octobre · déconseillé de décembre à février</span>
+          </span>
+          <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+        <span class="item">
+          <span class="glyphe" style="width:30px;height:30px;flex:0 0 30px;background:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:17px;height:17px"><path d="M4 16V11l2-5h12l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="13" r="1"/><circle cx="16.5" cy="13" r="1"/></svg></span>
+          <span style="flex:1">
+            <span class="t" style="color:var(--gris)">Louer un véhicule</span>
+            <span class="d">Aucun loueur ici · 25 ailleurs dans le pays</span>
+          </span>
+          <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>À voir</h4>
+      <p class="note">14 endroits · 1 a une photo</p>
+      <div class="rail" style="margin-bottom:9px">
+        <div class="vedette" style="width:170px;flex:0 0 170px">
+          <img class="photo" src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1787566211/01.jpg" alt="" width="170" height="113" loading="lazy">
+          <div class="dedans">
+            <p class="titre" style="font-size:14.5px">29 mars 1947</p>
+            <p class="meta">Monument</p>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+          <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 15c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2"/><path d="M3 20c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2"/><circle cx="17" cy="6" r="3"/></svg></span>Plage Ampazony</span>
+          <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3c3 4.5 5 7.3 5 10a5 5 0 01-10 0c0-2.7 2-5.5 5-10z"/></svg></span>Lac Sacré Mangatsa</span>
+          <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 20l6.5-11 4 6 2.5-4 5 9z"/></svg></span>Plateau des Tombes</span>
+        </div>
+      </div>
+      <div class="puces">
+        <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 15c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2"/><path d="M3 20c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2"/><circle cx="17" cy="6" r="3"/></svg></span>Plage du Village Touristique</span>
+        <span class="puce"><span class="pg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21c0-6 3-9 7-10-1 5-3 8-7 10z"/><path d="M12 21c0-6-3-9-7-10 1 5 3 8 7 10z"/></svg></span>Crocodiles</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Ce qu'on y a vécu</h4>
+      <p class="note">5 récits</p>
+      <div class="lignes">
+        <div class="ligne">
+          <img class="vignette" src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272187/01.jpg" alt="" width="52" height="52" loading="lazy">
+          <span class="corps-l">
+            <p class="nom" style="font-size:14px">Des flamants roses à Boanamary</p>
+            <p class="sous">Madagascar Tourisme · 1 sept.</p>
+          </span>
+        </div>
+        <div class="ligne">
+          <img class="vignette" src="https://diako.fonenako.mg/uploads/posts/284aa922-edf6-4773-bcee-c4f7cc074d67/1788272357/01.jpg" alt="" width="52" height="52" loading="lazy">
+          <span class="corps-l">
+            <p class="nom" style="font-size:14px">En route vers Mahajanga</p>
+            <p class="sous">TF sary · 1 sept.</p>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="barre">
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Fil</span>
+      <span class="ong actif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Explorer</span>
+      <span class="ong-publier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V10M4 10a3 3 0 003-3V3M7 7a3 3 0 003 3v11"/><path d="M16 21v-7a4 4 0 014-4V3"/></svg>Adresses</span>
+      <span class="ong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4.5L5 21V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>Carnet</span>
+    </div>
+
+  </div></div>
+</section>
+
+</div><!-- /rangee -->
+
+<div class="legende">
+  <h2>Ce qui change, et pourquoi</h2>
+  <ul>
+    <li><b>21 entrées de navigation → 4 onglets + Publier.</b> Explorer absorbe Destinations, Villes, Sites et parcs, Carte, Événements et Quand partir ; Adresses absorbe Hôtels, Restaurants et Plats ; Carnet absorbe Favoris, Goûts, mes récits et Messages.</li>
+    <li><b>Trois densités de carte, choisies par la donnée.</b> Vedette quand il y a une photo, ligne quand il y a des faits, puce quand on ne connaît que le nom. Le vide se compacte au lieu de s'étaler en rectangles gris.</li>
+    <li><b>Le type remplace la photo.</b> Les 2 435 sites ont tous un type (plage, sommet, patrimoine, réserve, cascade) ; 301 seulement ont une photo. Le glyphe porte la distinction, la couleur reste celle de la charte — teal pour un lieu, encre pour un établissement, corail pour un plat.</li>
+    <li><b>Ce qu'on ignore est écrit.</b> <code>Hôtel du Phare</code> affiche « Nous consulter » parce que son prix a été confirmé le 04/12/2017 ; les prix sans date de confirmation portent « à confirmer ». Aucun compteur de réactions n'est affiché tant qu'il vaut zéro.</li>
+    <li><b>La préparation entre dans la fiche du lieu.</b> Y aller, Quand partir et Louer un véhicule ne sont plus des pages qu'il faut aller chercher : elles répondent là où la question se pose.</li>
+    <li><b>Circuits (1 en base) et Guides (12)</b>, aujourd'hui marqués « pas prêts » dans le code, sortent de la navigation. Leurs fiches restent joignables par lien.</li>
+  </ul>
+</div>
+
+</div>
+</body>
+</html>

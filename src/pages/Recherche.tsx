@@ -110,6 +110,64 @@ interface Recit {
   created_at: string;
 }
 
+/* ══ CE QUE LA BARRE DE RÉPONSE A LE DROIT D'AFFIRMER ═════════════════════ */
+
+/**
+ * Combien il y en a — et la différence entre « reçues » et « il y en a ».
+ *
+ * 🔴 CE QUE ÇA CORRIGE. `/recherche?cat=hotel` annonçait « 24 établissements »
+ *    quand la base en porte 1 476 : le compte était le `.length` du tableau
+ *    reçu, plafonné par la pagination. C'est le défaut que ce dépôt écrit en
+ *    tête de trois fichiers d'accès — « les compteurs viennent du contrat,
+ *    jamais d'un .length » — et il avait survécu ici.
+ *
+ * ⚠ QUAND ON NE CONNAÎT PAS LE TOTAL, ON NE L'INVENTE PAS : on dit « les 24
+ *   premiers résultats », ce qui est vrai et ne promet rien.
+ */
+function combienDeFiches(recues: number, total: number | null): string {
+  if (total !== null && total >= recues) {
+    return `${total.toLocaleString("fr-FR")} établissement${total > 1 ? "s" : ""}`;
+  }
+  return recues > 1 ? `Les ${recues} premiers résultats` : "1 résultat";
+}
+
+/**
+ * Le prix plancher — DANS UNE SEULE UNITÉ.
+ *
+ * 🔴 L'INCIDENT, MESURÉ LE 27/10/2026. La page des hôtels affichait « à partir
+ *    de 974 Ar la nuit ». 974 Ar, c'est le `price_min_ar` de « Clair de Lune »,
+ *    dont l'unité est `plat` ; « la nuit » venait de la PREMIÈRE fiche tarifée
+ *    de la liste, une autre. Le code prenait le minimum toutes unités
+ *    confondues et lui collait l'unité d'un voisin — un dîner à 974 Ar devenu
+ *    une chambre à 974 Ar, soit environ 0,19 €.
+ *
+ * ⚠ ON NE CONVERTIT RIEN : un prix au plat et un prix à la nuit ne se
+ *   comparent pas. On garde l'unité la plus fréquente parmi les fiches
+ *   tarifées, et le minimum DANS cette unité. Une unité absente est écartée.
+ *
+ * ⚠ « AFFICHÉ ICI » EST DIT. Sur 1 476 hôtels, 68 portent un tarif : le
+ *   plancher est celui de la liste à l'écran, pas celui de Madagascar.
+ */
+function plancherAffiche(fiches: ResultatPage[]): string {
+  const tarifees = fiches.filter(
+    (f): f is ResultatPage & { price_min_ar: number } =>
+      typeof f.price_min_ar === "number" && f.price_min_ar > 0 && !!f.price_min_unit
+  );
+  if (tarifees.length === 0) return "";
+
+  const parUnite = new Map<string, number[]>();
+  for (const f of tarifees) {
+    const u = f.price_min_unit!;
+    parUnite.set(u, [...(parUnite.get(u) ?? []), f.price_min_ar]);
+  }
+  let gagnante: [string, number[]] | null = null;
+  for (const entree of parUnite) {
+    if (!gagnante || entree[1].length > gagnante[1].length) gagnante = entree;
+  }
+  if (!gagnante) return "";
+  return ` — le moins cher affiché ici : ${ariary(Math.min(...gagnante[1]))} ${unite(gagnante[0])}`;
+}
+
 /* ══ LES PORTES DES ADRESSES ══════════════════════════════════════════════ */
 
 /**
@@ -189,6 +247,29 @@ export default function Recherche() {
   const categorie = params.get("cat");
   const budget = params.get("max") ? Number(params.get("max")) : null;
   const equipements = params.get("eq")?.split(",").filter(Boolean) ?? [];
+
+  /**
+   * ⚠ LE VRAI TOTAL QUAND LA CATÉGORIE EST LE SEUL FILTRE. `chercher_pages`
+   *   ne rend pas de total ; un compte exact n'est donc possible que dans ce
+   *   cas-là, et c'est précisément celui des quatre portes de l'écran
+   *   d'accueil. Partout ailleurs la barre dit « les N premiers résultats ».
+   */
+  const [totalCategorie, setTotalCategorie] = useState<number | null>(null);
+  useEffect(() => {
+    const seulementCategorie = categorie && !q && !budget && equipements.length === 0;
+    if (!seulementCategorie) {
+      setTotalCategorie(null);
+      return;
+    }
+    let vivant = true;
+    void compterParCategorie([categorie]).then((c) => {
+      if (vivant) setTotalCategorie(c[categorie] ?? null);
+    });
+    return () => {
+      vivant = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categorie, q, budget, params.get("eq")]);
 
   /**
    * ⚠ LA ZONE VIT DANS L'URL, comme tous les autres filtres. C'est ce qui rend
@@ -465,11 +546,20 @@ export default function Recherche() {
   }
 
   /* ── Résultats ───────────────────────────────────────────────────────── */
+  /** Ce qu'on regarde, en toutes lettres : un terme, un lieu, ou une famille. */
+  const titreResultats = q
+    ? `« ${q} »`
+    : categorie
+      ? (CATEGORIES.find((c) => c.code === categorie)?.pluriel ?? "Adresses")
+      : "Adresses";
   const rien = !chargement && fiches.length === 0 && tables.length === 0;
 
   return (
     <div className="px-4 py-5">
-      <h1 className="sr-only">Résultats pour « {q} »</h1>
+      {/* ⚠ PAS DE « » VIDES. Le titre affichait des guillemets autour d'une
+          chaîne vide dès qu'on arrivait par une catégorie — « Résultats pour
+          «  » ». Le libellé de la catégorie dit ce qu'on regarde. */}
+      <h1 className="sr-only">{titreResultats}</h1>
       <SearchBar taille="hero" />
 
       <div className="mt-5">
@@ -484,7 +574,7 @@ export default function Recherche() {
             </span>
             <div className="min-w-0">
               <p className="font-semibold">
-                {plat?.name_fr ?? (lieu ? lieu.name_fr : `« ${q} »`)}
+                {plat?.name_fr ?? (lieu ? lieu.name_fr : titreResultats)}
                 {plat && lieu && ` à ${lieu.name_fr}`}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -512,17 +602,9 @@ export default function Recherche() {
                         })()
                       : "Aucun établissement ne l'a encore inscrit à sa carte."
                     : fiches.length > 0
-                      ? `${fiches.length} établissement${fiches.length > 1 ? "s" : ""}${
+                      ? `${combienDeFiches(fiches.length, totalCategorie)}${
                           lieu ? ` à ${lieu.name_fr}` : ""
-                        }${
-                          fiches.some((f) => f.price_min_ar)
-                            ? ` — à partir de ${ariary(
-                                Math.min(
-                                  ...fiches.filter((f) => f.price_min_ar).map((f) => f.price_min_ar!)
-                                )
-                              )} ${unite(fiches.find((f) => f.price_min_ar)?.price_min_unit)}`
-                            : ""
-                        }`
+                        }${plancherAffiche(fiches)}`
                       : lieu
                         ? `Aucun établissement référencé à ${lieu.name_fr} pour l'instant.`
                         : "Aucune destination ni aucun plat ne correspond."}

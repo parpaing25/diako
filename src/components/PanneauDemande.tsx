@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircle, Minus, Phone, Plus } from "lucide-react";
+import { MapPin, MessageCircle, Minus, Navigation, Phone, Plus } from "lucide-react";
 import { Prix } from "@/components/Prix";
 import { ariary, unite, type Fiche } from "@/lib/etablissements";
 import { afficherNumero, lienAppel, lienWhatsApp, peutRecevoirWhatsApp } from "@/lib/whatsapp";
+import { lienItineraire } from "@/lib/arrivee";
 import { cn } from "@/lib/utils";
 
 /**
@@ -195,13 +196,27 @@ export function PanneauDemande({
             <p className="dk-secondaire mt-1 leading-relaxed">{fiche.landmark}</p>
           )}
           {fiche.lat != null && fiche.lng != null && (
-            <Link
-              to={`/carte?focus=${fiche.slug}`}
-              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
-            >
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              Voir sur la carte
-            </Link>
+            <div className="mt-3 flex flex-col gap-2">
+              {/* ⭐ « Y aller » AUSSI DANS LE PANNEAU : la section du corps le
+                  porte depuis le 27/10, mais sur grand écran c'est ce panneau
+                  qu'on lit — il ne proposait que de regarder la carte. */}
+              <a
+                href={lienItineraire(fiche.lat, fiche.lng)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+              >
+                <Navigation className="h-4 w-4" aria-hidden="true" />
+                Y aller
+              </a>
+              <Link
+                to={`/carte?focus=${fiche.slug}`}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+              >
+                <MapPin className="h-4 w-4" aria-hidden="true" />
+                Voir sur la carte
+              </Link>
+            </div>
           )}
         </div>
       )}

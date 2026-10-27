@@ -10,6 +10,7 @@ import {
   Globe,
   MapPin,
   MessageCircle,
+  Navigation,
   Phone,
   Share2,
   Star,
@@ -56,6 +57,7 @@ import {
 import { signaler } from "@/lib/api";
 import { Revendication } from "@/components/Revendication";
 import { afficherNumero, lienAppel, lienWhatsApp, peutRecevoirWhatsApp } from "@/lib/whatsapp";
+import { lienItineraire } from "@/lib/arrivee";
 import { cn } from "@/lib/utils";
 
 /** Libellés des moyens de paiement (codes de `pages.payment_methods`). */
@@ -657,6 +659,21 @@ export default function PagePro() {
               Appeler
             </a>
           )}
+          {/* 🔴 SANS NUMÉRO, « Y ALLER » PREND LA PLACE DU BOUTON PLEIN.
+              C'est le cas de neuf restaurants sur dix : la rangée d'actions
+              n'offrait alors que « Écrire » et « Garder » — deux gestes qui
+              demandent un compte — là où l'adresse, elle, était connue. */}
+          {!fiche.phone && fiche.lat != null && fiche.lng != null && (
+            <a
+              href={lienItineraire(fiche.lat, fiche.lng)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground xl:hidden"
+            >
+              <Navigation className="h-4 w-4" aria-hidden="true" />
+              Y aller
+            </a>
+          )}
           {fiche.whatsapp && peutRecevoirWhatsApp(fiche.whatsapp) && (
             <a
               href={lienWhatsApp(fiche.whatsapp, { etablissement: fiche.name })}
@@ -700,6 +717,17 @@ export default function PagePro() {
             {gardee ? "Gardé" : "Garder"}
           </button>
         </div>
+
+        {/* 🔴 ON DIT CE QU'ON N'A PAS. Mesuré le 27/10/2026 : 185 restaurants
+            sur 1 904 ont un numéro ou un WhatsApp, 334 hôtels sur 1 476. Une
+            fiche muette laissait croire à une page à moitié chargée ; la
+            phrase dit la vérité, et la ligne qui suit explique comment la
+            corriger. */}
+        {!fiche.phone && !fiche.whatsapp && !fiche.website && !fiche.facebook && (
+          <p className="dk-secondaire mt-2">
+            Aucun moyen de contact connu pour cette adresse.
+          </p>
+        )}
 
         {/* ⭐ LA PORTE DU GÉRANT, EN HAUT DE LA FICHE. Le bloc de reprise est
             au bas de l'onglet Infos : un hôtelier qui trouve sa fiche ne le
@@ -1221,28 +1249,53 @@ export default function PagePro() {
               )}
 
               {/* Le repère en clair : l'adressage normalisé n'existe pas à
-                  Madagascar, c'est lui qui permet de trouver l'endroit. */}
-              {(fiche.landmark || fiche.address || fiche.place) && (
+                  Madagascar, c'est lui qui permet de trouver l'endroit.
+
+                  🔴 LA SECTION S'OUVRE AUSSI SUR DES COORDONNÉES SEULES.
+                     Elle exigeait un repère, une adresse ou un lieu : une
+                     fiche qui n'a que son point GPS — et il y en a — ne
+                     disait pas un mot de l'endroit où elle se trouve, alors
+                     qu'on savait l'y conduire. */}
+              {(fiche.landmark || fiche.address || fiche.place ||
+                (fiche.lat != null && fiche.lng != null)) && (
                 <section>
                   <h3 className="text-sm font-semibold">Où c'est</h3>
                   {fiche.address && <p className="mt-1 text-sm">{fiche.address}</p>}
                   {fiche.landmark && (
                     <p className="mt-1 text-sm text-muted-foreground">{fiche.landmark}</p>
                   )}
-                  {/* ⚠ `xl:hidden` QUAND LE PANNEAU DE DROITE PORTE DÉJÀ CE
-                      LIEN — deux fois à l'écran, c'était un de trop. Le
-                      panneau ne le montre qu'avec des coordonnées : sans
-                      elles, celui-ci reste le seul. */}
-                  <Link
-                    to={`/carte?focus=${fiche.slug}`}
-                    className={cn(
-                      "mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-medium",
-                      carteDansPanneau && "xl:hidden"
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {/* ⭐ « Y ALLER » EN PREMIER, ET EN PLEIN. C'est l'action
+                        la plus souvent possible — 94 % des adresses ont des
+                        coordonnées, contre 10 % des restaurants un numéro —
+                        et c'est la question qu'on se pose devant une fiche
+                        qui a déjà convaincu. */}
+                    {fiche.lat != null && fiche.lng != null && (
+                      <a
+                        href={lienItineraire(fiche.lat, fiche.lng)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
+                      >
+                        <Navigation className="h-4 w-4" aria-hidden="true" />
+                        Y aller
+                      </a>
                     )}
-                  >
-                    <MapPin className="h-4 w-4" aria-hidden="true" />
-                    Voir sur la carte
-                  </Link>
+                    {/* ⚠ `xl:hidden` QUAND LE PANNEAU DE DROITE PORTE DÉJÀ CE
+                        LIEN — deux fois à l'écran, c'était un de trop. Le
+                        panneau ne le montre qu'avec des coordonnées : sans
+                        elles, celui-ci reste le seul. */}
+                    <Link
+                      to={`/carte?focus=${fiche.slug}`}
+                      className={cn(
+                        "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input px-4 text-sm font-medium",
+                        carteDansPanneau && "xl:hidden"
+                      )}
+                    >
+                      <MapPin className="h-4 w-4" aria-hidden="true" />
+                      Voir sur la carte
+                    </Link>
+                  </div>
                 </section>
               )}
 

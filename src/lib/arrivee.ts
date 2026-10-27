@@ -94,3 +94,28 @@ export function lienCarte(lat: number, lng: number, familles?: string[], z = 12)
   if (familles && familles.length > 0) p.set("familles", familles.join(","));
   return `/carte?${p.toString()}`;
 }
+
+/**
+ * « Y ALLER » — l'itinéraire dans l'application de navigation du téléphone.
+ *
+ * 🔴 CE QUE ÇA COMBLE. Mesuré le 27/10/2026 sur les 3 377 adresses publiées :
+ *    3 189 ont des coordonnées (94 %), 334 hôtels sur 1 476 un téléphone
+ *    (23 %), 185 restaurants sur 1 904 (10 %). Y ALLER est donc l'action la
+ *    plus souvent possible — et la fiche n'en proposait aucune : « Voir sur la
+ *    carte » ouvrait la carte de Diako, qui montre où c'est sans dire comment
+ *    s'y rendre.
+ *
+ * ⚠ LE LIEN UNIVERSEL DE GOOGLE MAPS, PAS `geo:`. Sur Android, `geo:` ouvre
+ *   bien l'application installée, mais ne fait rien sur un ordinateur ni dans
+ *   un navigateur iOS. L'URL `maps/dir/?api=1` fonctionne partout : elle lance
+ *   l'application quand elle est installée, la page sinon.
+ *
+ * ⚠ LE NOM VOYAGE EN PLUS DES COORDONNÉES. `destination_place_id` n'existe pas
+ *   pour nos fiches (elles ne viennent pas de Google) ; le nom en `destination`
+ *   ferait chercher un établissement homonyme ailleurs. On garde donc les
+ *   coordonnées comme destination — la seule chose dont on soit sûr.
+ */
+export function lienItineraire(lat: number, lng: number): string {
+  const p = new URLSearchParams({ api: "1", destination: `${lat},${lng}` });
+  return `https://www.google.com/maps/dir/?${p.toString()}`;
+}

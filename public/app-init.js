@@ -48,25 +48,34 @@
   //    l'image qui fait le LCP. Ce fichier-ci s'exécute à la première ligne du
   //    document : la requête part PENDANT le téléchargement du JavaScript.
   //
-  // ⚠ LA CLÉ VIENT DU BUILD (`window.__DK_SB`, injecté depuis
-  //   src/integrations/supabase/client.ts) : pas de seconde copie écrite à la
-  //   main, qui dériverait le jour où elle tourne. Elle est publique par
-  //   nature — la sécurité repose sur la RLS, jamais sur son secret.
+  // ⚠ LA CLÉ VIENT DU BUILD, EN ATTRIBUTS `data-*` DE CETTE BALISE. Elle est
+  //   lue dans src/integrations/supabase/client.ts à la construction : pas de
+  //   seconde copie écrite à la main, qui dériverait le jour où elle tourne.
+  //   Elle est publique par nature — la sécurité repose sur la RLS.
+  //
+  // 🔴 ET SURTOUT : PAS DE SCRIPT EN LIGNE. La première version passait par
+  //    un `<script>window.__DK_SB=…</script>`. En local il marchait ; en ligne
+  //    la CSP de public/.htaccess (`script-src 'self'`) le REFUSE, et
+  //    l'amorçage n'est jamais parti — mesuré le 27/10/2026 : un seul appel, à
+  //    1 799 ms, celui de React. Le .htaccess l'annonçait déjà : « toute
+  //    réintroduction d'un script en ligne casserait le site EN SILENCE ».
   //
   // ⚠ UNIQUEMENT SUR /explorer SANS PARAMÈTRE : ailleurs, cette réponse ne
   //   sert à personne et coûterait une requête pour rien. Et si quoi que ce
   //   soit manque, il ne se passe rien — React refera la requête comme avant.
   try {
-    var sb = window.__DK_SB;
+    var moi = document.currentScript;
+    var u = moi && moi.getAttribute("data-sb-u");
+    var k = moi && moi.getAttribute("data-sb-k");
     var chemin = location.pathname.replace(/\/+$/, "");
-    if (sb && sb.u && sb.k && chemin === "/explorer" && !location.search) {
+    if (u && k && chemin === "/explorer" && !location.search) {
       window.__dkDestinations = fetch(
-        sb.u + "/rest/v1/rpc/destinations_emblematiques",
+        u + "/rest/v1/rpc/destinations_emblematiques",
         {
           method: "POST",
           headers: {
-            apikey: sb.k,
-            Authorization: "Bearer " + sb.k,
+            apikey: k,
+            Authorization: "Bearer " + k,
             "Content-Type": "application/json",
             Accept: "application/json",
           },

@@ -63,10 +63,18 @@ export default defineConfig(({ mode }) => ({
           }
         }
         if (!url || !cle) return html;
+        // 🔴 PAS DE SCRIPT EN LIGNE. public/.htaccess sert une CSP
+        //    `script-src 'self'` : un `<script>` en ligne est REFUSE par le
+        //    navigateur, en silence pour qui ne lit pas la console. Les deux
+        //    identifiants voyagent donc en attributs `data-*` de la balise
+        //    externe deja presente, qu'app-init.js relit par
+        //    `document.currentScript.dataset`. Un attribut n'est pas du code :
+        //    la CSP ne le regarde pas.
+        const ech = (v: string) =>
+          v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
         return html.replace(
           '<script src="/app-init.js">',
-          `<script>window.__DK_SB={u:"${url}",k:"${cle}"}</script>
-    <script src="/app-init.js">`
+          `<script src="/app-init.js" data-sb-u="${ech(url)}" data-sb-k="${ech(cle)}">`
         );
       },
     },
@@ -93,7 +101,7 @@ export default defineConfig(({ mode }) => ({
       // ⚠ `diako-logo.png` RETIRE : 482 Ko preacharges que RIEN n'affiche —
       //   l'entete sert `diako-marque-96.webp`, qui pese 5,5 Ko. Le commentaire
       //   ci-dessous dit « la coquille, rien de plus » ; il n'etait pas suivi.
-      includeAssets: ["media/favicon.png", "offline.html"],
+      includeAssets: ["media/favicon.png", "offline.html", "offline.js"],
       /* 🔴 CE PLUGIN NE FABRIQUE PLUS DE MANIFESTE, ET C'EST UN PIÈGE RÉSOLU.
             Il en écrivait un second — `manifest.webmanifest` — que RIEN ne
             charge : `index.html` pointe sur `/manifest.json`, écrit à la main

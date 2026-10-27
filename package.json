@@ -6,8 +6,8 @@
   "description": "Diako — le reseau social malgache du voyage et du tourisme",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && vite build",
-    "build:nocheck": "vite build",
+    "build": "npm run typecheck && vite build && node scripts/verifier-csp.mjs",
+    "build:nocheck": "vite build && node scripts/verifier-csp.mjs",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",

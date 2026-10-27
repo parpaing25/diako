@@ -131,11 +131,11 @@
     </a>
   </div>
   
-  <script>
-    // Auto-reload when online
-    window.addEventListener('online', () => {
-      window.location.reload();
-    });
-  </script>
+  <!-- 🔴 EXTERNE, JAMAIS EN LIGNE : la CSP du serveur
+       (`script-src 'self'`, public/.htaccess) refuse tout script en ligne.
+       Celui-ci était écrit dans la page : il n'a donc jamais tourné, et le
+       retour du réseau ne rechargeait rien. Le bouton « Réessayer », lui,
+       a toujours marché — c'est pour ça que personne ne l'a vu. -->
+  <script src="/offline.js"></script>
 </body>
 </html>

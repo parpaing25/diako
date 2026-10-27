@@ -563,11 +563,25 @@ function CarteDestination({
               srcSet={jeuDeTailles(d.cover_url) ?? undefined}
               /* ⚠ LE `sizes` SUIT LA GRILLE, SINON IL MENT : en demi-largeur
                  au téléphone, annoncer 100vw faisait réclamer la variante
-                 w960 pour une image affichée sur 180 px. */
+                 w960 pour une image affichée sur 180 px.
+
+                 🔴 ET « À PEU PRÈS » NE SUFFIT PAS : `48vw` paraît proche des
+                    42vw réels, mais il décide du FICHIER téléchargé. Seules deux
+                    variantes existent, 480 et 960 px. Sur l'Android de
+                    référence de Lighthouse (412 px, densité 2,625), 48vw réclame
+                    519 px — onze de trop — et les quatorze petites cartes
+                    basculent toutes sur le w960 : 168 Ko pour Andringitra, 47
+                    pour Anakao, là où la vignette en fait 15 à 40. La largeur
+                    vraie demande 453 px et tient dans la vignette.
+
+                 La carte mesure exactement (100vw − 62px) / 2 en dessous de
+                 640 px — relevé au navigateur à 360 et à 390 px, même constante.
+                 Au-dessus, on garde les parts d'écran : le rembourrage du
+                 conteneur y change, et une constante fausse rendrait flou. */
               sizes={
                 grande
                   ? "(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  : "(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, 48vw"
+                  : "(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 48vw, calc((100vw - 62px) / 2)"
               }
               alt=""
               aria-hidden="true"

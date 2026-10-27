@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { readFileSync } from "fs";
 import { VitePWA } from "vite-plugin-pwa";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,6 +27,49 @@ export default defineConfig(({ mode }) => ({
   server: { host: "::", port: 8080 },
   plugins: [
     react(),
+    {
+      /**
+       * Les identifiants PUBLICS de Supabase, poses avant app-init.js.
+       *
+       * 🔴 A QUOI CA SERT. app-init.js amorce la requete des destinations des
+       *    la premiere ligne du document : mesure Lighthouse du 27/10/2026, le
+       *    LCP de /explorer perd 2 491 ms de « load delay » a attendre que
+       *    React soit monte pour seulement COMMENCER a demander les donnees.
+       *
+       * ⚠ LA SOURCE EST `client.ts`, LUE AU BUILD — jamais une seconde copie
+       *   ecrite a la main. Le jour ou la cle tourne, un seul fichier change
+       *   et celui-ci suit tout seul. Si la lecture echoue, on n'injecte rien
+       *   et le site demarre comme avant : l'amorcage est un bonus, jamais une
+       *   dependance.
+       *
+       * ⚠ Cette cle est publique par nature (elle est deja dans le bundle, et
+       *   le depot est public) : la securite tient a la RLS.
+       */
+      name: "dk-identifiants-publics",
+      apply: "build" as const,
+      transformIndexHtml(html: string) {
+        let url = process.env.VITE_SUPABASE_URL ?? "";
+        let cle = process.env.VITE_SUPABASE_ANON_KEY ?? "";
+        if (!url || !cle) {
+          try {
+            const src = readFileSync(
+              path.resolve(process.cwd(), "src/integrations/supabase/client.ts"),
+              "utf8"
+            );
+            url = url || src.match(/VITE_SUPABASE_URL\s*\|\|\s*"([^"]+)"/)?.[1] || "";
+            cle = cle || src.match(/VITE_SUPABASE_ANON_KEY\s*\|\|\s*"([^"]+)"/)?.[1] || "";
+          } catch {
+            /* illisible : pas d'amorcage, pas de regression */
+          }
+        }
+        if (!url || !cle) return html;
+        return html.replace(
+          '<script src="/app-init.js">',
+          `<script>window.__DK_SB={u:"${url}",k:"${cle}"}</script>
+    <script src="/app-init.js">`
+        );
+      },
+    },
     {
       // Le CSS de l'app devient un <link rel=preload> ; app-init.js le
       // transforme en vraie feuille de style => rendu non bloque.

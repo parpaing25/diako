@@ -143,18 +143,60 @@ type AppelRpc = {
   rpc: (nom: string) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
 };
 
+/**
+ * La réponse déjà demandée par `app-init.js`, s'il l'a fait.
+ *
+ * 🔴 CE QUE ÇA ÉCONOMISE. Lighthouse mobile sur la production, 27/10/2026 :
+ *    le LCP de /explorer est une photo de la première carte, et ses phases
+ *    sont TTFB 717 ms, LOAD DELAY 2 491 ms, chargement 555 ms, rendu 29 ms.
+ *    Les deux tiers du temps passent à ATTENDRE : le navigateur télécharge le
+ *    HTML, puis 232 Ko de JavaScript, monte React, et SEULEMENT ALORS demande
+ *    les données — puis seulement ensuite l'image. `app-init.js`, lui, part
+ *    dès la première ligne du document : la requête voyage PENDANT le
+ *    téléchargement du JavaScript au lieu de l'attendre.
+ *
+ * ⚠ AUCUNE RÉGRESSION POSSIBLE. Sans amorce (autre page, fetch en échec,
+ *   navigateur ancien), on retombe exactement sur l'appel d'avant. L'amorce
+ *   est consommée UNE fois : un remontage du composant refait une vraie
+ *   requête plutôt que de resservir une réponse vieille de dix minutes.
+ */
+function amorce(): Promise<unknown> | null {
+  const w = globalThis as unknown as { __dkDestinations?: Promise<unknown> };
+  const p = w.__dkDestinations ?? null;
+  if (p) w.__dkDestinations = undefined;
+  return p;
+}
+
+/** La forme rendue par `destinations_emblematiques`, convertie champ par champ. */
+function depuisRpc(data: unknown): Destinations | null {
+  if (!estObjet(data) || !Array.isArray(data.elements)) return null;
+  const elements = (data.elements as unknown[])
+    .filter(estObjet)
+    .map((o) => versDestination(o, true))
+    .filter((d) => d.slug !== "");
+  return { total: elements.length, elements };
+}
+
 export async function chargerDestinations(): Promise<Destinations> {
+  // ⓪ Ce que `app-init.js` a demandé avant même que React existe.
+  try {
+    const avance = amorce();
+    if (avance) {
+      const pret = depuisRpc(await avance);
+      if (pret) return pret;
+    }
+  } catch {
+    /* amorce ratée : on redemande normalement, rien n'est perdu */
+  }
+
   // ① La fonction, quand elle existe : compteurs par lieu et tri fait en base.
   try {
     const { data, error } = await (supabase as unknown as AppelRpc).rpc(
       "destinations_emblematiques"
     );
-    if (!error && estObjet(data) && Array.isArray(data.elements)) {
-      const elements = (data.elements as unknown[])
-        .filter(estObjet)
-        .map((o) => versDestination(o, true))
-        .filter((d) => d.slug !== "");
-      return { total: elements.length, elements };
+    if (!error) {
+      const pret = depuisRpc(data);
+      if (pret) return pret;
     }
   } catch {
     /* la fonction n'est pas encore en base : on lit la table */

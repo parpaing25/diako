@@ -39,6 +39,51 @@
     /* thème clair par défaut */
   }
 
+  // ── 0 bis. AMORÇAGE DES DONNÉES DE L'EXPLORER ─────────────────────────
+  // 🔴 POURQUOI ICI, ET PAS DANS REACT. Lighthouse mobile sur la production
+  //    (27/10/2026) décompose le LCP de /explorer ainsi : TTFB 717 ms, LOAD
+  //    DELAY 2 491 ms, chargement 555 ms, rendu 29 ms. Les deux tiers du temps
+  //    sont une ATTENTE : le navigateur prend le HTML, puis 232 Ko de
+  //    JavaScript, monte React, demande alors les données, et seulement après
+  //    l'image qui fait le LCP. Ce fichier-ci s'exécute à la première ligne du
+  //    document : la requête part PENDANT le téléchargement du JavaScript.
+  //
+  // ⚠ LA CLÉ VIENT DU BUILD (`window.__DK_SB`, injecté depuis
+  //   src/integrations/supabase/client.ts) : pas de seconde copie écrite à la
+  //   main, qui dériverait le jour où elle tourne. Elle est publique par
+  //   nature — la sécurité repose sur la RLS, jamais sur son secret.
+  //
+  // ⚠ UNIQUEMENT SUR /explorer SANS PARAMÈTRE : ailleurs, cette réponse ne
+  //   sert à personne et coûterait une requête pour rien. Et si quoi que ce
+  //   soit manque, il ne se passe rien — React refera la requête comme avant.
+  try {
+    var sb = window.__DK_SB;
+    var chemin = location.pathname.replace(/\/+$/, "");
+    if (sb && sb.u && sb.k && chemin === "/explorer" && !location.search) {
+      window.__dkDestinations = fetch(
+        sb.u + "/rest/v1/rpc/destinations_emblematiques",
+        {
+          method: "POST",
+          headers: {
+            apikey: sb.k,
+            Authorization: "Bearer " + sb.k,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: "{}",
+        }
+      ).then(function (r) {
+        return r.ok ? r.json() : null;
+      });
+      // ⚠ Une promesse rejetée que personne n'attend encore ferait un
+      //   « unhandled rejection » dans la console : on l'absorbe ici, le
+      //   consommateur retombera sur la requête normale.
+      window.__dkDestinations.catch(function () {});
+    }
+  } catch (e) {
+    /* amorçage impossible : le site démarre exactement comme avant */
+  }
+
   // ── 1. CSS non bloquant ────────────────────────────────────────────────
   // Le build remplace <link rel=stylesheet> par <link id="dk-css" rel=preload>.
   // On le repasse en vraie feuille de style : le téléchargement a déjà démarré

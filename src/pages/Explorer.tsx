@@ -483,12 +483,23 @@ function SectionFamille({
       </div>
       {g.sousTitre && <p className="dk-secondaire mt-0.5 max-w-[70ch]">{g.sousTitre}</p>}
 
-      <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 large:grid-cols-4">
-        {cartes.map((d, i) => (
-          <li key={d.slug}>
-            <CarteDestination d={d} lcp={surPremierEcran && i === 0} />
-          </li>
-        ))}
+      {/* 🔴 DEUX PAR RANG AU TÉLÉPHONE, SAUF LA PREMIÈRE. Mesuré par Lighthouse
+          le 27/10/2026 sur la production : en une seule colonne, `sizes`
+          annonçait 100vw, et un écran de 360 px à densité 2,6 réclamait donc
+          la variante w960 — 151 Ko pour Nosy Hara, 138 pour Nosy Komba, 537 Ko
+          gaspillés sur le premier écran. En demi-largeur, la variante 480
+          suffit : environ trois fois moins lourd, et deux fois plus de lieux
+          visibles sans faire défiler. La première garde sa pleine largeur,
+          c'est elle qui décide du LCP. */}
+      <ul className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-3 large:grid-cols-4">
+        {cartes.map((d, i) => {
+          const grande = i === 0;
+          return (
+            <li key={d.slug} className={grande ? "col-span-2 xl:col-span-1" : undefined}>
+              <CarteDestination d={d} lcp={surPremierEcran && grande} grande={grande} />
+            </li>
+          );
+        })}
       </ul>
 
       {reste > 0 && (
@@ -520,7 +531,16 @@ function SectionFamille({
  *   rester lisible), et un compteur INCONNU n'affiche rien — `null` n'est pas
  *   zéro, voir `lib/destinations.ts`.
  */
-function CarteDestination({ d, lcp }: { d: DestinationEmblematique; lcp: boolean }) {
+function CarteDestination({
+  d,
+  lcp,
+  grande = false,
+}: {
+  d: DestinationEmblematique;
+  lcp: boolean;
+  /** Pleine largeur au téléphone : seulement la première de chaque famille. */
+  grande?: boolean;
+}) {
   const Icone = ICONE_FAMILLE[d.kind] ?? MapPin;
   const metas = [
     d.saisons === true ? "meilleure saison connue" : null,
@@ -535,13 +555,20 @@ function CarteDestination({ d, lcp }: { d: DestinationEmblematique; lcp: boolean
       to={`/lieu/${d.slug}`}
       className="dk-reveal dk-carte group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card"
     >
-      <div className="dk-zoom relative h-44 w-full bg-secondary">
+      <div className={cn("dk-zoom relative w-full bg-secondary", grande ? "h-44" : "h-32 sm:h-44")}>
         {d.cover_url ? (
           <>
             <img
               src={d.cover_url}
               srcSet={jeuDeTailles(d.cover_url) ?? undefined}
-              sizes="(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+              /* ⚠ LE `sizes` SUIT LA GRILLE, SINON IL MENT : en demi-largeur
+                 au téléphone, annoncer 100vw faisait réclamer la variante
+                 w960 pour une image affichée sur 180 px. */
+              sizes={
+                grande
+                  ? "(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  : "(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, 48vw"
+              }
               alt=""
               aria-hidden="true"
               loading={lcp ? "eager" : "lazy"}

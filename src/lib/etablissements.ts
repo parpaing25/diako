@@ -1745,3 +1745,42 @@ export async function chercherEtablissementsParNom(
   if (error) throw error;
   return (data as unknown as SuggestionEtab[]) ?? [];
 }
+
+/* ── COMBIEN D'ADRESSES DERRIÈRE CHAQUE FAMILLE ────────────────────────── */
+
+/**
+ * Le compte publié par catégorie, pour les portes de l'écran « Adresses ».
+ *
+ * 🔴 POURQUOI UN COMPTE, ET PAS UNE LISTE TRONQUÉE. L'écran d'accueil des
+ *    adresses ouvrait sur un champ de recherche vide : rien n'y disait que le
+ *    site connaît 1 476 hôtels et 1 904 restaurants. Une porte muette se
+ *    confond avec une porte fermée.
+ *
+ * ⚠ `head: true` NE RAMÈNE AUCUNE LIGNE — seulement l'en-tête Content-Range.
+ *   C'est quatre requêtes de quelques octets, pas quatre listes. Et on nomme
+ *   `id` plutôt que `*` : depuis le verrou PII, une colonne interdite dans un
+ *   `select=*` fait échouer toute la requête en 401.
+ *
+ * ⚠ UN ÉCHEC REND `null`, PAS ZÉRO. « 0 hôtel » se lit comme un site vide ;
+ *   l'absence de chiffre, elle, ne ment pas.
+ */
+export async function compterParCategorie(codes: string[]): Promise<Record<string, number>> {
+  const paires = await Promise.all(
+    codes.map(async (code) => {
+      try {
+        const { count, error } = await supabase
+          .from("pages")
+          .select("id", { count: "exact", head: true })
+          .eq("is_published", true)
+          .contains("categories", [code]);
+        if (error) return [code, null] as const;
+        return [code, count] as const;
+      } catch {
+        return [code, null] as const;
+      }
+    })
+  );
+  const out: Record<string, number> = {};
+  for (const [code, n] of paires) if (typeof n === "number" && n > 0) out[code] = n;
+  return out;
+}

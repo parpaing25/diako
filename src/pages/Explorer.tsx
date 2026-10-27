@@ -4,12 +4,17 @@ import {
   ArrowLeft,
   Building2,
   Compass,
+  Droplets,
+  Landmark,
+  Map,
   MapPin,
   Mountain,
+  MountainSnow,
   Sun,
   TentTree,
   TreePalm,
   Trees,
+  UtensilsCrossed,
   Waves,
   type LucideIcon,
 } from "lucide-react";
@@ -18,6 +23,8 @@ import { useReveal } from "@/hooks/useReveal";
 import { compteur, useStats } from "@/hooks/useStats";
 import { EmptyState, EtatErreur } from "@/components/Etats";
 import { FicheCard } from "@/components/FicheCard";
+import { ListeEnvie } from "@/components/ListeEnvie";
+import { chargerPortes, porteDe, PORTES, type ComptesPortes } from "@/lib/decouvrir";
 import {
   CATEGORIES,
   chargerLieu,
@@ -107,6 +114,11 @@ export default function Explorer() {
 
   if (lieu) return <FicheLieu slug={lieu} />;
 
+  // ⚠ UNE PORTE INCONNUE RETOMBE SUR LA VITRINE, elle ne rend pas 404 : un
+  //   `?envie=` mal recopié doit ouvrir quelque chose d'utile.
+  const envie = params.get("envie");
+  if (envie && porteDe(envie)) return <EcranEnvie code={envie} />;
+
   // 🔴 LA DESCENTE A DÉMÉNAGÉ SUR /villes, SES LIENS NON. Tout `?region=` ou
   //    `?ville=` partagé avant le renommage est réexpédié AVEC ses paramètres :
   //    l'adresse change, la page attendue arrive quand même.
@@ -115,6 +127,148 @@ export default function Explorer() {
   }
 
   return <VitrineDestinations />;
+}
+
+/* ══ CE QU'UNE PORTE OUVRE — `?envie=` ═══════════════════════════════════ */
+
+/**
+ * ⚠ UNE PORTE EST UN PARAMÈTRE, PAS UNE ROUTE. Six routes de plus
+ *   (/plages, /parcs, /cascades…) rendraient au rail six entrées de plus —
+ *   exactement le désordre qu'on défait. Le retour ramène à la vitrine, et
+ *   l'adresse reste partageable.
+ */
+function EcranEnvie({ code }: { code: string }) {
+  const porte = porteDe(code)!;
+
+  useSEO({
+    /* ⚠ PAS DE « — Diako » ICI : `useSEO` l'ajoute déjà, et l'onglet affichait
+       « Les plages à Madagascar — Diako — Diako ». */
+    titre: `${porte.titre} à Madagascar`,
+    description: `${porte.titre} à Madagascar : ${porte.quoi}. Où c'est, comment y aller, ce qu'il y a autour.`,
+    url: `/explorer?envie=${code}`,
+  });
+
+  return (
+    <div className="px-4 py-5">
+      <Link
+        to="/explorer"
+        className="dk-secondaire inline-flex min-h-10 items-center gap-1.5 hover:text-primary"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Explorer
+      </Link>
+      <h1 className="dk-titre mt-1">{porte.titre}</h1>
+      <p className="dk-corps mt-1 max-w-[70ch] text-muted-foreground">{porte.quoi}</p>
+      <div className="mt-4">
+        <ListeEnvie code={code} />
+      </div>
+    </div>
+  );
+}
+
+/* ══ LES PORTES DE LA VITRINE ═════════════════════════════════════════════ */
+
+/** ⚠ Le glyphe est DÉCORATIF : le titre de la porte dit déjà tout. */
+const GLYPHE_PORTE: Record<string, LucideIcon> = {
+  plage: Waves,
+  parcs: Trees,
+  eaux: Droplets,
+  trek: MountainSnow,
+  patrimoine: Landmark,
+  gastronomie: UtensilsCrossed,
+};
+
+/**
+ * PAR OÙ ON ENTRE — six envies et la carte.
+ *
+ * 🔴 UNE TUILE SANS COMPTE NE S'AFFICHE PAS. C'est la règle du projet (aucune
+ *    entrée vers un écran vide) appliquée à la lettre : tant que la migration
+ *    0126 n'est pas en ligne, « Patrimoine », « Parcs et réserves » et
+ *    « Cascades et grottes » n'ont pas de compte et restent fermées. Elles
+ *    s'allument d'elles-mêmes le jour où elle passe, sans qu'une ligne change
+ *    ici.
+ */
+function Portes() {
+  const [comptes, setComptes] = useState<ComptesPortes | null>(null);
+
+  useEffect(() => {
+    let vivant = true;
+    void chargerPortes().then((c) => {
+      if (vivant) setComptes(c);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
+  const ouvertes = PORTES.filter((p) => (comptes?.parPorte[p.code] ?? 0) > 0);
+
+  if (!comptes) {
+    return (
+      <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-3" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="dk-skeleton h-[88px] rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <section className="mt-5">
+      <h2 className="sr-only">Par où commencer</h2>
+      {ouvertes.length > 0 && (
+        <ul className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+          {ouvertes.map((p) => {
+            const Glyphe = GLYPHE_PORTE[p.code] ?? Compass;
+            return (
+              <li key={p.code}>
+                <Link
+                  to={`/explorer?envie=${p.code}`}
+                  className="dk-carte flex h-full flex-col gap-1.5 rounded-2xl border border-border bg-card p-3"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="grid h-10 w-10 place-items-center rounded-xl bg-teal-soft text-primary-fort"
+                  >
+                    <Glyphe className="h-5 w-5" />
+                  </span>
+                  <span className="font-semibold leading-tight">{p.titre}</span>
+                  <span className="dk-secondaire tabular-nums">
+                    {compteur(comptes.parPorte[p.code])}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* ── LA CARTE, EN PLEINE LARGEUR ───────────────────────────────────
+          🔴 C'EST L'ACTIF LE PLUS COMPLET DU SITE, ET IL ÉTAIT ENTERRÉ dans
+             une liste de vingt et une entrées de menu. Mesuré le 27/10/2026 :
+             5 624 adresses et sites ont des coordonnées, contre 514 une photo.
+             Ce que Diako sait le mieux faire, c'est situer. */}
+      {comptes.pointsCarte !== null && comptes.pointsCarte > 0 && (
+        <Link
+          to="/carte"
+          className="dk-carte mt-2.5 flex items-center gap-3 rounded-2xl border border-border bg-card p-3"
+        >
+          <span
+            aria-hidden="true"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-soft text-primary-fort"
+          >
+            <Map className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold leading-tight">Tout sur la carte</span>
+            <span className="dk-secondaire block tabular-nums">
+              {compteur(comptes.pointsCarte)} adresses et sites situés
+            </span>
+          </span>
+        </Link>
+      )}
+    </section>
+  );
 }
 
 /* ══ LA VITRINE ═══════════════════════════════════════════════════════════ */
@@ -167,12 +321,20 @@ function VitrineDestinations() {
   useReveal(rendues);
 
   useSEO({
+    /* ⚠ LE TITRE SUIT LE H1 depuis le 27/10 : l'onglet du navigateur disait
+       « Destinations » là où l'écran dit « Explorer », et c'est exactement le
+       défaut que ce dépôt a déjà payé ailleurs (la barre disait « Chercher »,
+       la page s'appelait « Recherche »). Le mot « destinations » reste dans le
+       titre, où il sert encore au référencement, mais en second. */
     titre:
       liste.length > 0
-        ? `Destinations — ${lieux(liste.length)} à visiter à Madagascar`
-        : "Destinations de Madagascar",
+        ? `Explorer Madagascar — ${lieux(liste.length)} emblématiques, plages, sommets`
+        : "Explorer Madagascar",
     description:
-      "Les lieux emblématiques de Madagascar : les îles, les plages, les parcs et réserves, les merveilles naturelles — avec leur saison, leurs récits et les adresses sur place.",
+      /* ⚠ AUCUN COMPTE ÉCRIT EN DUR ICI : « 178 destinations » a figuré des
+         mois sur quatre écrans pendant que la base en portait 508. Les
+         chiffres de cette page viennent tous de la base, à l'affichage. */
+      "Madagascar par envie : les plages, les parcs et réserves, les sommets, le patrimoine, les plats — et toutes les adresses situées sur la carte.",
     url: "/explorer",
   });
 
@@ -181,31 +343,19 @@ function VitrineDestinations() {
       <p className="dk-etiquette">Découvrir</p>
       <div className="mt-1 flex items-center gap-2">
         <Compass className="h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
-        <h1 className="dk-titre">Destinations</h1>
+        <h1 className="dk-titre">Explorer</h1>
       </div>
       <p className="dk-corps mt-2 max-w-[70ch] text-muted-foreground">
-        {liste.length > 0
-          ? `${lieux(liste.length)} emblématiques, des îles du Nord aux parcs du Sud.`
-          : "Les lieux emblématiques de Madagascar."}{" "}
-        Chaque fiche dit quand y aller, comment, et ce qui s'y trouve.
+        Madagascar par envie : ce qu'on vient voir, où c'est, et ce qu'il y a
+        autour.
       </p>
 
-      {/* ── CE QUE CET ÉCRAN N'EST PAS, dit en une ligne de liens ──────────
-          ⚠ Les villes ont quitté cet écran : sans ces portes, qui cherche
-            « Morondava » conclurait qu'elle a disparu du site. */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Renvoi to="/villes" icone={Building2} libelle="Villes et villages" />
-        <Renvoi
-          to="/sites"
-          icone={Trees}
-          libelle={
-            stats && stats.sites > 0
-              ? `Sites et parcs · ${compteur(stats.sites)}`
-              : "Sites et parcs"
-          }
-        />
-        <Renvoi to="/quand-partir" icone={Sun} libelle="Quand partir" />
-      </div>
+      {/* 🔴 LES PORTES D'ABORD, LE CATALOGUE ENSUITE. Cet écran ouvrait sur
+          61 lieux emblématiques — de belles fiches, mais une entrée unique
+          pour un référentiel qui porte 2 435 sites et 3 377 adresses. Qui
+          cherche une plage devait deviner qu'elle se trouvait derrière
+          « Sites et parcs », trois menus plus loin. */}
+      <Portes />
 
       {etat === "erreur" && <EtatErreur className="mt-5" onReessayer={() => void charger()} />}
 
@@ -217,6 +367,20 @@ function VitrineDestinations() {
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="dk-skeleton h-64 rounded-2xl" />
           ))}
+        </div>
+      )}
+
+      {/* ── LE CATALOGUE DE TÊTE ──────────────────────────────────────────
+          ⚠ Il garde sa place : 61 fiches toutes résumées, 39 avec une photo
+            créditée, c'est la plus belle matière du référentiel. Elle n'est
+            plus la SEULE entrée, elle est la mieux servie. */}
+      {etat === "ok" && liste.length > 0 && (
+        <div className="mt-9">
+          <h2 className="text-lg font-bold leading-tight">Les lieux emblématiques</h2>
+          <p className="dk-secondaire mt-0.5 max-w-[70ch]">
+            {lieux(liste.length)}, des îles du Nord aux parcs du Sud. Chaque fiche
+            dit quand y aller, comment, et ce qui s'y trouve.
+          </p>
         </div>
       )}
 
@@ -232,6 +396,26 @@ function VitrineDestinations() {
             }
           />
         ))}
+
+      {/* ── LES AUTRES CHEMINS VERS LA MÊME MATIÈRE ───────────────────────
+          ⚠ Ils descendent en bas de page, mais ils ne disparaissent pas : la
+            descente par région reste le bon outil quand on sait déjà où on va,
+            et qui cherche « Morondava » doit trouver sa porte. */}
+      {etat === "ok" && (
+        <div className="mt-8 flex flex-wrap gap-2 border-t border-border pt-5">
+          <Renvoi to="/villes" icone={Building2} libelle="Villes et villages" />
+          <Renvoi
+            to="/sites"
+            icone={Trees}
+            libelle={
+              stats && stats.sites > 0
+                ? `Par région · ${compteur(stats.sites)} sites`
+                : "Sites et parcs par région"
+            }
+          />
+          <Renvoi to="/quand-partir" icone={Sun} libelle="Quand partir" />
+        </div>
+      )}
 
       {etat === "ok" && liste.length === 0 && (
         <EmptyState

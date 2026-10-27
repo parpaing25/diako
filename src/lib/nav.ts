@@ -8,13 +8,13 @@ import {
   Compass,
   Map,
   Home,
+  MapPin,
   MessageCircle,
-  Mountain,
   Plus,
-  Route,
   Search,
   Settings,
   Sun,
+  Route,
   Trees,
   User,
   UtensilsCrossed,
@@ -48,10 +48,9 @@ export interface NavItem {
    */
   railDesktop?: boolean;
   /**
-   * ⚠ LE GROUPE DU RAIL, repris de la maquette « Explorer regions » de Claude
-   *   Design. Seize entrees a plat se lisent comme une liste de courses : l'oeil
-   *   ne sait pas par ou commencer. Trois intentions — DECOUVRIR, PREPARER,
-   *   CHEZ MOI — donnent trois points d'entree au lieu de seize.
+   * ⚠ LE GROUPE DU RAIL. Seize entrees a plat se lisent comme une liste de
+   *   courses : l'oeil ne sait pas par ou commencer. Trois intentions —
+   *   DECOUVRIR, PREPARER, CHEZ MOI — donnent trois points d'entree.
    */
   groupe?: "decouvrir" | "preparer" | "chez_moi";
   /** Le compte affiche a droite de l'entree, quand il est CONNU et VRAI. */
@@ -62,77 +61,89 @@ export interface NavItem {
 /**
  * Les 5 emplacements de la barre du bas (mobile), avec « Publier » AU CENTRE.
  *
- * ⚠ « GOÛTS » A PRIS LA PLACE DE « RECHERCHER » (ecran M1 du design final).
- *   Ce n'est pas un arbitrage esthetique : la recherche est deja dans l'entete,
- *   sur toutes les pages, alors que l'aventure culinaire n'avait aucune porte
- *   d'entree. Et c'est la seule mecanique du produit qui fonctionne avec un
- *   seul membre inscrit — marquer un plat goute n'a besoin de personne.
+ * 🔴 LA REFONTE DU 27/10/2026 — ce que la barre disait, et ce qu'elle dit.
+ *    Avant : Fil · Explorer · Publier · Goûts · Messages.
+ *    Deux des cinq places allaient à des écrans personnels (les plats goûtés,
+ *    la messagerie), et aucune n'ouvrait sur les 3 377 adresses ni sur les
+ *    5 624 points situés — c'est-à-dire sur la quasi-totalité de ce que le
+ *    site contient. Demande du propriétaire : « un réseau social de voyage à
+ *    Madagascar, avec toutes les options qu'on a déjà mises en place, mais en
+ *    plus pratique. »
+ *
+ * ⚠ MESSAGES SORT DE LA BARRE SANS PERDRE SA PORTE. L'en-tête porte le bouton
+ *   sur TOUTES les tailles d'écran, avec sa pastille de non-lus et un aperçu
+ *   qui s'ouvre sans changer de page (Header.tsx) : la messagerie est plus
+ *   accessible là qu'au fond d'une barre, et elle ne coûte plus une des cinq
+ *   places.
+ *
+ * ⚠ GOÛTS REJOINT LE CARNET. Marquer un plat goûté et enregistrer un lieu sont
+ *   le même geste — garder ce qui est à moi. Deux onglets pour deux listes
+ *   personnelles sur cinq places, quand les adresses n'en avaient aucune, ne
+ *   tenait pas. L'entrée reste dans le menu, groupe « Chez moi ».
  */
 export const NAV_PRINCIPAL: NavItem[] = [
   { to: "/", label: "Fil", icon: Home, pret: true },
   { to: "/explorer", label: "Explorer", icon: Compass, pret: true },
   { to: "/publier", label: "Publier", icon: Plus, pret: true },
-  { to: "/gouts", label: "Goûts", icon: UtensilsCrossed, pret: true },
-  { to: "/messages", label: "Messages", icon: MessageCircle, pret: true },
+  /* ⚠ L'URL RESTE `/recherche`, LE LIBELLÉ DEVIENT « Adresses ». Des liens
+     partagés et la barre de recherche de l'en-tête y mènent depuis des mois ;
+     changer l'adresse casserait les uns et le référencement des autres pour un
+     gain cosmétique. Ce qui comptait, c'est que le mot dise ce qu'on trouve :
+     « Rechercher » nomme un geste, « Adresses » nomme la matière — 3 377
+     hôtels, restaurants, agences et loueurs. */
+  { to: "/recherche", label: "Adresses", icon: MapPin, pret: true },
+  { to: "/favoris", label: "Carnet", icon: Bookmark, pret: true },
 ];
 
 /**
- * Le rail desktop et le menu mobile : tout le produit (ecran D1).
+ * Le rail desktop et le menu mobile : tout le produit.
  *
  * ⚠ TOUTES CES ENTREES MENENT A UN ECRAN BRANCHE SUR UNE VRAIE TABLE. La regle
  *   du projet est explicite : aucune entree de navigation vers un ecran non
  *   branche, parce qu'un onglet vide coute plus cher en confiance que son
- *   absence. Les circuits, les sites et les evenements sont vides AUJOURD'HUI,
- *   mais leurs tables existent depuis la migration 0032 et ce qu'on y ecrit se
- *   garde — la difference est entiere.
+ *   absence.
+ *
+ * 🔴 CIRCUITS ET GUIDES SONT SORTIS DE LA LISTE le 27/10/2026. Ils y figuraient
+ *    en `pret: false` avec une pastille « bientôt » — deux promesses dans un
+ *    menu qu'on refait justement parce qu'il en disait trop. Leurs tables sont
+ *    toujours vides (0 circuit, 0 guide publié), leurs ROUTES restent câblées,
+ *    et `FEUILLE_DE_ROUTE` continue de les annoncer là où c'est sa place : la
+ *    page « À propos ». À remettre ici le jour où elles se remplissent.
  */
 export const NAV_COMPLET: NavItem[] = [
   { to: "/", label: "Fil", icon: Home, pret: true },
-  { to: "/explorer", label: "Destinations", icon: Compass, pret: true, groupe: "decouvrir", compteur: "destinations" },
-  /* ⚠ SORTIE DE « DESTINATIONS » SUR DEMANDE DU PROPRIÉTAIRE : une descente
-     régions › communes n'est pas ce qu'on attend derrière ce mot. /explorer
-     ne montre plus que les lieux emblématiques ; les villes ont leur entrée.
-     Pas de compteur ici : `stats_diako` n'a pas de clé « villes », et un
-     chiffre approximatif serait pire qu'aucun. */
+  /* ⚠ « Explorer » PASSE EN TÊTE DU GROUPE : depuis la refonte du 27/10, c'est
+     la porte unique de la découverte — six envies, la carte, puis les lieux
+     emblématiques. Les écrans qui suivent restent des chemins vers la même
+     matière, pour qui sait déjà où il va. */
+  /* ⚠ PAS DE COMPTEUR SUR CETTE ENTRÉE. Le rail affichait « Explorer 61 » —
+     les 61 lieux emblématiques — alors que l'écran ouvre désormais sur les
+     318 plages, les 824 sommets, les 95 plats et les 5 624 points de la
+     carte. Un chiffre qui sous-estime de deux ordres de grandeur ferme la
+     porte qu'il est censé ouvrir. */
+  { to: "/explorer", label: "Explorer", icon: Compass, pret: true, groupe: "decouvrir" },
+  { to: "/carte", label: "Carte", icon: Map, pret: true, groupe: "decouvrir" },
   { to: "/villes", label: "Villes et villages", icon: Building2, pret: true, groupe: "decouvrir" },
-  { to: "/plats", label: "Atlas des plats", icon: UtensilsCrossed, pret: true, groupe: "decouvrir", compteur: "plats" },
-  /* 🔴 `pret: false` PARCE QUE LA TABLE EST VIDE. Mesuré : 0 circuit, 0 guide
-     publiés. Ces deux entrées menaient à un écran qui ne peut rien afficher, et
-     la pastille « bientôt » — dont le commentaire de SideNav dit qu'elle « dit
-     la vérité AVANT le clic » — ne s'affichait sur aucune des deux. On promet
-     un catalogue, on ouvre le vide : c'est le clic de trop qui fait douter du
-     reste du site. À repasser à `true` le jour où ces tables se remplissent. */
-  { to: "/circuits", label: "Circuits", icon: Route, pret: false, groupe: "decouvrir" },
   { to: "/sites", label: "Sites et parcs", icon: Trees, pret: true, groupe: "decouvrir", compteur: "sites" },
+  { to: "/plats", label: "Atlas des plats", icon: UtensilsCrossed, pret: true, groupe: "decouvrir", compteur: "plats" },
   { to: "/evenements", label: "Événements", icon: CalendarDays, pret: true, groupe: "decouvrir" },
-  /* ⚠ AJOUTE APRES L'AUDIT : `/projet` n'avait qu'UN SEUL lien dans tout le
-     depot — la carte du bas de SideNav, qui n'apparait qu'a 1280 px. Sur la
-     cible du produit (390 px), l'ecran que le code decrit comme « le seul
-     endroit ou l'offre vient au voyageur » n'etait joignable qu'en tapant
-     l'URL a la main. */
-  /* 🔴 L'ENTRÉE « Mon projet de voyage » A ÉTÉ RETIRÉE D'ICI. Elle faisait
-     DOUBLON : le rail portait la ligne de menu ET la carte de bas de rail
-     (SideNav.tsx), toutes deux vers /projet. Le propriétaire l'a signalé
-     capture à l'appui. On garde la CARTE, pas la ligne : c'est le seul endroit
-     du produit où l'offre vient au voyageur, une ligne parmi seize l'aurait
-     noyé — et c'est précisément l'argument écrit dans SideNav.tsx. */
+
   { to: "/quand-partir", label: "Quand partir", icon: Sun, pret: true, groupe: "preparer" },
   { to: "/y-aller", label: "Y aller", icon: Route, pret: true, groupe: "preparer" },
   /* ⚠ AJOUTÉE AVEC LA GRILLE DES LOUEURS (0114) : 18 loueurs publiés avec
      leurs types de véhicules et leurs tarifs par jour. L'écran ouvre sur du
      réel — la règle « pas d'entrée vers un écran vide » est respectée. */
   { to: "/location", label: "Louer un véhicule", icon: Car, pret: true, groupe: "preparer" },
-  { to: "/guides", label: "Guides", icon: Mountain, pret: false, groupe: "decouvrir" },
-  { to: "/carte", label: "Carte", icon: Map, pret: true },
+
   /* 🔴 RETIRÉS DU RAIL GAUCHE sur demande du propriétaire, captures à l'appui :
-     · « Rechercher » — la recherche vit déjà dans l'entête, sur TOUTES les
+     · « Adresses » — la recherche vit déjà dans l'entête, sur TOUTES les
        pages ; une deuxième porte dans le rail n'ajoute rien et prend une ligne.
      · « Paramètres » — déjà dans le menu du profil (avatar, en haut à droite).
      Les ROUTES restent câblées : seul le rail ne les liste plus. */
-  { to: "/recherche", label: "Rechercher", icon: Search, pret: true, railDesktop: false },
+  { to: "/recherche", label: "Adresses", icon: Search, pret: true, railDesktop: false },
   { to: "/publier", label: "Publier", icon: Plus, pret: true, railDesktop: false },
   { to: "/favoris", label: "Mon carnet", icon: Bookmark, pret: true, railDesktop: false, groupe: "chez_moi" },
-  { to: "/gouts", label: "Mon carnet de goûts", icon: UtensilsCrossed, pret: true, railDesktop: false, groupe: "chez_moi" },
+  { to: "/gouts", label: "Mes goûts", icon: UtensilsCrossed, pret: true, railDesktop: false, groupe: "chez_moi" },
   { to: "/messages", label: "Messages", icon: MessageCircle, pret: true, railDesktop: false },
   { to: "/notifications", label: "Notifications", icon: Bell, pret: true, railDesktop: false },
   { to: "/pro", label: "Espace pro", icon: Briefcase, pret: true, groupe: "chez_moi" },
@@ -151,9 +162,8 @@ export const NAV_RAIL = NAV_COMPLET.filter((e) => e.railDesktop !== false);
 /**
  * Les groupes du rail, dans l'ordre de la maquette.
  *
- * ⚠ « Fil », « Carte » et « Rechercher » restent HORS GROUPE, en tete : ce sont
- *   les trois gestes qu'on fait sans y penser. Les ranger sous un intitule les
- *   ralentirait pour rien.
+ * ⚠ « Fil » reste HORS GROUPE, en tete : c'est le geste qu'on fait sans y
+ *   penser. Le ranger sous un intitule le ralentirait pour rien.
  */
 export const GROUPES_RAIL: { cle: NonNullable<NavItem["groupe"]>; titre: string }[] = [
   { cle: "decouvrir", titre: "Découvrir" },
@@ -168,5 +178,6 @@ export const FEUILLE_DE_ROUTE = [
   { quoi: "Recherche par destination, par plat et par budget", etat: "ouvert" as const },
   { quoi: "Pages des hôtels, restaurants et agences", etat: "ouvert" as const },
   { quoi: "Premiers établissements référencés", etat: "en cours" as const },
+  { quoi: "Circuits et guides", etat: "à venir" as const },
   { quoi: "Réservation et paiement", etat: "à venir" as const },
 ];

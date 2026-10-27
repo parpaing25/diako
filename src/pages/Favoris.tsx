@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bookmark, Heart, MapPin, Star, Store } from "lucide-react";
+import { Bookmark, Heart, MapPin, Star, Store, UtensilsCrossed } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSEO } from "@/hooks/useSEO";
 import { PostCard } from "@/components/PostCard";
@@ -112,6 +112,19 @@ export default function Favoris() {
       <p className="mt-1 text-sm text-muted-foreground">
         Les adresses gardées, les récits mis de côté et ce que vous avez aimé.
       </p>
+
+      {/* 🔴 LA PORTE DES GOÛTS VIT ICI DEPUIS LE 27/10/2026. « Goûts » occupait
+          une des cinq places de la barre du bas, alors que les adresses n'en
+          avaient aucune. L'entrée a déménagé, pas l'écran : sans ce lien, les
+          plats goûtés devenaient injoignables au téléphone — c'est la seule
+          mécanique du produit qui fonctionne avec un seul membre inscrit. */}
+      <Link
+        to="/gouts"
+        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-input px-4 text-sm font-semibold hover:border-primary hover:text-primary"
+      >
+        <UtensilsCrossed className="h-4 w-4" aria-hidden="true" />
+        Mes plats goûtés
+      </Link>
 
       <div role="tablist" className="mt-4 flex gap-1 border-b border-border">
         {onglets.map((o) => (

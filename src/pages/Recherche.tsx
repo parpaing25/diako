@@ -1,6 +1,16 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { MapPin, Search, SlidersHorizontal, Star, UtensilsCrossed, X } from "lucide-react";
+import {
+  BedDouble,
+  Car,
+  Compass,
+  MapPin,
+  SlidersHorizontal,
+  Star,
+  UtensilsCrossed,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { SearchBar } from "@/components/SearchBar";
@@ -13,6 +23,7 @@ import {
   chargerDestinations,
   chargerPlats,
   chercherPages,
+  compterParCategorie,
   recitsParLieu,
   resoudreLieu,
   resoudrePlat,
@@ -99,6 +110,78 @@ interface Recit {
   created_at: string;
 }
 
+/* ══ LES PORTES DES ADRESSES ══════════════════════════════════════════════ */
+
+/**
+ * ⚠ QUATRE PORTES, PAS HUIT. Le référentiel porte huit catégories, mais
+ *   quatre d'entre elles pèsent moins de 1 % des fiches (12 guides, 7
+ *   organisateurs d'événements). Les afficher à égalité ferait croire à un
+ *   catalogue qui n'existe pas ; elles restent joignables par les filtres de
+ *   la page de résultats.
+ *
+ * ⚠ LES CODES SONT CEUX DE LA BASE, et le lien porte `?cat=` — le paramètre
+ *   que cet écran lit déjà. Un libellé inventé ici ne filtrerait rien.
+ */
+const PORTES_ADRESSES: { code: string; titre: string; quoi: string; icone: LucideIcon }[] = [
+  { code: "hotel", titre: "Dormir", quoi: "hôtels, bungalows, chambres", icone: BedDouble },
+  { code: "restaurant", titre: "Manger", quoi: "restaurants et tables", icone: UtensilsCrossed },
+  { code: "agence_voyage", titre: "Agences", quoi: "pour organiser le voyage", icone: Compass },
+  { code: "location_vehicule", titre: "Louer", quoi: "voitures, 4×4, deux-roues", icone: Car },
+];
+
+function PortesAdresses() {
+  const [comptes, setComptes] = useState<Record<string, number> | null>(null);
+
+  useEffect(() => {
+    let vivant = true;
+    void compterParCategorie(PORTES_ADRESSES.map((p) => p.code)).then((c) => {
+      if (vivant) setComptes(c);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
+  if (!comptes) {
+    return (
+      <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="dk-skeleton h-[88px] rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const ouvertes = PORTES_ADRESSES.filter((p) => (comptes[p.code] ?? 0) > 0);
+  if (ouvertes.length === 0) return null;
+
+  return (
+    <nav aria-label="Par famille" className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      {ouvertes.map((p) => {
+        const Icone = p.icone;
+        return (
+          <Link
+            key={p.code}
+            to={`/recherche?cat=${p.code}`}
+            className="dk-carte flex h-full flex-col gap-1.5 rounded-2xl border border-border bg-card p-3"
+          >
+            <span
+              aria-hidden="true"
+              className="grid h-10 w-10 place-items-center rounded-xl bg-teal-soft text-primary-fort"
+            >
+              <Icone className="h-5 w-5" />
+            </span>
+            <span className="font-semibold leading-tight">{p.titre}</span>
+            <span className="dk-secondaire tabular-nums">
+              {comptes[p.code].toLocaleString("fr-FR")}
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export default function Recherche() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -130,8 +213,8 @@ export default function Recherche() {
     titre: q
       ? `« ${q} »`
       : categorie
-        ? (CATEGORIES.find((c) => c.code === categorie)?.pluriel ?? "Rechercher")
-        : "Rechercher",
+        ? (CATEGORIES.find((c) => c.code === categorie)?.pluriel ?? "Adresses")
+        : "Adresses",
     url: "/recherche",
     noindex: Boolean(q || categorie),
   });
@@ -302,19 +385,34 @@ export default function Recherche() {
   if (!q && !categorie && !budget && !equipements.length) {
     return (
       <div className="px-4 py-5">
-        <h1 className="sr-only">Rechercher sur Diako</h1>
-        <SearchBar taille="hero" autoFocus />
+        {/* 🔴 CET ÉCRAN S'APPELLE « ADRESSES » DEPUIS LE 27/10/2026, et son
+            titre n'est plus caché. Il ouvrait sur un champ vide avec un H1 en
+            `sr-only` : rien, à l'écran, ne disait que le site connaît 1 476
+            hôtels et 1 904 restaurants. Une porte muette se confond avec une
+            porte fermée. L'URL reste `/recherche` — des liens partagés et le
+            référencement en dépendent ; c'est le MOT qui devait changer, pas
+            l'adresse : « Rechercher » nomme un geste, « Adresses » nomme ce
+            qu'on vient chercher. */}
+        <h1 className="dk-titre">Adresses</h1>
+        <p className="dk-corps mt-1 max-w-prose text-muted-foreground">
+          Où dormir, où manger, avec qui partir — à Madagascar.
+        </p>
+
+        {/* ⚠ PLUS D'`autoFocus`. Au téléphone il ouvrait le clavier à
+            l'arrivée et poussait tout l'écran — y compris les portes
+            ci-dessous — sous la ligne de flottaison. On tape quand on a décidé
+            de taper. */}
+        <div className="mt-4">
+          <SearchBar taille="hero" />
+        </div>
+
+        <PortesAdresses />
 
         <div className="mt-8">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-secondary">
-            <Search className="h-6 w-6 text-primary" aria-hidden="true" />
-          </div>
-          <h2 className="mt-5 text-xl font-semibold">Où dormir, où manger, avec qui partir</h2>
-          <p className="mt-2 max-w-prose text-muted-foreground">
-            Tapez une destination — <em>Majunga</em>, <em>Tuléar</em>,{" "}
-            <em>Sainte-Marie</em> — ou un plat. L'orthographe n'a pas
-            d'importance : <em>Majunga</em> et <em>Mahajanga</em> mènent au même
-            endroit, comme <em>ravitoto</em> et <em>ravi-toto</em>.
+          <p className="dk-secondaire max-w-prose">
+            L'orthographe n'a pas d'importance : <em>Majunga</em> et{" "}
+            <em>Mahajanga</em> mènent au même endroit, comme <em>ravitoto</em> et{" "}
+            <em>ravi-toto</em>.
           </p>
 
           {/* La question d'un voyageur sur place n'est pas « quels hotels

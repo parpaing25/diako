@@ -110,3 +110,72 @@ describe("dateDuReleve", () => {
     expect(dateDuReleve(null)).toBeNull();
   });
 });
+
+/* ── UN REPÈRE QUI N'EN EST PAS UN ─────────────────────────────────────── */
+
+describe("repères fabriqués par le collecteur", () => {
+  /**
+   * 🔴 L'INCIDENT, 27/10/2026. Le fil affichait sous une photo de baobab :
+   *    « 🧭 face à cette épreuve ». Le récit parlait d'un arbre en danger ;
+   *    le collecteur avait pris la locution « face à » pour un repère. Deux
+   *    autres sur les onze récits marqués : « 🧭 au bout de la nuit, jusqu'au
+   *    petit matin ! » (un festival), et un vrai, « 🧭 sur la route de
+   *    Mahajanga ».
+   *
+   * ⚠ LE TEST DE CRÉDIBILITÉ EST LA MAJUSCULE, et c'est volontairement étroit :
+   *   un repère sert à TROUVER un endroit, donc il nomme quelque chose — une
+   *   enseigne, une rue, une ville. Une suite de mots communs n'oriente
+   *   personne, et affichée sous une boussole elle affirme une information
+   *   qui n'existe pas.
+   */
+  it("écarte un repère sans aucun nom propre", () => {
+    expect(decouperRecit("🧭 face à cette épreuve").repere).toBeNull();
+    expect(decouperRecit("🧭 au bout de la nuit, jusqu'au petit matin !").repere).toBeNull();
+  });
+
+  it("garde un repère qui nomme un endroit", () => {
+    expect(decouperRecit("🧭 sur la route de Mahajanga").repere).toBe("sur la route de Mahajanga");
+    expect(decouperRecit("🧭 en face N'Hair Beauty").repere).toBe("en face N'Hair Beauty");
+  });
+
+  it("n'invente pas de prose avec le repère écarté", () => {
+    const b = decouperRecit("🧭 face à cette épreuve");
+    expect(b.prose).toEqual([]);
+  });
+  /**
+   * ⚠ LE CORPUS RÉEL, FIGÉ. Les 11 récits publiés qui portaient la boussole
+   *   le 27/10/2026, relus un par un. Cinq orientent, six sont des morceaux de
+   *   phrase. Toute règle qui remplacera celle d'aujourd'hui devra repasser
+   *   ces onze cas — c'est pour cela qu'ils sont écrits ici en entier, et pas
+   *   résumés en deux exemples choisis.
+   */
+  const CORPUS_27_10 = {
+    gardes: [
+      "À 20 km du Cap Sainte-Marie et à environ 31 km au sud de Beloha, district de Beloha, commune de Tranovaho",
+      "En face La Promenade",
+      "en face N'Hair Beauty",
+      "entre Ambanitsena et Sahamamy, vers Antsapanana",
+      "sur la route de Mahajanga",
+    ],
+    ecartes: [
+      "Après les festivités, quoi de mieux qu’un généreux sandwich accompagné d’une boisson bien chaud",
+      "après une journée à Nosy Be",
+      "au bout de la nuit, jusqu’au petit matin !",
+      "derrière cette richesse minérale se cache une réalité beaucoup moins brillante",
+      "face à cette épreuve",
+      "face, Nosy Be révèle toute sa magie",
+    ],
+  };
+
+  it("garde les 5 repères du corpus qui orientent vraiment", () => {
+    for (const r of CORPUS_27_10.gardes) {
+      expect(decouperRecit(`🧭 ${r}`).repere, r).toBe(r);
+    }
+  });
+
+  it("écarte les 6 morceaux de phrase du corpus", () => {
+    for (const r of CORPUS_27_10.ecartes) {
+      expect(decouperRecit(`🧭 ${r}`).repere, r).toBeNull();
+    }
+  });
+});

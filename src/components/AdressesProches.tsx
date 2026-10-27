@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BedDouble, MapPin, Utensils } from "lucide-react";
+import { BedDouble, Car, MapPin, Utensils } from "lucide-react";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { autourDeMoi, type EtablissementProche } from "@/lib/geo";
 import { CATEGORIES } from "@/lib/etablissements";
@@ -49,6 +49,13 @@ export function AdressesProches({
   const [etat, setEtat] = useState<"chargement" | "ok" | "erreur">("chargement");
   const [hotels, setHotels] = useState<EtablissementProche[]>([]);
   const [tables, setTables] = useState<EtablissementProche[]>([]);
+  /* ⭐ LES LOUEURS, SEULEMENT S'IL Y EN A. 30 loueurs sont publiés pour tout
+     Madagascar : une rubrique « Louer un véhicule » afficherait « aucun » sur
+     la quasi-totalité des fiches — du bruit sur chaque écran pour servir une
+     poignée de lieux. Elle n'apparaît donc que lorsqu'elle a quelque chose à
+     dire, et c'est précisément là qu'elle vaut de l'or : à Diego, à Morondava,
+     au départ d'une piste. */
+  const [loueurs, setLoueurs] = useState<EtablissementProche[]>([]);
 
   useEffect(() => {
     let vivant = true;
@@ -59,13 +66,15 @@ export function AdressesProches({
     Promise.all([
       autourDeMoi(p, { rayonKm: RAYON_KM, categorie: "hotel", limite: PAR_FAMILLE + 3 }),
       autourDeMoi(p, { rayonKm: RAYON_KM, categorie: "restaurant", limite: PAR_FAMILLE + 3 }),
+      autourDeMoi(p, { rayonKm: RAYON_KM, categorie: "location_vehicule", limite: PAR_FAMILLE }),
     ])
-      .then(([h, r]) => {
+      .then(([h, r, v]) => {
         if (!vivant) return;
         const dormir = h.slice(0, PAR_FAMILLE);
         const deja = new Set(dormir.map((x) => x.id));
         setHotels(dormir);
         setTables(r.filter((x) => !deja.has(x.id)).slice(0, PAR_FAMILLE));
+        setLoueurs(v);
         setEtat("ok");
       })
       .catch(() => {
@@ -114,6 +123,14 @@ export function AdressesProches({
             adresses={tables}
             vide={`Aucune table référencée à moins de ${RAYON_KM} km pour l'instant.`}
           />
+          {loueurs.length > 0 && (
+            <Groupe
+              titre="Louer un véhicule"
+              Icone={Car}
+              adresses={loueurs}
+              vide=""
+            />
+          )}
           <Link
             to={lienCarte(lat, lng, ["dormir", "manger"])}
             className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-input text-sm font-semibold hover:border-primary hover:text-primary"

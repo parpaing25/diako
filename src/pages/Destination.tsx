@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Bus, Compass, MapPin, Plane, RefreshCw, Ship, Utensils } from "lucide-react";
+import { ArrowLeft, Bus, Compass, MapPin, Navigation, Plane, RefreshCw, Ship, Utensils } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRetour } from "@/hooks/useRetour";
 import { useSEO } from "@/hooks/useSEO";
@@ -10,6 +10,7 @@ import { recitsDuLieu } from "@/lib/etablissements";
 import { ProposerPhoto } from "@/components/ProposerPhoto";
 import { ImageProgressive } from "@/components/ImageProgressive";
 import { AdressesProches } from "@/components/AdressesProches";
+import { lienItineraire } from "@/lib/arrivee";
 import { BoutonPartager, CouvertureFiche, LigneAccueil } from "@/components/Arrivee";
 import { SITE_URL, de, distanceArrondie, dureeLisible, lienCarte, venuDuSite } from "@/lib/arrivee";
 import { libelleTypeCourt } from "@/lib/sites";
@@ -752,6 +753,22 @@ export default function Destination() {
               il a été relevé, et un prix ne voyage jamais sans sa date. */}
         <section className="dk-reveal mt-6">
           <h2 className="dk-etiquette">Y aller</h2>
+          {/* ⭐ L'ITINÉRAIRE, AVANT LES TEMPS DE ROUTE. Les trajets relevés
+              disent combien d'heures depuis Tana ; ils ne conduisent personne.
+              Le point GPS, lui, existe pour tous les lieux du référentiel et
+              ouvre la navigation du téléphone. Posé au-dessus parce que c'est
+              l'action, le reste est l'information. */}
+          {gps && (
+            <a
+              href={lienItineraire(gps.lat, gps.lng)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground"
+            >
+              <Navigation className="h-4 w-4" aria-hidden="true" />
+              Ouvrir l'itinéraire
+            </a>
+          )}
           {f.acces.length > 0 ? (
             <ul className="mt-2 space-y-3">
               {f.acces.map((a, i) => {

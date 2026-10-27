@@ -42,6 +42,63 @@ const PREFIXE_LIEU = "📍";
 const DEBUT_SOURCE = "Vu sur Facebook";
 
 /**
+ * Ce repère oriente-t-il vraiment quelqu'un ?
+ *
+ * 🔴 L'INCIDENT DU 27/10/2026. Le fil affichait sous une photo de baobab
+ *    « 🧭 face à cette épreuve ». Le récit racontait un arbre en danger : le
+ *    collecteur (bot-diako) avait pris la locution « face à » pour un repère.
+ *
+ * ⚠ RÉGLÉ SUR LE CORPUS RÉEL, PAS SUR UNE IDÉE. Les 11 récits publiés qui
+ *   portent la boussole ont été relus un par un le 27/10/2026. Cinq orientent
+ *   vraiment — « en face N'Hair Beauty », « En face La Promenade », « entre
+ *   Ambanitsena et Sahamamy, vers Antsapanana », « sur la route de
+ *   Mahajanga », « À 20 km du Cap Sainte-Marie […] commune de Tranovaho ».
+ *   Six sont des morceaux de phrase, dont DEUX portent un nom propre : « face,
+ *   Nosy Be révèle toute sa magie » et « après une journée à Nosy Be ». Un
+ *   seul critère ne suffisait donc pas. Les onze cas sont figés dans
+ *   `recit.test.ts` : toute règle qui changera devra les repasser.
+ *
+ * ⚠ L'ASYMÉTRIE DES COÛTS AUTORISE LA SÉVÉRITÉ. Écarter à tort un vrai repère
+ *   ne perd rien — le texte reste dans la citation d'origine. En garder un
+ *   faux affirme une adresse qui n'existe pas, sous une icône de boussole.
+ *
+ * ⚠ CORRIGER ICI NE CORRIGE PAS LA SOURCE : le collecteur continuera d'en
+ *   fabriquer. Le site cesse seulement de les croire.
+ */
+const DEBUTS_TEMPORELS = /^(après|apres|avant|pendant|depuis|lors|hier|demain|aujourd)/iu;
+
+/** Ce qui trahit une phrase racontée plutôt qu'une indication de chemin. */
+const MOTS_NARRATIFS = new Set([
+  "se", "qui", "que", "quoi", "dont", "mieux", "toute", "toutes", "tout",
+  "beaucoup", "révèle", "revele", "cache", "jusqu'au", "jusqu'à", "jusqu",
+]);
+
+/** Les lieux communs qui suffisent à orienter, même sans nom propre. */
+const MOTS_DE_LIEU = new Set([
+  "plage", "marché", "marche", "rue", "route", "avenue", "boulevard", "place",
+  "église", "eglise", "mosquée", "mosquee", "temple", "école", "ecole",
+  "lycée", "lycee", "hôpital", "hopital", "pharmacie", "banque", "gare",
+  "port", "pont", "stade", "terrain", "station", "carrefour", "rond-point",
+  "quartier", "village", "lac", "rivière", "riviere", "colline", "bureau",
+  "épicerie", "epicerie", "boulangerie", "hôtel", "hotel", "parc", "jardin",
+  "cimetière", "cimetiere", "aéroport", "aeroport", "bord", "plateau",
+]);
+
+function repereCredible(texte: string): boolean {
+  const brut = texte.trim();
+  if (brut === "") return false;
+  if (DEBUTS_TEMPORELS.test(brut)) return false;
+
+  const mots = brut.split(/[\s,;!?.()«»"]+/u).filter(Boolean);
+  const nus = mots.map((m) => m.replace(/^['’]|['’]$/gu, "").toLocaleLowerCase("fr-FR"));
+  if (nus.some((m) => MOTS_NARRATIFS.has(m))) return false;
+
+  const nomPropre = mots.some((m) => /^[A-ZÀ-ÖØ-Þ]/u.test(m));
+  const lieuCommun = nus.some((m) => MOTS_DE_LIEU.has(m));
+  return nomPropre || lieuCommun;
+}
+
+/**
  * ⚠ LE TEST DE LA CITATION PORTE SUR LES BORNES, PAS SUR L'INTÉRIEUR. Deux
  *   récits contiennent eux-mêmes des guillemets français ; une expression qui
  *   irait chercher le contenu entre « et » couperait au premier guillemet
@@ -100,6 +157,10 @@ export function decouperRecit(
        peut disparaître de l'écran. */
     if (ligne.startsWith(PREFIXE_REPERE)) {
       const v = ligne.slice(PREFIXE_REPERE.length).trim();
+      /* 🔴 UN REPÈRE INCROYABLE EST JETÉ, PAS RENVOYÉ EN PROSE : il est déjà
+         dans le texte d'origine, et le reproduire plus bas ne ferait que
+         répéter un fragment de phrase. Voir `repereCredible`. */
+      if (!repereCredible(v)) continue;
       if (blocs.repere === null) blocs.repere = v;
       else blocs.prose.push(v);
       continue;

@@ -7,11 +7,14 @@
 photos/
 sortie/
 sortie2/
+sortie3/
 ecartees/
 captures/
 reels/hd/
 reels/travail/
 reels/sortie/
+# editeur_du_jour.py : metadonnees Commons et photos HD en cache, refaites a la demande
+editeur-cache/
 planche-*
 retenues-*
 pl-*

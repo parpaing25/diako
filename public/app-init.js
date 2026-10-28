@@ -156,7 +156,15 @@
     var l = document.createElement("link");
     l.rel = "preload";
     l.as = "image";
-    l.setAttribute("fetchpriority", "high");
+    // 🔴 PAS DE `fetchpriority: high` ICI, CONTRAIREMENT AUX DEUX AUTRES
+    //    PRECHARGEMENTS DE CE FICHIER. Sur /explorer la photo ne peut pas
+    //    peindre avant que React ait monte la carte : la servir en priorite
+    //    haute ne fait que voler de la bande passante au JavaScript qui,
+    //    lui, conditionne l'affichage. Mesure du 28/10/2026, memes phases
+    //    avant/apres : le delai avant requete tombe bien de 2 868 a 1 482 ms,
+    //    mais le telechargement passe de 720 a 1 596 ms et le rendu de 405 a
+    //    1 160 ms — temps deplace, pas gagne. Sur l'accueil et sur /lieu la
+    //    priorite haute se justifie : leur image est dans le HTML initial.
     l.setAttribute(
       "imagesrcset",
       base + ".thumb.webp" + q + " 480w, " +

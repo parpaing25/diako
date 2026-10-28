@@ -81,9 +81,19 @@
           },
           body: "{}",
         }
-      ).then(function (r) {
-        return r.ok ? r.json() : null;
-      });
+      )
+        .then(function (r) {
+          return r.ok ? r.json() : null;
+        })
+        .then(function (j) {
+          // Le preload est un bonus : s'il échoue, la réponse passe quand même.
+          try {
+            prechargerPhotoExplorer(j, moi.getAttribute("data-dk-familles"));
+          } catch (e3) {
+            /* rien : React affichera l'image comme avant */
+          }
+          return j;
+        });
       // ⚠ Une promesse rejetée que personne n'attend encore ferait un
       //   « unhandled rejection » dans la console : on l'absorbe ici, le
       //   consommateur retombera sur la requête normale.
@@ -91,6 +101,73 @@
     }
   } catch (e) {
     /* amorçage impossible : le site démarre exactement comme avant */
+  }
+
+  // ── 0 ter. LA PHOTO DE TÊTE DE L'EXPLORER, AVANT REACT ────────────────
+  // 🔴 LES DONNÉES TÔT NE SUFFISAIENT PAS. Avec l'amorçage ci-dessus, la
+  //    requête part bien à ~800 ms au lieu de 1 800 — et le LCP n'a pas
+  //    bougé d'une seconde. Décomposé par Lighthouse sur la production le
+  //    28/10/2026 : TTFB 810 ms, ATTENTE AVANT LA REQUÊTE DE L'IMAGE
+  //    2 868 ms (60 % du total), téléchargement 720 ms, rendu 405 ms. Le
+  //    navigateur ne CONNAÎT l'adresse de la photo qu'une fois React monté
+  //    et la carte rendue. Avoir les données tôt ne sert à rien si personne
+  //    ne s'en sert tôt : ce bloc pose le <link rel=preload> dès que la
+  //    réponse arrive, soit ~2,5 s avant que React n'y arrive.
+  //
+  // ⚠ QUELLE PHOTO. Celle de la première carte de la première famille
+  //   affichée — Explorer.tsx pose `surPremierEcran = iGroupe === 0` et
+  //   `grande = i === 0`, et `grouperParFamille` range dans l'ordre de
+  //   `FAMILLES` en laissant tomber les familles vides. L'ordre arrive en
+  //   `data-dk-familles`, écrit par le build depuis src/lib/destinations.ts :
+  //   pas de seconde liste à la main. Sans l'attribut, on ne précharge rien.
+  //
+  // ⚠ SRCSET ET SIZES DOIVENT ÊTRE CEUX DE L'IMAGE AFFICHÉE, sinon le
+  //   navigateur télécharge DEUX fichiers au lieu d'un et on perd plus qu'on
+  //   ne gagne. Recopiés de `jeuDeTailles` (src/lib/imageThumb.ts, appelée
+  //   sans w/h donc plafond 1600 et largeurs nominales) et du `sizes` de la
+  //   carte `grande` (src/pages/Explorer.tsx). La garde de dérive est dans
+  //   src/lib/prechargementExplorer.test.ts : elle casse le jour où l'un des
+  //   deux bouge sans l'autre.
+  function prechargerPhotoExplorer(json, ordre) {
+    if (!json || !ordre) return;
+    var els = json.elements;
+    if (!Array.isArray(els) || !els.length) return;
+
+    var familles = ordre.split(",");
+    var tete = null;
+    for (var i = 0; i < familles.length && !tete; i++) {
+      for (var j = 0; j < els.length; j++) {
+        if (els[j] && els[j].kind === familles[i]) {
+          tete = els[j];
+          break;
+        }
+      }
+    }
+    // Aucune famille connue : `grouperParFamille` ne rend que « Autres
+    // lieux », dont la première carte est le premier élément reçu.
+    if (!tete) tete = els[0];
+
+    var url = tete && tete.cover_url;
+    if (!url || url.indexOf("/uploads/") < 0) return;
+    if (!/\.(jpe?g|png|webp)(\?.*)?$/i.test(url)) return;
+
+    var q = (url.match(/(\?.*)$/) || [""])[0];
+    var base = url.replace(/\.(jpe?g|png|webp)(\?.*)?$/i, "");
+    var l = document.createElement("link");
+    l.rel = "preload";
+    l.as = "image";
+    l.setAttribute("fetchpriority", "high");
+    l.setAttribute(
+      "imagesrcset",
+      base + ".thumb.webp" + q + " 480w, " +
+        base + ".w960.webp" + q + " 960w, " +
+        base + ".w1600.webp" + q + " 1600w"
+    );
+    l.setAttribute(
+      "imagesizes",
+      "(min-width: 1920px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+    );
+    document.head.appendChild(l);
   }
 
   // ── 1. CSS non bloquant ────────────────────────────────────────────────

@@ -63,6 +63,36 @@ export default defineConfig(({ mode }) => ({
           }
         }
         if (!url || !cle) return html;
+
+        /* L'ORDRE DES FAMILLES DE L'EXPLORER, LU A LA SOURCE.
+         *
+         * 🔴 POURQUOI LE BUILD LE TRANSPORTE. L'element LCP de /explorer est la
+         *    photo de la PREMIERE carte de la PREMIERE famille affichee
+         *    (Explorer.tsx : `surPremierEcran = iGroupe === 0`, `grande = i === 0`).
+         *    Pour que l'amorcage puisse la precharger avant React, il doit
+         *    connaitre cet ordre — et `grouperParFamille` le tient dans
+         *    `FAMILLES` (src/lib/destinations.ts). Le recopier a la main dans
+         *    public/app-init.js, c'est une seconde liste qui divergera le jour
+         *    ou une famille bouge : le preload irait alors chercher une photo
+         *    que la page n'affiche pas, soit deux telechargements au lieu d'un.
+         *
+         * ⚠ Illisible ou vide => pas d'attribut, donc pas de preload : on
+         *   retombe exactement sur le comportement d'avant.
+         */
+        let familles = "";
+        try {
+          const dsrc = readFileSync(
+            path.resolve(process.cwd(), "src/lib/destinations.ts"),
+            "utf8"
+          );
+          const bloc = dsrc.match(/export const FAMILLES[\s\S]*?\n\];/)?.[0] ?? "";
+          familles = [...bloc.matchAll(/kind:\s*"([^"]+)"/g)]
+            .map((m) => m[1])
+            .join(",");
+        } catch {
+          /* illisible : pas de preload, pas de regression */
+        }
+
         // 🔴 PAS DE SCRIPT EN LIGNE. public/.htaccess sert une CSP
         //    `script-src 'self'` : un `<script>` en ligne est REFUSE par le
         //    navigateur, en silence pour qui ne lit pas la console. Les deux
@@ -74,7 +104,9 @@ export default defineConfig(({ mode }) => ({
           v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
         return html.replace(
           '<script src="/app-init.js">',
-          `<script src="/app-init.js" data-sb-u="${ech(url)}" data-sb-k="${ech(cle)}">`
+          `<script src="/app-init.js" data-sb-u="${ech(url)}" data-sb-k="${ech(cle)}"` +
+            (familles ? ` data-dk-familles="${ech(familles)}"` : "") +
+            `>`
         );
       },
     },

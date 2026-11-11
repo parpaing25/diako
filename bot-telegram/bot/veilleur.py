@@ -34,6 +34,16 @@ INTERVALLE_MIN = 25
 PREMIER_REVEIL_S = 120          # le serveur vient de se lever, on le laisse respirer
 FICHIER = config.DOSSIER_DONNEES / "veille_page.json"
 MAX_RAPPELS = 6                 # par envoi Telegram : au-delà, on renvoie au tableau
+# Depuis le 11/11/2026, le répondeur des pages du VPS (dépôt Fonenako, bots-garde/repondeur) peut
+# tenir Di'ako : il regarde la page chaque minute, jour et nuit. Tant que ce fichier existe, la
+# tournée automatique s'efface — un seul répondeur par page. Il est posé par la bascule
+# (bots-garde/deploiement/basculer.py diako reel) et retiré par son retour arrière ; il est relu à
+# chaque tour, sans redémarrer. Les ordres d'Andry sur Telegram, eux, passent toujours.
+DRAPEAU_REPONDEUR_VPS = config.DOSSIER_DONNEES / "repondeur-vps.actif"
+
+
+def au_repondeur_vps() -> bool:
+    return DRAPEAU_REPONDEUR_VPS.exists()
 
 
 def _lire() -> dict:
@@ -105,6 +115,7 @@ class Veilleur:
         etat = _lire()
         return {
             "actif": bool(self._fil and self._fil.is_alive()) and not self._stop.is_set(),
+            "au_repondeur_vps": au_repondeur_vps(),
             "minutes": INTERVALLE_MIN,
             "derniere": self.dernier or etat.get("derniere"),
             "signales": len(etat.get("signales", [])),
@@ -143,7 +154,12 @@ class Veilleur:
             return
         while not self._stop.is_set():
             try:
-                self.passer_une_fois()
+                if au_repondeur_vps():
+                    self.dernier = {"quand": datetime.now(TANA).isoformat(timespec="seconds"),
+                                    "resume": "tournée laissée au répondeur des pages du VPS",
+                                    "pour_andry": 0, "nouveaux_signales": 0}
+                else:
+                    self.passer_une_fois()
             except Exception:                                # noqa: BLE001
                 pass                                         # une tournée ratée n'arrête pas l'horloge
             if self._stop.wait(INTERVALLE_MIN * 60):

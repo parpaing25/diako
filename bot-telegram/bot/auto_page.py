@@ -65,7 +65,7 @@ if _GARDE not in sys.path:
 # suffit à rendre le bot muet sans toucher à une ligne de code.
 os.environ.setdefault("BOTS_SIMULATION", "0")
 
-from garde import facebook, porte, registre, ton    # noqa: E402
+from garde import coupure, facebook, porte, registre, ton    # noqa: E402
 
 PAR = "bot-diako"
 PAGE = config.PAGE_DIAKO
@@ -101,6 +101,11 @@ AGE_MAX_HEURES = 72       # au-delà, une réponse arrive trop tard pour être l
 FENETRE_MESSAGE_H = 24    # Meta refuse au-delà ; ce n'est pas notre choix
 
 
+def brancher_alerte(prevenir):
+    """Le canal Telegram de Di'ako porte l'alerte de coupure : pas de profil Hermes ici."""
+    coupure.PREVENIR = prevenir
+
+
 def _texte(humeur, servis):
     """Un gabarit qui n'a servi ni ces trois jours, ni dans cette tournée.
 
@@ -112,9 +117,9 @@ def _texte(humeur, servis):
     if not choix:
         return None
     frais = [t for t in choix
-             if t not in servis and registre.deja_dit(PAGE, t, 72) < 2]
-    if not frais:
-        frais = [t for t in choix if t not in servis] or choix
+             if t not in servis and registre.deja_dit(PAGE, t, 72) < porte.MAX_REDITES]
+    if not frais:                  # tous déjà servis : on se tait, la porte refuserait
+        return None
     t = random.choice(frais)
     servis.add(t)
     return t
@@ -135,6 +140,8 @@ def commentaires(publications=25):
     """Une tournée de commentaires. Rend le compte rendu, ne lève jamais."""
     compte = {"lus": 0, "repondus": 0, "pour_andry": [], "refuses": [],
               "muets": 0}
+    coupure.relancer_alerte()
+    arret = bool(coupure.active(PAGE))     # plus d'envoi, mais le tri continue
     try:
         coms = facebook.commentaires_avec_reponses(PAGE, publications, pages_max=1)
     except Exception as e:                                   # noqa: BLE001
@@ -149,7 +156,7 @@ def commentaires(publications=25):
         # de trier, pour que rien de ce qui attend un humain ne se perde.
         # Le 20/09/2026 sur Di'ako, un `break` ici faisait disparaître
         # 4 questions de clients sur 7 avec les 31 commentaires non lus.
-        plein = compte["repondus"] >= plafond
+        plein = arret or compte["repondus"] >= plafond
         if c["auteur_id"] == str(PAGE):        # jamais à nous-mêmes
             continue
         if c["nos_reponses"]:                  # Facebook fait foi, y compris
@@ -198,6 +205,9 @@ def commentaires(publications=25):
                 autorise_par_le_ton=avis,
                 detail=f"humeur {avis['humeur']} à {avis['confiance']:.0%}")
             compte["repondus"] += 1
+        except porte.ArretDuTour as r:
+            arret = True
+            compte["arret"] = str(r)[:140]
         except porte.Refus as r:
             compte["refuses"].append({"id": c["id"], "motif": str(r)[:140]})
         except Exception as e:                               # noqa: BLE001
@@ -210,6 +220,7 @@ def messages(conversations=40):
     """Une tournée de messages privés. Rend le compte rendu, ne lève jamais."""
     compte = {"lus": 0, "repondus": 0, "pour_andry": [], "refuses": [],
               "muets": 0, "hors_fenetre": []}
+    arret = bool(coupure.active(PAGE))
     try:
         fils = facebook.conversations_a_repondre(
             PAGE, limite=conversations, fenetre_heures=FENETRE_MESSAGE_H)
@@ -225,7 +236,7 @@ def messages(conversations=40):
         # de trier, pour que rien de ce qui attend un humain ne se perde.
         # Le 20/09/2026 sur Di'ako, un `break` ici faisait disparaître
         # 4 questions de clients sur 7 avec les 31 commentaires non lus.
-        plein = compte["repondus"] >= plafond
+        plein = arret or compte["repondus"] >= plafond
         if not f.get("psid") or not f.get("id"):
             continue
         if registre.deja_fait(PAGE, "message", f["id"]):
@@ -272,6 +283,9 @@ def messages(conversations=40):
                 autorise_par_le_ton=avis,
                 detail=f"humeur {avis['humeur']} à {avis['confiance']:.0%}")
             compte["repondus"] += 1
+        except porte.ArretDuTour as r:
+            arret = True
+            compte["arret"] = str(r)[:140]
         except porte.Refus as r:
             compte["refuses"].append({"psid": f["psid"], "motif": str(r)[:140]})
         except Exception as e:                               # noqa: BLE001

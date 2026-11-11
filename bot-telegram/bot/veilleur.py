@@ -86,6 +86,8 @@ class Veilleur:
         # `prevenir(texte)` : ce qui porte un mot à Andry. Injecté, pour que ce
         # module ne dépende pas du client Telegram — et reste testable.
         self._prevenir = prevenir
+        if prevenir:
+            auto_page.brancher_alerte(prevenir)
         self._stop = threading.Event()
         self._fil: threading.Thread | None = None
         self.dernier: dict | None = None

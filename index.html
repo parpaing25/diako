@@ -117,14 +117,31 @@
 
     <style>
       /* ── SQUELETTE STATIQUE ──────────────────────────────────────────────
-         Peint AVANT React, hors de #root : c'est lui l'élément LCP.
-         Il affiche le VRAI titre et la VRAIE phrase du produit — donc du texte
-         identique à celui que React montera. Aucun clignotement, un LCP textuel,
-         et un HTML qui dit enfin ce qu'est Diako aux robots qui n'exécutent pas
-         JavaScript.
-         ⚠ Il ne doit RIEN promettre qui n'existe pas : la version précédente
-         peignait deux cartes de publication avec zone photo, que React effaçait
-         ensuite — le visiteur voyait du contenu naître puis mourir.           */
+         Peint AVANT React, hors de #root. Son HTML dit ce qu'est Diako aux
+         robots qui n'exécutent pas JavaScript.
+         ⚠ Il ne doit RIEN promettre qui n'existe pas, ni rien montrer que
+         React ne montrera pas au même endroit. Deux versions l'ont fait :
+         - deux cartes de publication avec zone photo, que React effaçait ;
+         - puis le texte « À propos », annoncé « identique à celui que React
+           montera, aucun clignotement » : faux depuis que le bandeau d'accueil
+           a quitté React. Filmé en ligne le 11/11/2026 sur un téléphone moyen :
+           le texte restait 1,9 s puis le fil le remplaçait. Le propriétaire
+           l'a vu (« ça s'affiche une demi-seconde, il faut éviter ça sur tous
+           nos sites »).
+         Depuis le 11/11/2026 : ce qui se VOIT avant React est un squelette
+         neutre (.sk, des blocs gris). Le texte « À propos » RESTE dans le HTML
+         (robots sans JavaScript, vérificateur de l'écran de consentement OAuth
+         de Google) mais ne se voit que :
+         - sans JavaScript (le <noscript> à la fin du <head>) ;
+         - si un de nos scripts ne se charge pas : app-init.js pose aussitôt
+           .dk-lisible sur #dk-shell ;
+         - au bout de 15 s si #dk-shell est encore là, par une animation CSS
+           (elle ne dépend d'aucun script : elle joue même si app-init.js n'est
+           jamais arrivé). Pas plus court : sur un réseau lent React monte en
+           plusieurs secondes, et le texte reparaîtrait juste avant de partir.
+         Le LCP n'y perd rien : mesuré le 11/11, le dernier candidat de
+         l'accueil était déjà la photo du premier récit (85 433 px², contre
+         49 404 pour le paragraphe), pas ce texte.                              */
       :root {
         --dk-primary: #0e7c86;
         --dk-ink: #10262b;
@@ -162,7 +179,29 @@
       #dk-shell .cols { display: flex; gap: 24px; width: 100%; }
       #dk-shell .rail { display: none; }
       #dk-shell .main { flex: 1 1 auto; min-width: 0; padding: 24px 16px; }
-      #dk-shell .apropos { margin-top: 40px; }
+      /* Le texte : dans le document, hors de l'œil (voir l'en-tête de ce bloc). */
+      #dk-shell .apropos {
+        max-height: 0; overflow: hidden; visibility: hidden;
+        animation: dk-texte-revient 1ms linear 15s forwards;
+      }
+      #dk-shell.dk-lisible .apropos {
+        max-height: none; overflow: visible; visibility: visible; margin-top: 40px;
+        animation: none;
+      }
+      @keyframes dk-texte-revient { to { max-height: 300em; visibility: visible; } }
+      /* Le squelette : deux pastilles (les onglets du fil), quatre lignes, un bloc. */
+      #dk-shell .sk {
+        display: grid; gap: 12px; max-width: 640px; max-height: 1200px; overflow: hidden;
+        animation: dk-squelette-part 1ms linear 15s forwards;
+      }
+      #dk-shell.dk-lisible .sk { display: none; }
+      @keyframes dk-squelette-part { to { max-height: 0; visibility: hidden; } }
+      #dk-shell .sk span { display: block; height: 14px; border-radius: 7px; background: #f1f6f7; }
+      #dk-shell .sk .pastilles { display: flex; gap: 8px; height: 36px; margin-bottom: 8px; background: none; }
+      #dk-shell .sk .pastilles i { display: block; width: 104px; height: 36px; border-radius: 999px; background: #f1f6f7; }
+      #dk-shell .sk .l40 { width: 40%; }
+      #dk-shell .sk .l70 { width: 70%; }
+      #dk-shell .sk .bloc { height: auto; aspect-ratio: 4 / 3; max-height: 360px; border-radius: 16px; }
       #dk-shell .apropos h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
       #dk-shell .apropos p {
         margin: 0 0 12px; font-size: 14px; line-height: 1.7; color: var(--dk-muted);
@@ -183,8 +222,22 @@
       @media (prefers-color-scheme: dark) {
         :root { --dk-bg: #0c1a1d; --dk-ink: #eaf2f3; --dk-border: #1d3236; --dk-sand: #16292d; }
         #dk-shell .search { background: #16292d; }
+        #dk-shell .sk span, #dk-shell .sk .pastilles i { background: #16292d; }
+        #dk-shell .sk .pastilles { background: none; }
       }
     </style>
+    <!-- Sans JavaScript, React ne viendra jamais : le texte se lit, le squelette
+         ne s'affiche pas. (Une feuille en ligne est permise par la CSP de
+         public/.htaccess : style-src 'self' 'unsafe-inline'.) -->
+    <noscript>
+      <style>
+        #dk-shell .apropos {
+          max-height: none; overflow: visible; visibility: visible; margin-top: 40px;
+          animation: none;
+        }
+        #dk-shell .sk { display: none; }
+      </style>
+    </noscript>
   </head>
 
   <body>
@@ -211,7 +264,20 @@
                Ce texte-ci reste : il est servi en HTML STATIQUE, donc lisible
                par un robot qui n'exécute pas JavaScript — dont le vérificateur
                de l'écran de consentement OAuth de Google, qui exige que la page
-               d'accueil nomme l'application et explique son objectif. -->
+               d'accueil nomme l'application et explique son objectif.
+
+               11/11/2026 : il reste dans le HTML mais ne se VOIT plus quand
+               JavaScript est actif (il s'affichait puis disparaissait à chaque
+               chargement). L'œil reçoit le squelette .sk ci-dessous ; voir
+               l'en-tête du <style> pour les deux cas où le texte revient. -->
+          <div class="sk" aria-hidden="true">
+            <span class="pastilles"><i></i><i></i></span>
+            <span class="l40"></span>
+            <span></span>
+            <span></span>
+            <span class="l70"></span>
+            <span class="bloc"></span>
+          </div>
           <section class="apropos">
             <h2>À propos de Diako</h2>
             <p>

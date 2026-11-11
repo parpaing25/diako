@@ -39,6 +39,30 @@
     /* thème clair par défaut */
   }
 
+  // ── 0 ter. SI REACT NE MONTE PAS, LE TEXTE STATIQUE REVIENT ───────────
+  // Depuis le 11/11/2026 le squelette statique (#dk-shell, index.html) montre
+  // des blocs gris et garde son texte « À propos » hors de l'œil : React, qui
+  // retire #dk-shell au montage, ne l'affiche pas à cet endroit. Mais si React
+  // ne vient jamais, des blocs gris éternels ne valent rien : on rend le texte
+  // tout de suite quand un de nos scripts ne se charge pas (l'erreur d'une
+  // balise <script> ne remonte pas : elle se prend en CAPTURE sur window).
+  // Le délai de 15 s, lui, vit dans le CSS de index.html (animation) : il joue
+  // même si ce fichier-ci n'est jamais arrivé.
+  try {
+    var rendreLisible = function () {
+      var s = document.getElementById("dk-shell");
+      if (s && s.className.indexOf("dk-lisible") < 0) s.className += " dk-lisible";
+    };
+    window.addEventListener("error", function (e) {
+      // Seulement NOS scripts : un script tiers refusé par un bloqueur ne doit
+      // pas faire reparaître le texte pendant que React monte.
+      var c = e && e.target;
+      if (c && c.tagName === "SCRIPT" && String(c.src || "").indexOf(location.origin + "/") === 0) rendreLisible();
+    }, true);
+  } catch (e) {
+    /* sans ce filet : le texte revient quand même au bout de 15 s (CSS) */
+  }
+
   // ── 0 bis. AMORÇAGE DES DONNÉES DE L'EXPLORER ─────────────────────────
   // 🔴 POURQUOI ICI, ET PAS DANS REACT. Lighthouse mobile sur la production
   //    (27/10/2026) décompose le LCP de /explorer ainsi : TTFB 717 ms, LOAD
